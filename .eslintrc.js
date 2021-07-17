@@ -1,31 +1,26 @@
 module.exports = {
-  parser: "@typescript-eslint/parser",
+  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2020,
-    sourceType: "module",
+    sourceType: 'module',
     ecmaFeatures: {
-      jsx: true
-    }
+      jsx: true,
+    },
   },
   settings: {
     react: {
-      version: "detect"
-    }
+      version: 'detect',
+    },
   },
-  plugins: ["prettier"],
+  plugins: ['prettier'],
   extends: [
-    "eslint:recommended",
-    "plugin:react/recommended",
-    "plugin:@typescript-eslint/recommended",
-    "prettier",
+    'eslint:recommended',
+    'plugin:react/recommended',
+    'plugin:@typescript-eslint/recommended',
+    'prettier',
   ],
   rules: {
-    "prettier/prettier": "error"
+    'prettier/prettier': 'error',
   },
-  ignorePatterns: [
-    "bin",
-    "build",
-    "dist",
-    "node_modules",
-  ]
+  ignorePatterns: ['bin', 'build', 'dist', 'node_modules'],
 };

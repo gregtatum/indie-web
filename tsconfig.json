@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "jsx": "react",
     // Use commonjs module resolution.
     "module": "commonjs",
     "strict": true,
