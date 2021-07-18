@@ -15,6 +15,14 @@ export function init(): void {
   mountReact(store);
 }
 
+export function createRootApp(store: T.Store): JSX.Element {
+  return (
+    <Provider store={store as any}>
+      <App />
+    </Provider>
+  );
+}
+
 function mountReact(store: T.Store): void {
   const mountElement = document.createElement('div');
   mountElement.className = 'AppRoot';
@@ -25,12 +33,7 @@ function mountReact(store: T.Store): void {
     );
   }
   body.appendChild(mountElement);
-  ReactDOM.render(
-    <Provider store={store as any}>
-      <App />
-    </Provider>,
-    mountElement,
-  );
+  ReactDOM.render(createRootApp(store), mountElement);
 }
 
 /**
