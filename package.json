@@ -9,8 +9,10 @@
     "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet",
     "ts": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "",
+  "alias": {
+    "src": "./src"
+  },
+  "author": "Greg Tatum",
   "license": "MIT",
   "devDependencies": {
     "@types/react": "^17.0.14",
@@ -19,6 +21,7 @@
     "@typescript-eslint/parser": "^4.28.3",
     "eslint": "^7.30.0",
     "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.23.4",
     "eslint-plugin-prettier": "^3.4.0",
     "eslint-plugin-react": "^7.24.0",
     "parcel-bundler": "^1.12.5",
@@ -27,6 +30,10 @@
   },
   "dependencies": {
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "react-redux": "^7.2.4",
+    "redux": "^4.1.0",
+    "redux-thunk": "^2.3.0",
+    "src": "^1.1.2"
   }
 }
