@@ -10,10 +10,11 @@ It uses:
  * VSCode settings for auto-fixing errors.
  * React/Redux for front-end UI.
  * Jest for testing, which uses Babel for transpilation.
+ * React testing library for UI tests.
 
 ## Usage
 
-If this is not a react project then run:
+If this is not a React project then run:
 
 ```
 ./bin/remove-react.sh
