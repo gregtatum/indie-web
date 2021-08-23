@@ -1,1 +1,0 @@
-{"version":3,"sources":["index.js"],"names":["document","write"],"mappings":";AAAAA,SAASC,MAAM","file":"src.79102e72.js","sourceRoot":"../src","sourcesContent":["document.write(\"It works.\");\n"]}
