@@ -15,6 +15,9 @@
   },
   "author": "Greg Tatum",
   "license": "MIT",
+  "browserslist": [
+    "since 2019-01"
+  ],
   "jest": {
     "collectCoverageFrom": [
       "src/**/*.{js,jsx,ts,tsx}",
