@@ -2,7 +2,7 @@ import {
   createStore as reduxCreateStore,
   combineReducers,
   applyMiddleware,
-  Middleware,
+  type Middleware,
 } from 'redux';
 import thunk from 'redux-thunk';
 import { reducers } from 'src/reducers';

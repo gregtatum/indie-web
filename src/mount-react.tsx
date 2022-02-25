@@ -18,7 +18,7 @@ export function init(): void {
 export function createRootApp(store: T.Store): JSX.Element {
   return (
     <Provider store={store as any}>
-      <App />
+      <App key={'app'} />
     </Provider>
   );
 }
