@@ -1,10 +1,12 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { Provider, useSelector } from 'react-redux';
+import { Provider } from 'react-redux';
 import { createStore } from 'src/create-store';
 import * as A from 'src/actions';
 import * as T from 'src/@types';
-import * as $ from 'src/selectors';
+import { App } from 'src/components/App';
+
+init();
 
 export function init(): void {
   mockGoogleAnalytics();
@@ -49,12 +51,4 @@ function mockGoogleAnalytics() {
   } else if (process.env.NODE_ENV !== 'production') {
     (window as any).ga = () => {};
   }
-}
-
-function App() {
-  const isInit = useSelector($.getInit);
-  if (!isInit) {
-    throw new Error('Expected store to be init.');
-  }
-  return <h1>React is loaded</h1>;
 }
