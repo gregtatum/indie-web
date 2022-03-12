@@ -5,12 +5,15 @@ pub fn add(a: i32, b: i32) -> i32 {
     return a + b;
 }
 
-#[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
+macro_rules! console_log {
+    ($($t:tt)*) => {
+        {
+            web_sys::console::log_1(&format!($($t)*).into())
+        }
+    }
 }
 
 #[wasm_bindgen]
 pub fn greet(name: &str) {
-    alert(&format!("Hello, {}!", name));
+    console_log!("Greetings from wasm: {}!", name);
 }
