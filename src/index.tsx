@@ -6,16 +6,20 @@ import * as A from 'src/store/actions';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
 import { mockGoogleAnalytics } from 'src/utils';
+import { add, greet } from '../Cargo.toml';
 
 init();
 
-export function init(): void {
+export async function init(): Promise<void> {
   mockGoogleAnalytics();
 
   const store = createStore();
   store.dispatch(A.init());
   Object.assign(window as any, { store });
   mountReact(store);
+
+  console.log(add(2, 3));
+  greet('Greg Tatum');
 }
 
 export function createRootApp(store: T.Store): JSX.Element {

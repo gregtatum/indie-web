@@ -19,3 +19,9 @@ If this is not a React project then run:
 ```
 ./bin/remove-react.sh
 ```
+
+For wasm support make sure the wasm-bindgen-cli is installed via:
+
+```
+cargo install -f wasm-bindgen-cli
+```
