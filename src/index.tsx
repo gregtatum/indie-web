@@ -5,6 +5,7 @@ import { createStore } from 'src/store/create-store';
 import * as A from 'src/store/actions';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
+import { mockGoogleAnalytics } from 'src/utils';
 
 init();
 
@@ -36,19 +37,4 @@ function mountReact(store: T.Store): void {
   }
   body.appendChild(mountElement);
   ReactDOM.render(createRootApp(store), mountElement);
-}
-
-/**
- * Mock out Google Analytics for anything that's not production so that we have run-time
- * code coverage in development and testing.
- */
-function mockGoogleAnalytics() {
-  if (process.env.NODE_ENV === 'development') {
-    (window as any).ga = (event: any, ...payload: any[]) => {
-      const style = 'color: #FF6D00; font-weight: bold';
-      console.log(`[analytics] %c"${event}"`, style, ...payload);
-    };
-  } else if (process.env.NODE_ENV !== 'production') {
-    (window as any).ga = () => {};
-  }
 }
