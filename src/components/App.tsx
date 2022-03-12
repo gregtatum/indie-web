@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useSelector } from 'react-redux';
-import * as $ from 'src/selectors';
+import * as $ from 'src/store/selectors';
 
 import './App.css';
 

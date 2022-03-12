@@ -5,7 +5,7 @@ import {
   type Middleware,
 } from 'redux';
 import thunk from 'redux-thunk';
-import { reducers } from 'src/reducers';
+import { reducers } from 'src/store/reducers';
 import { Store, Action } from 'src/@types';
 
 /**

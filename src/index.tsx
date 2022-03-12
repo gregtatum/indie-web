@@ -1,8 +1,8 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
-import { createStore } from 'src/create-store';
-import * as A from 'src/actions';
+import { createStore } from 'src/store/create-store';
+import * as A from 'src/store/actions';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
 

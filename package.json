@@ -10,7 +10,8 @@
     "start": "tsc --noEmit --watch & parcel src/index.html -p 1234",
     "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet",
     "ts": "tsc --noEmit",
-    "test": "env NODE_ENV=test jest"
+    "test": "env NODE_ENV=test jest",
+    "test-all": "npm run lint && npm run ts && npm run test"
   },
   "alias": {
     "src": "./src"
@@ -36,7 +37,7 @@
       "node_modules"
     ],
     "moduleNameMapper": {
-      ".+\\.css$": "<rootDir>/src/styleMock.ts"
+      "\\.(css|less)$": "<rootDir>/src/test/__mocks__/style.ts"
     },
     "roots": [
       "src/test"

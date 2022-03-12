@@ -70,6 +70,8 @@ module.exports = {
     // 'react/no-unused-prop-types': 'error',
     'react/no-unused-state': 'error',
     'react/jsx-no-bind': 'error',
+    // False positives.
+    'react/jsx-key': 'off',
 
     // overriding recommended rules
     'no-constant-condition': ['error', { checkLoops: false }],

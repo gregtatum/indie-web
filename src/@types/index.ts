@@ -1,9 +1,9 @@
-import { State } from 'src/reducers';
+import { State } from 'src/store/reducers';
 
 /**
  * Re-exports.
  */
-export { AppState, State } from 'src/reducers';
+export { AppState, State } from 'src/store/reducers';
 
 export type Action = { type: 'init' };
 
