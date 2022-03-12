@@ -7,11 +7,13 @@
     "build": "parcel build src/index.html --public-url '.'",
     "deploy": "bin/deploy.sh",
     "check-updates": "npx npm-check-updates",
-    "start": "tsc --noEmit --watch & parcel src/index.html -p 1234",
+    "start-ts": "tsc --noEmit --watch",
+    "start-parcel": "parcel src/index.html -p 1234",
+    "start": "run-p start-ts start-parcel",
     "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet",
     "ts": "tsc --noEmit",
     "test": "env NODE_ENV=test jest",
-    "test-all": "npm run lint && npm run ts && npm run test"
+    "test-all": "run-s lint ts test"
   },
   "alias": {
     "src": "./src"
@@ -64,6 +66,7 @@
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.29.0",
     "jest": "^27.5.1",
+    "npm-run-all": "^4.1.5",
     "parcel-bundler": "^1.12.5",
     "parcel-plugin-wasm.rs": "^1.3.0",
     "prettier": "^2.5.1",

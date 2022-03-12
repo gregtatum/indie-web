@@ -6,7 +6,7 @@ import * as A from 'src/store/actions';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
 import { mockGoogleAnalytics } from 'src/utils';
-import { add, greet } from '../Cargo.toml';
+import { add, greet } from 'src/../Cargo.toml';
 
 init();
 
