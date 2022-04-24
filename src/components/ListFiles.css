@@ -1,0 +1,27 @@
+.listFiles {
+  animation: fadein 150ms;
+}
+
+.listFilesIcon {
+  margin-inline-end: 5px;
+  width: 20px;
+  height: 20px;
+  position: relative;
+  display: inline-block;
+  background: #0001;
+  border-radius: 3px;
+  text-align: center;
+  padding: 4px;
+}
+
+.listFilesFile a, .listFilesFileEmpty {
+  padding: 8px;
+  display: block;
+  border-bottom: 1px solid #ddd;
+  text-decoration: none;
+  color: #000;
+}
+
+.listFilesFile a:hover {
+  background: #eee;
+}

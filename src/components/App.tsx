@@ -3,15 +3,35 @@ import { LinkDropbox, UnlinkDropbox } from './LinkDropbox';
 
 import './App.css';
 import { ListFiles } from './ListFiles';
+import { ViewFile } from './ViewFile';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 export function App() {
   return (
-    <LinkDropbox>
-      <p>
-        <UnlinkDropbox />
-      </p>
-      <p>Your dropbox is linked!</p>
-      <ListFiles />
-    </LinkDropbox>
+    <BrowserRouter>
+      <LinkDropbox>
+        <div className="appView">
+          <div className="appViewMenu">
+            <div className="appViewMenuStart">
+              <div className="appViewMenuTitle">🎵 Browser Chords</div>
+            </div>
+            <div className="appViewMenuEnd">
+              <UnlinkDropbox />
+            </div>
+          </div>
+          <div className="appViewContents">
+            <Routes>
+              <Route path="/" element={<ListFiles />} />
+              <Route path="folder" element={<ListFiles />}>
+                <Route path="*" element={<ListFiles />} />
+              </Route>
+              <Route path="file" element={<ViewFile />}>
+                <Route path="*" element={<ViewFile />} />
+              </Route>
+            </Routes>
+          </div>
+        </div>
+      </LinkDropbox>
+    </BrowserRouter>
   );
 }

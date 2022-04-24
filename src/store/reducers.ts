@@ -23,16 +23,69 @@ function dropboxAccessToken(
   }
 }
 
-function init(state = false, action: T.Action): boolean {
+function listFilesCache(
+  state: T.ListFilesCache = new Map(),
+  action: T.Action,
+): T.ListFilesCache {
   switch (action.type) {
-    case 'init':
-      return true;
+    case 'list-files-requested': {
+      const newState = new Map(state);
+      newState.set(action.args.path, action);
+      return newState;
+    }
+    case 'list-files-received':
+    case 'list-files-failed': {
+      const newState = new Map(state);
+      const cache = state.get(action.args.path);
+      if (cache) {
+        if (cache.generation > action.generation) {
+          return state; // The request is stale.
+        }
+      }
+      newState.set(action.args.path, action);
+      return newState;
+    }
+    case 'clear-api-cache':
+      return new Map();
     default:
       return state;
   }
 }
 
-export const app = combineReducers({ init, dropboxAccessToken });
+function downloadFileCache(
+  state: T.DownloadFileCache = new Map(),
+  action: T.Action,
+): T.DownloadFileCache {
+  switch (action.type) {
+    case 'download-file-requested': {
+      const newState = new Map(state);
+      newState.set(action.args.path, action);
+      return newState;
+    }
+    case 'download-file-received':
+    case 'download-file-failed': {
+      const newState = new Map(state);
+      const cache = state.get(action.args.path);
+      if (cache) {
+        if (cache.generation > action.generation) {
+          return state; // The request is stale.
+        }
+      }
+      newState.set(action.args.path, action);
+      return newState;
+    }
+    case 'clear-api-cache':
+      return new Map();
+    default:
+      return state;
+  }
+}
+
+export const app = combineReducers({
+  dropboxAccessToken,
+  listFilesCache,
+  downloadFileCache,
+});
 export type AppState = ReturnType<typeof app>;
 
 export const reducers = { app };

@@ -2,10 +2,7 @@ import { State } from 'src/@types';
 import { Dropbox } from 'dropbox';
 import { createSelector } from 'reselect';
 import { ensureExists } from 'src/utils';
-
-export function getInit(state: State) {
-  return state.app.init;
-}
+import * as T from 'src/@types';
 
 export function getDropboxAccessToken(state: State) {
   return state.app.dropboxAccessToken;
@@ -33,12 +30,7 @@ export const getDropboxOrNull = createSelector(
           const result = (dropbox as any)[key](...args);
           result.then(
             (response: any) => {
-              console.log(
-                `[dropbox] response %c"${key}"`,
-                style,
-                response?.result,
-                response,
-              );
+              console.log(`[dropbox] response %c"${key}"`, style, response);
               resolve(response);
             },
             (error: any) => {
@@ -55,4 +47,12 @@ export const getDropboxOrNull = createSelector(
 
 export function getDropbox(state: State) {
   return ensureExists(getDropboxOrNull(state), 'Dropbox');
+}
+
+export function getListFilesCache(state: State): T.ListFilesCache {
+  return state.app.listFilesCache;
+}
+
+export function getDownloadFileCache(state: State): T.DownloadFileCache {
+  return state.app.downloadFileCache;
 }

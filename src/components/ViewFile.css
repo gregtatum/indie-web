@@ -1,0 +1,22 @@
+.viewFileTextArea {
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
+  border: 0;
+  outline: 0;
+  padding: 10px;
+}
+
+.viewFileSplit {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.viewFileStart, .viewFileEnd {
+  flex: 1;
+  overflow:hidden;
+}
+
+.viewFileEnd {
+  border-left: 2px solid #ccc;
+}

@@ -41,3 +41,24 @@ export function mockGoogleAnalytics() {
     (window as any).ga = () => {};
   }
 }
+
+let _generation = 0;
+export function getGeneration() {
+  return _generation++;
+}
+
+// test-only
+export function resetGeneration() {
+  _generation = 0;
+}
+
+export function maybeGetProperty(value: any, property: string): string | null {
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof value[property] === 'string'
+  ) {
+    return value[property];
+  }
+  return null;
+}

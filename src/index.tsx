@@ -2,8 +2,9 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
 import { createStore } from 'src/store/create-store';
-import * as A from 'src/store/actions';
 import * as T from 'src/@types';
+import * as $ from 'src/store/selectors';
+import * as A from 'src/store/actions';
 import { App } from 'src/components/App';
 import { mockGoogleAnalytics } from 'src/utils';
 
@@ -13,8 +14,13 @@ export async function init(): Promise<void> {
   mockGoogleAnalytics();
 
   const store = createStore();
-  store.dispatch(A.init());
-  Object.assign(window as any, { store });
+  Object.assign(window as any, {
+    store,
+    dispatch: store.dispatch,
+    getState: store.getState,
+    $,
+    A,
+  });
   mountReact(store);
 }
 
@@ -28,7 +34,7 @@ export function createRootApp(store: T.Store): JSX.Element {
 
 function mountReact(store: T.Store): void {
   const mountElement = document.createElement('div');
-  mountElement.className = 'AppRoot';
+  mountElement.className = 'appRoot';
   const body = document.body;
   if (!body) {
     throw new Error(
