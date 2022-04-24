@@ -5,7 +5,10 @@ import { State } from 'src/store/reducers';
  */
 export { AppState, State } from 'src/store/reducers';
 
-export type Action = { type: 'init' };
+export type Action =
+  | { type: 'init' }
+  | { type: 'set-dropbox-access-token'; token: string }
+  | { type: 'remove-dropbox-access-token' };
 
 /**
  * Selectors always take the root state, and return some part of it.

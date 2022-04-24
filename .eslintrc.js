@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-undef
 module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -69,7 +70,6 @@ module.exports = {
     // See https://github.com/yannickcr/eslint-plugin-react/issues/1561
     // 'react/no-unused-prop-types': 'error',
     'react/no-unused-state': 'error',
-    'react/jsx-no-bind': 'error',
     // False positives.
     'react/jsx-key': 'off',
 
@@ -84,7 +84,6 @@ module.exports = {
     'dot-notation': 'error',
     eqeqeq: 'error',
     'for-direction': 'error',
-    'no-alert': 'error',
     'no-caller': 'error',
     'no-eval': 'error',
     'no-extend-native': 'error',

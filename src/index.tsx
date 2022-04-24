@@ -6,7 +6,6 @@ import * as A from 'src/store/actions';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
 import { mockGoogleAnalytics } from 'src/utils';
-import { add, greet } from 'Cargo.toml';
 
 init();
 
@@ -17,12 +16,6 @@ export async function init(): Promise<void> {
   store.dispatch(A.init());
   Object.assign(window as any, { store });
   mountReact(store);
-
-  // The following can be deleted, but it shows that the wasm is working.
-  if (add(2, 3) !== 5) {
-    throw new Error('wasm is not working.');
-  }
-  greet('Greg Tatum');
 }
 
 export function createRootApp(store: T.Store): JSX.Element {

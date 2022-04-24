@@ -1,0 +1,19 @@
+.linkDropbox {
+  max-width: 500px;
+  margin: 20px;
+  line-height: 1.4;
+}
+
+.linkDropboxForm {
+  display: flex;
+}
+
+.linkDropboxInput {
+  flex: 1;
+  padding: 7px;
+  margin-inline-end: 10px;
+}
+
+.linkDropboxSubmit {
+  padding: 7px;
+}
