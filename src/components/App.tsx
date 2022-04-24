@@ -1,9 +1,8 @@
 import * as React from 'react';
-// import { useSelector } from 'react-redux';
-// import * as $ from 'src/store/selectors';
 import { LinkDropbox, UnlinkDropbox } from './LinkDropbox';
 
 import './App.css';
+import { ListFiles } from './ListFiles';
 
 export function App() {
   return (
@@ -12,6 +11,7 @@ export function App() {
         <UnlinkDropbox />
       </p>
       <p>Your dropbox is linked!</p>
+      <ListFiles />
     </LinkDropbox>
   );
 }
