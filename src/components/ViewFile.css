@@ -8,16 +8,43 @@
 }
 
 .viewFileSplit {
-  display: flex;
   height: 100%;
   width: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
-.viewFileStart, .viewFileEnd {
+.viewFileSplit > * {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+.viewFileSplitMiddle {
+  cursor: grab;
+  z-index: 1;
+  display: flex;
+}
+
+.viewFileSplitMiddle.dragging {
+  cursor: grabbing;
+}
+
+.viewFileSplitMiddleVisible {
+  height: 100%;
+  background: #ccc;
   flex: 1;
-  overflow:hidden;
 }
 
-.viewFileEnd {
-  border-left: 2px solid #ccc;
+.viewFileSplitMiddleVisible:hover {
+  background: #aaa;
+}
+
+.viewFileSplitStart {
+  width: calc(50% - 0px);
+  left: 0;
+}
+
+.viewFileSplitEnd {
+  right: 0;
 }
