@@ -35,6 +35,17 @@ export function listFiles(path = ''): Thunk {
             value.push(entry);
           }
         }
+        value.sort((a, b) => {
+          // Sort folders first
+          if (a['.tag'] === 'file' && b['.tag'] === 'folder') {
+            return 1;
+          }
+          if (b['.tag'] === 'file' && a['.tag'] === 'folder') {
+            return -1;
+          }
+          // Sort by file name second.
+          return a.name.localeCompare(b.name);
+        });
         dispatch({
           type: 'list-files-received',
           generation,

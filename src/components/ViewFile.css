@@ -4,6 +4,7 @@
   border: 0;
   outline: 0;
   padding: 10px;
+  resize: none;
 }
 
 .viewFileSplit {

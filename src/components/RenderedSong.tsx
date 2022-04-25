@@ -25,11 +25,26 @@ export function RenderedSong() {
       </div>
       {lines.map((line) => {
         switch (line.type) {
-          case 'line':
-            return null;
-            return <div>{line.text}</div>;
+          case 'line': {
+            return (
+              <div
+                className={`renderedSongLine renderedSongLine-${line.content}`}
+              >
+                {line.spans.map((span) => {
+                  return span.type === 'text' ? (
+                    <span className="renderedSongLineText">{span.text}</span>
+                  ) : (
+                    <span className="renderedSongLineChord">
+                      {span.chord.text}
+                    </span>
+                  );
+                  return <div />;
+                })}
+              </div>
+            );
+          }
           case 'section':
-            return <h3>{line.text}</h3>;
+            return <h3 className="renderedSongSection">{line.text}</h3>;
           default:
             return null;
         }

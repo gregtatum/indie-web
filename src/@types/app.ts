@@ -25,14 +25,15 @@ export interface Chord {
   add?: string;
 }
 
+type LineContent = 'mixed' | 'chords' | 'text';
+
 export type TextOrChord =
   | { type: 'text'; text: string }
   | { type: 'chord'; chord: Chord };
 
 export type LineType =
-  | { type: 'line'; text: string }
   | { type: 'section'; text: string }
-  | { type: 'line'; text: TextOrChord[]; hasChords: boolean };
+  | { type: 'line'; text: TextOrChord[]; content: LineContent };
 
 export interface ParsedChordPro {
   directives: { [directive: string]: string };

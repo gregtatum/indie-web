@@ -39,6 +39,7 @@ export function parseChord(text: string): T.Chord | null {
     return null;
   }
   const [, baseNote] = baseNoteResult;
+  // eslint-disable-next-line prefer-const
   let [rest, slash] = text.slice(baseNote.length).split('/');
   const chord: T.Chord = {
     text: text,
@@ -139,12 +140,7 @@ export function parseChordPro(text: string): T.ParsedChordPro {
       continue;
     }
 
-    const result: { type: 'line'; text: T.TextOrChord[]; hasChords: boolean } =
-      {
-        type: 'line',
-        text: [],
-        hasChords: false,
-      };
+    const spans: T.TextOrChord[] = [];
     let text = '';
     let chordText = '';
     let inChord = false;
@@ -162,9 +158,8 @@ export function parseChordPro(text: string): T.ParsedChordPro {
       if (letter === ']' && inChord) {
         const chord = parseChord(chordText);
         if (chord) {
-          result.text.push({ type: 'text', text });
-          result.text.push({ type: 'chord', chord });
-          result.hasChords = true;
+          spans.push({ type: 'text', text });
+          spans.push({ type: 'chord', chord });
           text = '';
         } else {
           text = `${text}[${chordText}]`;
@@ -182,10 +177,33 @@ export function parseChordPro(text: string): T.ParsedChordPro {
     if (chordText) {
       text += '[' + chordText;
     }
-    if (text) {
-      result.text.push({ type: 'text', text });
+    spans.push({ type: 'text', text });
+    if (spans.length > 0) {
+      let hasChords = false;
+      let hasText = false;
+      for (const span of spans) {
+        if (span.type === 'text' && span.text.trim()) {
+          hasText = true;
+        }
+        if (span.type === 'chord') {
+          hasChords = true;
+        }
+      }
+      let content: T.LineContent = 'text';
+      if (hasChords && hasText) {
+        content = 'mixed';
+      } else if (hasChords) {
+        content = 'chords';
+      }
+      if (hasChords || hasText) {
+        // Exclude whitespace
+        lines.push({
+          type: 'line',
+          spans,
+          content,
+        });
+      }
     }
-    lines.push(result);
   }
   return { directives, lines };
 }

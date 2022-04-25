@@ -59,6 +59,10 @@ export function ViewFile() {
 
 function TextArea(props: { text: string }) {
   return (
-    <textarea className="viewFileTextArea" defaultValue={props.text}></textarea>
+    <textarea
+      spellCheck="false"
+      className="viewFileTextArea"
+      defaultValue={props.text}
+    ></textarea>
   );
 }
