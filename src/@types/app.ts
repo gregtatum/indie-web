@@ -1,15 +1,3 @@
-export type TextOrChord = { type: 'text' | 'chord'; text: string };
-
-export type LineType =
-  | { type: 'line'; text: string }
-  | { type: 'section'; text: string }
-  | { type: 'line'; text: TextOrChord[]; hasChords: boolean };
-
-export interface ParsedChordPro {
-  directives: { [directive: string]: string };
-  lines: LineType[];
-}
-
 // prettier-ignore
 export type Note =
   | 'A' | 'Ab' | 'A#'
@@ -20,11 +8,33 @@ export type Note =
   | 'F' | 'Fb' | 'F#'
   | 'G' | 'Gb' | 'G#';
 
-export type MajorMinor = 'major' | 'minor' | 'power';
+export type ChordType =
+  | 'major'
+  | 'minor'
+  | 'power'
+  | 'augmented'
+  | 'sus2'
+  | 'sus4';
 
 export interface Chord {
   text: string;
   baseNote: Note;
-  majorMinor?: MajorMinor;
+  type?: ChordType;
+  embellishment?: string;
   slash?: Note;
+  add?: string;
+}
+
+export type TextOrChord =
+  | { type: 'text'; text: string }
+  | { type: 'chord'; chord: Chord };
+
+export type LineType =
+  | { type: 'line'; text: string }
+  | { type: 'section'; text: string }
+  | { type: 'line'; text: TextOrChord[]; hasChords: boolean };
+
+export interface ParsedChordPro {
+  directives: { [directive: string]: string };
+  lines: LineType[];
 }

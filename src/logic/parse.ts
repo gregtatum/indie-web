@@ -1,16 +1,110 @@
 import * as T from 'src/@types';
+import { ensureExists } from 'src/utils';
 
 const normalizeDirectives = new Map([
   ['t', 'title'],
   ['st', 'subtitle'],
 ]);
 
-export function validateChord(chord: string): boolean {
-  if (chord === '') {
-    return false;
+function noteOrNull(v: string): T.Note | null {
+  // prettier-ignore
+  switch (v) {
+    case 'A': case 'Ab': case 'A#':
+    case 'B': case 'Bb': case 'B#':
+    case 'C': case 'Cb': case 'C#':
+    case 'D': case 'Db': case 'D#':
+    case 'E': case 'Eb': case 'E#':
+    case 'F': case 'Fb': case 'F#':
+    case 'G': case 'Gb': case 'G#':
+      return v;
+    default:
+      return null;
   }
-  return true;
-  // if (chord.
+}
+
+function ensureNote(v: string): T.Note {
+  return ensureExists(noteOrNull(v), 'expected note');
+}
+
+export function parseChord(text: string): T.Chord | null {
+  if (text === '') {
+    return null;
+  }
+  const baseNoteResult = text.match(/^([A-G][b#]?)/);
+  //                                 ^                 match the beginning
+  //                                  (          )     capture
+  //                                   [A-G]           capital A-G
+  //                                        [b#]?      flat or sharp
+  if (!baseNoteResult) {
+    return null;
+  }
+  const [, baseNote] = baseNoteResult;
+  let [rest, slash] = text.slice(baseNote.length).split('/');
+  const chord: T.Chord = {
+    text: text,
+    type: 'major',
+    baseNote: ensureNote(baseNote),
+  };
+  if (slash) {
+    const result = slash.match(/^([A-G][b#]?)\s*$/);
+    //           ^                 match the beginning
+    //            (          )     capture
+    //             [A-G]           capital A-G
+    //                  [b#]?      flat or sharp
+    if (!result) {
+      // Invalid slash chord.
+      return null;
+    }
+    chord.slash = ensureNote(result[1]);
+  }
+
+  const addResult = rest.match(/(add\d+)$/);
+  if (addResult) {
+    chord.add = addResult[1];
+    rest = rest.slice(0, rest.length - chord.add.length);
+  }
+
+  if (rest === 'm' || rest.match(/$(m)\d/)) {
+    chord.type = 'minor';
+    rest = rest.slice(1);
+  }
+
+  if (rest.includes('+')) {
+    if (chord.type === 'minor') {
+      return null;
+    }
+    chord.type = 'augmented';
+    rest = rest.replace('+', '');
+  }
+
+  if (rest === 'sus' || rest === 'sus4') {
+    if (chord.type !== 'major') {
+      return null;
+    }
+    chord.type = 'sus4';
+    rest = '';
+  }
+
+  if (rest === 'sus2') {
+    chord.type = 'sus2';
+    rest = '';
+  }
+
+  if (rest === 'maj7') {
+    chord.embellishment = 'maj7';
+    rest = '';
+  }
+
+  if (rest.match(/^\d+$/)) {
+    chord.embellishment = rest;
+    rest = '';
+  }
+
+  if (rest.trim()) {
+    return null;
+  }
+
+  return chord;
 }
 
 export function parseChordPro(text: string): T.ParsedChordPro {
@@ -52,40 +146,41 @@ export function parseChordPro(text: string): T.ParsedChordPro {
         hasChords: false,
       };
     let text = '';
-    let chord = '';
+    let chordText = '';
     let inChord = false;
     for (let i = 0; i < line.length; i++) {
       const letter = line[i];
       if (letter === '[') {
         if (inChord) {
           // Already in a chord, abandon in.
-          text += '[' + chord;
-          chord = '';
+          text += '[' + chordText;
+          chordText = '';
         }
         inChord = true;
         continue;
       }
       if (letter === ']' && inChord) {
-        if (validateChord(chord)) {
+        const chord = parseChord(chordText);
+        if (chord) {
           result.text.push({ type: 'text', text });
-          result.text.push({ type: 'chord', text: chord });
+          result.text.push({ type: 'chord', chord });
           result.hasChords = true;
           text = '';
         } else {
-          text = `${text}[${chord}]`;
+          text = `${text}[${chordText}]`;
         }
-        chord = '';
+        chordText = '';
         inChord = false;
         continue;
       }
       if (inChord) {
-        chord += letter;
+        chordText += letter;
       } else {
         text += letter;
       }
     }
-    if (chord) {
-      text += '[' + chord;
+    if (chordText) {
+      text += '[' + chordText;
     }
     if (text) {
       result.text.push({ type: 'text', text });

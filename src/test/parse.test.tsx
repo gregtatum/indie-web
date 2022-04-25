@@ -1,5 +1,124 @@
-import { parseChordPro } from '../logic/parse';
+import { parseChord, parseChordPro } from '../logic/parse';
 import { stripIndent } from 'common-tags';
+
+describe('parseChord', () => {
+  it('parses basic chords', () => {
+    expect(parseChord('A')).toEqual({
+      baseNote: 'A',
+      text: 'A',
+      type: 'major',
+    });
+
+    expect(parseChord('G')).toEqual({
+      baseNote: 'G',
+      text: 'G',
+      type: 'major',
+    });
+
+    expect(parseChord('Fm')).toEqual({
+      baseNote: 'F',
+      text: 'Fm',
+      type: 'minor',
+    });
+
+    expect(parseChord('H')).toEqual(null);
+  });
+
+  it('parses slash chords', () => {
+    expect(parseChord('G/F#')).toEqual({
+      baseNote: 'G',
+      text: 'G/F#',
+      slash: 'F#',
+      type: 'major',
+    });
+    expect(parseChord('Bb/Ab')).toEqual({
+      baseNote: 'Bb',
+      text: 'Bb/Ab',
+      slash: 'Ab',
+      type: 'major',
+    });
+  });
+
+  it('parses 7th 9th etc chords', () => {
+    expect(parseChord('A6')).toEqual({
+      baseNote: 'A',
+      text: 'A6',
+      type: 'major',
+      embellishment: '6',
+    });
+    expect(parseChord('A7')).toEqual({
+      baseNote: 'A',
+      text: 'A7',
+      type: 'major',
+      embellishment: '7',
+    });
+    expect(parseChord('A13')).toEqual({
+      baseNote: 'A',
+      text: 'A13',
+      type: 'major',
+      embellishment: '13',
+    });
+    expect(parseChord('Amaj7')).toEqual({
+      baseNote: 'A',
+      text: 'Amaj7',
+      type: 'major',
+      embellishment: 'maj7',
+    });
+  });
+
+  it('parses add chords', () => {
+    expect(parseChord('Aadd12')).toEqual({
+      baseNote: 'A',
+      text: 'Aadd12',
+      type: 'major',
+      add: 'add12',
+    });
+    expect(parseChord('Cmadd9')).toEqual({
+      baseNote: 'C',
+      text: 'Cmadd9',
+      type: 'minor',
+      add: 'add9',
+    });
+  });
+
+  it('parses augmented chords', () => {
+    expect(parseChord('C+')).toEqual({
+      baseNote: 'C',
+      text: 'C+',
+      type: 'augmented',
+    });
+    expect(parseChord('C+7')).toEqual({
+      baseNote: 'C',
+      text: 'C+7',
+      type: 'augmented',
+      embellishment: '7',
+    });
+    expect(parseChord('C7+')).toEqual({
+      baseNote: 'C',
+      text: 'C7+',
+      type: 'augmented',
+      embellishment: '7',
+    });
+  });
+
+  it('parses sus chords', () => {
+    expect(parseChord('C#sus')).toEqual({
+      baseNote: 'C#',
+      text: 'C#sus',
+      type: 'sus4',
+    });
+    expect(parseChord('C#sus2')).toEqual({
+      baseNote: 'C#',
+      text: 'C#sus2',
+      type: 'sus2',
+    });
+    expect(parseChord('C#sus4')).toEqual({
+      baseNote: 'C#',
+      text: 'C#sus4',
+      type: 'sus4',
+    });
+  });
+});
 
 describe('parseChordPro', () => {
   it('can parse directives', () => {
@@ -26,7 +145,11 @@ describe('parseChordPro', () => {
             "type": "text",
           },
           Object {
-            "text": "A",
+            "chord": Object {
+              "baseNote": "A",
+              "text": "A",
+              "type": "major",
+            },
             "type": "chord",
           },
           Object {
