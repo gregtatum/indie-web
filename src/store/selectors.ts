@@ -66,7 +66,6 @@ export const getActiveFileText = createSelector(
   getDownloadFileCache,
   getActiveFile,
   (downloadFileCache, activeFile): string => {
-    console.log(`!!! downloadFileCache`, { downloadFileCache, activeFile });
     const downloadFileRequest = ensureExists(
       downloadFileCache.get(activeFile),
       'download file',
