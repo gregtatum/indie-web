@@ -5,6 +5,8 @@
   outline: 0;
   padding: 10px;
   resize: none;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 13px;
 }
 
 .viewFileSplit {
