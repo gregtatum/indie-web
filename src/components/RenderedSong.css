@@ -1,0 +1,25 @@
+.renderedSong {
+  padding: 10px;
+}
+
+.renderedSongHeader {
+  display: flex;
+}
+
+.renderedSongHeaderTitle {
+  flex: 1;
+}
+
+.renderedSongHeaderTitle h1, .renderedSongHeaderTitle h2 {
+  margin: 0;
+  margin-bottom: 6px;
+}
+
+.renderedSongHeaderTitle h1 {
+  font-size: 24px;
+}
+
+.renderedSongHeaderTitle h2 {
+  font-size: 16px;
+  color: #555;
+}

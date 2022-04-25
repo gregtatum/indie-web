@@ -5,6 +5,7 @@ import { type files } from 'dropbox';
  * Re-exports.
  */
 export { AppState, State } from 'src/store/reducers';
+export * from './app';
 
 export type DownloadedTextFile = { text?: string; error?: unknown };
 
@@ -61,6 +62,8 @@ export type Action =
   | { type: 'set-dropbox-access-token'; token: string }
   | { type: 'remove-dropbox-access-token' }
   | { type: 'clear-api-cache' }
+  | { type: 'set-api-cache' }
+  | { type: 'change-active-file'; path: string }
   | APICalls.ListFiles
   | APICalls.DownloadFile;
 

@@ -3,6 +3,7 @@ import { Dropbox } from 'dropbox';
 import { createSelector } from 'reselect';
 import { ensureExists } from 'src/utils';
 import * as T from 'src/@types';
+import { parseChordPro } from 'src/logic/parse';
 
 export function getDropboxAccessToken(state: State) {
   return state.app.dropboxAccessToken;
@@ -56,3 +57,61 @@ export function getListFilesCache(state: State): T.ListFilesCache {
 export function getDownloadFileCache(state: State): T.DownloadFileCache {
   return state.app.downloadFileCache;
 }
+
+export function getActiveFile(state: State): string {
+  return state.app.activeFile;
+}
+
+export const getActiveFileText = createSelector(
+  getDownloadFileCache,
+  getActiveFile,
+  (downloadFileCache, activeFile): string => {
+    console.log(`!!! downloadFileCache`, { downloadFileCache, activeFile });
+    const downloadFileRequest = ensureExists(
+      downloadFileCache.get(activeFile),
+      'download file',
+    );
+    if (
+      downloadFileRequest.type === 'download-file-received' &&
+      typeof downloadFileRequest.value.text === 'string'
+    ) {
+      return downloadFileRequest.value.text;
+    }
+    if (
+      downloadFileRequest.type === 'download-file-failed' &&
+      typeof downloadFileRequest.value?.text === 'string'
+    ) {
+      return downloadFileRequest.value.text;
+    }
+    throw new Error('Downloaded file is not ready.');
+  },
+);
+
+export const getParsedFile = createSelector(getActiveFileText, parseChordPro);
+
+export const getSongKey = createSelector(
+  getParsedFile,
+  ({ directives }): string | null => {
+    if (typeof directives.key === 'string') {
+      if (directives.key.match(/^[A-G]#?b?m?$/)) {
+        //                      ^           $
+        //                       [A-G]
+        //                            #?
+        //                              b?
+        //                                m?
+        return directives.key;
+      }
+    }
+    return null;
+  },
+);
+
+export const getSongTitle = createSelector(
+  getParsedFile,
+  ({ directives }): string | null => {
+    if (typeof directives.title === 'string') {
+      return directives.title;
+    }
+    return 'Untitled';
+  },
+);

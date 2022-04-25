@@ -81,10 +81,20 @@ function downloadFileCache(
   }
 }
 
+function activeFile(state = '', action: T.Action): string {
+  switch (action.type) {
+    case 'change-active-file':
+      return action.path;
+    default:
+      return state;
+  }
+}
+
 export const app = combineReducers({
   dropboxAccessToken,
   listFilesCache,
   downloadFileCache,
+  activeFile,
 });
 export type AppState = ReturnType<typeof app>;
 

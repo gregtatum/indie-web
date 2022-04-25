@@ -110,3 +110,7 @@ export function downloadFile(path: string): Thunk {
 export function clearApiCache(): Action {
   return { type: 'clear-api-cache' };
 }
+
+export function changeActiveFile(path: string): Action {
+  return { type: 'change-active-file', path };
+}
