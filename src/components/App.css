@@ -3,6 +3,12 @@
   to   { opacity: 1; }
 }
 
+@keyframes fadeindelay {
+  0% { opacity: 0; }
+  30% { opacity: 0; }
+  100%   { opacity: 1; }
+}
+
 body, .appRoot {
   position: absolute;
   height: 100%;
@@ -23,20 +29,7 @@ body, .appRoot {
   flex-direction: column;
 }
 
-.appViewMenu {
-  border-bottom: 1px solid #ddd;
-  padding: 9px;
-}
-
 .appViewContents {
   flex: 1;
   overflow-y: auto;
-}
-
-.appViewMenu {
-  display: flex;
-}
-
-.appViewMenuStart {
-  flex: 1;
 }

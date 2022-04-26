@@ -84,7 +84,16 @@ function downloadFileCache(
 function activeFile(state = '', action: T.Action): string {
   switch (action.type) {
     case 'change-active-file':
-      return action.path;
+      return action.value;
+    default:
+      return state;
+  }
+}
+
+function view(state: T.View = 'link-dropbox', action: T.Action): T.View {
+  switch (action.type) {
+    case 'change-view':
+      return action.value;
     default:
       return state;
   }
@@ -95,6 +104,7 @@ export const app = combineReducers({
   listFilesCache,
   downloadFileCache,
   activeFile,
+  view,
 });
 export type AppState = ReturnType<typeof app>;
 

@@ -7,6 +7,7 @@ import { RenderedSong } from './RenderedSong';
 
 import './ViewFile.css';
 import { ensureExists, maybeGetProperty } from 'src/utils';
+import { UnlinkDropbox } from './LinkDropbox';
 
 export function ViewFile() {
   const dispatch = Redux.useDispatch();
@@ -16,6 +17,7 @@ export function ViewFile() {
 
   React.useEffect(() => {
     document.title = path;
+    dispatch(A.changeView('view-file'));
     dispatch(A.changeActiveFile(path));
   }, []);
 
@@ -46,11 +48,19 @@ export function ViewFile() {
         />
       );
     }
-    case 'download-file-failed':
-      return <div className="viewFileRequested">Failed to download file</div>;
+    case 'download-file-failed': {
+      return (
+        <div className="viewFileError">
+          <div>
+            <p>Unable to access DropBox account.</p>
+            <UnlinkDropbox />
+          </div>
+        </div>
+      );
+    }
     case 'download-file-requested':
     default:
-      return <div className="viewFileRequested">Requesting file.</div>;
+      return <div className="viewFileMessage">Requesting file.</div>;
   }
 }
 

@@ -122,6 +122,10 @@ export function clearApiCache(): Action {
   return { type: 'clear-api-cache' };
 }
 
-export function changeActiveFile(path: string): Action {
-  return { type: 'change-active-file', path };
+export function changeActiveFile(value: string): Action {
+  return { type: 'change-active-file', value };
+}
+
+export function changeView(value: T.View): Action {
+  return { type: 'change-view', value };
 }

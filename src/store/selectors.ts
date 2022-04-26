@@ -5,8 +5,31 @@ import { ensureExists } from 'src/utils';
 import * as T from 'src/@types';
 import { parseChordPro } from 'src/logic/parse';
 
+export function getView(state: State): T.View {
+  return state.app.view;
+}
+
 export function getDropboxAccessToken(state: State) {
   return state.app.dropboxAccessToken;
+}
+
+export function getListFilesCache(state: State): T.ListFilesCache {
+  return state.app.listFilesCache;
+}
+
+export function getDownloadFileCache(state: State): T.DownloadFileCache {
+  return state.app.downloadFileCache;
+}
+
+export function getActiveFile(state: State): string {
+  return state.app.activeFile;
+}
+
+function dangerousSelector<T>(
+  selector: (state: State) => T | null,
+  message: string,
+): (state: State) => T {
+  return (state) => ensureExists(selector(state), message);
 }
 
 export const getDropboxOrNull = createSelector(
@@ -46,30 +69,19 @@ export const getDropboxOrNull = createSelector(
   },
 );
 
-export function getDropbox(state: State) {
-  return ensureExists(getDropboxOrNull(state), 'Dropbox');
-}
+export const getDropbox = dangerousSelector(
+  getDropboxOrNull,
+  "Dropbox wasn't available",
+);
 
-export function getListFilesCache(state: State): T.ListFilesCache {
-  return state.app.listFilesCache;
-}
-
-export function getDownloadFileCache(state: State): T.DownloadFileCache {
-  return state.app.downloadFileCache;
-}
-
-export function getActiveFile(state: State): string {
-  return state.app.activeFile;
-}
-
-export const getActiveFileText = createSelector(
+export const getActiveFileTextOrNull = createSelector(
   getDownloadFileCache,
   getActiveFile,
-  (downloadFileCache, activeFile): string => {
-    const downloadFileRequest = ensureExists(
-      downloadFileCache.get(activeFile),
-      'download file',
-    );
+  (downloadFileCache, activeFile): string | null => {
+    const downloadFileRequest = downloadFileCache.get(activeFile);
+    if (!downloadFileRequest) {
+      return null;
+    }
     if (
       downloadFileRequest.type === 'download-file-received' &&
       typeof downloadFileRequest.value.text === 'string'
@@ -82,14 +94,32 @@ export const getActiveFileText = createSelector(
     ) {
       return downloadFileRequest.value.text;
     }
-    throw new Error('Downloaded file is not ready.');
+    return null;
   },
 );
 
-export const getParsedFile = createSelector(getActiveFileText, parseChordPro);
+export const getActiveFileText = dangerousSelector(
+  getActiveFileTextOrNull,
+  'Active file was not downloaded while getting text.',
+);
 
-export const getSongKey = createSelector(
-  getParsedFile,
+export const getActiveFileParsedOrNull = createSelector(
+  getActiveFileTextOrNull,
+  (text) => {
+    if (!text) {
+      return null;
+    }
+    return parseChordPro(text);
+  },
+);
+
+export const getActiveFileParsed = dangerousSelector(
+  getActiveFileParsedOrNull,
+  'Active file was not downloaded while parsing file.',
+);
+
+export const getActiveFileSongKey = createSelector(
+  getActiveFileParsed,
   ({ directives }): string | null => {
     if (typeof directives.key === 'string') {
       if (directives.key.match(/^[A-G]#?b?m?$/)) {
@@ -105,12 +135,21 @@ export const getSongKey = createSelector(
   },
 );
 
-export const getSongTitle = createSelector(
-  getParsedFile,
-  ({ directives }): string | null => {
+export const getActiveFileSongTitleOrNull = createSelector(
+  getActiveFileParsedOrNull,
+  (parsedFile): string | null => {
+    if (!parsedFile) {
+      return null;
+    }
+    const { directives } = parsedFile;
     if (typeof directives.title === 'string') {
       return directives.title;
     }
     return 'Untitled';
   },
+);
+
+export const getActiveFileSongTitle = dangerousSelector(
+  getActiveFileSongTitleOrNull,
+  'Active file was not downloaded when getting song title.',
 );

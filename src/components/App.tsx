@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { LinkDropbox, UnlinkDropbox } from './LinkDropbox';
+import { LinkDropbox } from './LinkDropbox';
+import { Header } from './Header';
 
 import './App.css';
 import { ListFiles } from './ListFiles';
@@ -11,14 +12,7 @@ export function App() {
     <BrowserRouter>
       <LinkDropbox>
         <div className="appView">
-          <div className="appViewMenu">
-            <div className="appViewMenuStart">
-              <div className="appViewMenuTitle">🎵 Browser Chords</div>
-            </div>
-            <div className="appViewMenuEnd">
-              <UnlinkDropbox />
-            </div>
-          </div>
+          <Header />
           <div className="appViewContents">
             <Routes>
               <Route path="/" element={<ListFiles />} />

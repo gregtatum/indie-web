@@ -1,0 +1,22 @@
+.header {
+  border-bottom: 1px solid #ddd;
+  padding: 9px;
+  display: flex;
+}
+
+.headerStart {
+  flex: 1;
+}
+
+.headerActiveFile > * {
+  margin-inline-end: 9px;
+  display: inline-block;
+}
+
+.headerActiveFile > a {
+  color: #000;
+}
+
+.headerActiveFile > a:hover {
+  text-decoration: none;
+}

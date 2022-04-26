@@ -25,7 +25,11 @@ export function LinkDropbox(props: { children: any }) {
             >
               Follow the directions on this blog post
             </a>{' '}
-            to get an access token.
+            to get an access token. Or directly generate on in the{' '}
+            <a href="https://www.dropbox.com/developers/apps" target="_new">
+              App Console
+            </a>
+            .
           </p>
         </div>
         <form

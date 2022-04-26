@@ -14,6 +14,7 @@
   width: 100%;
   position: relative;
   overflow: hidden;
+  animation: fadein 200ms;
 }
 
 .viewFileSplit > * {
@@ -38,7 +39,11 @@
   flex: 1;
 }
 
-.viewFileSplitMiddleVisible:hover {
+.viewFileSplitMiddle:hover {
+  background: #eee;
+}
+
+.viewFileSplitMiddle:hover .viewFileSplitMiddleVisible {
   background: #aaa;
 }
 
@@ -49,4 +54,18 @@
 
 .viewFileSplitEnd {
   right: 0;
+}
+
+.viewFileMessage, .viewFileError {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  text-align: center;
+  flex-flow: column;
+  justify-content: center;
+}
+
+.viewFileMessage {
+  animation: fadeindelay 1500ms;
 }

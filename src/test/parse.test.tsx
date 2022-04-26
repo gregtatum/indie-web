@@ -64,6 +64,18 @@ describe('parseChord', () => {
       type: 'major',
       embellishment: 'maj7',
     });
+    expect(parseChord('Am6')).toEqual({
+      baseNote: 'A',
+      text: 'Am6',
+      type: 'minor',
+      embellishment: '6',
+    });
+    expect(parseChord('A#m6')).toEqual({
+      baseNote: 'A#',
+      text: 'A#m6',
+      type: 'minor',
+      embellishment: '6',
+    });
   });
 
   it('parses add chords', () => {
@@ -138,8 +150,8 @@ describe('parseChordPro', () => {
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
       Object {
-        "hasChords": true,
-        "text": Array [
+        "content": "mixed",
+        "spans": Array [
           Object {
             "text": "This is",
             "type": "text",
@@ -168,8 +180,8 @@ describe('parseChordPro', () => {
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
       Object {
-        "hasChords": false,
-        "text": Array [
+        "content": "text",
+        "spans": Array [
           Object {
             "text": "This] is[A a simple song",
             "type": "text",
@@ -186,8 +198,8 @@ describe('parseChordPro', () => {
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
       Object {
-        "hasChords": false,
-        "text": Array [
+        "content": "text",
+        "spans": Array [
           Object {
             "text": "This is[] a simple song",
             "type": "text",
@@ -217,17 +229,12 @@ describe('parseChordPro', () => {
         },
         "lines": Array [
           Object {
-            "hasChords": false,
-            "text": Array [],
-            "type": "line",
-          },
-          Object {
             "text": "Verse 1:",
             "type": "section",
           },
           Object {
-            "hasChords": false,
-            "text": Array [
+            "content": "text",
+            "spans": Array [
               Object {
                 "text": "This is a simple song",
                 "type": "text",

@@ -7,10 +7,8 @@ import './RenderedSong.css';
 import { UnhandledCaseError } from 'src/utils';
 
 export function RenderedSong() {
-  const fileKey = Redux.useSelector($.getSongKey);
-  const { directives, lines } = Redux.useSelector($.getParsedFile);
-
-  // useEffect
+  const fileKey = Redux.useSelector($.getActiveFileSongKey);
+  const { directives, lines } = Redux.useSelector($.getActiveFileParsed);
 
   return (
     <div className="renderedSong">

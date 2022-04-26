@@ -58,14 +58,13 @@ export function parseChord(text: string): T.Chord | null {
     }
     chord.slash = ensureNote(result[1]);
   }
-
   const addResult = rest.match(/(add\d+)$/);
   if (addResult) {
     chord.add = addResult[1];
     rest = rest.slice(0, rest.length - chord.add.length);
   }
 
-  if (rest === 'm' || rest === 'M' || rest.match(/$([mM])\d/)) {
+  if (rest === 'm' || rest === 'M' || rest.match(/^([mM])\d/)) {
     chord.type = 'minor';
     rest = rest.slice(1);
   }

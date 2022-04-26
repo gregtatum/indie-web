@@ -14,6 +14,7 @@ export function ListFiles() {
 
   React.useEffect(() => {
     document.title = path;
+    dispatch(A.changeView('list-files'));
   }, []);
 
   React.useEffect(() => {
@@ -30,7 +31,7 @@ export function ListFiles() {
         parts.pop();
         parent = (
           <div className="listFilesFile">
-            <Router.Link to={`/view${parts.join()}`}>
+            <Router.Link to={`/folder${parts.join()}`}>
               <span className="listFilesIcon">↩</span>
               ..
             </Router.Link>
@@ -59,7 +60,7 @@ export function ListFiles() {
             if (path_lower) {
               if (isFolder) {
                 link = (
-                  <Router.Link to={`/view${path_lower}`}>
+                  <Router.Link to={`/folder${path_lower}`}>
                     <span className="listFilesIcon">{icon}</span>
                     {name}
                   </Router.Link>
