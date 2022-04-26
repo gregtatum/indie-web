@@ -25,6 +25,10 @@ export function getActiveFile(state: State): string {
   return state.app.activeFile;
 }
 
+export function getModifiedText(state: State): string {
+  return state.app.modifiedText;
+}
+
 function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,
@@ -77,7 +81,11 @@ export const getDropbox = dangerousSelector(
 export const getActiveFileTextOrNull = createSelector(
   getDownloadFileCache,
   getActiveFile,
-  (downloadFileCache, activeFile): string | null => {
+  getModifiedText,
+  (downloadFileCache, activeFile, modifiedText): string | null => {
+    if (modifiedText) {
+      return modifiedText;
+    }
     const downloadFileRequest = downloadFileCache.get(activeFile);
     if (!downloadFileRequest) {
       return null;

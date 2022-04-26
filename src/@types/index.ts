@@ -41,6 +41,7 @@ export type Action =
   | { type: 'clear-api-cache' }
   | { type: 'set-api-cache' }
   | { type: 'change-active-file'; value: string }
+  | { type: 'modify-active-file'; value: string }
   | { type: 'change-view'; value: App.View }
   | APICalls.ListFiles
   | APICalls.DownloadFile;

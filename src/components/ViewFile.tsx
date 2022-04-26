@@ -4,6 +4,7 @@ import * as $ from 'src/store/selectors';
 import * as A from 'src/store/actions';
 import * as Router from 'react-router-dom';
 import { RenderedSong } from './RenderedSong';
+import { TextArea } from './TextArea';
 
 import './ViewFile.css';
 import { ensureExists, maybeGetProperty } from 'src/utils';
@@ -14,12 +15,19 @@ export function ViewFile() {
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
   const request = Redux.useSelector($.getDownloadFileCache).get(path);
+  const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
 
   React.useEffect(() => {
-    document.title = path;
-    dispatch(A.changeView('view-file'));
     dispatch(A.changeActiveFile(path));
   }, []);
+
+  React.useEffect(() => {
+    if (songTitle) {
+      document.title = songTitle;
+    } else {
+      document.title = path;
+    }
+  }, [path, songTitle]);
 
   React.useEffect(() => {
     if (!request) {
@@ -42,7 +50,7 @@ export function ViewFile() {
       return (
         <Splitter
           className="viewFileSplit"
-          start={<TextArea text={text} />}
+          start={<TextArea path={path} text={text} />}
           end={<RenderedSong />}
           persistLocalStorage={'viewFileSplitterOffset'}
         />
@@ -180,15 +188,5 @@ function Splitter(props: SplitterProps) {
         {end}
       </div>
     </div>
-  );
-}
-
-function TextArea(props: { text: string }) {
-  return (
-    <textarea
-      spellCheck="false"
-      className="viewFileTextArea"
-      defaultValue={props.text}
-    ></textarea>
   );
 }

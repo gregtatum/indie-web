@@ -126,6 +126,10 @@ export function changeActiveFile(value: string): Action {
   return { type: 'change-active-file', value };
 }
 
+export function modifyActiveFile(value: string): Action {
+  return { type: 'modify-active-file', value };
+}
+
 export function changeView(value: T.View): Action {
   return { type: 'change-view', value };
 }

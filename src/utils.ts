@@ -62,3 +62,33 @@ export function maybeGetProperty(value: any, property: string): string | null {
   }
   return null;
 }
+
+export function throttle1<Arg1>(
+  callback: (arg1: Arg1) => void,
+  flushRef: React.MutableRefObject<null | (() => void)>,
+  interval: number,
+): (arg1: Arg1) => void {
+  let timeout = false;
+  let wasFlushed = false;
+  let arg1Cache: Arg1;
+  return (arg1: Arg1) => {
+    arg1Cache = arg1;
+    if (timeout || wasFlushed) {
+      return;
+    }
+    timeout = true;
+
+    const timeoutId = setTimeout(() => {
+      callback(arg1Cache);
+      flushRef.current = null;
+      timeout = false;
+    }, interval);
+
+    flushRef.current = () => {
+      callback(arg1Cache);
+      clearTimeout(timeoutId);
+      flushRef.current = null;
+      wasFlushed = true;
+    };
+  };
+}

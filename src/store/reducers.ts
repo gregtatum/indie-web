@@ -90,8 +90,19 @@ function activeFile(state = '', action: T.Action): string {
   }
 }
 
+function modifiedText(state = '', action: T.Action): string {
+  switch (action.type) {
+    case 'modify-active-file':
+      return action.value;
+    default:
+      return state;
+  }
+}
+
 function view(state: T.View = 'link-dropbox', action: T.Action): T.View {
   switch (action.type) {
+    case 'change-active-file':
+      return 'view-file';
     case 'change-view':
       return action.value;
     default:
@@ -105,6 +116,7 @@ export const app = combineReducers({
   downloadFileCache,
   activeFile,
   view,
+  modifiedText,
 });
 export type AppState = ReturnType<typeof app>;
 

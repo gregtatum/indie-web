@@ -7,6 +7,7 @@
   resize: none;
   font-family: 'Roboto Mono', monospace;
   font-size: 13px;
+  background: #f3efed;
 }
 
 .viewFileSplit {
@@ -68,4 +69,17 @@
 
 .viewFileMessage {
   animation: fadeindelay 1500ms;
+}
+
+.headerActiveFileModified {
+  background-color: red;
+  border-radius: 3px;
+  padding: 4px;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  position: relative;
+  top: -3px;
+  height: 9px;
+  animation: fadein 300ms;
 }

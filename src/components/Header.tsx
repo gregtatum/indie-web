@@ -35,6 +35,8 @@ export function Header() {
 function ActiveFile() {
   const path = Redux.useSelector($.getActiveFile);
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
+  const modifiedText = Redux.useSelector($.getModifiedText);
+
   const breadcrumbs = [];
   let pathGrow = '';
   const parts = path.split('/');
@@ -64,6 +66,9 @@ function ActiveFile() {
       {breadcrumbs}
       <span>»</span>
       <span title={fileName}>{songTitle ?? fileName}</span>
+      {modifiedText ? (
+        <span className="headerActiveFileModified">modified</span>
+      ) : null}
     </div>
   );
 }
