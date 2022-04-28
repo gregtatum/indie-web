@@ -1,12 +1,67 @@
 import * as React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import * as $ from 'src/store/selectors';
 import * as A from 'src/store/actions';
+import * as Router from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 
 import './LinkDropbox.css';
 import { ensureExists } from 'src/utils';
+import { UnhandledCaseError } from '../utils';
+
+const awsAuthUrl = ensureExists(process.env.AUTH_URL, 'process.env.AUTH_URL');
+const dropboxClientId = ensureExists(
+  process.env.DROPBOX_CLIENT_ID,
+  'process.env.DROPBOX_CLIENT_ID',
+);
+
+function getRedirectUri() {
+  const uri = window.location.origin;
+  return uri + '/login';
+}
+
+console.log(getRedirectUri());
+
+const url = `https://www.dropbox.com/oauth2/authorize?client_id=${dropboxClientId}&redirect_uri=${getRedirectUri()}&response_type=code`;
+
+type AuthState =
+  | 'no-auth'
+  | 'auth-requested'
+  | 'auth-failed'
+  | 'auth-succeeded';
 
 export function LinkDropbox(props: { children: any }) {
+  const [authState, setAuthState] = React.useState<AuthState>('no-auth');
+  React.useEffect(() => {
+    if (window.location.pathname !== '/login') {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    setAuthState('auth-requested');
+    window
+      .fetch(awsAuthUrl)
+      .then(async (response) => {
+        console.log(`!!! response`, await response.json());
+      })
+      .then(null, (error) => {
+        console.error(error);
+        setAuthState('auth-failed');
+      });
+    console.log(`!!! params.get("code");`, params.get('code'));
+  }, []);
+
+  switch (authState) {
+    case 'no-auth':
+      break;
+    case 'auth-requested':
+      break;
+    case 'auth-failed':
+      break;
+    case 'auth-succeeded':
+      break;
+    default:
+      throw new UnhandledCaseError(authState, 'AuthState');
+  }
+
   const accessToken = useSelector($.getDropboxAccessToken);
   const dispatch = useDispatch();
   if (!accessToken) {
@@ -31,6 +86,11 @@ export function LinkDropbox(props: { children: any }) {
             </a>
             .
           </p>
+        </div>
+        <div>
+          <a href={url} className="linkDropboxConnect">
+            Connect Dropbox
+          </a>
         </div>
         <form
           className="linkDropboxForm"
@@ -71,4 +131,9 @@ export function UnlinkDropbox() {
       Unlink Dropbox
     </button>
   );
+}
+
+export function HandleAuth() {
+  const params = Router.useParams();
+  return <div>{params.code}</div>;
 }

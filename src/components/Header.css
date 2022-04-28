@@ -1,7 +1,10 @@
 .header {
-  border-bottom: 1px solid #ddd;
+  position: relative; /* create a stacking context */
+  z-index: 1; /* position above the appViewContents */
   padding: 9px;
   display: flex;
+  border-bottom: 2px solid #ccc;
+  box-shadow: 0 0 7px #00000045;
 }
 
 .headerStart {

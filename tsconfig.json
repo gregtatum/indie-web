@@ -6,6 +6,8 @@
     "strict": true,
     "baseUrl": "./",
     "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
     "lib": ["esnext", "dom"],
     // paths lets you declare how TypeScript should resolve an import in
     // your require/imports.

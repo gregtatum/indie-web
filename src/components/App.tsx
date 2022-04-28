@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { LinkDropbox } from './LinkDropbox';
+import { LinkDropbox, HandleAuth } from './LinkDropbox';
 import { Header } from './Header';
 
 import './App.css';

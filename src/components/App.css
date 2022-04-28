@@ -30,6 +30,7 @@ body, .appRoot {
 }
 
 .appViewContents {
+  position: relative; /* create a stacking context */
   flex: 1;
   overflow-y: auto;
 }
