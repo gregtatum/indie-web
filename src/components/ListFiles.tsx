@@ -13,7 +13,15 @@ export function ListFiles() {
   const request = Redux.useSelector($.getListFilesCache).get(path);
 
   React.useEffect(() => {
-    document.title = path;
+    if (path === '/') {
+      document.title = '🎵 Chords';
+    } else {
+      if (path.startsWith('/')) {
+        document.title = '📁 ' + path.slice(1);
+      } else {
+        document.title = '📁 ' + path;
+      }
+    }
     dispatch(A.changeView('list-files'));
   }, []);
 
@@ -24,6 +32,7 @@ export function ListFiles() {
   }, [request]);
 
   switch (request?.type) {
+    // switch ('list-files-requested') {
     case 'list-files-received': {
       let parent = null;
       if (path !== '/') {
@@ -39,54 +48,70 @@ export function ListFiles() {
         );
       }
       return (
-        <div className="listFiles">
-          {parent}
-          {request.value.map((entry) => {
-            const { name, id, path_lower } = entry;
-            const isFolder = entry['.tag'] === 'folder';
-            const isChordPro = !isFolder && name.endsWith('.chopro');
-            let icon = '📄';
-            if (isFolder) {
-              icon = '📁';
-            } else if (isChordPro) {
-              icon = '🎵';
-            }
-            let link = (
-              <div className="listFilesFileEmpty">
-                <span className="listFilesIcon">{icon}</span>
-                {name}
-              </div>
-            );
-            if (path_lower) {
+        <>
+          <div className="listFiles">
+            {parent}
+            {request.value.map((entry) => {
+              const { name, id, path_lower } = entry;
+              const isFolder = entry['.tag'] === 'folder';
+              const isChordPro = !isFolder && name.endsWith('.chopro');
+              let icon = '📄';
               if (isFolder) {
-                link = (
-                  <Router.Link to={`/folder${path_lower}`}>
-                    <span className="listFilesIcon">{icon}</span>
-                    {name}
-                  </Router.Link>
-                );
+                icon = '📁';
               } else if (isChordPro) {
-                link = (
-                  <Router.Link to={`/file${path_lower}`}>
-                    <span className="listFilesIcon">{icon}</span>
-                    {name}
-                  </Router.Link>
-                );
+                icon = '🎵';
               }
-            }
+              let link = (
+                <div className="listFilesFileEmpty">
+                  <span className="listFilesIcon">{icon}</span>
+                  {name}
+                </div>
+              );
+              if (path_lower) {
+                if (isFolder) {
+                  link = (
+                    <Router.Link to={`/folder${path_lower}`}>
+                      <span className="listFilesIcon">{icon}</span>
+                      {name}
+                    </Router.Link>
+                  );
+                } else if (isChordPro) {
+                  link = (
+                    <Router.Link to={`/file${path_lower}`}>
+                      <span className="listFilesIcon">{icon}</span>
+                      {name}
+                    </Router.Link>
+                  );
+                }
+              }
 
-            return (
-              <div className="listFilesFile" key={id}>
-                {link}
-              </div>
-            );
-          })}
-        </div>
+              return (
+                <div className="listFilesFile" key={id}>
+                  {link}
+                </div>
+              );
+            })}
+          </div>
+        </>
       );
     }
     case 'list-files-failed':
-      return <div className="listFilesFailed"></div>;
+      return (
+        <div className="appViewError">
+          <p>Unable to list the Dropbox files.</p>
+          {typeof request.error === 'string' ? <p>{request.error}</p> : null}
+        </div>
+      );
     case 'list-files-requested':
+      return (
+        <div className="listFiles">
+          <div className="listFilesFileBlock"></div>
+          <div className="listFilesFileBlock"></div>
+          <div className="listFilesFileBlock"></div>
+          <div className="listFilesFileBlock"></div>
+          <div className="listFilesFileBlock"></div>
+        </div>
+      );
     default:
       return <div className="listFilesRequested"></div>;
   }

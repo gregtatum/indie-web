@@ -4,6 +4,7 @@ import * as Redux from 'react-redux';
 import { throttle1 } from 'src/utils';
 
 export function TextArea(props: { path: string; text: string }) {
+  const [isFocused, setFocus] = React.useState(false);
   const dispatch = Redux.useDispatch();
   function onChange(newText: string) {
     dispatch(A.modifyActiveFile(newText));
@@ -29,6 +30,8 @@ export function TextArea(props: { path: string; text: string }) {
       className="viewFileTextArea"
       defaultValue={props.text}
       onChange={(event) => throttledOnChange(event.target.value)}
+      onFocus={() => setFocus(true)}
+      onBlur={() => setFocus(false)}
     ></textarea>
   );
 }

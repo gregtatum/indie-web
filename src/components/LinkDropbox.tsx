@@ -8,7 +8,7 @@ import './LinkDropbox.css';
 import { ensureExists } from 'src/utils';
 import { UnhandledCaseError } from '../utils';
 
-const awsAuthUrl = ensureExists(process.env.AUTH_URL, 'process.env.AUTH_URL');
+const lambaAuthUrl = ensureExists(process.env.AUTH_URL, 'process.env.AUTH_URL');
 const dropboxClientId = ensureExists(
   process.env.DROPBOX_CLIENT_ID,
   'process.env.DROPBOX_CLIENT_ID',
@@ -23,96 +23,104 @@ console.log(getRedirectUri());
 
 const url = `https://www.dropbox.com/oauth2/authorize?client_id=${dropboxClientId}&redirect_uri=${getRedirectUri()}&response_type=code`;
 
-type AuthState =
-  | 'no-auth'
-  | 'auth-requested'
-  | 'auth-failed'
-  | 'auth-succeeded';
+type AuthState = 'no-auth' | 'await-auth' | 'auth-failed';
 
 export function LinkDropbox(props: { children: any }) {
-  const [authState, setAuthState] = React.useState<AuthState>('no-auth');
+  const isLogin = window.location.pathname === '/login';
+  const [authState, setAuthState] = React.useState<AuthState>(
+    isLogin ? 'await-auth' : 'no-auth',
+  );
+  const dispatch = useDispatch();
+  const navigate = Router.useNavigate();
+
   React.useEffect(() => {
-    if (window.location.pathname !== '/login') {
+    if (!isLogin) {
       return;
     }
     const params = new URLSearchParams(window.location.search);
-    setAuthState('auth-requested');
+    const code = params.get('code');
+    if (!code) {
+      setAuthState('auth-failed');
+      return;
+    }
+
+    const paramsOut = new URLSearchParams();
+    paramsOut.set('code', code);
+
     window
-      .fetch(awsAuthUrl)
+      .fetch(lambaAuthUrl + '?' + paramsOut.toString())
       .then(async (response) => {
-        console.log(`!!! response`, await response.json());
+        if (response.status === 200) {
+          const text = await response.text();
+          try {
+            const json = JSON.parse(text);
+            // {
+            //   "access_token": "...",
+            //   "token_type": "bearer",
+            //   "expires_in": 14400,
+            //   "scope": "account_info.read ...",
+            //   "uid": "12345",
+            //   "account_id": "dbid:..."
+            // }
+            const authToken = json?.access_token;
+            if (authToken) {
+              dispatch(A.setDropboxAccessToken(authToken));
+              setAuthState('no-auth');
+              navigate('/', { replace: true });
+            } else {
+              console.error('No auth token was received', json);
+              setAuthState('auth-failed');
+            }
+          } catch (_err) {
+            console.error('Could not parse lambda response', text);
+            setAuthState('auth-failed');
+          }
+        } else {
+          console.error('The lambda returned an error.', await response.text());
+          setAuthState('auth-failed');
+        }
       })
       .then(null, (error) => {
         console.error(error);
         setAuthState('auth-failed');
       });
-    console.log(`!!! params.get("code");`, params.get('code'));
-  }, []);
-
-  switch (authState) {
-    case 'no-auth':
-      break;
-    case 'auth-requested':
-      break;
-    case 'auth-failed':
-      break;
-    case 'auth-succeeded':
-      break;
-    default:
-      throw new UnhandledCaseError(authState, 'AuthState');
-  }
+  }, [isLogin]);
 
   const accessToken = useSelector($.getDropboxAccessToken);
-  const dispatch = useDispatch();
   if (!accessToken) {
-    return (
-      <div className="linkDropbox">
-        <div className="linkDropboxDescription">
-          <h1>View ChordPro Files</h1>
-          <p>
-            This app works by hooking into a Dropbox folder. Create a dropbox
-            app for the folder you want to give this app access to.
-          </p>
-          <p>
-            <a
-              href="https://dropbox.tech/developers/generate-an-access-token-for-your-own-account"
-              target="_new"
-            >
-              Follow the directions on this blog post
-            </a>{' '}
-            to get an access token. Or directly generate on in the{' '}
-            <a href="https://www.dropbox.com/developers/apps" target="_new">
-              App Console
+    switch (authState) {
+      case 'no-auth':
+        return (
+          <div className="linkDropbox">
+            <div className="linkDropboxDescription">
+              <h1>View ChordPro Files</h1>
+              <p>
+                View ChordPro files in a Dropbox folder. This app will only be
+                given acces to the <code>Dropbox/Apps/Chord Pro</code> folder in
+                Dropbox once access is given.
+              </p>
+            </div>
+            <div>
+              <a href={url} className="linkDropboxConnect">
+                Connect Dropbox
+              </a>
+            </div>
+          </div>
+        );
+      case 'await-auth':
+        return <div className="appViewMessage">Logging you in...</div>;
+      case 'auth-failed':
+        return (
+          <div className="appViewMessage">
+            <p>The Dropbox login failed. </p>
+            <a href={url} className="linkDropboxConnect">
+              Try Again…
             </a>
-            .
-          </p>
-        </div>
-        <div>
-          <a href={url} className="linkDropboxConnect">
-            Connect Dropbox
-          </a>
-        </div>
-        <form
-          className="linkDropboxForm"
-          onSubmit={(event) => {
-            const { value } = ensureExists(
-              (event.target as HTMLFormElement).querySelector('input'),
-              'input element',
-            );
-            if (value) {
-              dispatch(A.setDropboxAccessToken(value));
-            }
-          }}
-        >
-          <input
-            type="text"
-            className="linkDropboxInput"
-            placeholder="Insert access token"
-          />
-          <input type="submit" className="linkDropboxSubmit" value="Add" />
-        </form>
-      </div>
-    );
+          </div>
+        );
+      default:
+        throw new UnhandledCaseError(authState, 'AuthState');
+    }
   }
   return props.children;
 }

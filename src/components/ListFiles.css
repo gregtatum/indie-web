@@ -25,3 +25,24 @@
 .listFilesFile a:hover {
   background: #eee;
 }
+
+.listFilesFileBlock {
+  padding: 16px;
+  position: relative;
+  border-bottom: 1px solid #ddd;
+}
+
+.listFilesFileBlock::after {
+  content: "";
+  height: 12px;
+  background-color: #eee;
+  position: relative;
+  display: block;
+  width: 67%;
+}
+
+.listFilesFileBlock:nth-child(1)::after { width: 70%; }
+.listFilesFileBlock:nth-child(2)::after { width: 30%; }
+.listFilesFileBlock:nth-child(3)::after { width: 60%; }
+.listFilesFileBlock:nth-child(4)::after { width: 55%; }
+.listFilesFileBlock:nth-child(5)::after { width: 24%; }

@@ -53,6 +53,9 @@ exports.handler = async (event) => {
     }
   };
 
+  /**
+   * @param {{[key: string]: string}} args
+   */
   function createParams(args) {
     const u = new URLSearchParams();
     for (const [key, value] of Object.entries(args)) {
@@ -61,9 +64,9 @@ exports.handler = async (event) => {
     return u.toString()
   }
 
-  let response;
+  let body;
   try {
-    const response = await new Promise((resolve, reject) => {
+    body = await new Promise((resolve, reject) => {
       const req = https.request(options, (res) => {
         console.log(`Dropbox response: ${res.statusCode}`);
 
@@ -93,8 +96,16 @@ exports.handler = async (event) => {
     }
   }
 
+  // {
+  //   "access_token": "...",
+  //   "token_type": "bearer",
+  //   "expires_in": 14400,
+  //   "scope": "account_info.read ...",
+  //   "uid": "12345",
+  //   "account_id": "dbid:..."
+  // }
   return {
       statusCode: 200,
-      body: JSON.stringify(event.queryStringParameters),
+      body,
   };
 };

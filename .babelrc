@@ -1,16 +1,20 @@
 {
-  "presets": [
-    "@babel/preset-env",
-    "@babel/preset-typescript",
-    "@babel/preset-react"
-  ],
-  "plugins": [
-    ["module-resolver", {
-      "root": ["."],
-      "alias": {
-        "src": "./src",
-        "Cargo.toml": "./Cargo.toml"
-      }
-    }]
-  ]
+  "env": {
+    "test": {
+      "presets": [
+        "@babel/preset-env",
+        "@babel/preset-typescript",
+        "@babel/preset-react"
+      ],
+      "plugins": [
+        ["module-resolver", {
+          "root": ["."],
+          "alias": {
+            "src": "./src",
+            "Cargo.toml": "./Cargo.toml"
+          }
+        }]
+      ]
+    }
+  }
 }
