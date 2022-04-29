@@ -1,7 +1,6 @@
 import * as React from 'react';
-import * as $ from 'src/store/selectors';
-import * as A from 'src/store/actions';
 import * as Redux from 'react-redux';
+import { A, $ } from 'src';
 
 import './Messages.css';
 

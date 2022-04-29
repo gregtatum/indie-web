@@ -1,7 +1,6 @@
 import { Action, Thunk } from 'src/@types';
 import * as React from 'react';
-import * as $ from 'src/store/selectors';
-import * as T from 'src/@types';
+import { $, T } from 'src';
 import type { files } from 'dropbox';
 import { getGeneration } from 'src/utils';
 import NoSleep from 'nosleep.js';

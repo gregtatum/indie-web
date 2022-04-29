@@ -113,9 +113,13 @@ function view(state: T.View = 'link-dropbox', action: T.Action): T.View {
   }
 }
 
-function hideEditor(state: boolean = false, action: T.Action): boolean {
+function hideEditor(
+  state: boolean = localStorage.getItem('appHideEditor') === 'true',
+  action: T.Action,
+): boolean {
   switch (action.type) {
     case 'hide-editor':
+      localStorage.setItem('appHideEditor', action.flag.toString());
       return action.flag;
     default:
       return state;

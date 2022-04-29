@@ -21,6 +21,14 @@ body, .appRoot {
   font-family: sans-serif;
 }
 
+body, html {
+  /* Prevent iOS from doing bad scrolling behavior */
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 code {
   padding: 0 4px;
   background-color: #eee;

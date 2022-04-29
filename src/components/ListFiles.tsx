@@ -1,7 +1,6 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
-import * as $ from 'src/store/selectors';
-import * as A from 'src/store/actions';
+import { A, $ } from 'src';
 import * as Router from 'react-router-dom';
 
 import './ListFiles.css';
@@ -23,6 +22,7 @@ export function ListFiles() {
       }
     }
     dispatch(A.changeView('list-files'));
+    dispatch(A.keepAwake(false));
   }, []);
 
   React.useEffect(() => {

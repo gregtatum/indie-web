@@ -1,14 +1,20 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
-import * as $ from 'src/store/selectors';
-import * as T from 'src/@types';
+import { A, $, T } from 'src';
 
 import './RenderedSong.css';
 import { UnhandledCaseError } from 'src/utils';
 
 export function RenderedSong() {
   const fileKey = Redux.useSelector($.getActiveFileSongKey);
+  const hideEditor = Redux.useSelector($.getHideEditor);
   const { directives, lines } = Redux.useSelector($.getActiveFileParsed);
+  const dispatch = Redux.useDispatch();
+  React.useEffect(() => {
+    document.addEventListener('touchstart', (event) => {
+      console.log({ event, target: event.target });
+    });
+  }, []);
 
   return (
     <div className="renderedSong">
@@ -20,6 +26,15 @@ export function RenderedSong() {
         <div className="renderedSongHeaderDetails">
           {fileKey ? (
             <div className="renderedSongHeaderRow">Key: {fileKey}</div>
+          ) : null}
+          {hideEditor ? (
+            <button
+              className="renderedSongEdit"
+              type="button"
+              onClick={() => dispatch(A.hideEditor(false))}
+            >
+              Edit
+            </button>
           ) : null}
         </div>
       </div>
@@ -63,6 +78,7 @@ export function RenderedSong() {
             return null;
         }
       })}
+      <div className="renderedSongEndPadding" />
     </div>
   );
 }

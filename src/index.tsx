@@ -3,10 +3,15 @@ import * as ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
 import { createStore } from 'src/store/create-store';
 import * as T from 'src/@types';
-import * as $ from 'src/store/selectors';
-import * as A from 'src/store/actions';
 import { App } from 'src/components/App';
 import { mockGoogleAnalytics } from 'src/utils';
+
+import * as A from 'src/store/actions';
+import * as $ from 'src/store/selectors';
+
+export * as A from 'src/store/actions';
+export * as $ from 'src/store/selectors';
+export * as T from 'src/@types';
 
 init();
 

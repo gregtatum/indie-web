@@ -1,7 +1,6 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
-import * as $ from 'src/store/selectors';
-import * as A from 'src/store/actions';
+import { A, $ } from 'src';
 import * as Router from 'react-router-dom';
 import { RenderedSong } from './RenderedSong';
 import { TextArea } from './TextArea';
@@ -95,6 +94,7 @@ function Splitter(props: SplitterProps) {
   const { start, end, className, persistLocalStorage } = props;
   const container = React.useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = React.useState(false);
+  const touchId = React.useRef<null | number>(null);
 
   let initialOffset = 0;
   if (persistLocalStorage) {
@@ -156,25 +156,72 @@ function Splitter(props: SplitterProps) {
     setIsDragging(true);
 
     function onMouseUp() {
-      setIsDragging(false);
-      window.document.body.style.cursor = '';
+      handleUp();
       window.removeEventListener('mouseup', onMouseUp);
       window.removeEventListener('mousemove', onMouseMove);
     }
 
     function onMouseMove(event: MouseEvent) {
       event.preventDefault();
-      const { current } = container;
-      if (!current) {
-        return;
-      }
-      const rect = current.getBoundingClientRect();
-      const offX = rect.width / 2 + rect.x - event.pageX;
-      setOffsetX(keepOffsetInBounds(rect, offX));
+      handleMove(event.pageX);
     }
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('mousemove', onMouseMove);
   };
+
+  const onTouchStart: React.TouchEventHandler<HTMLDivElement> = (event) => {
+    if (touchId.current !== null) {
+      return;
+    }
+    event.preventDefault();
+    setIsDragging(true);
+    touchId.current = event.changedTouches[0].identifier;
+
+    function onTouchEnd() {
+      touchId.current = null;
+      handleUp();
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchmove', onTouchMove);
+      document.body.removeEventListener('touchmove', preventDocScroll);
+    }
+
+    function onTouchMove(event: TouchEvent) {
+      let touch;
+      for (let i = 0; i < event.touches.length; i++) {
+        if (event.touches[i].identifier === touchId.current) {
+          touch = event.touches[i];
+        }
+      }
+      if (!touch) {
+        console.error('Touch event:', { event, identifier: touchId.current });
+        throw new Error('Expected to find a touch from the identifier');
+      }
+      event.preventDefault();
+      handleMove(touch.pageX);
+    }
+    function preventDocScroll(event: TouchEvent) {
+      event.preventDefault();
+    }
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchmove', onTouchMove);
+    document.body.addEventListener('touchmove', preventDocScroll, {
+      passive: false,
+    });
+  };
+
+  function handleMove(pageX: number) {
+    const { current } = container;
+    if (!current) {
+      return;
+    }
+    const rect = current.getBoundingClientRect();
+    const offX = rect.width / 2 + rect.x - pageX;
+    setOffsetX(keepOffsetInBounds(rect, offX));
+  }
+  function handleUp() {
+    setIsDragging(false);
+    window.document.body.style.cursor = '';
+  }
 
   const startStyle = { width: `calc(50% - ${offsetX}px)` };
   const endStyle = { width: `calc(50% + ${offsetX}px)` };
@@ -193,6 +240,7 @@ function Splitter(props: SplitterProps) {
         className={className + 'Middle ' + (isDragging ? 'dragging' : '')}
         style={middleStyle}
         onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
       >
         <div className={className + 'MiddleVisible'} />
       </div>

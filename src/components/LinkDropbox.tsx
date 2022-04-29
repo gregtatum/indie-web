@@ -1,6 +1,5 @@
 import * as React from 'react';
-import * as $ from 'src/store/selectors';
-import * as A from 'src/store/actions';
+import { A, $ } from 'src';
 import * as Router from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -96,7 +95,7 @@ export function LinkDropbox(props: { children: any }) {
               <h1>View ChordPro Files</h1>
               <p>
                 View ChordPro files in a Dropbox folder. This app will only be
-                given acces to the <code>Dropbox/Apps/Chord Pro</code> folder in
+                given acces to the <code>Dropbox/Apps/Chords</code> folder in
                 Dropbox once access is given.
               </p>
             </div>

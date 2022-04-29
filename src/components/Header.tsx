@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
-import * as $ from 'src/store/selectors';
+import { $ } from 'src';
 import * as Router from 'react-router-dom';
 import { UnlinkDropbox } from './LinkDropbox';
 

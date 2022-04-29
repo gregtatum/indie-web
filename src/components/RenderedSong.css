@@ -1,13 +1,19 @@
 .renderedSong {
   padding: 50px;
-  max-height: calc(100% - 100px);
+  /**
+   * The end padding was being applied inconsistantly between browsers
+   * See .renderedSongEndPadding
+   */
+  padding-bottom: 0;
+  max-height: calc(100% - 50px);
   font-size: 14px;
   font-family: 'Roboto Mono', monospace;
 }
 
 .viewFileSplit .renderedSong {
   box-shadow: -20px 0 20px #00000012;
-  overflow-y: scroll;
+  overflow: scroll;
+  -webkit-overflow-scrolling: touch;
 }
 
 .renderedSongHeader {
@@ -50,8 +56,9 @@
 }
 
 .renderedSongLine-chords .renderedSongLineChord {
-  margin-inline-end: 5px;
-  min-width: 35px;
+  /* Maybe restore this, spacing was weird. */
+  /* margin-inline-end: 5px;
+  min-width: 35px; */
   display: inline-block;
 }
 
@@ -70,4 +77,18 @@
 .renderedSongHeaderDetails {
   margin-left: 15px;
   padding-top: 7px;
+  text-align: right;
+}
+
+.renderedSongEndPadding {
+  height: 50px;
+}
+
+.renderedSongEdit {
+  background-color: #eee;
+  border: 1px solid #888;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  margin: 10px 0;
 }
