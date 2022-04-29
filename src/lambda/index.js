@@ -5,6 +5,7 @@
  *   queryStringParameters?: { code?: string; };
  *   mockedDropboxKey?: string;
  *   mockedDropboxSecret?: string;
+ *   mockedDropboxRedirectUri?: string,
  * }} event
  */
 exports.handler = async (event) => {
@@ -13,11 +14,15 @@ exports.handler = async (event) => {
 
   const key = process.env.DROPBOX_KEY || event.mockedDropboxKey;
   const secret = process.env.DROPBOX_SECRET || event.mockedDropboxSecret;
+  const redirect_uri = process.env.REDIRECT_URI || event.mockedDropboxRedirectUri;
   if (!key) {
     throw new Error("Dropbox key required.");
   }
   if (!secret) {
     throw new Error("Dropbox secret required");
+  }
+  if (!redirect_uri) {
+    throw new Error("Dropbox redirect URI required");
   }
   const authorization = `Basic ` + Buffer.from(`${key}:${secret}`).toString(`base64`);
   const code = event.queryStringParameters?.code;
@@ -38,7 +43,7 @@ exports.handler = async (event) => {
   const data = createParams({
     code,
     grant_type: "authorization_code",
-    redirect_uri: "http://localhost:1234/login"
+    redirect_uri
   });
 
   const options = {
