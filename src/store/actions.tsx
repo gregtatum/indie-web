@@ -4,6 +4,7 @@ import * as $ from 'src/store/selectors';
 import * as T from 'src/@types';
 import type { files } from 'dropbox';
 import { getGeneration } from 'src/utils';
+import NoSleep from 'nosleep.js';
 
 const DEFAULT_MESSAGE_DELAY = 3000;
 
@@ -259,5 +260,23 @@ export function hideEditor(flag: boolean): Action {
   return {
     type: 'hide-editor',
     flag,
+  };
+}
+
+let _noSleep: NoSleep | undefined;
+export function keepAwake(flag: boolean): Thunk {
+  return (dispatch) => {
+    if (!_noSleep) {
+      _noSleep = new NoSleep();
+    }
+    if (flag === _noSleep.isEnabled) {
+      return;
+    }
+    if (flag) {
+      _noSleep.enable();
+    } else {
+      _noSleep.disable();
+    }
+    dispatch({ type: 'keep-awake', flag });
   };
 }

@@ -37,6 +37,10 @@ export function getHideEditor(state: State): boolean {
   return state.app.hideEditor;
 }
 
+export function getKeepAwake(state: State): boolean {
+  return state.app.keepAwake;
+}
+
 function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,

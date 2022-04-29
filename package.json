@@ -75,6 +75,7 @@
   },
   "dependencies": {
     "dropbox": "^10.28.0",
+    "nosleep.js": "^0.12.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-redux": "^7.2.6",

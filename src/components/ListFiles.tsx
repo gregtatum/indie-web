@@ -31,6 +31,10 @@ export function ListFiles() {
     }
   }, [request]);
 
+  function clickFile() {
+    dispatch(A.keepAwake(true));
+  }
+
   switch (request?.type) {
     // switch ('list-files-requested') {
     case 'list-files-received': {
@@ -77,7 +81,7 @@ export function ListFiles() {
                   );
                 } else if (isChordPro) {
                   link = (
-                    <Router.Link to={`/file${path_lower}`}>
+                    <Router.Link to={`/file${path_lower}`} onClick={clickFile}>
                       <span className="listFilesIcon">{icon}</span>
                       {name}
                     </Router.Link>
