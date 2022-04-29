@@ -104,7 +104,7 @@ export function ListFiles() {
       );
     case 'list-files-requested':
       return (
-        <div className="listFiles">
+        <div className="listFilesBlocks">
           <div className="listFilesFileBlock"></div>
           <div className="listFilesFileBlock"></div>
           <div className="listFilesFileBlock"></div>

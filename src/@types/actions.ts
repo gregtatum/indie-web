@@ -10,6 +10,7 @@ export type Action =
   | { type: 'change-view'; value: App.View }
   | { type: 'dismiss-message'; generation: number }
   | { type: 'dismiss-all-messages' }
+  | { type: 'hide-editor'; flag: boolean }
   | {
       type: 'add-message';
       message: React.ReactNode;

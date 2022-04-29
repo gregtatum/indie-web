@@ -254,3 +254,10 @@ export function dismissAllMessages(): Thunk {
     }
   };
 }
+
+export function hideEditor(flag: boolean): Action {
+  return {
+    type: 'hide-editor',
+    flag,
+  };
+}

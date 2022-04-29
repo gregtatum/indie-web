@@ -4,6 +4,8 @@ import * as Redux from 'react-redux';
 import * as T from 'src/@types';
 import { throttle1 } from 'src/utils';
 
+import './TextArea.css';
+
 export function TextArea(props: {
   path: string;
   text: string;
@@ -29,22 +31,30 @@ export function TextArea(props: {
   }, []);
 
   return (
-    <textarea
-      spellCheck="false"
-      className="viewFileTextArea"
-      defaultValue={props.text}
-      onChange={(event) => throttledOnChange(event.target.value)}
-      onKeyDown={async (event) => {
-        const { metaKey, ctrlKey, code, target } = event;
-        if ((metaKey || ctrlKey) && code === 'KeyS') {
-          event.preventDefault();
-          const text = (target as HTMLTextAreaElement).value;
-          await dispatch(A.saveFile(props.path, text, props.originalRequest));
-          if (text === (target as HTMLTextAreaElement).value) {
-            // Invalidate the modified state.
+    <div className="textArea">
+      <button
+        className="textAreaDismiss"
+        type="button"
+        aria-label="Hide Editor"
+        onClick={() => dispatch(A.hideEditor(true))}
+      ></button>
+      <textarea
+        spellCheck="false"
+        className="textAreaTextArea"
+        defaultValue={props.text}
+        onChange={(event) => throttledOnChange(event.target.value)}
+        onKeyDown={async (event) => {
+          const { metaKey, ctrlKey, code, target } = event;
+          if ((metaKey || ctrlKey) && code === 'KeyS') {
+            event.preventDefault();
+            const text = (target as HTMLTextAreaElement).value;
+            await dispatch(A.saveFile(props.path, text, props.originalRequest));
+            if (text === (target as HTMLTextAreaElement).value) {
+              // Invalidate the modified state.
+            }
           }
-        }
-      }}
-    ></textarea>
+        }}
+      ></textarea>
+    </div>
   );
 }

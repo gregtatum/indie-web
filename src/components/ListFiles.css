@@ -1,7 +1,3 @@
-.listFiles {
-  animation: fadein 150ms;
-}
-
 .listFilesIcon {
   margin-inline-end: 5px;
   width: 20px;
@@ -26,6 +22,10 @@
   background: #eee;
 }
 
+.listFilesBlocks {
+  animation: fadein 500ms
+}
+
 .listFilesFileBlock {
   padding: 16px;
   position: relative;
@@ -40,6 +40,12 @@
   display: block;
   width: 67%;
 }
+
+.listFilesFileBlock:nth-child(1) { opacity: 100%; }
+.listFilesFileBlock:nth-child(2) { opacity: 90%; }
+.listFilesFileBlock:nth-child(3) { opacity: 80%; }
+.listFilesFileBlock:nth-child(4) { opacity: 60%; }
+.listFilesFileBlock:nth-child(5) { opacity: 40%; }
 
 .listFilesFileBlock:nth-child(1)::after { width: 70%; }
 .listFilesFileBlock:nth-child(2)::after { width: 30%; }

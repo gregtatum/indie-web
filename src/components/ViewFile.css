@@ -1,21 +1,15 @@
-.viewFileTextArea {
-  width: calc(100% - 20px);
-  height: calc(100% - 20px);
-  border: 0;
-  outline: 0;
-  padding: 10px;
-  resize: none;
-  font-family: 'Roboto Mono', monospace;
-  font-size: 13px;
-  background: #f3efed;
-}
-
-.viewFileSplit {
+.viewFileSplit, .viewFileSolo {
   height: 100%;
   width: 100%;
   position: relative;
   overflow: hidden;
   animation: fadein 200ms;
+}
+
+.viewFileSolo {
+  display: flex;
+  justify-content: center;
+  overflow-y: scroll;
 }
 
 .viewFileSplit > * {

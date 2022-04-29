@@ -33,6 +33,10 @@ export function getMessages(state: State): T.Message[] {
   return state.app.messages;
 }
 
+export function getHideEditor(state: State): boolean {
+  return state.app.hideEditor;
+}
+
 function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,

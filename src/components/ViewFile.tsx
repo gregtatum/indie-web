@@ -16,6 +16,7 @@ export function ViewFile() {
   const path = '/' + (params['*'] ?? '');
   const request = Redux.useSelector($.getDownloadFileCache).get(path);
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
+  const hideEditor = Redux.useSelector($.getHideEditor);
 
   React.useEffect(() => {
     dispatch(A.changeActiveFile(path));
@@ -51,6 +52,13 @@ export function ViewFile() {
         );
       }
       const text = ensureExists(request.value.text, 'text');
+      if (hideEditor) {
+        return (
+          <div className="viewFileSolo">
+            <RenderedSong />
+          </div>
+        );
+      }
       return (
         <Splitter
           className="viewFileSplit"

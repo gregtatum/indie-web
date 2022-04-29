@@ -113,6 +113,15 @@ function view(state: T.View = 'link-dropbox', action: T.Action): T.View {
   }
 }
 
+function hideEditor(state: boolean = false, action: T.Action): boolean {
+  switch (action.type) {
+    case 'hide-editor':
+      return action.flag;
+    default:
+      return state;
+  }
+}
+
 function messages(state: T.Message[] = [], action: T.Action): T.Message[] {
   switch (action.type) {
     case 'add-message':
@@ -142,6 +151,7 @@ export const app = combineReducers({
   view,
   modifiedText,
   messages,
+  hideEditor,
 });
 export type AppState = ReturnType<typeof app>;
 
