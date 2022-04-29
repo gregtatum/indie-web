@@ -66,3 +66,8 @@ export interface DownloadFileResponse {
 export type DropboxFile =
   | files.FileMetadataReference
   | files.FolderMetadataReference;
+
+export type Message = {
+  message: React.ReactNode;
+  generation: number;
+};

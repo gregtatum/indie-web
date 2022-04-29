@@ -1,8 +1,11 @@
 import { Action, Thunk } from 'src/@types';
+import * as React from 'react';
 import * as $ from 'src/store/selectors';
 import * as T from 'src/@types';
 import type { files } from 'dropbox';
 import { getGeneration } from 'src/utils';
+
+const DEFAULT_MESSAGE_DELAY = 3000;
 
 export function setDropboxAccessToken(token: string): Action {
   window.localStorage.setItem('dropboxAccessToken', token);
@@ -132,4 +135,122 @@ export function modifyActiveFile(value: string): Action {
 
 export function changeView(value: T.View): Action {
   return { type: 'change-view', value };
+}
+
+export function saveFile(
+  path: string,
+  contents: string,
+  originalFileRequest: T.APICalls.DownloadFile,
+): Thunk {
+  return async (dispatch, getState) => {
+    const dropbox = $.getDropbox(getState());
+    const messageGeneration = dispatch(
+      addMessage({
+        message: (
+          <>
+            Saving <code>{path}</code>
+          </>
+        ),
+      }),
+    );
+    return dropbox
+      .filesUpload({
+        path,
+        contents,
+        mode: {
+          '.tag': 'overwrite',
+        },
+      })
+      .then(
+        () => {
+          dispatch({
+            type: 'download-file-received',
+            generation: originalFileRequest.generation,
+            args: originalFileRequest.args,
+            value: {
+              text: contents,
+            },
+          });
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Saved <code>{path}</code>
+                </>
+              ),
+              generation: messageGeneration,
+              timeout: true,
+            }),
+          );
+        },
+        (error) => {
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Unable to save <code>{path}</code>
+                </>
+              ),
+              generation: messageGeneration,
+            }),
+          );
+          console.error(error);
+          return Promise.reject(
+            new Error('Unable to save the file with Dropbox.'),
+          );
+        },
+      );
+  };
+}
+
+interface MessageArgs {
+  message: React.ReactNode;
+  // A unique generation number to identify a message, useful if
+  // the message needs dismissing or can be replaced.
+  generation?: number;
+  // If a number, the number of milliseconds before hiding.
+  // If `true`, then use the default delay.
+  // If falsey, do not auto-hide the message.
+  timeout?: number | boolean;
+}
+
+export function addMessage({
+  message,
+  generation = getGeneration(),
+  timeout = false,
+}: MessageArgs): Thunk<number> {
+  return (dispatch) => {
+    dispatch({
+      type: 'add-message',
+      message,
+      generation,
+    });
+    if (timeout) {
+      setTimeout(
+        () => {
+          dispatch(dismissMessage(generation));
+        },
+        typeof timeout === 'number' ? timeout : DEFAULT_MESSAGE_DELAY,
+      );
+    }
+    return generation;
+  };
+}
+
+export function dismissMessage(generation: number): T.Action {
+  return {
+    type: 'dismiss-message',
+    generation,
+  };
+}
+
+export function dismissAllMessages(): Thunk {
+  return (dispatch, getState) => {
+    const messages = $.getMessages(getState());
+    if (messages.length > 0) {
+      dispatch({
+        type: 'dismiss-all-messages',
+      });
+    }
+  };
 }

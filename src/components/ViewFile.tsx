@@ -54,7 +54,7 @@ export function ViewFile() {
       return (
         <Splitter
           className="viewFileSplit"
-          start={<TextArea path={path} text={text} />}
+          start={<TextArea path={path} text={text} originalRequest={request} />}
           end={<RenderedSong />}
           persistLocalStorage={'viewFileSplitterOffset'}
         />

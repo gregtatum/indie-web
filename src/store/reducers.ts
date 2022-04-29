@@ -74,6 +74,7 @@ function downloadFileCache(
       newState.set(action.args.path, action);
       return newState;
     }
+
     case 'clear-api-cache':
       return new Map();
     default:
@@ -94,6 +95,8 @@ function modifiedText(state = '', action: T.Action): string {
   switch (action.type) {
     case 'modify-active-file':
       return action.value;
+    case 'download-file-received':
+      return '';
     default:
       return state;
   }
@@ -110,6 +113,27 @@ function view(state: T.View = 'link-dropbox', action: T.Action): T.View {
   }
 }
 
+function messages(state: T.Message[] = [], action: T.Action): T.Message[] {
+  switch (action.type) {
+    case 'add-message':
+      return [
+        ...state.filter((message) => message.generation !== action.generation),
+        {
+          message: action.message,
+          generation: action.generation,
+        },
+      ];
+    case 'dismiss-message':
+      return state.filter(
+        (message) => message.generation !== action.generation,
+      );
+    case 'dismiss-all-messages':
+      return [];
+    default:
+      return state;
+  }
+}
+
 export const app = combineReducers({
   dropboxAccessToken,
   listFilesCache,
@@ -117,6 +141,7 @@ export const app = combineReducers({
   activeFile,
   view,
   modifiedText,
+  messages,
 });
 export type AppState = ReturnType<typeof app>;
 

@@ -29,6 +29,10 @@ export function getModifiedText(state: State): string {
   return state.app.modifiedText;
 }
 
+export function getMessages(state: State): T.Message[] {
+  return state.app.messages;
+}
+
 function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,

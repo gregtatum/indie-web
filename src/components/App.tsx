@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { LinkDropbox, HandleAuth } from './LinkDropbox';
+import { LinkDropbox } from './LinkDropbox';
 import { Header } from './Header';
 
 import './App.css';
 import { ListFiles } from './ListFiles';
 import { ViewFile } from './ViewFile';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Messages } from './Messages';
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ export function App() {
           </div>
         </div>
       </LinkDropbox>
+      <Messages />
     </BrowserRouter>
   );
 }
