@@ -47,7 +47,10 @@ code {
 .appViewContents {
   position: relative; /* create a stacking context */
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .appViewError {

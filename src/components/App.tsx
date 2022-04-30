@@ -5,6 +5,7 @@ import { Header } from './Header';
 import './App.css';
 import { ListFiles } from './ListFiles';
 import { ViewFile } from './ViewFile';
+import { ViewPDF } from './ViewPDF';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Messages } from './Messages';
 
@@ -22,6 +23,9 @@ export function App() {
               </Route>
               <Route path="file" element={<ViewFile />}>
                 <Route path="*" element={<ViewFile />} />
+              </Route>
+              <Route path="pdf" element={<ViewPDF />}>
+                <Route path="*" element={<ViewPDF />} />
               </Route>
             </Routes>
           </div>

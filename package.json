@@ -6,7 +6,7 @@
     "build": "./bin/build.sh",
     "check-updates": "npx npm-check-updates",
     "start-ts": "tsc --noEmit --watch",
-    "start-parcel": "parcel src/index.html -p 1234 --no-hmr",
+    "start-parcel": "parcel index.html data/**/* -p 1234 --no-hmr",
     "start": "run-p start-ts start-parcel",
     "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet",
     "ts": "tsc --noEmit",
@@ -76,6 +76,7 @@
   "dependencies": {
     "dropbox": "^10.28.0",
     "nosleep.js": "^0.12.0",
+    "pdfjs-dist": "^2.13.216",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-redux": "^7.2.6",

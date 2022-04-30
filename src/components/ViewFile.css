@@ -7,9 +7,7 @@
 }
 
 .viewFileSolo {
-  display: flex;
-  justify-content: center;
-  overflow-y: scroll;
+  overflow: auto;
 }
 
 .viewFileSplit > * {

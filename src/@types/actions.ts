@@ -18,7 +18,8 @@ export type Action =
       generation: number;
     }
   | APICalls.ListFiles
-  | APICalls.DownloadFile;
+  | APICalls.DownloadFile
+  | APICalls.DownloadBlob;
 
 export type APIAction<Type extends string, Args, T> =
   | { type: `${Type}-requested`; generation: number; args: Args }
@@ -32,9 +33,6 @@ export type APIAction<Type extends string, Args, T> =
       error: unknown;
     };
 
-export type ListFilesCache = Map<string, APICalls.ListFiles>;
-export type DownloadFileCache = Map<string, APICalls.DownloadFile>;
-
 export namespace APICalls {
   export type ListFiles = APIAction<
     'list-files',
@@ -46,4 +44,13 @@ export namespace APICalls {
     { path: string },
     App.DownloadedTextFile
   >;
+  export type DownloadBlob = APIAction<
+    'download-blob',
+    { path: string },
+    App.DownloadedBlob
+  >;
 }
+
+export type ListFilesCache = Map<string, APICalls.ListFiles>;
+export type DownloadFileCache = Map<string, APICalls.DownloadFile>;
+export type DownloadBlobCache = Map<string, APICalls.DownloadBlob>;

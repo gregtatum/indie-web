@@ -4,6 +4,9 @@ import { createSelector } from 'reselect';
 import { ensureExists } from 'src/utils';
 import * as T from 'src/@types';
 import { parseChordPro } from 'src/logic/parse';
+import * as PDFJS from 'pdfjs-dist';
+
+PDFJS.GlobalWorkerOptions.workerSrc = '/data/pdf.worker.js';
 
 export function getView(state: State): T.View {
   return state.app.view;
@@ -13,31 +16,35 @@ export function getDropboxAccessToken(state: State) {
   return state.app.dropboxAccessToken;
 }
 
-export function getListFilesCache(state: State): T.ListFilesCache {
+export function getListFilesCache(state: State) {
   return state.app.listFilesCache;
 }
 
-export function getDownloadFileCache(state: State): T.DownloadFileCache {
+export function getDownloadFileCache(state: State) {
   return state.app.downloadFileCache;
 }
 
-export function getActiveFile(state: State): string {
+export function getDownloadBlobCache(state: State) {
+  return state.app.downloadBlobCache;
+}
+
+export function getActiveFile(state: State) {
   return state.app.activeFile;
 }
 
-export function getModifiedText(state: State): string {
+export function getModifiedText(state: State) {
   return state.app.modifiedText;
 }
 
-export function getMessages(state: State): T.Message[] {
+export function getMessages(state: State) {
   return state.app.messages;
 }
 
-export function getHideEditor(state: State): boolean {
+export function getHideEditor(state: State) {
   return state.app.hideEditor;
 }
 
-export function getKeepAwake(state: State): boolean {
+export function getKeepAwake(state: State) {
   return state.app.keepAwake;
 }
 
@@ -135,6 +142,51 @@ export const getActiveFileParsedOrNull = createSelector(
 
 export const getActiveFileParsed = dangerousSelector(
   getActiveFileParsedOrNull,
+  'Active file was not downloaded while parsing file.',
+);
+
+export const getActiveBlobOrNull = createSelector(
+  getDownloadBlobCache,
+  getActiveFile,
+  (downloadBlobCache, activeFile): Blob | null => {
+    const downloadFileRequest = downloadBlobCache.get(activeFile);
+    console.log(`!!! getActiveBlobOrNull`, downloadFileRequest);
+    if (!downloadFileRequest) {
+      return null;
+    }
+    if (
+      downloadFileRequest.type === 'download-blob-received' &&
+      downloadFileRequest.value.fileBlob
+    ) {
+      return downloadFileRequest.value.fileBlob;
+    }
+    if (
+      downloadFileRequest.type === 'download-blob-failed' &&
+      downloadFileRequest.value?.fileBlob
+    ) {
+      return downloadFileRequest.value.fileBlob;
+    }
+    return null;
+  },
+);
+
+export const getActiveBlob = dangerousSelector(
+  getActiveBlobOrNull,
+  'Active file was not downloaded while getting text.',
+);
+
+export const getActivePDFOrNull = createSelector(
+  getActiveBlobOrNull,
+  async (blob) => {
+    if (!blob) {
+      return null;
+    }
+    return PDFJS.getDocument((await blob.arrayBuffer()) as Uint8Array).promise;
+  },
+);
+
+export const getActivePDF = dangerousSelector(
+  getActivePDFOrNull,
   'Active file was not downloaded while parsing file.',
 );
 

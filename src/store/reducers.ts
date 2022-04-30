@@ -82,6 +82,36 @@ function downloadFileCache(
   }
 }
 
+function downloadBlobCache(
+  state: T.DownloadBlobCache = new Map(),
+  action: T.Action,
+): T.DownloadBlobCache {
+  switch (action.type) {
+    case 'download-blob-requested': {
+      const newState = new Map(state);
+      newState.set(action.args.path, action);
+      return newState;
+    }
+    case 'download-blob-received':
+    case 'download-blob-failed': {
+      const newState = new Map(state);
+      const cache = state.get(action.args.path);
+      if (cache) {
+        if (cache.generation > action.generation) {
+          return state; // The request is stale.
+        }
+      }
+      newState.set(action.args.path, action);
+      return newState;
+    }
+
+    case 'clear-api-cache':
+      return new Map();
+    default:
+      return state;
+  }
+}
+
 function activeFile(state = '', action: T.Action): string {
   switch (action.type) {
     case 'change-active-file':
@@ -160,6 +190,7 @@ export const app = combineReducers({
   dropboxAccessToken,
   listFilesCache,
   downloadFileCache,
+  downloadBlobCache,
   activeFile,
   view,
   modifiedText,

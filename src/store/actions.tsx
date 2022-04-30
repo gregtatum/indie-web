@@ -121,6 +121,50 @@ export function downloadFile(path: string): Thunk {
   };
 }
 
+export function downloadBlob(path: string): Thunk {
+  return (dispatch, getState) => {
+    const generation = getGeneration();
+    const args = { path };
+    dispatch({ type: 'download-blob-requested', generation, args });
+    $.getDropbox(getState())
+      .filesDownload({ path })
+      .then(async (response) => {
+        const file = response.result as T.DownloadFileResponse;
+        const value: T.DownloadedBlob = {};
+        try {
+          value.fileBlob = file.fileBlob;
+        } catch (error) {
+          value.error = error;
+        }
+        const action: T.Action = {
+          type: 'download-blob-received',
+          generation,
+          args,
+          value,
+        };
+        dispatch(action);
+      })
+      .catch((error) => {
+        const cache = $.getDownloadFileCache(getState()).get(path);
+        const action: T.Action = {
+          type: 'download-blob-failed',
+          generation,
+          args,
+          value:
+            cache?.type === 'download-file-received' ||
+            cache?.type === 'download-file-failed'
+              ? cache.value
+              : undefined,
+          error:
+            error?.message ??
+            error?.toString() ??
+            'There was a Dropbox API error',
+        };
+        dispatch(action);
+      });
+  };
+}
+
 export function clearApiCache(): Action {
   return { type: 'clear-api-cache' };
 }

@@ -1,3 +1,9 @@
+.listFiles {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
 .listFilesIcon {
   margin-inline-end: 5px;
   width: 20px;

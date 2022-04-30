@@ -5,6 +5,7 @@
    * See .renderedSongEndPadding
    */
   padding-bottom: 0;
+  margin: 0 auto;
   max-height: calc(100% - 50px);
   font-size: 14px;
   font-family: 'Roboto Mono', monospace;
@@ -47,12 +48,19 @@
 }
 
 .renderedSongLine-mixed {
-  padding-top: 20px;
+  padding-top: 0;
+  max-width: 100%;
+  line-height: 2.7;
+  position: relative;
+  top: 0.9em;
 }
 
 .renderedSongLine-mixed .renderedSongLineChord {
-  position: absolute;
-  top: 3px;
+  position: relative;
+  top: -17px;
+  height: ;
+  width: 0;
+  display: inline-block;
 }
 
 .renderedSongLine-chords .renderedSongLineChord {
@@ -71,7 +79,7 @@
 }
 
 .renderedSongLineText {
-  white-space: pre;
+  white-space: pre-wrap;
 }
 
 .renderedSongHeaderDetails {
@@ -91,4 +99,11 @@
   padding: 2px 8px;
   font-size: 12px;
   margin: 10px 0;
+}
+
+@media (min-width: 900px) {
+  .renderedSong {
+    min-width: 800px;
+    max-width: 900px;
+  }
 }

@@ -59,6 +59,7 @@ export function ListFiles() {
               const { name, id, path_lower } = entry;
               const isFolder = entry['.tag'] === 'folder';
               const isChordPro = !isFolder && name.endsWith('.chopro');
+              const isPDF = !isFolder && name.endsWith('.pdf');
               let icon = '📄';
               if (isFolder) {
                 icon = '📁';
@@ -82,6 +83,13 @@ export function ListFiles() {
                 } else if (isChordPro) {
                   link = (
                     <Router.Link to={`/file${path_lower}`} onClick={clickFile}>
+                      <span className="listFilesIcon">{icon}</span>
+                      {name}
+                    </Router.Link>
+                  );
+                } else if (isPDF) {
+                  link = (
+                    <Router.Link to={`/pdf${path_lower}`} onClick={clickFile}>
                       <span className="listFilesIcon">{icon}</span>
                       {name}
                     </Router.Link>
