@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
-import { createStore } from 'src/store/create-store';
+import { createStore } from './store/create-store';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
 import { mockGoogleAnalytics } from 'src/utils';

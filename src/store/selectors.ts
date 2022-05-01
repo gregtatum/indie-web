@@ -6,7 +6,7 @@ import * as T from 'src/@types';
 import { parseChordPro } from 'src/logic/parse';
 import * as PDFJS from 'pdfjs-dist';
 
-PDFJS.GlobalWorkerOptions.workerSrc = '/data/pdf.worker.js';
+PDFJS.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
 
 export function getView(state: State): T.View {
   return state.app.view;

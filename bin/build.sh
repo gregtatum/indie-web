@@ -1,3 +1,2 @@
 rm -rf dist
-parcel build index.html
-cp _redirects ./dist
+NODE_ENV=production webpack

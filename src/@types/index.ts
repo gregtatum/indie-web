@@ -4,7 +4,7 @@ import { Action } from './actions';
 /**
  * Re-exports.
  */
-export { AppState, State } from 'src/store/reducers';
+export type { AppState, State } from 'src/store/reducers';
 export * from './app';
 export * from './actions';
 
