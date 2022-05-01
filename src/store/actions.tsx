@@ -2,8 +2,9 @@ import { Action, Thunk } from 'src/@types';
 import * as React from 'react';
 import { $, T } from 'src';
 import type { files } from 'dropbox';
-import { getGeneration } from 'src/utils';
+import { getGeneration, getProp } from 'src/utils';
 import NoSleep from 'nosleep.js';
+import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_MESSAGE_DELAY = 3000;
 
@@ -56,24 +57,23 @@ export function listFiles(path = ''): Thunk {
           value,
         });
       })
-      .catch((error) => {
-        const cache = $.getListFilesCache(getState()).get(path);
+      .catch(
+        handleKnownError(dispatch, (error) => {
+          const cache = $.getListFilesCache(getState()).get(path);
 
-        dispatch({
-          type: 'list-files-failed',
-          generation,
-          args,
-          value:
-            cache?.type === 'list-files-received' ||
-            cache?.type === 'list-files-failed'
-              ? cache.value
-              : undefined,
-          error:
-            error?.message ??
-            error?.toString() ??
-            'There was a Dropbox API error',
-        });
-      });
+          dispatch({
+            type: 'list-files-failed',
+            generation,
+            args,
+            value:
+              cache?.type === 'list-files-received' ||
+              cache?.type === 'list-files-failed'
+                ? cache.value
+                : undefined,
+            error: getProp(error, 'message') ?? 'There was a Dropbox API error',
+          });
+        }),
+      );
   };
 }
 
@@ -321,5 +321,23 @@ export function keepAwake(flag: boolean): Thunk {
       _noSleep.disable();
     }
     dispatch({ type: 'keep-awake', flag });
+  };
+}
+
+function handleKnownError(dispatch: T.Dispatch, fn: (error: unknown) => void) {
+  return (error: unknown): void => {
+    if (
+      getProp(error, 'status') === 401 &&
+      getProp(error, 'error', 'error', '.tag') === 'expired_access_token'
+    ) {
+      window.localStorage.setItem(
+        'dropboxRedirectURL',
+        window.location.toString(),
+      );
+      dispatch(removeDropboxAccessToken());
+      window.location.href = '/expired';
+      return;
+    }
+    fn(error);
   };
 }

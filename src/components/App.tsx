@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { LinkDropbox } from './LinkDropbox';
+import { DropboxExpired, LinkDropbox } from './LinkDropbox';
 import { Header } from './Header';
 
 import './App.css';
@@ -27,6 +27,7 @@ export function App() {
               <Route path="pdf" element={<ViewPDF />}>
                 <Route path="*" element={<ViewPDF />} />
               </Route>
+              <Route path="expired" element={<DropboxExpired />} />
             </Routes>
           </div>
         </div>

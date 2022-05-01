@@ -92,3 +92,16 @@ export function throttle1<Arg1>(
     };
   };
 }
+
+/**
+ * Access unknown object properties in a type safe way.
+ */
+export function getProp(object: unknown, ...keys: string[]): unknown {
+  for (const key of keys) {
+    if (!object || typeof object !== 'object') {
+      return null;
+    }
+    object = (object as any)[key];
+  }
+  return object;
+}

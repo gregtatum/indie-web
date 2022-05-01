@@ -36,7 +36,6 @@ export function ListFiles() {
   }
 
   switch (request?.type) {
-    // switch ('list-files-requested') {
     case 'list-files-received': {
       let parent = null;
       if (path !== '/') {
@@ -115,6 +114,7 @@ export function ListFiles() {
         </div>
       );
     case 'list-files-requested':
+    default:
       return (
         <div className="listFilesBlocks">
           <div className="listFilesFileBlock"></div>
@@ -124,7 +124,5 @@ export function ListFiles() {
           <div className="listFilesFileBlock"></div>
         </div>
       );
-    default:
-      return <div className="listFilesRequested"></div>;
   }
 }
