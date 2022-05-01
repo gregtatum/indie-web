@@ -112,7 +112,6 @@ function PDF({ pdf }: PDFProps) {
       ).getBoundingClientRect();
       const scale =
         (window.devicePixelRatio * divRect.width) / pdfViewport.width;
-      console.log(`!!! scale`, scale);
       const viewport = page.getViewport({ scale });
 
       // Prepare canvas using PDF page dimensions

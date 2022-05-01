@@ -150,7 +150,6 @@ export const getActiveBlobOrNull = createSelector(
   getActiveFile,
   (downloadBlobCache, activeFile): Blob | null => {
     const downloadFileRequest = downloadBlobCache.get(activeFile);
-    console.log(`!!! getActiveBlobOrNull`, downloadFileRequest);
     if (!downloadFileRequest) {
       return null;
     }

@@ -1,7 +1,10 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
-import { A, $ } from 'src';
 import * as Router from 'react-router-dom';
+import { A, $ } from 'src';
+import { useRetainScroll } from './hooks';
+
+Router.useNavigationType;
 
 import './ListFiles.css';
 
@@ -10,6 +13,9 @@ export function ListFiles() {
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
   const request = Redux.useSelector($.getListFilesCache).get(path);
+  const scrollRef = useRetainScroll(
+    request?.type ?? 'none' + window.location.href,
+  );
 
   React.useEffect(() => {
     if (path === '/') {
@@ -52,7 +58,7 @@ export function ListFiles() {
       }
       return (
         <>
-          <div className="listFiles">
+          <div className="listFiles" ref={scrollRef}>
             {parent}
             {request.value.map((entry) => {
               const { name, id, path_lower } = entry;
