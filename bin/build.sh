@@ -1,3 +1,3 @@
 rm -rf dist
-parcel build src/index.html
+parcel build index.html
 cp _redirects ./dist

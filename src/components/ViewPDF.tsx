@@ -7,7 +7,7 @@ import './ViewPDF.css';
 import { ensureExists, maybeGetProperty, UnhandledCaseError } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
 import { usePromiseSelector, useInfalliblePromise } from './hooks';
-import { PDFDocumentProxy } from 'pdfjs-dist';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 export function ViewPDF() {
   const dispatch = Redux.useDispatch();
