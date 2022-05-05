@@ -4,12 +4,21 @@ import { $, T } from 'src';
 import type { files } from 'dropbox';
 import { getGeneration, getProp } from 'src/utils';
 import NoSleep from 'nosleep.js';
-import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_MESSAGE_DELAY = 3000;
 
-export function setDropboxAccessToken(token: string): Action {
+export function setDropboxAccessToken(
+  token: string,
+  expiresIn: number,
+  refreshToken: string,
+): Action {
   window.localStorage.setItem('dropboxAccessToken', token);
+  const fiveMinutes = 60 * 5;
+  window.localStorage.setItem(
+    'dropboxExpires',
+    String(Date.now() + expiresIn - fiveMinutes),
+  );
+  window.localStorage.setItem('dropboxRefreshToken', refreshToken);
   return { type: 'set-dropbox-access-token', token };
 }
 

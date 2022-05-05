@@ -4,8 +4,9 @@ import * as Router from 'react-router-dom';
 import * as Redux from 'react-redux';
 
 import './LinkDropbox.css';
-import { ensureExists } from 'src/utils';
+import { ensureExists, postData } from 'src/utils';
 import { UnhandledCaseError } from '../utils';
+import { randomBytes, createHash } from 'crypto';
 
 const lambaAuthUrl = ensureExists(process.env.AUTH_URL, 'process.env.AUTH_URL');
 const dropboxClientId = ensureExists(
@@ -18,9 +19,40 @@ function getRedirectUri() {
   return uri + '/login';
 }
 
-const url = `https://www.dropbox.com/oauth2/authorize?client_id=${dropboxClientId}&redirect_uri=${getRedirectUri()}&response_type=code`;
+function base64Encode(str: Buffer) {
+  return str
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+function sha256(buffer: string): Buffer {
+  return createHash('sha256').update(buffer).digest();
+}
+
+const codeVerifier = base64Encode(randomBytes(32));
+const codeChallenge = base64Encode(sha256(codeVerifier));
+
+console.log(`Client generated code_verifier: ${codeVerifier}`);
+console.log(`Client generated code_challenge: ${codeChallenge}`);
+
+const url =
+  'https://www.dropbox.com/oauth2/authorize?' +
+  new URLSearchParams({
+    response_type: `code`,
+    code_challenge_method: `S256`,
+    client_id: dropboxClientId,
+    code_challenge: codeChallenge,
+    redirect_uri: getRedirectUri(),
+    token_access_type: 'offline',
+  });
 
 type AuthState = 'no-auth' | 'await-auth' | 'auth-failed';
+
+function persistCodeVerifier() {
+  window.localStorage.setItem('dropboxCodeVerifier', codeVerifier);
+}
 
 export function LinkDropbox(props: { children: any }) {
   const isLogin = window.location.pathname === '/login';
@@ -51,24 +83,55 @@ export function LinkDropbox(props: { children: any }) {
     const paramsOut = new URLSearchParams();
     paramsOut.set('code', code);
 
-    window
-      .fetch(lambaAuthUrl + '?' + paramsOut.toString())
+    // Client generated code_verifier: 0u0JGkp5kmy5AsqotDjHvTOGmVEUpRzK8yLlv8ctCkY LinkDropbox.tsx:37:8
+    // Client generated code_challenge: 8nPqPl5DW8MA4loRgwWZndFnuqY91RdqHVEMtr0ZFOA LinkDropbox.tsx:38:8
+    // Code: bk2Gh-J_8KAAAAAAAAFQU-GPJ1APhuIYuTauGKrOHEU
+
+    // curl https://api.dropbox.com/oauth2/token \
+    //     -d code=<AUTHORIZATION_CODE> \
+    //     -d grant_type=authorization_code \
+    //     -d redirect_uri=<REDIRECT_URI> \
+    //     -d code_verifier=<VERIFICATION_CODE> \
+    //     -d client_id=<APP_KEY>
+
+    fetch(
+      'https://www.dropbox.com/oauth2/token' +
+        '?' +
+        new URLSearchParams({
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: getRedirectUri(),
+          code_verifier:
+            window.localStorage.getItem('dropboxCodeVerifier') ?? '',
+          client_id: dropboxClientId,
+        }),
+      { method: 'POST' },
+    )
       .then(async (response) => {
         if (response.status === 200) {
           const text = await response.text();
           try {
             const json = JSON.parse(text);
             // {
-            //   "access_token": "...",
-            //   "token_type": "bearer",
-            //   "expires_in": 14400,
-            //   "scope": "account_info.read ...",
-            //   "uid": "12345",
-            //   "account_id": "dbid:..."
+            //  "access_token": "sl.XXXX",
+            //  "token_type": "bearer",
+            //  "expires_in": 14400,
+            //  "refresh_token": "G0TgYlyTtfcAAAAAAAAAAY8pNWiPMFtzeZV0i4n7Szodc30I7VevgaIeGmmcCbtr",
+            //  "scope": "account_info.read file_requests.read files.content.read files.content.write files.metadata.read files.metadata.write",
+            //  "uid": "2064116",
+            //  "account_id": "dbid:AACqbOgi4TZtF3UsCOOJKo--3Ep90CPnu6A"
             // }
-            const authToken = json?.access_token;
-            if (authToken) {
-              dispatch(A.setDropboxAccessToken(authToken));
+            const accessToken = json?.access_token;
+            const expiresIn = json?.expires_in;
+            const refreshToken = json?.refresh_token;
+            if (
+              typeof accessToken === 'string' &&
+              typeof expiresIn === 'number' &&
+              typeof refreshToken === 'string'
+            ) {
+              dispatch(
+                A.setDropboxAccessToken(accessToken, expiresIn, refreshToken),
+              );
               setAuthState('no-auth');
               const url =
                 window.localStorage.getItem('dropboxRedirectURL') || '/';
@@ -108,7 +171,11 @@ export function LinkDropbox(props: { children: any }) {
               </p>
             </div>
             <div>
-              <a href={url} className="linkDropboxConnect">
+              <a
+                href={url}
+                className="linkDropboxConnect"
+                onClick={persistCodeVerifier}
+              >
                 Connect Dropbox
               </a>
             </div>
@@ -120,7 +187,11 @@ export function LinkDropbox(props: { children: any }) {
         return (
           <div className="appViewMessage">
             <p>The Dropbox login failed. </p>
-            <a href={url} className="linkDropboxConnect">
+            <a
+              href={url}
+              className="linkDropboxConnect"
+              onClick={persistCodeVerifier}
+            >
               Try Again…
             </a>
           </div>

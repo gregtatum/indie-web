@@ -105,3 +105,20 @@ export function getProp(object: unknown, ...keys: string[]): unknown {
   }
   return object;
 }
+
+export async function postData(
+  url: string,
+  params: Record<string, string>,
+): Promise<Response> {
+  return fetch(
+    url +
+      '?' +
+      new URLSearchParams({ ...params, reject_cors_preflight: 'true' }),
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain; charset=dropbox-cors-hack',
+      },
+    },
+  );
+}
