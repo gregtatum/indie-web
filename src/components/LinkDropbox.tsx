@@ -1,14 +1,13 @@
 import * as React from 'react';
-import { A, $ } from 'src';
+import { A, T, $ } from 'src';
 import * as Router from 'react-router-dom';
 import * as Redux from 'react-redux';
 
 import './LinkDropbox.css';
-import { ensureExists, postData } from 'src/utils';
-import { UnhandledCaseError } from '../utils';
+import { ensureExists } from 'src/utils';
+import { UnhandledCaseError, getStringProp, getNumberProp } from '../utils';
 import { randomBytes, createHash } from 'crypto';
 
-const lambaAuthUrl = ensureExists(process.env.AUTH_URL, 'process.env.AUTH_URL');
 const dropboxClientId = ensureExists(
   process.env.DROPBOX_CLIENT_ID,
   'process.env.DROPBOX_CLIENT_ID',
@@ -31,36 +30,127 @@ function sha256(buffer: string): Buffer {
   return createHash('sha256').update(buffer).digest();
 }
 
-const codeVerifier = base64Encode(randomBytes(32));
-const codeChallenge = base64Encode(sha256(codeVerifier));
+interface Codes {
+  codeVerifier: string;
+  codeChallenge: string;
+}
+let _codes: null | Codes = null;
+function getCodes(): Codes {
+  if (!_codes) {
+    const codeVerifier = base64Encode(randomBytes(32));
+    const codeChallenge = base64Encode(sha256(codeVerifier));
+    _codes = { codeVerifier, codeChallenge };
+  }
 
-console.log(`Client generated code_verifier: ${codeVerifier}`);
-console.log(`Client generated code_challenge: ${codeChallenge}`);
+  return _codes;
+}
 
-const url =
-  'https://www.dropbox.com/oauth2/authorize?' +
-  new URLSearchParams({
-    response_type: `code`,
-    code_challenge_method: `S256`,
-    client_id: dropboxClientId,
-    code_challenge: codeChallenge,
-    redirect_uri: getRedirectUri(),
-    token_access_type: 'offline',
-  });
+let _authorizeUrl: string | null = null;
+function getAuthorizeUrl() {
+  if (!_authorizeUrl) {
+    _authorizeUrl =
+      'https://www.dropbox.com/oauth2/authorize?' +
+      new URLSearchParams({
+        response_type: `code`,
+        code_challenge_method: `S256`,
+        client_id: dropboxClientId,
+        code_challenge: getCodes().codeChallenge,
+        redirect_uri: getRedirectUri(),
+        token_access_type: 'offline',
+      });
+  }
+  return _authorizeUrl;
+}
 
-type AuthState = 'no-auth' | 'await-auth' | 'auth-failed';
+type AuthState = 'no-auth' | 'await-auth' | 'auth-failed' | 'refreshing';
 
 function persistCodeVerifier() {
-  window.localStorage.setItem('dropboxCodeVerifier', codeVerifier);
+  window.localStorage.setItem('dropboxCodeVerifier', getCodes().codeVerifier);
 }
 
 export function LinkDropbox(props: { children: any }) {
   const isLogin = window.location.pathname === '/login';
-  const [authState, setAuthState] = React.useState<AuthState>(
-    isLogin ? 'await-auth' : 'no-auth',
-  );
+  const oauth = Redux.useSelector($.getDropboxOauth);
+  const oauthRef = React.useRef<T.DropboxOauth | null>(null);
+  oauthRef.current = oauth;
+  let defaultAuthState: AuthState = 'no-auth';
+  if (isLogin) {
+    defaultAuthState = 'await-auth';
+  }
+  if (oauth && oauth.expires < Date.now()) {
+    defaultAuthState = 'refreshing';
+  }
+  const [authState, setAuthState] = React.useState<AuthState>(defaultAuthState);
   const dispatch = Redux.useDispatch();
   const navigate = Router.useNavigate();
+
+  React.useEffect(() => {
+    if (!oauth) {
+      return;
+    }
+    if (oauth.expires > Date.now()) {
+      setTimeout(useRefreshToken, oauth.expires - Date.now());
+      return;
+    }
+    useRefreshToken();
+
+    function useRefreshToken() {
+      if (!oauth || oauthRef.current !== oauth) {
+        return;
+      }
+      console.log('Refresh token is out of date, fetching a new one.');
+      setAuthState('refreshing');
+      fetch(
+        'https://www.dropbox.com/oauth2/token' +
+          '?' +
+          new URLSearchParams({
+            grant_type: 'refresh_token',
+            client_id: ensureExists(
+              process.env.DROPBOX_CLIENT_ID,
+              'process.env.DROPBOX_CLIENT_ID',
+            ),
+            refresh_token: oauth.refreshToken,
+          }),
+        { method: 'POST' },
+      ).then(async (response) => {
+        if (response.status === 200) {
+          const text = await response.text();
+          try {
+            const json: unknown = JSON.parse(text);
+            // {
+            //   "access_token": "sl...-...",
+            //   "token_type": "bearer",
+            //   "expires_in": 14400
+            // }
+            const accessToken = getStringProp(json, 'access_token');
+            const expiresIn = getNumberProp(json, 'expires_in');
+            if (accessToken && expiresIn) {
+              dispatch(
+                A.setDropboxAccessToken(
+                  accessToken,
+                  expiresIn,
+                  oauth.refreshToken,
+                ),
+              );
+              setAuthState('no-auth');
+            } else {
+              console.error(
+                'Did not receive all expected data from refreshing the Dropbox access token',
+                { json, accessToken, expiresIn },
+              );
+              setAuthState('auth-failed');
+            }
+          } catch (_err) {
+            console.error('Could not parse lambda response', text);
+            setAuthState('auth-failed');
+          }
+        } else {
+          console.error('The lambda returned an error.', await response.text());
+          setAuthState('auth-failed');
+        }
+      });
+    }
+  }, [oauth]);
 
   React.useEffect(() => {
     if (authState === 'no-auth') {
@@ -111,24 +201,20 @@ export function LinkDropbox(props: { children: any }) {
         if (response.status === 200) {
           const text = await response.text();
           try {
-            const json = JSON.parse(text);
+            const json: unknown = JSON.parse(text);
             // {
             //  "access_token": "sl.XXXX",
             //  "token_type": "bearer",
             //  "expires_in": 14400,
-            //  "refresh_token": "G0TgYlyTtfcAAAAAAAAAAY8pNWiPMFtzeZV0i4n7Szodc30I7VevgaIeGmmcCbtr",
+            //  "refresh_token": "...",
             //  "scope": "account_info.read file_requests.read files.content.read files.content.write files.metadata.read files.metadata.write",
             //  "uid": "2064116",
-            //  "account_id": "dbid:AACqbOgi4TZtF3UsCOOJKo--3Ep90CPnu6A"
+            //  "account_id": "..."
             // }
-            const accessToken = json?.access_token;
-            const expiresIn = json?.expires_in;
-            const refreshToken = json?.refresh_token;
-            if (
-              typeof accessToken === 'string' &&
-              typeof expiresIn === 'number' &&
-              typeof refreshToken === 'string'
-            ) {
+            const accessToken = getStringProp(json, 'access_token');
+            const expiresIn = getNumberProp(json, 'expires_in');
+            const refreshToken = getStringProp(json, 'refresh_token');
+            if (accessToken && expiresIn && refreshToken) {
               dispatch(
                 A.setDropboxAccessToken(accessToken, expiresIn, refreshToken),
               );
@@ -138,7 +224,10 @@ export function LinkDropbox(props: { children: any }) {
               window.localStorage.removeItem('dropboxRedirectURL');
               navigate(url, { replace: true });
             } else {
-              console.error('No auth token was received', json);
+              console.error(
+                'Did not receive all expected data from authentication',
+                { json, accessToken, expiresIn, refreshToken },
+              );
               setAuthState('auth-failed');
             }
           } catch (_err) {
@@ -156,8 +245,9 @@ export function LinkDropbox(props: { children: any }) {
       });
   }, [isLogin]);
 
-  const accessToken = Redux.useSelector($.getDropboxAccessToken);
-  if (!accessToken) {
+  const authorizeUrl = getAuthorizeUrl();
+
+  if (!oauth) {
     switch (authState) {
       case 'no-auth':
         return (
@@ -172,7 +262,7 @@ export function LinkDropbox(props: { children: any }) {
             </div>
             <div>
               <a
-                href={url}
+                href={authorizeUrl}
                 className="linkDropboxConnect"
                 onClick={persistCodeVerifier}
               >
@@ -183,12 +273,14 @@ export function LinkDropbox(props: { children: any }) {
         );
       case 'await-auth':
         return <div className="appViewMessage">Logging you in...</div>;
+      case 'refreshing':
+        return <div className="appViewMessage">Connecting to DropBox...</div>;
       case 'auth-failed':
         return (
           <div className="appViewMessage">
             <p>The Dropbox login failed. </p>
             <a
-              href={url}
+              href={authorizeUrl}
               className="linkDropboxConnect"
               onClick={persistCodeVerifier}
             >
@@ -219,27 +311,26 @@ export function UnlinkDropbox() {
   );
 }
 
-export function HandleAuth() {
-  const params = Router.useParams();
-  return <div>{params.code}</div>;
-}
-
 export function DropboxExpired() {
-  const accessToken = Redux.useSelector($.getDropboxAccessToken);
+  const oauth = Redux.useSelector($.getDropboxOauth);
   const navigate = Router.useNavigate();
   React.useEffect(() => {
-    if (accessToken) {
+    if (oauth) {
       // Only allow this page if the access token is gone.
       navigate('/');
     }
-  }, [accessToken]);
+  }, [oauth]);
   return (
     <div className="linkDropbox">
       <div className="linkDropboxDescription">
         <h1>Dropbox Session Expired</h1>
       </div>
       <div>
-        <a href={url} className="linkDropboxConnect">
+        <a
+          href={getAuthorizeUrl()}
+          className="linkDropboxConnect"
+          onClick={persistCodeVerifier}
+        >
           Re-connect Dropbox
         </a>
       </div>

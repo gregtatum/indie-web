@@ -61,7 +61,7 @@ function ActiveFile() {
     }
   }
   return (
-    <div className="headerActiveFile">
+    <div className="headerActiveFile" key={path}>
       <span>🎵</span>
       {breadcrumbs}
       <span>»</span>

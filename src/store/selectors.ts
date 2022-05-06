@@ -12,8 +12,8 @@ export function getView(state: State): T.View {
   return state.app.view;
 }
 
-export function getDropboxAccessToken(state: State) {
-  return state.app.dropboxAccessToken;
+export function getDropboxOauth(state: State) {
+  return state.app.dropboxOauth;
 }
 
 export function getListFilesCache(state: State) {
@@ -56,11 +56,12 @@ function dangerousSelector<T>(
 }
 
 export const getDropboxOrNull = createSelector(
-  getDropboxAccessToken,
-  (accessToken): Dropbox | null => {
-    if (!accessToken) {
+  getDropboxOauth,
+  (oauth): Dropbox | null => {
+    if (!oauth) {
       return null;
     }
+    const { accessToken } = oauth;
     // Initiate dropbox.
     const dropbox = new Dropbox({ accessToken });
     // Intercept all calls to dropbox and log them.

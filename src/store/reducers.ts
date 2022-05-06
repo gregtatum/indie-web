@@ -1,22 +1,47 @@
 import * as T from 'src/@types';
 import { combineReducers } from 'redux';
+import { getStringProp, getNumberProp } from 'src/utils';
 
-function getDropboxAccessTokenLocalStorage(): string | null {
-  const token = window.localStorage.getItem('dropboxAccessToken');
-  if (token) {
-    return token;
+function getDropboxOauth(): T.DropboxOauth | null {
+  const oauthString = window.localStorage.getItem('dropboxOauth');
+  if (!oauthString) {
+    return null;
   }
+
+  let oauthRaw: unknown;
+  try {
+    oauthRaw = JSON.parse(oauthString);
+  } catch (error) {
+    console.error(
+      'Could not parse the Dropbox oauth data from localStorage',
+      error,
+    );
+    return null;
+  }
+
+  const accessToken = getStringProp(oauthRaw, 'accessToken');
+  const refreshToken = getStringProp(oauthRaw, 'refreshToken');
+  const expires = getNumberProp(oauthRaw, 'expires');
+
+  if (accessToken !== null && refreshToken !== null && expires !== null) {
+    return { accessToken, refreshToken, expires };
+  }
+
+  console.error(
+    'Could not find all of the required Dropbox oauth data from localStorage',
+    { accessToken, refreshToken, expires },
+  );
   return null;
 }
 
-function dropboxAccessToken(
-  state: string | null = getDropboxAccessTokenLocalStorage(),
+function dropboxOauth(
+  state: T.DropboxOauth | null = getDropboxOauth(),
   action: T.Action,
-): string | null {
+): T.DropboxOauth | null {
   switch (action.type) {
-    case 'set-dropbox-access-token':
-      return action.token;
-    case 'remove-dropbox-access-token':
+    case 'set-dropbox-oauth':
+      return action.oauth;
+    case 'remove-dropbox-oauth':
       return null;
     default:
       return state;
@@ -187,7 +212,7 @@ function messages(state: T.Message[] = [], action: T.Action): T.Message[] {
 }
 
 export const app = combineReducers({
-  dropboxAccessToken,
+  dropboxOauth,
   listFilesCache,
   downloadFileCache,
   downloadBlobCache,

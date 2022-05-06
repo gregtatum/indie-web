@@ -72,3 +72,10 @@ export type Message = {
   message: React.ReactNode;
   generation: number;
 };
+
+export interface DropboxOauth {
+  accessToken: string;
+  refreshToken: string;
+  // Timestamp in milliseconds
+  expires: number;
+}

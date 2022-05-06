@@ -1,8 +1,11 @@
 import * as App from './app';
 
 export type Action =
-  | { type: 'set-dropbox-access-token'; token: string }
-  | { type: 'remove-dropbox-access-token' }
+  | {
+      type: 'set-dropbox-oauth';
+      oauth: App.DropboxOauth;
+    }
+  | { type: 'remove-dropbox-oauth' }
   | { type: 'clear-api-cache' }
   | { type: 'set-api-cache' }
   | { type: 'change-active-file'; value: string }

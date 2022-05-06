@@ -31,7 +31,7 @@ export function TextArea(props: {
   }, []);
 
   return (
-    <div className="textArea">
+    <div className="textArea" key={props.path}>
       <button
         className="textAreaDismiss"
         type="button"

@@ -6,6 +6,7 @@ import './RenderedSong.css';
 import { UnhandledCaseError } from 'src/utils';
 
 export function RenderedSong() {
+  const path = Redux.useSelector($.getActiveFile);
   const fileKey = Redux.useSelector($.getActiveFileSongKey);
   const hideEditor = Redux.useSelector($.getHideEditor);
   const { directives, lines } = Redux.useSelector($.getActiveFileParsed);
@@ -17,7 +18,7 @@ export function RenderedSong() {
   }, []);
 
   return (
-    <div className="renderedSong">
+    <div className="renderedSong" key={path}>
       <div className="renderedSongHeader">
         <div className="renderedSongHeaderTitle">
           <h1>{directives.title ?? 'Untitled'}</h1>

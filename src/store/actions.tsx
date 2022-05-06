@@ -8,23 +8,31 @@ import NoSleep from 'nosleep.js';
 const DEFAULT_MESSAGE_DELAY = 3000;
 
 export function setDropboxAccessToken(
-  token: string,
+  accessToken: string,
   expiresIn: number,
   refreshToken: string,
 ): Action {
-  window.localStorage.setItem('dropboxAccessToken', token);
-  const fiveMinutes = 60 * 5;
-  window.localStorage.setItem(
-    'dropboxExpires',
-    String(Date.now() + expiresIn - fiveMinutes),
-  );
-  window.localStorage.setItem('dropboxRefreshToken', refreshToken);
-  return { type: 'set-dropbox-access-token', token };
+  const expires =
+    Date.now() + expiresIn * 1000 - 5 * 60 * 1000; /* subtract five minutes */
+
+  const oauth: T.DropboxOauth = {
+    accessToken,
+    expires,
+    refreshToken,
+  };
+  window.localStorage.setItem('dropboxOauth', JSON.stringify(oauth));
+
+  return {
+    type: 'set-dropbox-oauth',
+    oauth,
+  };
 }
 
 export function removeDropboxAccessToken(): Action {
   window.localStorage.removeItem('dropboxAccessToken');
-  return { type: 'remove-dropbox-access-token' };
+  window.localStorage.removeItem('dropboxRefreshToken');
+  window.localStorage.removeItem('dropboxExpires');
+  return { type: 'remove-dropbox-oauth' };
 }
 
 export function listFiles(path = ''): Thunk {

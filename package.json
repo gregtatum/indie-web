@@ -8,7 +8,7 @@
     "start-ts": "tsc --noEmit --watch",
     "start-webpack": "NODE_ENV=development ./bin/server.js",
     "start": "run-p start-ts start-webpack",
-    "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet",
+    "lint": "eslint '{src,bin}/**/*.{js,ts,tsx}'",
     "ts": "tsc --noEmit",
     "test": "env NODE_ENV=test jest",
     "test-all": "run-s lint ts test"
