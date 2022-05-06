@@ -109,5 +109,5 @@ module.exports = {
     'prefer-rest-params': 'error',
     'prefer-spread': 'error',
   },
-  ignorePatterns: ['bin', 'build', 'dist', 'node_modules'],
+  ignorePatterns: ['data', 'build', 'dist', 'node_modules'],
 };

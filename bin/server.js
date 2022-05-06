@@ -13,7 +13,7 @@ const serverConfig = {
   liveReload: false,
   historyApiFallback: {
     // Allow loading urls like /pdf/sheet.pdf
-    disableDotRule: true
+    disableDotRule: true,
   },
 
   // TODO - Make this more secure.
@@ -37,6 +37,4 @@ const serverConfig = {
 };
 
 const server = new WebpackDevServer(serverConfig, webpack(config));
-server
-  .start()
-  .catch((err) => console.log(err));
+server.start().catch((err) => console.log(err));
