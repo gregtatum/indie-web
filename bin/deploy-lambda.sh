@@ -5,13 +5,13 @@ cd ../..
 
 aws lambda update-function-code               \
   --zip-file "fileb://$(realpath lambda.zip)" \
-  --function-name chords-lambda               \
+  --function-name browser-chords-lambda       \
   --publish
   # --dry-run
 
 aws lambda update-function-code               \
   --zip-file "fileb://$(realpath lambda.zip)" \
-  --function-name chords-lambda-localhost     \
+  --function-name browser-chords-lambda-localhost     \
   --publish
   # --dry-run
 
