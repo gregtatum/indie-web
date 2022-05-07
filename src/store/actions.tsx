@@ -101,11 +101,14 @@ export function downloadFile(path: string): Thunk {
     dispatch({ type: 'download-file-requested', generation, args });
     $.getDropbox(getState())
       .filesDownload({ path })
-      .then(async (response) => {
-        const file = response.result as T.DownloadFileResponse;
+      .then(async ({ result }) => {
+        const { fileBlob } = result as T.DownloadFileResponse;
+        // The file blob was left off of this type.
+        delete (result as any).fileBlob;
         const value: T.DownloadedTextFile = {};
+        value.metadata = result;
         try {
-          value.text = await file.fileBlob.text();
+          value.text = await fileBlob.text();
         } catch (error) {
           value.error = error;
         }
@@ -194,8 +197,11 @@ export function modifyActiveFile(value: string): Action {
   return { type: 'modify-active-file', value };
 }
 
-export function changeView(value: T.View): Action {
-  return { type: 'change-view', value };
+export function changeView<T>(view: T.View, data?: T): Action {
+  if (view === 'list-files' && typeof data === 'string') {
+    return { type: 'change-view-list-files', view: 'list-files', data };
+  }
+  return { type: 'change-view', view };
 }
 
 export function saveFile(

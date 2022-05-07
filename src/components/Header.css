@@ -11,15 +11,70 @@
   flex: 1;
 }
 
-.headerActiveFile > * {
+.headerPath, .headerPathFull {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerEnd {
+  flex-shrink: 0;
+}
+
+.headerStart {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.headerPathFull > * {
   margin-inline-end: 9px;
   display: inline-block;
 }
 
-.headerActiveFile > a {
+.headerPathFull > a {
   color: #000;
 }
 
-.headerActiveFile > a:hover {
+.headerPathFull > a:hover {
   text-decoration: none;
+}
+
+.headerPathMobile {
+  display: none;
+  line-height: 0;
+}
+
+.headerPathBack {
+  display: inline-block;
+  width: 25px;
+  height: 19px;
+  background-color: #eee;
+  border: 1px solid #888;
+  border-radius: 4px;
+  margin: 0;
+  line-height: 0;
+  position: relative;
+}
+
+.headerPathBack::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  transform: rotate(225deg);
+  border-top: 2px solid #000;
+  border-right: 2px solid #000;
+  top: 5px;
+  position: absolute;
+  left: 9px;
+}
+
+@media (max-width: 500px) {
+  .headerPathFull {
+    display: none;
+  }
+
+  .headerPathMobile {
+    display: block;
+  }
 }

@@ -141,6 +141,8 @@ function activeFile(state = '', action: T.Action): string {
   switch (action.type) {
     case 'change-active-file':
       return action.value;
+    case 'change-view-list-files':
+      return action.data;
     default:
       return state;
   }
@@ -162,7 +164,8 @@ function view(state: T.View = 'link-dropbox', action: T.Action): T.View {
     case 'change-active-file':
       return 'view-file';
     case 'change-view':
-      return action.value;
+    case 'change-view-list-files':
+      return action.view;
     default:
       return state;
   }

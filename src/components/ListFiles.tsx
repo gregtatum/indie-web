@@ -9,9 +9,13 @@ Router.useNavigationType;
 import './ListFiles.css';
 
 export function ListFiles() {
-  const dispatch = Redux.useDispatch();
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
+  return <ListFilesImpl key={path} path={path} />;
+}
+
+export function ListFilesImpl({ path }: { path: string }) {
+  const dispatch = Redux.useDispatch();
   const request = Redux.useSelector($.getListFilesCache).get(path);
   const scrollRef = useRetainScroll(
     request?.type ?? 'none' + window.location.href,
@@ -27,7 +31,7 @@ export function ListFiles() {
         document.title = '📁 ' + path;
       }
     }
-    dispatch(A.changeView('list-files'));
+    dispatch(A.changeView('list-files', path));
     dispatch(A.keepAwake(false));
   }, []);
 

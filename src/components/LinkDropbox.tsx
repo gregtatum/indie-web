@@ -306,7 +306,7 @@ export function UnlinkDropbox() {
         dispatch(A.removeDropboxAccessToken());
       }}
     >
-      Unlink Dropbox
+      Sign Out
     </button>
   );
 }

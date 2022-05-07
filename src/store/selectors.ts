@@ -225,3 +225,48 @@ export const getActiveFileSongTitle = dangerousSelector(
   getActiveFileSongTitleOrNull,
   'Active file was not downloaded when getting song title.',
 );
+
+export const getActiveFileDisplayPath = createSelector(
+  getActiveFile,
+  getDownloadFileCache,
+  getListFilesCache,
+  (activeFile, downloadFilesCache, listFilesCache) => {
+    const downloadFile = downloadFilesCache.get(activeFile);
+    if (
+      downloadFile &&
+      downloadFile.type !== 'download-file-requested' &&
+      downloadFile.value
+    ) {
+      const { metadata } = downloadFile.value;
+      if (metadata?.path_display) {
+        return metadata.path_display;
+      }
+    }
+
+    const listFiles = listFilesCache.get(activeFile);
+    if (
+      listFiles &&
+      listFiles.type !== 'list-files-requested' &&
+      listFiles.value
+    ) {
+      const files = listFiles.value;
+      const file = files.find((file) => file.path_lower === activeFile);
+      if (file?.path_display) {
+        return file.path_display;
+      }
+      const activeFileWithSlash = activeFile + '/';
+      for (const file of files) {
+        if (
+          file?.path_lower?.startsWith(activeFileWithSlash) &&
+          file.path_display
+        ) {
+          const parts = activeFile.split('/');
+          const displayParts = file.path_display.split('/');
+          return displayParts.slice(0, parts.length).join('/');
+        }
+      }
+    }
+
+    return activeFile;
+  },
+);

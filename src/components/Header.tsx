@@ -9,12 +9,16 @@ import { UnhandledCaseError } from '../utils';
 
 export function Header() {
   const view = Redux.useSelector($.getView);
+  const path = Redux.useSelector($.getActiveFileDisplayPath);
   let title = <div className="headerTitle">🎵 Browser Chords</div>;
   switch (view) {
     case 'view-file':
-      title = <ActiveFile />;
+      title = <Path key={path} path={path} />;
       break;
     case 'list-files':
+      if (location.pathname !== '/folder' && location.pathname !== '/') {
+        title = <Path key={path} path={path} />;
+      }
       break;
     case 'link-dropbox':
       break;
@@ -32,8 +36,7 @@ export function Header() {
   );
 }
 
-function ActiveFile() {
-  const path = Redux.useSelector($.getActiveFile);
+function Path({ path }: { path: string }) {
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
   const modifiedText = Redux.useSelector($.getModifiedText);
 
@@ -51,24 +54,34 @@ function ActiveFile() {
     } else {
       pathGrow += '/' + part;
       breadcrumbs.push(
-        <>
-          <span>»</span>
-          <Router.Link key={pathGrow} to={`/folder${pathGrow}`}>
-            {part}
-          </Router.Link>
-        </>,
+        <span key={pathGrow + '»'}>»</span>,
+        <Router.Link key={pathGrow} to={`/folder${pathGrow}`}>
+          {part}
+        </Router.Link>,
       );
     }
   }
+  const backParts = path.split('/');
+  backParts.pop();
+
   return (
-    <div className="headerActiveFile" key={path}>
-      <span>🎵</span>
-      {breadcrumbs}
-      <span>»</span>
-      <span title={fileName}>{songTitle ?? fileName}</span>
-      {modifiedText ? (
-        <span className="headerActiveFileModified">modified</span>
-      ) : null}
+    <div className="headerPath" key={path}>
+      <div className="headerPathFull">
+        <span>🎵</span>
+        {breadcrumbs}
+        <span>»</span>
+        <span title={fileName}>{songTitle ?? fileName}</span>
+        {modifiedText ? (
+          <span className="headerPathModified">modified</span>
+        ) : null}
+      </div>
+      <div className="headerPathMobile">
+        <Router.Link
+          to={`/folder${backParts.join('/')}`}
+          className="headerPathBack"
+          aria-label="back"
+        ></Router.Link>
+      </div>
     </div>
   );
 }

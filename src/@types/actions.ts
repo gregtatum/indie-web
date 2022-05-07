@@ -10,7 +10,8 @@ export type Action =
   | { type: 'set-api-cache' }
   | { type: 'change-active-file'; value: string }
   | { type: 'modify-active-file'; value: string }
-  | { type: 'change-view'; value: App.View }
+  | { type: 'change-view'; view: App.View }
+  | { type: 'change-view-list-files'; view: 'list-files'; data: string }
   | { type: 'dismiss-message'; generation: number }
   | { type: 'dismiss-all-messages' }
   | { type: 'hide-editor'; flag: boolean }

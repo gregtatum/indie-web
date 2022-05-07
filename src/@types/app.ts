@@ -44,7 +44,11 @@ export interface ParsedChordPro {
 
 export type View = 'view-file' | 'list-files' | 'link-dropbox';
 
-export type DownloadedTextFile = { text?: string; error?: unknown };
+export type DownloadedTextFile = {
+  text?: string;
+  error?: unknown;
+  metadata?: files.FileMetadata;
+};
 export type DownloadedBlob = { fileBlob?: Blob; error?: unknown };
 
 /**
