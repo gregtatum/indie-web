@@ -299,7 +299,7 @@ export function UnlinkDropbox() {
   const dispatch = Redux.useDispatch();
   return (
     <button
-      className="linkDropboxUnlink"
+      className="button linkDropboxUnlink"
       type="button"
       onClick={() => {
         confirm('Are you sure you want to remove the access token?');

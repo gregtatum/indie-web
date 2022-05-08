@@ -52,13 +52,12 @@
   max-width: 100%;
   line-height: 2.7;
   position: relative;
-  top: 0.9em;
+  top: 0.5em;
 }
 
 .renderedSongLine-mixed .renderedSongLineChord {
   position: relative;
   top: -17px;
-  height: ;
   width: 0;
   display: inline-block;
 }
@@ -76,6 +75,7 @@
 
 .renderedSongSection {
   color: #666;
+  margin: 1.2em 0;
 }
 
 .renderedSongLineText {

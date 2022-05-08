@@ -29,6 +29,28 @@ body, html {
   overflow: hidden;
 }
 
+.button {
+  background-color: #eee;
+  border: 1px solid #888;
+  border-radius: 4px;
+  padding: 0.2em 0.5em;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.button:active {
+  outline: 2px solid #0040ff;
+}
+
+.button:focus {
+  outline: 2px solid #0040ffaa;
+}
+
+.button:hover {
+  opacity: 1;
+}
+
 code {
   padding: 0 4px;
   background-color: #eee;

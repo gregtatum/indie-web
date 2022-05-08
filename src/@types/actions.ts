@@ -8,10 +8,10 @@ export type Action =
   | { type: 'remove-dropbox-oauth' }
   | { type: 'clear-api-cache' }
   | { type: 'set-api-cache' }
-  | { type: 'change-active-file'; value: string }
-  | { type: 'modify-active-file'; value: string }
+  | { type: 'change-active-file'; path: string }
+  | { type: 'modify-active-file'; modifiedText: string }
   | { type: 'change-view'; view: App.View }
-  | { type: 'change-view-list-files'; view: 'list-files'; data: string }
+  | { type: 'change-view-list-files'; view: 'list-files'; path: string }
   | { type: 'dismiss-message'; generation: number }
   | { type: 'dismiss-all-messages' }
   | { type: 'hide-editor'; flag: boolean }

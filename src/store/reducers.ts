@@ -140,9 +140,9 @@ function downloadBlobCache(
 function activeFile(state = '', action: T.Action): string {
   switch (action.type) {
     case 'change-active-file':
-      return action.value;
+      return action.path;
     case 'change-view-list-files':
-      return action.data;
+      return action.path;
     default:
       return state;
   }
@@ -151,7 +151,7 @@ function activeFile(state = '', action: T.Action): string {
 function modifiedText(state = '', action: T.Action): string {
   switch (action.type) {
     case 'modify-active-file':
-      return action.value;
+      return action.modifiedText;
     case 'download-file-received':
       return '';
     default:

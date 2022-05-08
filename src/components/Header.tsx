@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
-import { $ } from 'src';
+import { $, A } from 'src';
 import * as Router from 'react-router-dom';
 import { UnlinkDropbox } from './LinkDropbox';
 
@@ -30,15 +30,38 @@ export function Header() {
     <div className="header">
       <div className="headerStart">{title}</div>
       <div className="headerEnd">
+        <SaveFileButton />
         <UnlinkDropbox />
       </div>
     </div>
   );
 }
 
+function SaveFileButton() {
+  const text = Redux.useSelector($.getModifiedText);
+  const view = Redux.useSelector($.getView);
+  const dispatch = Redux.useDispatch();
+  const path = Redux.useSelector($.getActiveFile);
+  const request = Redux.useSelector($.getDownloadFileCache).get(path);
+
+  if (!text || view !== 'view-file' || !request) {
+    return null;
+  }
+
+  return (
+    <button
+      className="button headerSaveFile"
+      onClick={() => {
+        dispatch(A.saveFile(path, text, request));
+      }}
+    >
+      Save
+    </button>
+  );
+}
+
 function Path({ path }: { path: string }) {
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
-  const modifiedText = Redux.useSelector($.getModifiedText);
 
   const breadcrumbs = [];
   let pathGrow = '';
@@ -71,9 +94,6 @@ function Path({ path }: { path: string }) {
         {breadcrumbs}
         <span>»</span>
         <span title={fileName}>{songTitle ?? fileName}</span>
-        {modifiedText ? (
-          <span className="headerPathModified">modified</span>
-        ) : null}
       </div>
       <div className="headerPathMobile">
         <Router.Link

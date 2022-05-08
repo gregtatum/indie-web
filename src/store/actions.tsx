@@ -189,17 +189,17 @@ export function clearApiCache(): Action {
   return { type: 'clear-api-cache' };
 }
 
-export function changeActiveFile(value: string): Action {
-  return { type: 'change-active-file', value };
+export function changeActiveFile(path: string): Action {
+  return { type: 'change-active-file', path };
 }
 
-export function modifyActiveFile(value: string): Action {
-  return { type: 'modify-active-file', value };
+export function modifyActiveFile(modifiedText: string): Action {
+  return { type: 'modify-active-file', modifiedText };
 }
 
 export function changeView<T>(view: T.View, data?: T): Action {
   if (view === 'list-files' && typeof data === 'string') {
-    return { type: 'change-view-list-files', view: 'list-files', data };
+    return { type: 'change-view-list-files', view: 'list-files', path: data };
   }
   return { type: 'change-view', view };
 }

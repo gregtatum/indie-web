@@ -69,6 +69,13 @@
   left: 9px;
 }
 
+.button.headerSaveFile {
+  color: #fff;
+  background-color: #0070ff;
+  border: 1px solid #004195;
+  margin-inline: 6px;
+}
+
 @media (max-width: 500px) {
   .headerPathFull {
     display: none;

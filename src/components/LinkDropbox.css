@@ -32,11 +32,3 @@
 .linkDropboxConnect:hover {
   background-color: #004eca;
 }
-
-.linkDropboxUnlink {
-  background-color: #eee;
-  border: 1px solid #888;
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 12px;
-}
