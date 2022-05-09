@@ -1,8 +1,8 @@
 import { Action, Thunk } from 'src/@types';
 import * as React from 'react';
 import { $, T } from 'src';
-import type { files } from 'dropbox';
 import { getGeneration, getProp } from 'src/utils';
+import type { files } from 'dropbox';
 import NoSleep from 'nosleep.js';
 
 const DEFAULT_MESSAGE_DELAY = 3000;
@@ -197,32 +197,47 @@ export function modifyActiveFile(modifiedText: string): Action {
   return { type: 'modify-active-file', modifiedText };
 }
 
-export function changeView<T>(view: T.View, data?: T): Action {
-  if (view === 'list-files' && typeof data === 'string') {
-    return { type: 'change-view-list-files', view: 'list-files', path: data };
-  }
-  return { type: 'change-view', view };
+export function viewListFiles(path: string): Action {
+  return { type: 'view-list-files', path };
+}
+
+export function viewFile(path: string): Action {
+  return { type: 'view-file', path };
+}
+
+export function viewPDF(path: string): Action {
+  return { type: 'view-pdf', path };
+}
+
+export function viewLinkDropbox(): Action {
+  return { type: 'view-link-dropbox' };
 }
 
 export function saveFile(
-  path: string,
+  pathLowercase: string,
   contents: string,
   originalFileRequest: T.APICalls.DownloadFile,
 ): Thunk {
   return async (dispatch, getState) => {
     const dropbox = $.getDropbox(getState());
+    if (originalFileRequest.type === 'download-file-requested') {
+      throw new Error('Logic error, the download file is being requested');
+    }
+    const savePath =
+      originalFileRequest.value?.metadata?.path_display ?? pathLowercase;
+
     const messageGeneration = dispatch(
       addMessage({
         message: (
           <>
-            Saving <code>{path}</code>
+            Saving <code>{savePath}</code>
           </>
         ),
       }),
     );
     return dropbox
       .filesUpload({
-        path,
+        path: savePath,
         contents,
         mode: {
           '.tag': 'overwrite',
@@ -242,7 +257,7 @@ export function saveFile(
             addMessage({
               message: (
                 <>
-                  Saved <code>{path}</code>
+                  Saved <code>{savePath}</code>
                 </>
               ),
               generation: messageGeneration,
@@ -255,7 +270,7 @@ export function saveFile(
             addMessage({
               message: (
                 <>
-                  Unable to save <code>{path}</code>
+                  Unable to save <code>{savePath}</code>
                 </>
               ),
               generation: messageGeneration,

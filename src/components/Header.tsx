@@ -12,15 +12,16 @@ export function Header() {
   const path = Redux.useSelector($.getActiveFileDisplayPath);
   let title = <div className="headerTitle">🎵 Browser Chords</div>;
   switch (view) {
+    case null:
+      break;
     case 'view-file':
+    case 'view-pdf':
       title = <Path key={path} path={path} />;
       break;
     case 'list-files':
       if (location.pathname !== '/folder' && location.pathname !== '/') {
         title = <Path key={path} path={path} />;
       }
-      break;
-    case 'link-dropbox':
       break;
     default:
       throw new UnhandledCaseError(view, 'View');
@@ -41,7 +42,7 @@ function SaveFileButton() {
   const text = Redux.useSelector($.getModifiedText);
   const view = Redux.useSelector($.getView);
   const dispatch = Redux.useDispatch();
-  const path = Redux.useSelector($.getActiveFile);
+  const path = Redux.useSelector($.getPath);
   const request = Redux.useSelector($.getDownloadFileCache).get(path);
 
   if (!text || view !== 'view-file' || !request) {

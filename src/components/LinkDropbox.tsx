@@ -310,30 +310,3 @@ export function UnlinkDropbox() {
     </button>
   );
 }
-
-export function DropboxExpired() {
-  const oauth = Redux.useSelector($.getDropboxOauth);
-  const navigate = Router.useNavigate();
-  React.useEffect(() => {
-    if (oauth) {
-      // Only allow this page if the access token is gone.
-      navigate('/');
-    }
-  }, [oauth]);
-  return (
-    <div className="linkDropbox">
-      <div className="linkDropboxDescription">
-        <h1>Dropbox Session Expired</h1>
-      </div>
-      <div>
-        <a
-          href={getAuthorizeUrl()}
-          className="linkDropboxConnect"
-          onClick={persistCodeVerifier}
-        >
-          Re-connect Dropbox
-        </a>
-      </div>
-    </div>
-  );
-}

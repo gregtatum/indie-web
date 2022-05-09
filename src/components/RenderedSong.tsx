@@ -6,7 +6,7 @@ import './RenderedSong.css';
 import { UnhandledCaseError } from 'src/utils';
 
 export function RenderedSong() {
-  const path = Redux.useSelector($.getActiveFile);
+  const path = Redux.useSelector($.getPath);
   const fileKey = Redux.useSelector($.getActiveFileSongKey);
   const hideEditor = Redux.useSelector($.getHideEditor);
   const { directives, lines } = Redux.useSelector($.getActiveFileParsed);

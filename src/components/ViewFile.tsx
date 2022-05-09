@@ -11,15 +11,10 @@ import { UnlinkDropbox } from './LinkDropbox';
 
 export function ViewFile() {
   const dispatch = Redux.useDispatch();
-  const params = Router.useParams();
-  const path = '/' + (params['*'] ?? '');
+  const path = Redux.useSelector($.getPath);
   const request = Redux.useSelector($.getDownloadFileCache).get(path);
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
   const hideEditor = Redux.useSelector($.getHideEditor);
-
-  React.useEffect(() => {
-    dispatch(A.changeActiveFile(path));
-  }, []);
 
   React.useEffect(() => {
     if (songTitle) {

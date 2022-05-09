@@ -137,11 +137,12 @@ function downloadBlobCache(
   }
 }
 
-function activeFile(state = '', action: T.Action): string {
+function path(state = '/', action: T.Action): string {
   switch (action.type) {
     case 'change-active-file':
-      return action.path;
-    case 'change-view-list-files':
+    case 'view-list-files':
+    case 'view-file':
+    case 'view-pdf':
       return action.path;
     default:
       return state;
@@ -159,13 +160,16 @@ function modifiedText(state = '', action: T.Action): string {
   }
 }
 
-function view(state: T.View = 'link-dropbox', action: T.Action): T.View {
+function view(state: T.View | null = null, action: T.Action): T.View | null {
   switch (action.type) {
     case 'change-active-file':
       return 'view-file';
-    case 'change-view':
-    case 'change-view-list-files':
-      return action.view;
+    case 'view-list-files':
+      return 'list-files';
+    case 'view-file':
+      return 'view-file';
+    case 'view-pdf':
+      return 'view-pdf';
     default:
       return state;
   }
@@ -219,7 +223,7 @@ export const app = combineReducers({
   listFilesCache,
   downloadFileCache,
   downloadBlobCache,
-  activeFile,
+  path,
   view,
   modifiedText,
   messages,

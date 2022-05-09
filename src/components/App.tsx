@@ -1,38 +1,89 @@
 import * as React from 'react';
-import { DropboxExpired, LinkDropbox } from './LinkDropbox';
-import { Header } from './Header';
+import * as Redux from 'react-redux';
+import * as Router from 'react-router-dom';
+import { A, $ } from 'src';
 
-import './App.css';
+import { LinkDropbox } from './LinkDropbox';
+import { Header } from './Header';
 import { ListFiles } from './ListFiles';
 import { ViewFile } from './ViewFile';
 import { ViewPDF } from './ViewPDF';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
 import { Messages } from './Messages';
+import './App.css';
+import { UnhandledCaseError } from 'src/utils';
+
+function ListFilesRouter() {
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const dispatch = Redux.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewListFiles(path));
+  }, [path]);
+  return null;
+}
+
+function ViewFileRouter() {
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const dispatch = Redux.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewFile(path));
+  }, [path]);
+  return null;
+}
+
+function ViewPDFRouter() {
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const dispatch = Redux.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewPDF(path));
+  }, [path]);
+  return null;
+}
 
 export function App() {
   return (
-    <BrowserRouter>
+    <Router.BrowserRouter>
+      <Router.Routes>
+        <Router.Route path="/" element={<ListFilesRouter />} />
+        <Router.Route path="folder" element={<ListFilesRouter />}>
+          <Router.Route path="*" element={<ListFilesRouter />} />
+        </Router.Route>
+        <Router.Route path="file" element={<ViewFileRouter />}>
+          <Router.Route path="*" element={<ViewFileRouter />} />
+        </Router.Route>
+        <Router.Route path="pdf" element={<ViewPDFRouter />}>
+          <Router.Route path="*" element={<ViewPDFRouter />} />
+        </Router.Route>
+      </Router.Routes>
       <LinkDropbox>
         <div className="appView">
           <Header />
           <div className="appViewContents">
-            <Routes>
-              <Route path="/" element={<ListFiles />} />
-              <Route path="folder" element={<ListFiles />}>
-                <Route path="*" element={<ListFiles />} />
-              </Route>
-              <Route path="file" element={<ViewFile />}>
-                <Route path="*" element={<ViewFile />} />
-              </Route>
-              <Route path="pdf" element={<ViewPDF />}>
-                <Route path="*" element={<ViewPDF />} />
-              </Route>
-              <Route path="expired" element={<DropboxExpired />} />
-            </Routes>
+            <Views />
           </div>
         </div>
       </LinkDropbox>
       <Messages />
-    </BrowserRouter>
+    </Router.BrowserRouter>
   );
+}
+
+function Views() {
+  const view = Redux.useSelector($.getView);
+  const path = Redux.useSelector($.getPath);
+  switch (view) {
+    case null:
+      return null;
+    case 'list-files':
+      return <ListFiles key={path} />;
+    case 'view-file':
+      return <ViewFile key={path} />;
+    case 'view-pdf':
+      return <ViewPDF key={path} />;
+    default:
+      throw new UnhandledCaseError(view, 'view');
+  }
 }

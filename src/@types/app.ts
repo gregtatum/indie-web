@@ -42,7 +42,7 @@ export interface ParsedChordPro {
   lines: LineType[];
 }
 
-export type View = 'view-file' | 'list-files' | 'link-dropbox';
+export type View = 'view-file' | 'view-pdf' | 'list-files';
 
 export type DownloadedTextFile = {
   text?: string;

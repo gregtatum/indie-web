@@ -2,13 +2,12 @@ import { State } from 'src/@types';
 import { Dropbox } from 'dropbox';
 import { createSelector } from 'reselect';
 import { ensureExists } from 'src/utils';
-import * as T from 'src/@types';
 import { parseChordPro } from 'src/logic/parse';
 import * as PDFJS from 'pdfjs-dist';
 
 PDFJS.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
 
-export function getView(state: State): T.View {
+export function getView(state: State) {
   return state.app.view;
 }
 
@@ -28,8 +27,8 @@ export function getDownloadBlobCache(state: State) {
   return state.app.downloadBlobCache;
 }
 
-export function getActiveFile(state: State) {
-  return state.app.activeFile;
+export function getPath(state: State) {
+  return state.app.path;
 }
 
 export function getModifiedText(state: State) {
@@ -100,13 +99,13 @@ export const getDropbox = dangerousSelector(
 
 export const getActiveFileTextOrNull = createSelector(
   getDownloadFileCache,
-  getActiveFile,
+  getPath,
   getModifiedText,
-  (downloadFileCache, activeFile, modifiedText): string | null => {
+  (downloadFileCache, path, modifiedText): string | null => {
     if (modifiedText) {
       return modifiedText;
     }
-    const downloadFileRequest = downloadFileCache.get(activeFile);
+    const downloadFileRequest = downloadFileCache.get(path);
     if (!downloadFileRequest) {
       return null;
     }
@@ -148,9 +147,9 @@ export const getActiveFileParsed = dangerousSelector(
 
 export const getActiveBlobOrNull = createSelector(
   getDownloadBlobCache,
-  getActiveFile,
-  (downloadBlobCache, activeFile): Blob | null => {
-    const downloadFileRequest = downloadBlobCache.get(activeFile);
+  getPath,
+  (downloadBlobCache, path): Blob | null => {
+    const downloadFileRequest = downloadBlobCache.get(path);
     if (!downloadFileRequest) {
       return null;
     }
@@ -227,11 +226,11 @@ export const getActiveFileSongTitle = dangerousSelector(
 );
 
 export const getActiveFileDisplayPath = createSelector(
-  getActiveFile,
+  getPath,
   getDownloadFileCache,
   getListFilesCache,
-  (activeFile, downloadFilesCache, listFilesCache) => {
-    const downloadFile = downloadFilesCache.get(activeFile);
+  (path, downloadFilesCache, listFilesCache) => {
+    const downloadFile = downloadFilesCache.get(path);
     if (
       downloadFile &&
       downloadFile.type !== 'download-file-requested' &&
@@ -243,30 +242,30 @@ export const getActiveFileDisplayPath = createSelector(
       }
     }
 
-    const listFiles = listFilesCache.get(activeFile);
+    const listFiles = listFilesCache.get(path);
     if (
       listFiles &&
       listFiles.type !== 'list-files-requested' &&
       listFiles.value
     ) {
       const files = listFiles.value;
-      const file = files.find((file) => file.path_lower === activeFile);
+      const file = files.find((file) => file.path_lower === path);
       if (file?.path_display) {
         return file.path_display;
       }
-      const activeFileWithSlash = activeFile + '/';
+      const activeFileWithSlash = path + '/';
       for (const file of files) {
         if (
           file?.path_lower?.startsWith(activeFileWithSlash) &&
           file.path_display
         ) {
-          const parts = activeFile.split('/');
+          const parts = path.split('/');
           const displayParts = file.path_display.split('/');
           return displayParts.slice(0, parts.length).join('/');
         }
       }
     }
 
-    return activeFile;
+    return path;
   },
 );

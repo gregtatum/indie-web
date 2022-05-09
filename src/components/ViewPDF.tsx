@@ -1,6 +1,5 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
-import * as Router from 'react-router-dom';
 import { A, $ } from 'src';
 
 import './ViewPDF.css';
@@ -11,14 +10,9 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 export function ViewPDF() {
   const dispatch = Redux.useDispatch();
-  const params = Router.useParams();
-  const path = '/' + (params['*'] ?? '');
+  const path = Redux.useSelector($.getPath);
   const request = Redux.useSelector($.getDownloadBlobCache).get(path);
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
-
-  React.useEffect(() => {
-    dispatch(A.changeActiveFile(path));
-  }, []);
 
   React.useEffect(() => {
     if (songTitle) {
