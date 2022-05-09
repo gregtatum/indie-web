@@ -7,6 +7,7 @@ import { UnhandledCaseError } from 'src/utils';
 
 export function RenderedSong() {
   const path = Redux.useSelector($.getPath);
+  const displayPath = Redux.useSelector($.getActiveFileDisplayPath);
   const fileKey = Redux.useSelector($.getActiveFileSongKey);
   const hideEditor = Redux.useSelector($.getHideEditor);
   const { directives, lines } = Redux.useSelector($.getActiveFileParsed);
@@ -17,11 +18,17 @@ export function RenderedSong() {
     });
   }, []);
 
+  const parts = displayPath.split('/');
+  let fileName = parts[parts.length - 1].replace('.chopro', '');
+  if (fileName.endsWith('.chopro')) {
+    fileName = fileName.slice(0, fileName.length - '.chopro'.length);
+  }
+
   return (
     <div className="renderedSong" key={path}>
       <div className="renderedSongHeader">
         <div className="renderedSongHeaderTitle">
-          <h1>{directives.title ?? 'Untitled'}</h1>
+          <h1>{directives.title ?? fileName}</h1>
           {directives.subtitle ? <h2>{directives.subtitle}</h2> : null}
         </div>
         <div className="renderedSongHeaderDetails">

@@ -216,7 +216,7 @@ export const getActiveFileSongTitleOrNull = createSelector(
     if (typeof directives.title === 'string') {
       return directives.title;
     }
-    return 'Untitled';
+    return null;
   },
 );
 
