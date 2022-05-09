@@ -43,6 +43,10 @@
   position: relative; /* create a stacking context for the chords. */
 }
 
+.renderedSongSpace {
+  height: 1.5em;
+}
+
 .renderedSongLine-chords {
   margin: 3px 0;
 }

@@ -1,15 +1,14 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
 import { A, $ } from 'src';
-import * as Router from 'react-router-dom';
 import { RenderedSong } from './RenderedSong';
 import { TextArea } from './TextArea';
 
-import './ViewFile.css';
+import './ViewChopro.css';
 import { ensureExists, maybeGetProperty } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
 
-export function ViewFile() {
+export function ViewChopro() {
   const dispatch = Redux.useDispatch();
   const path = Redux.useSelector($.getPath);
   const request = Redux.useSelector($.getDownloadFileCache).get(path);
@@ -48,23 +47,23 @@ export function ViewFile() {
       const text = ensureExists(request.value.text, 'text');
       if (hideEditor) {
         return (
-          <div className="viewFileSolo">
+          <div className="viewChoproSolo">
             <RenderedSong />
           </div>
         );
       }
       return (
         <Splitter
-          className="viewFileSplit"
+          className="viewChoproSplit"
           start={<TextArea path={path} text={text} originalRequest={request} />}
           end={<RenderedSong />}
-          persistLocalStorage={'viewFileSplitterOffset'}
+          persistLocalStorage={'viewChoproSplitterOffset'}
         />
       );
     }
     case 'download-file-failed': {
       return (
-        <div className="viewFileError">
+        <div className="viewChoproError">
           <div>
             <p>Unable to access DropBox account.</p>
             <UnlinkDropbox />
@@ -74,7 +73,7 @@ export function ViewFile() {
     }
     case 'download-file-requested':
     default:
-      return <div className="viewFileMessage">Requesting file.</div>;
+      return <div className="viewChoproMessage">Requesting file.</div>;
   }
 }
 

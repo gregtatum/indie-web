@@ -35,6 +35,7 @@ export type TextOrChord =
 
 export type LineType =
   | { type: 'section'; text: string }
+  | { type: 'space' }
   | { type: 'line'; spans: TextOrChord[]; content: LineContent };
 
 export interface ParsedChordPro {

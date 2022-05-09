@@ -1,4 +1,4 @@
-.viewFileSplit, .viewFileSolo {
+.viewChoproSplit, .viewChoproSolo {
   height: 100%;
   width: 100%;
   position: relative;
@@ -6,50 +6,50 @@
   animation: fadein 200ms;
 }
 
-.viewFileSolo {
+.viewChoproSolo {
   overflow: auto;
 }
 
-.viewFileSplit > * {
+.viewChoproSplit > * {
   position: absolute;
   top: 0;
   height: 100%;
 }
 
-.viewFileSplitMiddle {
+.viewChoproSplitMiddle {
   cursor: grab;
   z-index: 1;
   display: flex;
 }
 
-.viewFileSplitMiddle.dragging {
+.viewChoproSplitMiddle.dragging {
   cursor: grabbing;
 }
 
-.viewFileSplitMiddleVisible {
+.viewChoproSplitMiddleVisible {
   height: 100%;
   background: #ccc;
   flex: 1;
 }
 
-.viewFileSplitMiddle:hover {
+.viewChoproSplitMiddle:hover {
   background: #eee;
 }
 
-.viewFileSplitMiddle:hover .viewFileSplitMiddleVisible {
+.viewChoproSplitMiddle:hover .viewChoproSplitMiddleVisible {
   background: #aaa;
 }
 
-.viewFileSplitStart {
+.viewChoproSplitStart {
   width: calc(50% - 0px);
   left: 0;
 }
 
-.viewFileSplitEnd {
+.viewChoproSplitEnd {
   right: 0;
 }
 
-.viewFileMessage, .viewFileError {
+.viewChoproMessage, .viewChoproError {
   position: absolute;
   height: 100%;
   width: 100%;
@@ -59,6 +59,6 @@
   justify-content: center;
 }
 
-.viewFileMessage {
+.viewChoproMessage {
   animation: fadeindelay 1500ms;
 }

@@ -6,7 +6,7 @@ import { A, $ } from 'src';
 import { LinkDropbox } from './LinkDropbox';
 import { Header } from './Header';
 import { ListFiles } from './ListFiles';
-import { ViewFile } from './ViewFile';
+import { ViewChopro } from './ViewChopro';
 import { ViewPDF } from './ViewPDF';
 
 import { Messages } from './Messages';
@@ -23,7 +23,7 @@ function ListFilesRouter() {
   return null;
 }
 
-function ViewFileRouter() {
+function ViewChoproRouter() {
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
   const dispatch = Redux.useDispatch();
@@ -51,8 +51,8 @@ export function App() {
         <Router.Route path="folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
         </Router.Route>
-        <Router.Route path="file" element={<ViewFileRouter />}>
-          <Router.Route path="*" element={<ViewFileRouter />} />
+        <Router.Route path="file" element={<ViewChoproRouter />}>
+          <Router.Route path="*" element={<ViewChoproRouter />} />
         </Router.Route>
         <Router.Route path="pdf" element={<ViewPDFRouter />}>
           <Router.Route path="*" element={<ViewPDFRouter />} />
@@ -80,7 +80,7 @@ function Views() {
     case 'list-files':
       return <ListFiles key={path} />;
     case 'view-file':
-      return <ViewFile key={path} />;
+      return <ViewChopro key={path} />;
     case 'view-pdf':
       return <ViewPDF key={path} />;
     default:

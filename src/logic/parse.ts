@@ -135,7 +135,19 @@ export function parseChordPro(text: string): T.ParsedChordPro {
 
     const sectionResult = matchSection.exec(line);
     if (sectionResult) {
+      const lastLine = lines[lines.length - 1];
+      if (lastLine?.type === 'space') {
+        lines.pop();
+      }
       lines.push({ type: 'section', text: line });
+      continue;
+    }
+
+    if (!line.trim()) {
+      const lastLine = lines[lines.length - 1];
+      if (lastLine?.type !== 'section') {
+        lines.push({ type: 'space' });
+      }
       continue;
     }
 

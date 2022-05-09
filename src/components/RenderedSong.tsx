@@ -75,6 +75,8 @@ export function RenderedSong() {
                 {line.text}
               </h3>
             );
+          case 'space':
+            return <div className="renderedSongSpace" key={lineKey} />;
           default:
             return null;
         }
@@ -87,9 +89,11 @@ export function RenderedSong() {
 function getLineTypeKey(line: T.LineType, index: number): string {
   switch (line.type) {
     case 'section':
-      return index + line.text;
+      return 'section' + index + line.text;
+    case 'space':
+      return 'space' + index;
     case 'line': {
-      let key = '' + index;
+      let key = 'line' + index;
       for (const span of line.spans) {
         switch (span.type) {
           case 'text':
