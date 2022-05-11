@@ -42,8 +42,7 @@
     "roots": [
       "src/test"
     ],
-    "globalSetup": "./src/test/setup.ts",
-    "globalTeardown": "./src/test/teardown.ts",
+    "setupFilesAfterEnv": ["./src/test/setup.ts"],
     "verbose": true
   },
   "devDependencies": {
@@ -70,6 +69,7 @@
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.29.0",
+    "fetch-mock-jest": "^1.5.1",
     "html-webpack-plugin": "^5.5.0",
     "jest": "^27.5.1",
     "node-polyfill-webpack-plugin": "^1.1.4",
