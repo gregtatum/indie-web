@@ -6,6 +6,93 @@ const normalizeDirectives = new Map([
   ['st', 'subtitle'],
 ]);
 
+const extensions = new Set([
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '69',
+  '7',
+  '7-5',
+  '7#5',
+  '7#9',
+  '7#9#5',
+  '7#9b5',
+  '7#9#11',
+  '7b5',
+  '7b9',
+  '7b9#5',
+  '7b9#9',
+  '7b9#11',
+  '7b9b13',
+  '7b9b5',
+  '7b9sus',
+  '7b13',
+  '7b13sus',
+  '7-9',
+  '7-9#11',
+  '7-9#5',
+  '7-9#9',
+  '7-9-13',
+  '7-9-5',
+  '7-9sus',
+  '711',
+  '7#11',
+  '7-13',
+  '7-13sus',
+  '7sus',
+  '7susadd3',
+  '7+',
+  '7alt',
+  '9',
+  '9+',
+  '9#5',
+  '9b5',
+  '9-5',
+  '9sus',
+  '9add6',
+  'maj7',
+  'maj711',
+  'maj7#11',
+  'maj13',
+  'maj7#5',
+  'maj7sus2',
+  'maj7sus4',
+  '^7',
+  '^711',
+  '^7#11',
+  '^7#5',
+  '^7sus2',
+  '^7sus4',
+  'maj9',
+  'maj911',
+  '^9',
+  '^911',
+  '^13',
+  '^9#11',
+  '11',
+  '911',
+  '9#11',
+  '13',
+  '13#11',
+  '13#9',
+  '13b9',
+  'alt',
+  'add2',
+  'add4',
+  'add9',
+  'sus2',
+  'sus4',
+  'sus9',
+  '6sus2',
+  '6sus4',
+  '7sus2',
+  '7sus4',
+  '13sus2',
+  '13sus4',
+]);
+
 function noteOrNull(v: string): T.Note | null {
   // prettier-ignore
   switch (v) {
@@ -30,6 +117,7 @@ export function parseChord(text: string): T.Chord | null {
   if (text === '') {
     return null;
   }
+  text = text.trim();
   const baseNoteResult = text.match(/^([A-G][b#]?)/);
   //                                 ^                 match the beginning
   //                                  (          )     capture
@@ -64,7 +152,11 @@ export function parseChord(text: string): T.Chord | null {
     rest = rest.slice(0, rest.length - chord.add.length);
   }
 
-  if (rest === 'm' || rest === 'M' || rest.match(/^([mM])\d/)) {
+  if (
+    (rest.startsWith('m') || rest.startsWith('M') || rest.startsWith('-')) &&
+    !rest.toLowerCase().startsWith('maj') &&
+    !rest.toLowerCase().startsWith('mj')
+  ) {
     chord.type = 'minor';
     rest = rest.slice(1);
   }
@@ -77,6 +169,11 @@ export function parseChord(text: string): T.Chord | null {
     rest = rest.replace('+', '');
   }
 
+  if (rest === 'sus2') {
+    chord.type = 'sus2';
+    rest = '';
+  }
+
   if (rest === 'sus' || rest === 'sus4') {
     if (chord.type !== 'major') {
       return null;
@@ -85,13 +182,8 @@ export function parseChord(text: string): T.Chord | null {
     rest = '';
   }
 
-  if (rest === 'sus2') {
-    chord.type = 'sus2';
-    rest = '';
-  }
-
-  if (rest === 'maj7') {
-    chord.embellishment = 'maj7';
+  if (extensions.has(rest)) {
+    chord.embellishment = rest;
     rest = '';
   }
 
