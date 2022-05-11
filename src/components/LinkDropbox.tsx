@@ -70,6 +70,9 @@ function persistCodeVerifier() {
 
 export function LinkDropbox(props: { children: any }) {
   const isLogin = window.location.pathname === '/login';
+  const isDropboxInitiallyExpired = Redux.useSelector(
+    $.getIsDropboxInitiallyExpired,
+  );
   const oauth = Redux.useSelector($.getDropboxOauth);
   const oauthRef = React.useRef<T.DropboxOauth | null>(null);
   oauthRef.current = oauth;
@@ -246,6 +249,16 @@ export function LinkDropbox(props: { children: any }) {
   }, [isLogin]);
 
   const authorizeUrl = getAuthorizeUrl();
+
+  if (isDropboxInitiallyExpired) {
+    return (
+      <div className="linkDropbox">
+        <div className="linkDropboxDescription">
+          <h3>Accessing Your Dropbox…</h3>
+        </div>
+      </div>
+    );
+  }
 
   if (!oauth) {
     switch (authState) {

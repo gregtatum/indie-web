@@ -74,23 +74,21 @@ export function listFiles(path = ''): Thunk {
           value,
         });
       })
-      .catch(
-        handleKnownError(dispatch, (error) => {
-          const cache = $.getListFilesCache(getState()).get(path);
+      .catch((error) => {
+        const cache = $.getListFilesCache(getState()).get(path);
 
-          dispatch({
-            type: 'list-files-failed',
-            generation,
-            args,
-            value:
-              cache?.type === 'list-files-received' ||
-              cache?.type === 'list-files-failed'
-                ? cache.value
-                : undefined,
-            error: getProp(error, 'message') ?? 'There was a Dropbox API error',
-          });
-        }),
-      );
+        dispatch({
+          type: 'list-files-failed',
+          generation,
+          args,
+          value:
+            cache?.type === 'list-files-received' ||
+            cache?.type === 'list-files-failed'
+              ? cache.value
+              : undefined,
+          error: getProp(error, 'message') ?? 'There was a Dropbox API error',
+        });
+      });
   };
 }
 
@@ -362,20 +360,17 @@ export function keepAwake(flag: boolean): Thunk {
   };
 }
 
-function handleKnownError(dispatch: T.Dispatch, fn: (error: unknown) => void) {
-  return (error: unknown): void => {
-    if (
-      getProp(error, 'status') === 401 &&
-      getProp(error, 'error', 'error', '.tag') === 'expired_access_token'
-    ) {
-      window.localStorage.setItem(
-        'dropboxRedirectURL',
-        window.location.toString(),
-      );
-      dispatch(removeDropboxAccessToken());
-      window.location.href = '/expired';
+/**
+ * This is useful for testing purposes from the command line.
+ *
+ * dispatch($.forceExpiration())
+ */
+export function forceExpiration(): Thunk {
+  return (dispatch, getState) => {
+    const oauth = $.getDropboxOauth(getState());
+    if (!oauth) {
       return;
     }
-    fn(error);
+    dispatch(setDropboxAccessToken(oauth.accessToken, 0, oauth.refreshToken));
   };
 }

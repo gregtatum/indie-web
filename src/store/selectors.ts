@@ -92,6 +92,16 @@ export const getDropboxOrNull = createSelector(
   },
 );
 
+export const getIsDropboxInitiallyExpired = createSelector(
+  getDropboxOauth,
+  (oauth) => {
+    if (!oauth) {
+      return false;
+    }
+    return oauth.expires < Date.now();
+  },
+);
+
 export const getDropbox = dangerousSelector(
   getDropboxOrNull,
   "Dropbox wasn't available",
