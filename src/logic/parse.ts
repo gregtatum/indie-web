@@ -6,6 +6,7 @@ const normalizeDirectives = new Map([
   ['st', 'subtitle'],
 ]);
 
+// Taken from: https://www.chordpro.org/chordpro/chordpro-chords/
 const extensions = new Set([
   '2',
   '3',

@@ -10,6 +10,7 @@ import './ListFiles.css';
 
 export function ListFiles() {
   const path = Redux.useSelector($.getPath);
+  const activeFileDisplayPath = Redux.useSelector($.getActiveFileDisplayPath);
   const dispatch = Redux.useDispatch();
   const request = Redux.useSelector($.getListFilesCache).get(path);
   const scrollRef = useRetainScroll(
@@ -21,13 +22,13 @@ export function ListFiles() {
       document.title = '🎵 Chords';
     } else {
       if (path.startsWith('/')) {
-        document.title = '📁 ' + path.slice(1);
+        document.title = '📁 ' + (activeFileDisplayPath || path).slice(1);
       } else {
-        document.title = '📁 ' + path;
+        document.title = '📁 ' + (activeFileDisplayPath || path);
       }
     }
     dispatch(A.keepAwake(false));
-  }, []);
+  }, [activeFileDisplayPath]);
 
   React.useEffect(() => {
     if (!request) {
