@@ -27,6 +27,10 @@ export function ensureExists<T>(
   return item;
 }
 
+export function getEnv(key: string): string {
+  return ensureExists(process.env[key], `Could not find "${key}" in .env file`);
+}
+
 /**
  * Mock out Google Analytics for anything that's not production so that we have run-time
  * code coverage in development and testing.

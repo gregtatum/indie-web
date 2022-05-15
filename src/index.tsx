@@ -32,7 +32,7 @@ export async function init(): Promise<void> {
 export function createRootApp(store: T.Store): JSX.Element {
   return (
     <Provider store={store as any}>
-      <App key={'app'} />
+      <App key="app" />
     </Provider>
   );
 }

@@ -48,7 +48,10 @@ export function ListFiles() {
         parts.pop();
         parent = (
           <div className="listFilesFile">
-            <Router.Link to={`/folder${parts.join()}`}>
+            <Router.Link
+              className="listFilesFileLink"
+              to={`/folder${parts.join()}`}
+            >
               <span className="listFilesIcon">↩</span>
               ..
             </Router.Link>
@@ -79,21 +82,32 @@ export function ListFiles() {
               if (path_lower) {
                 if (isFolder) {
                   link = (
-                    <Router.Link to={`/folder${path_lower}`}>
+                    <Router.Link
+                      className="listFilesFileLink"
+                      to={`/folder${path_lower}`}
+                    >
                       <span className="listFilesIcon">{icon}</span>
                       {name}
                     </Router.Link>
                   );
                 } else if (isChordPro) {
                   link = (
-                    <Router.Link to={`/file${path_lower}`} onClick={clickFile}>
+                    <Router.Link
+                      className="listFilesFileLink"
+                      to={`/file${path_lower}`}
+                      onClick={clickFile}
+                    >
                       <span className="listFilesIcon">{icon}</span>
                       {name}
                     </Router.Link>
                   );
                 } else if (isPDF) {
                   link = (
-                    <Router.Link to={`/pdf${path_lower}`} onClick={clickFile}>
+                    <Router.Link
+                      className="listFilesFileLink"
+                      to={`/pdf${path_lower}`}
+                      onClick={clickFile}
+                    >
                       <span className="listFilesIcon">{icon}</span>
                       {name}
                     </Router.Link>

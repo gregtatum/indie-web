@@ -1,0 +1,24 @@
+.page {
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+  display: flex;
+  line-height: 1.4;
+}
+
+.page .button {
+  font-size: 15px;
+  padding: 0.2em 0.5em;
+}
+
+.pageInner {
+  width: 100%;
+  margin: 40px;
+}
+
+@media (min-width: 900px) {
+  .pageInner {
+    max-width: 900px;
+  }
+}

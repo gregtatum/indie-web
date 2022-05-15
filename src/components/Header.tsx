@@ -2,7 +2,6 @@ import * as React from 'react';
 import * as Redux from 'react-redux';
 import { $, A } from 'src';
 import * as Router from 'react-router-dom';
-import { UnlinkDropbox } from './LinkDropbox';
 
 import './Header.css';
 import { UnhandledCaseError } from '../utils';
@@ -10,9 +9,21 @@ import { UnhandledCaseError } from '../utils';
 export function Header() {
   const view = Redux.useSelector($.getView);
   const path = Redux.useSelector($.getActiveFileDisplayPath);
-  let title = <div className="headerTitle">🎵 Browser Chords</div>;
+  let title = (
+    <div className="headerTitle" key="home">
+      🎵 Browser Chords
+    </div>
+  );
   switch (view) {
     case null:
+      break;
+    case 'settings':
+      title = <Path path="/" key="settings" title="⚙️ Settings" />;
+      break;
+    case 'privacy':
+      title = (
+        <Path path="/" key="settings" title="👀 Privacy Policy and Usage" />
+      );
       break;
     case 'view-file':
     case 'view-pdf':
@@ -32,9 +43,21 @@ export function Header() {
       <div className="headerStart">{title}</div>
       <div className="headerEnd">
         <SaveFileButton />
-        <UnlinkDropbox />
+        <SettingsButton />
       </div>
     </div>
+  );
+}
+
+function SettingsButton() {
+  const view = Redux.useSelector($.getView);
+  if (view === 'settings') {
+    return null;
+  }
+  return (
+    <a href="/settings" className="button headerSettings">
+      Settings
+    </a>
   );
 }
 
@@ -61,7 +84,7 @@ function SaveFileButton() {
   );
 }
 
-function Path({ path }: { path: string }) {
+function Path({ path, title }: { path: string; title?: string }) {
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
 
   const breadcrumbs = [];
@@ -71,7 +94,7 @@ function Path({ path }: { path: string }) {
   for (const part of parts) {
     if (breadcrumbs.length === 0) {
       breadcrumbs.push(
-        <Router.Link key={'/'} to={`/`}>
+        <Router.Link key="/" to="/">
           home
         </Router.Link>,
       );
@@ -94,7 +117,10 @@ function Path({ path }: { path: string }) {
         <span>🎵</span>
         {breadcrumbs}
         <span>»</span>
-        <span title={fileName}>{songTitle ?? fileName}</span>
+        {songTitle ?? fileName ? (
+          <span title={fileName}>{songTitle ?? fileName}</span>
+        ) : null}
+        {title ? <span>{title}</span> : null}
       </div>
       <div className="headerPathMobile">
         <Router.Link

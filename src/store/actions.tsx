@@ -29,9 +29,7 @@ export function setDropboxAccessToken(
 }
 
 export function removeDropboxAccessToken(): Action {
-  window.localStorage.removeItem('dropboxAccessToken');
-  window.localStorage.removeItem('dropboxRefreshToken');
-  window.localStorage.removeItem('dropboxExpires');
+  localStorage.clear();
   return { type: 'remove-dropbox-oauth' };
 }
 
@@ -209,6 +207,14 @@ export function viewPDF(path: string): Action {
 
 export function viewLinkDropbox(): Action {
   return { type: 'view-link-dropbox' };
+}
+
+export function viewSettings(): Action {
+  return { type: 'view-settings' };
+}
+
+export function viewPrivacy(): Action {
+  return { type: 'view-privacy' };
 }
 
 export function saveFile(

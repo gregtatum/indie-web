@@ -12,6 +12,7 @@ import { ViewPDF } from './ViewPDF';
 import { Messages } from './Messages';
 import './App.css';
 import { UnhandledCaseError } from 'src/utils';
+import { Settings, Privacy } from './Page';
 
 function ListFilesRouter() {
   const params = Router.useParams();
@@ -43,11 +44,29 @@ function ViewPDFRouter() {
   return null;
 }
 
+function SettingsRouter() {
+  const dispatch = Redux.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewSettings());
+  });
+  return null;
+}
+
+function PrivacyRouter() {
+  const dispatch = Redux.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewPrivacy());
+  });
+  return null;
+}
+
 export function App() {
   return (
     <Router.BrowserRouter>
       <Router.Routes>
         <Router.Route path="/" element={<ListFilesRouter />} />
+        <Router.Route path="settings" element={<SettingsRouter />} />
+        <Router.Route path="privacy" element={<PrivacyRouter />} />
         <Router.Route path="folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
         </Router.Route>
@@ -83,6 +102,10 @@ function Views() {
       return <ViewChopro key={path} />;
     case 'view-pdf':
       return <ViewPDF key={path} />;
+    case 'settings':
+      return <Settings key={path} />;
+    case 'privacy':
+      return <Privacy key={path} />;
     default:
       throw new UnhandledCaseError(view, 'view');
   }

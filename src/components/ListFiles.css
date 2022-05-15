@@ -16,7 +16,7 @@
   padding: 4px;
 }
 
-.listFilesFile a, .listFilesFileEmpty {
+a.listFilesFileLink, .listFilesFileEmpty {
   padding: 8px;
   display: block;
   border-bottom: 1px solid #ddd;

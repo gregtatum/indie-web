@@ -29,14 +29,24 @@ body, html {
   overflow: hidden;
 }
 
+a {
+  color: #004eca;
+}
+
 .button {
-  background-color: #eee;
-  border: 1px solid #888;
-  border-radius: 4px;
+  margin: 0;
   padding: 0.2em 0.5em;
+  display: inline-block;
+  border: 1px solid #888;
+  color: #000;
+  background-color: #eee;
+  border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   opacity: 0.9;
+  text-decoration: none;
+  line-height: 1.2;
+  font-family: sans-serif;
 }
 
 .button:active {

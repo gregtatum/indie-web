@@ -170,6 +170,10 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'view-file';
     case 'view-pdf':
       return 'view-pdf';
+    case 'view-settings':
+      return 'settings';
+    case 'view-privacy':
+      return 'privacy';
     default:
       return state;
   }

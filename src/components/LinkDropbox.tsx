@@ -4,14 +4,12 @@ import * as Router from 'react-router-dom';
 import * as Redux from 'react-redux';
 
 import './LinkDropbox.css';
-import { ensureExists } from 'src/utils';
+import { ensureExists, getEnv } from 'src/utils';
 import { UnhandledCaseError, getStringProp, getNumberProp } from '../utils';
 import { randomBytes, createHash } from 'crypto';
+import { Privacy } from './Page';
 
-const dropboxClientId = ensureExists(
-  process.env.DROPBOX_CLIENT_ID,
-  'process.env.DROPBOX_CLIENT_ID',
-);
+const dropboxClientId = getEnv('DROPBOX_CLIENT_ID');
 
 function getRedirectUri() {
   const uri = window.location.origin;
@@ -108,10 +106,7 @@ export function LinkDropbox(props: { children: any }) {
           '?' +
           new URLSearchParams({
             grant_type: 'refresh_token',
-            client_id: ensureExists(
-              process.env.DROPBOX_CLIENT_ID,
-              'process.env.DROPBOX_CLIENT_ID',
-            ),
+            client_id: dropboxClientId,
             refresh_token: oauth.refreshToken,
           }),
         { method: 'POST' },
@@ -249,6 +244,7 @@ export function LinkDropbox(props: { children: any }) {
   }, [isLogin]);
 
   const authorizeUrl = getAuthorizeUrl();
+  const view = Redux.useSelector($.getView);
 
   if (isDropboxInitiallyExpired) {
     return (
@@ -263,14 +259,22 @@ export function LinkDropbox(props: { children: any }) {
   if (!oauth) {
     switch (authState) {
       case 'no-auth':
+        if (view === 'privacy') {
+          return <Privacy />;
+        }
         return (
           <div className="linkDropbox">
             <div className="linkDropboxDescription">
-              <h1>View ChordPro Files</h1>
+              <h1>🎵 Browser Chords</h1>
               <p>
-                View ChordPro files in a Dropbox folder. This app will only be
-                given acces to the <code>Dropbox/Apps/Chords</code> folder in
-                Dropbox once access is given.
+                View and edit common sheet music formats directly in your
+                browser. The sheet music is stored in your Dropbox account.
+                ChordPro and PDF file formats are supported.
+              </p>
+              <p>
+                Privacy is important. This app will only be given access to the{' '}
+                <code>Dropbox/Apps/Chords</code> folder in Dropbox to manage
+                files.
               </p>
             </div>
             <div>
@@ -282,6 +286,9 @@ export function LinkDropbox(props: { children: any }) {
                 Connect Dropbox
               </a>
             </div>
+            <p>
+              <Router.Link to="/privacy">Privacy Policy and Usage.</Router.Link>
+            </p>
           </div>
         );
       case 'await-auth':
@@ -315,7 +322,11 @@ export function UnlinkDropbox() {
       className="button linkDropboxUnlink"
       type="button"
       onClick={() => {
-        confirm('Are you sure you want to remove the access token?');
+        confirm(
+          'Are you sure you want to log out of the site? All of your data in the ' +
+            'browser will be removed, but your Dropbox folder will still be available ' +
+            'on Dropbox or if you sign back in.',
+        );
         dispatch(A.removeDropboxAccessToken());
       }}
     >

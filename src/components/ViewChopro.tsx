@@ -57,7 +57,7 @@ export function ViewChopro() {
           className="viewChoproSplit"
           start={<TextArea path={path} text={text} originalRequest={request} />}
           end={<RenderedSong />}
-          persistLocalStorage={'viewChoproSplitterOffset'}
+          persistLocalStorage="viewChoproSplitterOffset"
         />
       );
     }

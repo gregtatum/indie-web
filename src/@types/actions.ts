@@ -13,6 +13,8 @@ export type Action =
   | { type: 'view-list-files'; path: string }
   | { type: 'view-file'; path: string }
   | { type: 'view-pdf'; path: string }
+  | { type: 'view-settings' }
+  | { type: 'view-privacy' }
   | { type: 'view-link-dropbox' }
   | { type: 'dismiss-message'; generation: number }
   | { type: 'dismiss-all-messages' }
