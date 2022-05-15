@@ -1,4 +1,4 @@
-# Browser Chords
+# 🎵 Browser Chords
 
 Manage tabs, chords, and sheet music in Dropbox, and access and edit them directly in the browser, anywhere.
 
