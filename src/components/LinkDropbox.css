@@ -66,6 +66,7 @@
   outline: 2px solid #888;
   margin: var(--margin);
   animation: fadein 500ms;
+  width: auto;
 }
 
 .linkDropboxEnd::before,
@@ -120,6 +121,7 @@
   .linkDropboxEnd img {
     max-width: min(800px, calc(100% - var(--margin)));
     max-height: none;
+    height: auto;
   }
 
   .linkDropboxHome {

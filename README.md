@@ -20,7 +20,6 @@ This project supports basic [ChordPro](https://www.chordpro.org/) (.chopro) file
 
 Planned features include, but are not limited to:
 
- * Inline images
  * Chord transposing
  * Styling directives
 
