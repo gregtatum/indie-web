@@ -263,32 +263,46 @@ export function LinkDropbox(props: { children: any }) {
           return <Privacy />;
         }
         return (
-          <div className="linkDropbox">
-            <div className="linkDropboxDescription">
-              <h1>🎵 Browser Chords</h1>
-              <p>
-                View and edit common sheet music formats directly in your
-                browser. The sheet music is stored in your Dropbox account.
-                ChordPro and PDF file formats are supported.
-              </p>
-              <p>
-                Privacy is important. This app will only be given access to the{' '}
-                <code>Dropbox/Apps/Chords</code> folder in Dropbox to manage
-                files.
-              </p>
+          <div className="linkDropboxHome">
+            <div className="linkDropboxBegin">
+              <div className="linkDropbox">
+                <div className="linkDropboxDescription">
+                  <h1 className="linkDropboxH1">🎵 Browser Chords</h1>
+                  <h2 className="linkDropboxH2">A Greg Tatum Web App</h2>
+                  <p>
+                    Manage tabs, chords, and sheet music in Dropbox. Access and
+                    edit them directly in the browser, from anywhere.
+                  </p>
+                  <p>
+                    Privacy is important. This app will only be given access to
+                    the <code>Dropbox/Apps/Chords</code> folder in Dropbox to
+                    manage files. See the{' '}
+                    <Router.Link to="/privacy">privacy policy</Router.Link> for
+                    more details. The source code is on{' '}
+                    <a href="https://github.com/gregtatum/browser-chords">
+                      GitHub
+                    </a>
+                    .
+                  </p>
+                </div>
+                <div>
+                  <a
+                    href={authorizeUrl}
+                    className="linkDropboxConnect"
+                    onClick={persistCodeVerifier}
+                  >
+                    Connect Dropbox
+                  </a>
+                </div>
+              </div>
             </div>
-            <div>
-              <a
-                href={authorizeUrl}
-                className="linkDropboxConnect"
-                onClick={persistCodeVerifier}
-              >
-                Connect Dropbox
-              </a>
+            <div className="linkDropboxEnd">
+              <div className="linkDropboxScroller">
+                <img src="/Chords.tiny.png" width="1125" height="1500" />
+                <img src="/Songs.tiny.png" width="1125" height="1500" />
+                <img src="/Sheet.tiny.png" width="1125" height="1500" />
+              </div>
             </div>
-            <p>
-              <Router.Link to="/privacy">Privacy Policy and Usage.</Router.Link>
-            </p>
           </div>
         );
       case 'await-auth':
