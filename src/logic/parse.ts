@@ -200,6 +200,124 @@ export function parseChord(text: string): T.Chord | null {
   return chord;
 }
 
+export class Parser {
+  text: string;
+  index = 0;
+  constructor(text: string) {
+    this.text = text;
+  }
+
+  next(): string | undefined {
+    return this.text[this.index++];
+  }
+
+  peek(): string | undefined {
+    return this.text[this.index];
+  }
+
+  skipWhitespace() {
+    while (this.peek() === ' ' || this.peek() === '\t') {
+      this.next();
+    }
+  }
+
+  alphaNumeric(): string | null {
+    let string = '';
+    let ch = this.peek();
+    while (ch !== undefined && isAsciiAlphaNumeric(ch)) {
+      string += ch;
+      this.next();
+      ch = this.peek();
+    }
+    if (string.length === 0) {
+      return null;
+    }
+    return string;
+  }
+
+  escaped(surrounding: string, escaped: string): string | null {
+    let text = '';
+    let isEscaped = false;
+    const n = this.next();
+    if (n !== surrounding) {
+      return null;
+    }
+    let ch = this.next();
+    while (ch !== undefined) {
+      if (ch === escaped) {
+        if (!isEscaped) {
+          // {image: alt="My \\/alentine"}
+          //                 ^
+          isEscaped = true;
+          ch = this.next();
+          continue;
+        }
+        // {image: alt="My \\/alentine"}
+        //                  ^
+        isEscaped = false;
+      }
+      if (ch === surrounding) {
+        if (!isEscaped) {
+          return text;
+        }
+        isEscaped = false;
+      }
+      text += ch;
+      ch = this.next();
+    }
+    return null;
+  }
+}
+
+/**
+ * Parse a directive's attributes.
+ *
+ * {image: src="path/to/file.png"}
+ *        ^ starts here
+ */
+export function parseAttributes(text: string): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  const parser = new Parser(text);
+  while (parser.peek() !== undefined) {
+    // {image: src="path/to/file.png"}
+    //        ^
+    parser.skipWhitespace();
+
+    // {image: src="path/to/file.png"}
+    //                               ^
+    if (parser.peek() === '}') {
+      break;
+    }
+
+    // {image: src="path/to/file.png"}
+    //         ^^^
+    const key = parser.alphaNumeric();
+    if (!key) {
+      break;
+    }
+
+    // {image: src = "path/to/file.png"}
+    //            ^
+    parser.skipWhitespace();
+    // {image: src = "path/to/file.png"}
+    //             ^
+    if (parser.next() !== '=') {
+      break;
+    }
+    // {image: src = "path/to/file.png"}
+    //              ^
+    parser.skipWhitespace();
+    // {image: src = "path/to/file.png"}
+    //               ^
+    const value = parser.escaped('"', '\\');
+    if (value === null) {
+      break;
+    }
+    attributes[key] = value;
+  }
+  return attributes;
+}
+
 export function parseChordPro(text: string): T.ParsedChordPro {
   // {t:I Am a Man of Constant Sorrow}
   const matchMeta = /^\s*\{\s*(.*)\s*:\s*(.*)\s*\}\s*$/;
@@ -222,7 +340,17 @@ export function parseChordPro(text: string): T.ParsedChordPro {
     if (metaResult) {
       const [, key, value] = metaResult;
       const directive = normalizeDirectives.get(key) || key;
-      directives[directive] = value;
+      switch (directive) {
+        case 'image': {
+          const { src } = parseAttributes(value);
+          if (src) {
+            lines.push({ type: 'image', src });
+          }
+          break;
+        }
+        default:
+          directives[directive] = value;
+      }
       continue;
     }
 
@@ -310,4 +438,16 @@ export function parseChordPro(text: string): T.ParsedChordPro {
     }
   }
   return { directives, lines };
+}
+
+function isAsciiAlphaNumeric(ch: string): boolean {
+  const code = ch.charCodeAt(0);
+  return (
+    // numeric (0-9)
+    (code > 47 && code < 58) ||
+    // upper alpha (A-Z)
+    (code > 64 && code < 91) ||
+    // lower alpha (a-z)
+    (code > 96 && code < 123)
+  );
 }

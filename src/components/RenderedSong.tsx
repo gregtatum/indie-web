@@ -4,6 +4,7 @@ import { A, $, T } from 'src';
 
 import './RenderedSong.css';
 import { UnhandledCaseError } from 'src/utils';
+import { pathJoin } from '../utils';
 
 export function RenderedSong() {
   const path = Redux.useSelector($.getPath);
@@ -23,6 +24,7 @@ export function RenderedSong() {
   if (fileName.endsWith('.chopro')) {
     fileName = fileName.slice(0, fileName.length - '.chopro'.length);
   }
+  const folderPath = parts.slice(0, parts.length - 1).join('/');
 
   return (
     <div className="renderedSong" key={path}>
@@ -84,13 +86,69 @@ export function RenderedSong() {
             );
           case 'space':
             return <div className="renderedSongSpace" key={lineKey} />;
+          case 'image':
+            return (
+              <DropboxImage
+                className="renderedSongImage"
+                src={pathJoin(folderPath, line.src)}
+                key={lineKey}
+              />
+            );
           default:
-            return null;
+            throw new UnhandledCaseError(line, 'LineType');
         }
       })}
       <div className="renderedSongEndPadding" />
     </div>
   );
+}
+
+const imageCache: Record<string, string> = Object.create(null);
+
+function DropboxImage({
+  // eslint-disable-next-line react/prop-types
+  src,
+  ...props
+}: React.ImgHTMLAttributes<HTMLImageElement>) {
+  console.log(props);
+  const dropbox = Redux.useSelector($.getDropbox);
+  const [objectUrl, setObjectUrl] = React.useState<string>('');
+  const generationRef = React.useRef(0);
+
+  React.useEffect(() => {
+    return () => {
+      generationRef.current++;
+    };
+  });
+
+  React.useEffect(() => {
+    if (!src) {
+      return;
+    }
+
+    if (imageCache[src]) {
+      setObjectUrl(imageCache[src]);
+      return;
+    }
+
+    const generation = ++generationRef.current;
+
+    dropbox
+      .filesDownload({ path: src })
+      .then(async ({ result }) => {
+        if (generation !== generationRef.current) {
+          return;
+        }
+        const { fileBlob } = result as T.DownloadFileResponse;
+        imageCache[src] = URL.createObjectURL(fileBlob);
+        setObjectUrl(imageCache[src]);
+      })
+      .catch((error) => {
+        console.error('<DropboxImage /> error:', error);
+      });
+  }, [dropbox, src]);
+
+  return <img {...props} src={objectUrl} />;
 }
 
 function getLineTypeKey(line: T.LineType, index: number): string {
@@ -114,6 +172,9 @@ function getLineTypeKey(line: T.LineType, index: number): string {
         }
       }
       return key;
+    }
+    case 'image': {
+      return 'image:' + index + line.src;
     }
     default:
       throw new UnhandledCaseError(line, 'LineType');

@@ -133,3 +133,42 @@ export function getNumberProp(
   }
   return null;
 }
+
+/**
+ * An implementaion of node's path.join().
+ */
+export function pathJoin(...segments: string[]) {
+  const parts: string[] = [];
+  for (let segment of segments) {
+    if (parts.length > 0 && segment[0] === '/') {
+      // Remove leading slashes from non-first part.
+      segment = segment.slice(1);
+    }
+    if (segment[segment.length - 1] === '/') {
+      segment = segment.slice(0, segment.length - 1);
+    }
+    parts.push(...segment.split('/'));
+  }
+
+  const resultParts: string[] = [];
+  for (const part of parts) {
+    if (part === '.') {
+      continue;
+    }
+    if (part === '..') {
+      resultParts.pop();
+      continue;
+    }
+    resultParts.push(part);
+  }
+
+  const result = resultParts.join('/');
+
+  // Add on the trailing '/' if it exists
+  const endSegment = segments[segments.length - 1];
+  if (endSegment && endSegment[endSegment.length - 1] === '/') {
+    return result + '/';
+  }
+
+  return result;
+}

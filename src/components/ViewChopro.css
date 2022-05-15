@@ -47,6 +47,7 @@
 
 .viewChoproSplitEnd {
   right: 0;
+  overflow: auto;
 }
 
 .viewChoproMessage, .viewChoproError {

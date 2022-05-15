@@ -53,6 +53,10 @@
   height: 1.5em;
 }
 
+.renderedSongImage {
+  max-width: 100%;
+}
+
 .renderedSongLine-chords {
   margin: 3px 0;
 }
@@ -112,7 +116,7 @@
 }
 
 @media (min-width: 900px) {
-  .renderedSong {
+  .viewChoproSolo .renderedSong {
     min-width: 800px;
     max-width: 900px;
   }

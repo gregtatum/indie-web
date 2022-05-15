@@ -35,6 +35,7 @@ export type TextOrChord =
 
 export type LineType =
   | { type: 'section'; text: string }
+  | { type: 'image'; src: string }
   | { type: 'space' }
   | { type: 'line'; spans: TextOrChord[]; content: LineContent };
 
