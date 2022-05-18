@@ -17,6 +17,7 @@ init();
 
 export async function init(): Promise<void> {
   mockGoogleAnalytics();
+  initServiceWorker();
 
   const store = createStore();
   Object.assign(window as any, {
@@ -48,4 +49,17 @@ function mountReact(store: T.Store): void {
   }
   body.appendChild(mountElement);
   ReactDOM.render(createRootApp(store), mountElement);
+}
+
+function initServiceWorker() {
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register(
+        '/service-worker.js',
+      );
+      console.log('Service worker registered: ', registration);
+    } catch (error) {
+      console.log('Service worker registration failed:', error);
+    }
+  });
 }

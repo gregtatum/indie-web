@@ -141,7 +141,6 @@ function DropboxImage({
   src,
   ...props
 }: React.ImgHTMLAttributes<HTMLImageElement>) {
-  console.log(props);
   const dropbox = Redux.useSelector($.getDropbox);
   const [objectUrl, setObjectUrl] = React.useState<string>('');
   const generationRef = React.useRef(0);

@@ -4,6 +4,7 @@ const { DefinePlugin } = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+const WorkboxPlugin = require('workbox-webpack-plugin');
 
 const path = require('path');
 
@@ -44,6 +45,13 @@ const config = {
       patterns: [{ from: 'data' }],
     }),
     new NodePolyfillPlugin({ excludeAliases: ['console'] }),
+    // Service worker config.
+    new WorkboxPlugin.GenerateSW({
+      clientsClaim: true,
+      skipWaiting: true,
+      maximumFileSizeToCacheInBytes:
+        process.env.NODE_ENV === 'development' ? 10_000_000 : 2_097_152,
+    }),
   ],
 };
 
