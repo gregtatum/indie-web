@@ -3,16 +3,21 @@
 const { DefinePlugin } = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 const WorkboxPlugin = require('workbox-webpack-plugin');
 
 const path = require('path');
 
+/**
+ * @type {import("webpack").Configuration}
+ */
 const config = {
   entry: './src/index.tsx',
   devtool: 'source-map',
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx'],
+    alias: {
+      crypto: path.resolve(__dirname, 'src/logic/crypto-mock'),
+    },
   },
   output: {
     path: path.join(__dirname, 'dist'),
@@ -44,14 +49,6 @@ const config = {
     new CopyWebpackPlugin({
       patterns: [{ from: 'data' }],
     }),
-    new NodePolyfillPlugin({ excludeAliases: ['console'] }),
-    // Service worker config.
-    new WorkboxPlugin.GenerateSW({
-      clientsClaim: true,
-      skipWaiting: true,
-      maximumFileSizeToCacheInBytes:
-        process.env.NODE_ENV === 'development' ? 10_000_000 : 2_097_152,
-    }),
   ],
 };
 
@@ -63,6 +60,13 @@ if (process.env.NODE_ENV === 'development') {
 if (process.env.NODE_ENV === 'production') {
   require('dotenv').config({ path: './.env' });
   config.mode = 'production';
+
+  config.plugins.push(
+    new WorkboxPlugin.GenerateSW({
+      clientsClaim: true,
+      skipWaiting: true,
+    }),
+  );
 }
 
 config.plugins.push(

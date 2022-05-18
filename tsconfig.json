@@ -14,7 +14,8 @@
     // your require/imports.
     "paths": {
       "src/*": [
-        "./src/*"
+        "./src/*",
+        "src/@types/globals.d.ts",
       ],
     }
   },

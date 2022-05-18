@@ -3,9 +3,11 @@ import { Dropbox } from 'dropbox';
 import { createSelector } from 'reselect';
 import { ensureExists } from 'src/utils';
 import { parseChordPro } from 'src/logic/parse';
-import * as PDFJS from 'pdfjs-dist';
+import type * as PDFJS from 'pdfjs-dist';
 
-PDFJS.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
+const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
+
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
 
 export function getView(state: State) {
   return state.app.view;
@@ -190,7 +192,7 @@ export const getActivePDFOrNull = createSelector(
     if (!blob) {
       return null;
     }
-    return PDFJS.getDocument((await blob.arrayBuffer()) as Uint8Array).promise;
+    return pdfjs.getDocument((await blob.arrayBuffer()) as Uint8Array).promise;
   },
 );
 

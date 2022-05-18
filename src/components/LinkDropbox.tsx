@@ -4,67 +4,18 @@ import * as Router from 'react-router-dom';
 import * as Redux from 'react-redux';
 
 import './LinkDropbox.css';
-import { ensureExists, getEnv } from 'src/utils';
-import { UnhandledCaseError, getStringProp, getNumberProp } from '../utils';
-import { randomBytes, createHash } from 'crypto';
+import {
+  getEnv,
+  UnhandledCaseError,
+  getStringProp,
+  getNumberProp,
+} from 'src/utils';
 import { Privacy } from './Page';
+import { getRedirectUri, useCodeVerifier } from './hooks/pcse';
 
 const dropboxClientId = getEnv('DROPBOX_CLIENT_ID');
 
-function getRedirectUri() {
-  const uri = window.location.origin;
-  return uri + '/login';
-}
-
-function base64Encode(str: Buffer) {
-  return str
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
-
-function sha256(buffer: string): Buffer {
-  return createHash('sha256').update(buffer).digest();
-}
-
-interface Codes {
-  codeVerifier: string;
-  codeChallenge: string;
-}
-let _codes: null | Codes = null;
-function getCodes(): Codes {
-  if (!_codes) {
-    const codeVerifier = base64Encode(randomBytes(32));
-    const codeChallenge = base64Encode(sha256(codeVerifier));
-    _codes = { codeVerifier, codeChallenge };
-  }
-
-  return _codes;
-}
-
-let _authorizeUrl: string | null = null;
-function getAuthorizeUrl() {
-  if (!_authorizeUrl) {
-    _authorizeUrl =
-      'https://www.dropbox.com/oauth2/authorize?' +
-      new URLSearchParams({
-        response_type: `code`,
-        code_challenge_method: `S256`,
-        client_id: dropboxClientId,
-        code_challenge: getCodes().codeChallenge,
-        redirect_uri: getRedirectUri(),
-        token_access_type: 'offline',
-      });
-  }
-  return _authorizeUrl;
-}
-
 type AuthState = 'no-auth' | 'await-auth' | 'auth-failed' | 'refreshing';
-
-function persistCodeVerifier() {
-  window.localStorage.setItem('dropboxCodeVerifier', getCodes().codeVerifier);
-}
 
 export function LinkDropbox(props: { children: any }) {
   const isLogin = window.location.pathname === '/login';
@@ -243,7 +194,7 @@ export function LinkDropbox(props: { children: any }) {
       });
   }, [isLogin]);
 
-  const authorizeUrl = getAuthorizeUrl();
+  const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
   const view = Redux.useSelector($.getView);
 
   if (isDropboxInitiallyExpired) {
@@ -287,7 +238,7 @@ export function LinkDropbox(props: { children: any }) {
                 </div>
                 <div>
                   <a
-                    href={authorizeUrl}
+                    href={authorizationUrl}
                     className="linkDropboxConnect"
                     onClick={persistCodeVerifier}
                   >
@@ -314,7 +265,7 @@ export function LinkDropbox(props: { children: any }) {
           <div className="appViewMessage">
             <p>The Dropbox login failed. </p>
             <a
-              href={authorizeUrl}
+              href={authorizationUrl}
               className="linkDropboxConnect"
               onClick={persistCodeVerifier}
             >
