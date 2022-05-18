@@ -6,6 +6,27 @@ import './RenderedSong.css';
 import { UnhandledCaseError } from 'src/utils';
 import { pathJoin } from '../utils';
 
+function getSpotifyLink(
+  { title, subtitle }: Record<string, string>,
+  fileName: string,
+) {
+  let search: string = '';
+  if (title) {
+    search = title;
+  }
+  if (subtitle) {
+    if (search) {
+      search += ' ';
+    }
+    search += subtitle;
+  }
+  if (!search) {
+    search = fileName;
+  }
+
+  return 'https://open.spotify.com/search/' + encodeURIComponent(search);
+}
+
 export function RenderedSong() {
   const path = Redux.useSelector($.getPath);
   const displayPath = Redux.useSelector($.getActiveFileDisplayPath);
@@ -30,7 +51,17 @@ export function RenderedSong() {
     <div className="renderedSong" key={path}>
       <div className="renderedSongHeader">
         <div className="renderedSongHeaderTitle">
-          <h1>{directives.title ?? fileName}</h1>
+          <h1>
+            {directives.title ?? fileName}{' '}
+            <a
+              href={getSpotifyLink(directives, fileName)}
+              className="button renderedSongHeaderSpotify"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Spotify
+            </a>
+          </h1>
           {directives.subtitle ? <h2>{directives.subtitle}</h2> : null}
         </div>
         <div className="renderedSongHeaderDetails">

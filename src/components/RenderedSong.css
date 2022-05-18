@@ -38,6 +38,12 @@
 
 .renderedSongHeaderTitle h1 {
   font-size: 1.7em;
+  display: flex;
+  align-items: center;
+}
+
+.renderedSongHeaderTitleSpan {
+  flex: 1;
 }
 
 .renderedSongHeaderTitle h2 {
@@ -113,6 +119,13 @@
   padding: 2px 8px;
   font-size: 12px;
   margin: 10px 0;
+}
+
+a.renderedSongHeaderSpotify {
+  margin-inline: 1em;
+  background-color: #1ed760;
+  padding: 0.3em 0.5em 0.2em;
+  border-color: #138e3f;
 }
 
 @media (min-width: 900px) {
