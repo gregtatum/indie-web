@@ -12,7 +12,7 @@
   resize: none;
   font-family: 'Roboto Mono', monospace;
   font-size: 13px;
-  background: #f3efed;
+  background: linear-gradient(270deg, #ddd7d3 0px, #f3efed 60px);
 }
 
 .textAreaDismiss {

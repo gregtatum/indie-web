@@ -28,12 +28,12 @@
 
 .viewChoproSplitMiddleVisible {
   height: 100%;
-  background: #ccc;
+  background: #bbb;
   flex: 1;
 }
 
 .viewChoproSplitMiddle:hover {
-  background: #eee;
+  background: linear-gradient(90deg, transparent 0%, #fff 50%, transparent 100%);
 }
 
 .viewChoproSplitMiddle:hover .viewChoproSplitMiddleVisible {

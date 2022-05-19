@@ -87,7 +87,8 @@ interface SplitterProps {
 function Splitter(props: SplitterProps) {
   const { start, end, className, persistLocalStorage } = props;
   const container = React.useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = React.useState(false);
+  const isDragging = Redux.useSelector($.getIsDraggingSplitter);
+  const dispatch = Redux.useDispatch();
   const touchId = React.useRef<null | number>(null);
 
   let initialOffset = 0;
@@ -107,7 +108,7 @@ function Splitter(props: SplitterProps) {
   offsetXRef.current = offsetX;
   const minSpace = 10;
   const splitterWidth = 3;
-  const splitterPadding = 3;
+  const splitterPadding = 6;
 
   if (persistLocalStorage) {
     window.localStorage.setItem(persistLocalStorage, '' + offsetX);
@@ -147,7 +148,7 @@ function Splitter(props: SplitterProps) {
 
   const onMouseDown: React.MouseEventHandler<HTMLDivElement> = (event) => {
     event.preventDefault();
-    setIsDragging(true);
+    dispatch(A.draggingSplitter(true));
 
     function onMouseUp() {
       handleUp();
@@ -168,7 +169,7 @@ function Splitter(props: SplitterProps) {
       return;
     }
     event.preventDefault();
-    setIsDragging(true);
+    dispatch(A.draggingSplitter(true));
     touchId.current = event.changedTouches[0].identifier;
 
     function onTouchEnd() {
@@ -213,7 +214,7 @@ function Splitter(props: SplitterProps) {
     setOffsetX(keepOffsetInBounds(rect, offX));
   }
   function handleUp() {
-    setIsDragging(false);
+    dispatch(A.draggingSplitter(false));
     window.document.body.style.cursor = '';
   }
 

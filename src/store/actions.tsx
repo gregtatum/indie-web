@@ -181,6 +181,10 @@ export function downloadBlob(path: string): Thunk {
   };
 }
 
+export function draggingSplitter(isDragging: boolean): Action {
+  return { type: 'dragging-splitter', isDragging };
+}
+
 export function clearApiCache(): Action {
   return { type: 'clear-api-cache' };
 }

@@ -222,6 +222,13 @@ function messages(state: T.Message[] = [], action: T.Action): T.Message[] {
   }
 }
 
+function isDraggingSplitter(state = false, action: T.Action): boolean {
+  if (action.type === 'dragging-splitter') {
+    return action.isDragging;
+  }
+  return state;
+}
+
 export const app = combineReducers({
   dropboxOauth,
   listFilesCache,
@@ -233,6 +240,7 @@ export const app = combineReducers({
   messages,
   hideEditor,
   keepAwake,
+  isDraggingSplitter,
 });
 export type AppState = ReturnType<typeof app>;
 

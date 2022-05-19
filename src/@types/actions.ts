@@ -20,6 +20,7 @@ export type Action =
   | { type: 'dismiss-all-messages' }
   | { type: 'hide-editor'; flag: boolean }
   | { type: 'keep-awake'; flag: boolean }
+  | { type: 'dragging-splitter'; isDragging: boolean }
   | { type: 'expired-access-token' }
   | {
       type: 'add-message';

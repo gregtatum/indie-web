@@ -1,7 +1,6 @@
 import * as React from 'react';
-import * as A from 'src/store/actions';
 import * as Redux from 'react-redux';
-import * as T from 'src/@types';
+import { $, T, A } from 'src';
 import { throttle1 } from 'src/utils';
 
 import './TextArea.css';
@@ -11,6 +10,7 @@ export function TextArea(props: {
   text: string;
   originalRequest: T.APICalls.DownloadFile;
 }) {
+  const isDragging = Redux.useSelector($.getIsDraggingSplitter);
   const dispatch = Redux.useDispatch();
   function onChange(newText: string) {
     dispatch(A.modifyActiveFile(newText));
@@ -30,6 +30,11 @@ export function TextArea(props: {
     };
   }, []);
 
+  const style: React.CSSProperties = {};
+  if (isDragging) {
+    style.overflow = 'hidden';
+  }
+
   return (
     <div className="textArea" key={props.path}>
       <button
@@ -43,6 +48,7 @@ export function TextArea(props: {
         className="textAreaTextArea"
         defaultValue={props.text}
         onChange={(event) => throttledOnChange(event.target.value)}
+        style={style}
         onKeyDown={async (event) => {
           const { metaKey, ctrlKey, code, target } = event;
           if ((metaKey || ctrlKey) && code === 'KeyS') {

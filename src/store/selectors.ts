@@ -49,6 +49,10 @@ export function getKeepAwake(state: State) {
   return state.app.keepAwake;
 }
 
+export function getIsDraggingSplitter(state: State) {
+  return state.app.isDraggingSplitter;
+}
+
 function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,
