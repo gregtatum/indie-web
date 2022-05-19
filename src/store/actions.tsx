@@ -384,3 +384,11 @@ export function forceExpiration(): Thunk {
     dispatch(setDropboxAccessToken(oauth.accessToken, 0, oauth.refreshToken));
   };
 }
+
+export function disconnectOfflineDB(): Action {
+  return { type: 'disconnect-offline-db' };
+}
+
+export function connectOfflineDB(db: T.OfflineDB): Action {
+  return { type: 'connect-offline-db', db };
+}

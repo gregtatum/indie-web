@@ -1,7 +1,5 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
-import { A, $ } from 'src';
 import { getEnv } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
 

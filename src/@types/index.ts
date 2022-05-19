@@ -7,6 +7,7 @@ import { Action } from './actions';
 export type { AppState, State } from 'src/store/reducers';
 export * from './app';
 export * from './actions';
+export * from './db';
 
 /**
  * Selectors always take the root state, and return some part of it.

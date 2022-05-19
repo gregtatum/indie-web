@@ -229,6 +229,20 @@ function isDraggingSplitter(state = false, action: T.Action): boolean {
   return state;
 }
 
+function offlineDB(
+  state: T.OfflineDBState = { phase: 'connecting', db: null },
+  action: T.Action,
+): T.OfflineDBState {
+  switch (action.type) {
+    case 'disconnect-offline-db':
+      return { phase: 'disconnected', db: null };
+    case 'connect-offline-db':
+      return { phase: 'connected', db: action.db };
+    default:
+      return state;
+  }
+}
+
 export const app = combineReducers({
   dropboxOauth,
   listFilesCache,
@@ -241,7 +255,9 @@ export const app = combineReducers({
   hideEditor,
   keepAwake,
   isDraggingSplitter,
+  offlineDB,
 });
+
 export type AppState = ReturnType<typeof app>;
 
 export const reducers = { app };

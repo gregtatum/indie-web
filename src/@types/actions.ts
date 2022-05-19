@@ -1,4 +1,5 @@
 import * as App from './app';
+import * as DB from './db';
 
 export type Action =
   | {
@@ -22,6 +23,8 @@ export type Action =
   | { type: 'keep-awake'; flag: boolean }
   | { type: 'dragging-splitter'; isDragging: boolean }
   | { type: 'expired-access-token' }
+  | { type: 'disconnect-offline-db' }
+  | { type: 'connect-offline-db'; db: DB.OfflineDB }
   | {
       type: 'add-message';
       message: React.ReactNode;
