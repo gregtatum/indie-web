@@ -4,21 +4,46 @@ import { $, T } from 'src';
 import { getGeneration, getProp } from 'src/utils';
 import type { files } from 'dropbox';
 import NoSleep from 'nosleep.js';
-import { dismissMessage, setDropboxAccessToken } from './plain';
+import * as Plain from './plain';
+
+/**
+ * This file contains all of the thunk actions, that contain extra logic,
+ * such as conditional dispatches, and multiple async calls.
+ */
 
 const DEFAULT_MESSAGE_DELAY = 3000;
 
+/**
+ * Plain actions defined in thunks.tsx should either be APICalls, or internal.
+ * These will all be collected on the global `T` export in `src`.
+ */
 export type PlainActions =
   | T.APICalls.ListFiles
   | T.APICalls.DownloadFile
   | T.APICalls.DownloadBlob
-  | {
-      type: 'add-message';
-      message: React.ReactNode;
-      generation: number;
-    }
-  | { type: 'keep-awake'; flag: boolean }
-  | { type: 'dismiss-all-messages' };
+  // See PlainActions in src/@types/index.ts for details on this next line.
+  | T.Values<{
+      [FnName in keyof typeof PlainInternal]: ReturnType<
+        typeof PlainInternal[FnName]
+      >;
+    }>;
+
+/**
+ * These should only be used internally in thunks.
+ */
+namespace PlainInternal {
+  export function addMessage(message: React.ReactNode, generation: number) {
+    return { type: 'add-message' as const, message, generation };
+  }
+
+  export function dismissAllMessages() {
+    return { type: 'dismiss-all-messages' as const };
+  }
+
+  export function keepAwake(flag: boolean) {
+    return { type: 'keep-awake' as const, flag };
+  }
+}
 
 export function listFiles(path = ''): Thunk {
   return (dispatch, getState) => {
@@ -257,15 +282,11 @@ export function addMessage({
   timeout = false,
 }: MessageArgs): Thunk<number> {
   return (dispatch) => {
-    dispatch({
-      type: 'add-message',
-      message,
-      generation,
-    });
+    dispatch(PlainInternal.addMessage(message, generation));
     if (timeout) {
       setTimeout(
         () => {
-          dispatch(dismissMessage(generation));
+          dispatch(Plain.dismissMessage(generation));
         },
         typeof timeout === 'number' ? timeout : DEFAULT_MESSAGE_DELAY,
       );
@@ -278,7 +299,7 @@ export function dismissAllMessages(): Thunk {
   return (dispatch, getState) => {
     const messages = $.getMessages(getState());
     if (messages.length > 0) {
-      dispatch({ type: 'dismiss-all-messages' as const });
+      dispatch(PlainInternal.dismissAllMessages());
     }
   };
 }
@@ -297,7 +318,7 @@ export function keepAwake(flag: boolean): Thunk {
     } else {
       _noSleep.disable();
     }
-    dispatch({ type: 'keep-awake', flag });
+    dispatch(PlainInternal.keepAwake(flag));
   };
 }
 
@@ -312,6 +333,8 @@ export function forceExpiration(): Thunk {
     if (!oauth) {
       return;
     }
-    dispatch(setDropboxAccessToken(oauth.accessToken, 0, oauth.refreshToken));
+    dispatch(
+      Plain.setDropboxAccessToken(oauth.accessToken, 0, oauth.refreshToken),
+    );
   };
 }

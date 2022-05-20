@@ -10,7 +10,7 @@ export type { AppState, State } from 'src/store/reducers';
 import type * as Thunks from 'src/store/actions/thunks';
 import type * as PlainActions from 'src/store/actions/plain';
 
-type Values<T> = T[keyof T];
+export type Values<T> = T[keyof T];
 
 type PlainActions = Values<{
   [FnName in keyof typeof PlainActions]: ReturnType<
