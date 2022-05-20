@@ -1,37 +1,24 @@
-import { Action, Thunk } from 'src/@types';
+import { Thunk } from 'src/@types';
 import * as React from 'react';
 import { $, T } from 'src';
 import { getGeneration, getProp } from 'src/utils';
 import type { files } from 'dropbox';
 import NoSleep from 'nosleep.js';
+import { dismissMessage, setDropboxAccessToken } from './plain';
 
 const DEFAULT_MESSAGE_DELAY = 3000;
 
-export function setDropboxAccessToken(
-  accessToken: string,
-  expiresIn: number,
-  refreshToken: string,
-): Action {
-  const expires =
-    Date.now() + expiresIn * 1000 - 5 * 60 * 1000; /* subtract five minutes */
-
-  const oauth: T.DropboxOauth = {
-    accessToken,
-    expires,
-    refreshToken,
-  };
-  window.localStorage.setItem('dropboxOauth', JSON.stringify(oauth));
-
-  return {
-    type: 'set-dropbox-oauth',
-    oauth,
-  };
-}
-
-export function removeDropboxAccessToken(): Action {
-  localStorage.clear();
-  return { type: 'remove-dropbox-oauth' };
-}
+export type PlainActions =
+  | T.APICalls.ListFiles
+  | T.APICalls.DownloadFile
+  | T.APICalls.DownloadBlob
+  | {
+      type: 'add-message';
+      message: React.ReactNode;
+      generation: number;
+    }
+  | { type: 'keep-awake'; flag: boolean }
+  | { type: 'dismiss-all-messages' };
 
 export function listFiles(path = ''): Thunk {
   return (dispatch, getState) => {
@@ -181,46 +168,6 @@ export function downloadBlob(path: string): Thunk {
   };
 }
 
-export function draggingSplitter(isDragging: boolean): Action {
-  return { type: 'dragging-splitter', isDragging };
-}
-
-export function clearApiCache(): Action {
-  return { type: 'clear-api-cache' };
-}
-
-export function changeActiveFile(path: string): Action {
-  return { type: 'change-active-file', path };
-}
-
-export function modifyActiveFile(modifiedText: string): Action {
-  return { type: 'modify-active-file', modifiedText };
-}
-
-export function viewListFiles(path: string): Action {
-  return { type: 'view-list-files', path };
-}
-
-export function viewFile(path: string): Action {
-  return { type: 'view-file', path };
-}
-
-export function viewPDF(path: string): Action {
-  return { type: 'view-pdf', path };
-}
-
-export function viewLinkDropbox(): Action {
-  return { type: 'view-link-dropbox' };
-}
-
-export function viewSettings(): Action {
-  return { type: 'view-settings' };
-}
-
-export function viewPrivacy(): Action {
-  return { type: 'view-privacy' };
-}
-
 export function saveFile(
   pathLowercase: string,
   contents: string,
@@ -327,28 +274,12 @@ export function addMessage({
   };
 }
 
-export function dismissMessage(generation: number): T.Action {
-  return {
-    type: 'dismiss-message',
-    generation,
-  };
-}
-
 export function dismissAllMessages(): Thunk {
   return (dispatch, getState) => {
     const messages = $.getMessages(getState());
     if (messages.length > 0) {
-      dispatch({
-        type: 'dismiss-all-messages',
-      });
+      dispatch({ type: 'dismiss-all-messages' as const });
     }
-  };
-}
-
-export function hideEditor(flag: boolean): Action {
-  return {
-    type: 'hide-editor',
-    flag,
   };
 }
 
@@ -383,12 +314,4 @@ export function forceExpiration(): Thunk {
     }
     dispatch(setDropboxAccessToken(oauth.accessToken, 0, oauth.refreshToken));
   };
-}
-
-export function disconnectOfflineDB(): Action {
-  return { type: 'disconnect-offline-db' };
-}
-
-export function connectOfflineDB(db: T.OfflineDB): Action {
-  return { type: 'connect-offline-db', db };
 }

@@ -1,13 +1,24 @@
-import { State } from 'src/store/reducers';
-import { Action } from './actions';
-
 /**
  * Re-exports.
  */
-export type { AppState, State } from 'src/store/reducers';
 export * from './app';
 export * from './actions';
 export * from './db';
+
+import type { State } from 'src/store/reducers';
+export type { AppState, State } from 'src/store/reducers';
+import type * as Thunks from 'src/store/actions/thunks';
+import type * as PlainActions from 'src/store/actions/plain';
+
+type Values<T> = T[keyof T];
+
+type PlainActions = Values<{
+  [FnName in keyof typeof PlainActions]: ReturnType<
+    typeof PlainActions[FnName]
+  >;
+}>;
+
+export type Action = Thunks.PlainActions | PlainActions;
 
 /**
  * Selectors always take the root state, and return some part of it.
