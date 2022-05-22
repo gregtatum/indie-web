@@ -176,3 +176,20 @@ export function pathJoin(...segments: string[]) {
 
   return result;
 }
+
+/**
+ * Convert an arbitrary Dropbox or network error into a nice message.
+ */
+export function dropboxErrorMessage(error: any): string {
+  if (error?.status >= 500 && error?.status < 600) {
+    return 'Dropbox seems to be down at the moment. See https://status.dropbox.com/';
+  }
+  const name = error?.name;
+  if (typeof name === 'string') {
+    if (name === 'TypeError') {
+      return 'Unable to connect to the internet. Try again?';
+    }
+  }
+
+  return 'There was an error with Dropbox';
+}

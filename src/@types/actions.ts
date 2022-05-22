@@ -43,7 +43,7 @@ export type APIAction<Type extends string, Args, T> =
       args: Args;
       // The old value could be retained.
       value?: T;
-      error: unknown;
+      error: string;
     };
 
 export namespace APICalls {

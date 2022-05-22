@@ -1,7 +1,7 @@
 import { Thunk } from 'src/@types';
 import * as React from 'react';
 import { $, T } from 'src';
-import { getGeneration, getProp } from 'src/utils';
+import { dropboxErrorMessage, getGeneration } from 'src/utils';
 import type { files } from 'dropbox';
 import NoSleep from 'nosleep.js';
 import * as Plain from './plain';
@@ -84,7 +84,7 @@ export function listFiles(path = ''): Thunk {
           value,
         });
       })
-      .catch((error) => {
+      .catch((response) => {
         const cache = $.getListFilesCache(getState()).get(path);
 
         dispatch({
@@ -96,7 +96,7 @@ export function listFiles(path = ''): Thunk {
             cache?.type === 'list-files-failed'
               ? cache.value
               : undefined,
-          error: getProp(error, 'message') ?? 'There was a Dropbox API error',
+          error: dropboxErrorMessage(response),
         });
       });
   };
@@ -128,7 +128,13 @@ export function downloadFile(path: string): Thunk {
         };
         dispatch(action);
       })
-      .catch((error) => {
+      .catch((response) => {
+        let error;
+        if (response?.error?.error?.path['.tag'] === 'not_found') {
+          error = 'The file does not exist. ' + path;
+        } else {
+          error = dropboxErrorMessage(response);
+        }
         const cache = $.getDownloadFileCache(getState()).get(path);
         const action: T.Action = {
           type: 'download-file-failed',
@@ -139,10 +145,7 @@ export function downloadFile(path: string): Thunk {
             cache?.type === 'download-file-failed'
               ? cache.value
               : undefined,
-          error:
-            error?.message ??
-            error?.toString() ??
-            'There was a Dropbox API error',
+          error,
         };
         dispatch(action);
       });

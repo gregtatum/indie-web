@@ -9,6 +9,7 @@ import {
   UnhandledCaseError,
   getStringProp,
   getNumberProp,
+  dropboxErrorMessage,
 } from 'src/utils';
 import { Privacy } from './Page';
 import { getRedirectUri, useCodeVerifier } from './hooks/pcse';
@@ -33,6 +34,7 @@ export function LinkDropbox(props: { children: any }) {
     defaultAuthState = 'refreshing';
   }
   const [authState, setAuthState] = React.useState<AuthState>(defaultAuthState);
+  const [authError, setAuthError] = React.useState('');
   const dispatch = Redux.useDispatch();
   const navigate = Router.useNavigate();
 
@@ -61,43 +63,56 @@ export function LinkDropbox(props: { children: any }) {
             refresh_token: oauth.refreshToken,
           }),
         { method: 'POST' },
-      ).then(async (response) => {
-        if (response.status === 200) {
-          const text = await response.text();
-          try {
-            const json: unknown = JSON.parse(text);
-            // {
-            //   "access_token": "sl...-...",
-            //   "token_type": "bearer",
-            //   "expires_in": 14400
-            // }
-            const accessToken = getStringProp(json, 'access_token');
-            const expiresIn = getNumberProp(json, 'expires_in');
-            if (accessToken && expiresIn) {
-              dispatch(
-                A.setDropboxAccessToken(
-                  accessToken,
-                  expiresIn,
-                  oauth.refreshToken,
-                ),
-              );
-              setAuthState('no-auth');
-            } else {
-              console.error(
-                'Did not receive all expected data from refreshing the Dropbox access token',
-                { json, accessToken, expiresIn },
-              );
+      )
+        .then(async (response) => {
+          if (response.status === 200) {
+            const text = await response.text();
+            try {
+              const json: unknown = JSON.parse(text);
+              // {
+              //   "access_token": "sl...-...",
+              //   "token_type": "bearer",
+              //   "expires_in": 14400
+              // }
+              const accessToken = getStringProp(json, 'access_token');
+              const expiresIn = getNumberProp(json, 'expires_in');
+              if (accessToken && expiresIn) {
+                dispatch(
+                  A.setDropboxAccessToken(
+                    accessToken,
+                    expiresIn,
+                    oauth.refreshToken,
+                  ),
+                );
+                setAuthState('no-auth');
+              } else {
+                console.error(
+                  'Did not receive all expected data from refreshing the Dropbox access token',
+                  { json, accessToken, expiresIn },
+                );
+                setAuthState('auth-failed');
+              }
+            } catch (_err) {
+              console.error('Could not parse response', text);
+              setAuthError('Dropbox returned strange data.');
               setAuthState('auth-failed');
             }
-          } catch (_err) {
-            console.error('Could not parse lambda response', text);
+          } else {
+            console.error(
+              'The Dropbox API returned an error.',
+              await response.text(),
+            );
+            setAuthError(
+              'Dropbox replied with information that could not be understood.',
+            );
             setAuthState('auth-failed');
           }
-        } else {
-          console.error('The lambda returned an error.', await response.text());
+        })
+        .catch((error) => {
+          console.error(`Error with refresh token:`, error);
+          setAuthError(dropboxErrorMessage(error));
           setAuthState('auth-failed');
-        }
-      });
+        });
     }
   }, [oauth]);
 
@@ -189,7 +204,7 @@ export function LinkDropbox(props: { children: any }) {
         }
       })
       .then(null, (error) => {
-        console.error(error);
+        setAuthError(dropboxErrorMessage(error));
         setAuthState('auth-failed');
       });
   }, [isLogin]);
@@ -202,6 +217,7 @@ export function LinkDropbox(props: { children: any }) {
       <div className="linkDropbox">
         <div className="linkDropboxDescription">
           <h3>Accessing Your Dropbox…</h3>
+          <p>{authError ? authError : null}</p>
         </div>
       </div>
     );

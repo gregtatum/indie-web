@@ -6,7 +6,6 @@ import { TextArea } from './TextArea';
 
 import './ViewChopro.css';
 import { ensureExists, maybeGetProperty } from 'src/utils';
-import { UnlinkDropbox } from './LinkDropbox';
 
 export function ViewChopro() {
   const dispatch = Redux.useDispatch();
@@ -65,8 +64,7 @@ export function ViewChopro() {
       return (
         <div className="viewChoproError">
           <div>
-            <p>Unable to access DropBox account.</p>
-            <UnlinkDropbox />
+            <p>{request.error}</p>
           </div>
         </div>
       );
