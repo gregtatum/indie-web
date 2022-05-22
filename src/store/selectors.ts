@@ -265,14 +265,14 @@ export const getActiveFileDisplayPath = createSelector(
       listFiles.value
     ) {
       const files = listFiles.value;
-      const file = files.find((file) => file.path_lower === path);
+      const file = files.find((file) => file.path_display === path);
       if (file?.path_display) {
         return file.path_display;
       }
       const activeFileWithSlash = path + '/';
       for (const file of files) {
         if (
-          file?.path_lower?.startsWith(activeFileWithSlash) &&
+          file?.path_display?.startsWith(activeFileWithSlash) &&
           file.path_display
         ) {
           const parts = path.split('/');

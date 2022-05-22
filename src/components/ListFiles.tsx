@@ -86,12 +86,12 @@ export function ListFiles() {
                   {name}
                 </div>
               );
-              if (path_lower) {
+              if (path_display) {
                 if (isFolder) {
                   link = (
                     <Router.Link
                       className="listFilesFileLink"
-                      to={`/folder${path_lower}`}
+                      to={`/folder${path_display}`}
                     >
                       <span className="listFilesIcon">{icon}</span>
                       {name}
@@ -101,7 +101,7 @@ export function ListFiles() {
                   link = (
                     <Router.Link
                       className="listFilesFileLink"
-                      to={`/file${path_lower}`}
+                      to={`/file${path_display}`}
                       onClick={clickFile}
                     >
                       <span className="listFilesIcon">{icon}</span>
@@ -112,7 +112,7 @@ export function ListFiles() {
                   link = (
                     <Router.Link
                       className="listFilesFileLink"
-                      to={`/pdf${path_lower}`}
+                      to={`/pdf${path_display}`}
                       onClick={clickFile}
                     >
                       <span className="listFilesIcon">{icon}</span>
