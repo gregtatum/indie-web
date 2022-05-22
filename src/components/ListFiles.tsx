@@ -60,12 +60,17 @@ export function ListFiles() {
           </div>
         );
       }
+      // Remove any dot files.
+      const visibleFiles = request.value.filter(
+        (entry) => entry.name[0] !== '.',
+      );
+
       return (
         <>
           <div className="listFiles" ref={scrollRef}>
             {parent}
-            {request.value.map((entry) => {
-              const { name, id, path_lower } = entry;
+            {visibleFiles.map((entry) => {
+              const { name, id, path_display } = entry;
               const isFolder = entry['.tag'] === 'folder';
               const isChordPro = !isFolder && name.endsWith('.chopro');
               const isPDF = !isFolder && name.endsWith('.pdf');
