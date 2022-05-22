@@ -61,6 +61,10 @@ a {
   opacity: 1;
 }
 
+.button:disabled {
+  opacity: 0.6;
+}
+
 code {
   padding: 0 4px;
   background-color: #eee;

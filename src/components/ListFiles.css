@@ -58,3 +58,28 @@ a.listFilesFileLink, .listFilesFileEmpty {
 .listFilesFileBlock:nth-child(3)::after { width: 60%; }
 .listFilesFileBlock:nth-child(4)::after { width: 55%; }
 .listFilesFileBlock:nth-child(5)::after { width: 24%; }
+
+.button.listFilesCreate {
+  margin: 8px;
+}
+
+.listFilesCreateEditorInput {
+  flex: 1;
+  font-size: 13px;
+}
+
+.listFilesCreateEditor {
+  display: flex;
+  gap: 8px;
+  margin: 8px;
+  max-width: 300px;
+}
+
+.listFilesCreateError {
+  margin: 8px;
+  background: #ffbfbf;
+  padding: 8px;
+  border-radius: 3px;
+  border: 1px solid #f00;
+  font-size: 13px;
+}
