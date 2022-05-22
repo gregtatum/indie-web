@@ -29,7 +29,6 @@ export function ListFiles() {
         document.title = '📁 ' + (activeFileDisplayPath || path);
       }
     }
-    dispatch(A.keepAwake(false));
   }, [activeFileDisplayPath]);
 
   React.useEffect(() => {
@@ -37,10 +36,6 @@ export function ListFiles() {
       dispatch(A.listFiles(path));
     }
   }, [request]);
-
-  function clickFile() {
-    dispatch(A.keepAwake(true));
-  }
 
   switch (request?.type) {
     case 'list-files-received': {
@@ -102,7 +97,6 @@ export function ListFiles() {
                     <Router.Link
                       className="listFilesFileLink"
                       to={`/file${path_display}`}
-                      onClick={clickFile}
                     >
                       <span className="listFilesIcon">{icon}</span>
                       {name}
@@ -113,7 +107,6 @@ export function ListFiles() {
                     <Router.Link
                       className="listFilesFileLink"
                       to={`/pdf${path_display}`}
-                      onClick={clickFile}
                     >
                       <span className="listFilesIcon">{icon}</span>
                       {name}

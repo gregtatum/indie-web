@@ -45,10 +45,6 @@ export function getHideEditor(state: State) {
   return state.app.hideEditor;
 }
 
-export function getKeepAwake(state: State) {
-  return state.app.keepAwake;
-}
-
 export function getIsDraggingSplitter(state: State) {
   return state.app.isDraggingSplitter;
 }

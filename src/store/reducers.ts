@@ -192,15 +192,6 @@ function hideEditor(
   }
 }
 
-function keepAwake(state: boolean = false, action: T.Action): boolean {
-  switch (action.type) {
-    case 'keep-awake':
-      return action.flag;
-    default:
-      return state;
-  }
-}
-
 function messages(state: T.Message[] = [], action: T.Action): T.Message[] {
   switch (action.type) {
     case 'add-message':
@@ -253,7 +244,6 @@ export const app = combineReducers({
   modifiedText,
   messages,
   hideEditor,
-  keepAwake,
   isDraggingSplitter,
   offlineDB,
 });

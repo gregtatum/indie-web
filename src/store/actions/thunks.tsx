@@ -3,7 +3,6 @@ import * as React from 'react';
 import { $, T } from 'src';
 import { dropboxErrorMessage, getGeneration } from 'src/utils';
 import type { files } from 'dropbox';
-import NoSleep from 'nosleep.js';
 import * as Plain from './plain';
 
 /**
@@ -38,10 +37,6 @@ namespace PlainInternal {
 
   export function dismissAllMessages() {
     return { type: 'dismiss-all-messages' as const };
-  }
-
-  export function keepAwake(flag: boolean) {
-    return { type: 'keep-awake' as const, flag };
   }
 }
 
@@ -304,24 +299,6 @@ export function dismissAllMessages(): Thunk {
     if (messages.length > 0) {
       dispatch(PlainInternal.dismissAllMessages());
     }
-  };
-}
-
-let _noSleep: NoSleep | undefined;
-export function keepAwake(flag: boolean): Thunk {
-  return (dispatch) => {
-    if (!_noSleep) {
-      _noSleep = new NoSleep();
-    }
-    if (flag === _noSleep.isEnabled) {
-      return;
-    }
-    if (flag) {
-      _noSleep.enable();
-    } else {
-      _noSleep.disable();
-    }
-    dispatch(PlainInternal.keepAwake(flag));
   };
 }
 
