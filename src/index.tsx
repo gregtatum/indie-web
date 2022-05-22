@@ -52,6 +52,9 @@ function mountReact(store: T.Store): void {
 }
 
 function initServiceWorker() {
+  if (process.env.NODE_ENV === 'development') {
+    return;
+  }
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register(
