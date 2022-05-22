@@ -125,6 +125,12 @@ export function RenderedSong() {
                 key={lineKey}
               />
             );
+          case 'link':
+            return (
+              <a href={line.href} target="_blank" rel="noreferrer">
+                {line.href}
+              </a>
+            );
           default:
             throw new UnhandledCaseError(line, 'LineType');
         }
@@ -187,6 +193,8 @@ function getLineTypeKey(line: T.LineType, index: number): string {
       return 'section' + index + line.text;
     case 'space':
       return 'space' + index;
+    case 'link':
+      return 'link' + index + line.href;
     case 'line': {
       let key = 'line' + index;
       for (const span of line.spans) {

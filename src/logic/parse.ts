@@ -332,6 +332,11 @@ export function parseChordPro(text: string): T.ParsedChordPro {
   //                     \s*     \s*                      whitespace
   //                        (.*)                          contents
   //                            :                         end colon
+  const matchLink = /^https?:\/\//;
+  //                 ^                                    just start
+  //                  http                                http
+  //                      s?                              maybe s
+  //                        :\/\/                         ://
   const directives: { [directive: string]: string } = {};
   const lines: T.LineType[] = [];
 
@@ -341,6 +346,7 @@ export function parseChordPro(text: string): T.ParsedChordPro {
       const [, key, value] = metaResult;
       const directive = normalizeDirectives.get(key) || key;
       switch (directive) {
+        case 'img':
         case 'image': {
           const { src } = parseAttributes(value);
           if (src) {
@@ -351,6 +357,11 @@ export function parseChordPro(text: string): T.ParsedChordPro {
         default:
           directives[directive] = value;
       }
+      continue;
+    }
+    const linkResult = matchLink.exec(line);
+    if (linkResult) {
+      lines.push({ type: 'link', href: line.trim() });
       continue;
     }
 

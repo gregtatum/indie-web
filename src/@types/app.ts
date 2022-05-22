@@ -37,6 +37,7 @@ export type LineType =
   | { type: 'section'; text: string }
   | { type: 'image'; src: string }
   | { type: 'space' }
+  | { type: 'link'; href: string }
   | { type: 'line'; spans: TextOrChord[]; content: LineContent };
 
 export interface ParsedChordPro {
