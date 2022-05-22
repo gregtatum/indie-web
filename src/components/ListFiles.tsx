@@ -52,7 +52,7 @@ export function ListFiles() {
           <div className="listFilesFile">
             <Router.Link
               className="listFilesFileLink"
-              to={`/folder${parts.join()}`}
+              to={`/folder${parts.join('/')}`}
             >
               <span className="listFilesIcon">↩</span>
               ..
