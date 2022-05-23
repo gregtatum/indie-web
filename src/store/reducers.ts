@@ -72,6 +72,13 @@ function listFilesCache(
     }
     case 'clear-api-cache':
       return new Map();
+    case 'invalidate-path':
+      if (state.has(action.path)) {
+        const newState = new Map(state);
+        newState.delete(action.path);
+        return newState;
+      }
+      return state;
     default:
       return state;
   }
@@ -99,9 +106,15 @@ function downloadFileCache(
       newState.set(action.args.path, action);
       return newState;
     }
-
     case 'clear-api-cache':
       return new Map();
+    case 'invalidate-path':
+      if (state.has(action.path)) {
+        const newState = new Map(state);
+        newState.delete(action.path);
+        return newState;
+      }
+      return state;
     default:
       return state;
   }

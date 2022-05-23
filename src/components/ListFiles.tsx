@@ -37,6 +37,18 @@ export function ListFiles() {
     }
   }, [request]);
 
+  // Create the initial files if needed.
+  React.useEffect(() => {
+    if (
+      activeFileDisplayPath === '/' &&
+      request?.type === 'list-files-received' &&
+      request.value.length === 0
+    ) {
+      console.log(`!!! here`, A.createInitialFiles);
+      dispatch(A.createInitialFiles());
+    }
+  }, [activeFileDisplayPath, request]);
+
   switch (request?.type) {
     case 'list-files-received': {
       let parent = null;

@@ -87,3 +87,7 @@ export function disconnectOfflineDB() {
 export function connectOfflineDB(db: T.OfflineDB) {
   return { type: 'connect-offline-db' as const, db };
 }
+
+export function invalidatePath(path: string) {
+  return { type: 'invalidate-path' as const, path };
+}

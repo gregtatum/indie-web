@@ -318,3 +318,46 @@ export function forceExpiration(): Thunk {
     );
   };
 }
+
+export function createInitialFiles(): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const dropbox = $.getDropbox(getState());
+    const files = ['Getting started.chopro'];
+    let hasFailure = false;
+    let dropboxError: string = '';
+
+    for (const file of files) {
+      // Load the file locally first.
+      let contents: string;
+      try {
+        const response = await fetch('/guide/' + file);
+        contents = await response.text();
+      } catch (error) {
+        hasFailure = true;
+        console.error(error);
+        continue;
+      }
+
+      // Upload it Dropbox.
+      try {
+        await dropbox.filesUpload({
+          path: '/' + file,
+          contents,
+          mode: { '.tag': 'add' },
+        });
+      } catch (error) {
+        console.error(error);
+        hasFailure = true;
+        dropboxError = dropboxErrorMessage(error);
+      }
+    }
+    if (hasFailure) {
+      dispatch(
+        addMessage({
+          message: `Could not create the initial demo files. ${dropboxError}`,
+        }),
+      );
+    }
+    dispatch(Plain.invalidatePath('/'));
+  };
+}
