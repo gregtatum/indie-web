@@ -38,12 +38,19 @@ export function Header() {
       throw new UnhandledCaseError(view, 'View');
   }
 
+  const headerWrapperStyle: React.CSSProperties = {};
+  if (Redux.useSelector($.shouldHideHeader)) {
+    headerWrapperStyle.transform = 'translateY(var(--header-transform-y))';
+  }
+
   return (
-    <div className="header">
-      <div className="headerStart">{title}</div>
-      <div className="headerEnd">
-        <SaveFileButton />
-        <SettingsButton />
+    <div className="headerWrapper" style={headerWrapperStyle}>
+      <div className="header">
+        <div className="headerStart">{title}</div>
+        <div className="headerEnd">
+          <SaveFileButton />
+          <SettingsButton />
+        </div>
       </div>
     </div>
   );

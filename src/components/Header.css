@@ -1,10 +1,17 @@
 .header {
-  position: relative; /* create a stacking context */
-  z-index: 1; /* position above the appViewContents */
   padding: 9px;
   display: flex;
   border-bottom: 2px solid #ccc;
   box-shadow: 0 0 7px #00000045;
+  background-color: #fff;
+}
+
+.headerWrapper {
+  position: relative;
+  overflow: visible;
+  height: 0;
+  z-index: 1; /* Place above the contents */
+  transition: transform 150ms;
 }
 
 .headerStart {

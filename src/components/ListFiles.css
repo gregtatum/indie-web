@@ -1,7 +1,8 @@
 .listFiles, .listFilesBlocks {
   width: 100%;
-  height: 100%;
+  height: calc(100% - var(--header-padding));
   overflow: auto;
+  padding-top: var(--header-padding);
 }
 
 .listFilesIcon {

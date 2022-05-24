@@ -5,7 +5,11 @@ import { A, $ } from 'src';
 import './ViewPDF.css';
 import { ensureExists, maybeGetProperty, UnhandledCaseError } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
-import { usePromiseSelector, useInfalliblePromise } from './hooks';
+import {
+  usePromiseSelector,
+  useInfalliblePromise,
+  useShouldHideHeader,
+} from './hooks';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 export function ViewPDF() {
@@ -92,6 +96,7 @@ function PDF({ pdf }: PDFProps) {
     return Promise.all(pages);
   }, [pdf]);
   const pages = useInfalliblePromise(getAllPages);
+  const hideHeaderRef = useShouldHideHeader();
 
   React.useEffect(() => {
     const div = container.current;
@@ -128,7 +133,7 @@ function PDF({ pdf }: PDFProps) {
   }, [pages]);
 
   return (
-    <div className="viewPDFSolo">
+    <div className="viewPDFSolo" ref={hideHeaderRef}>
       <div className="viewPDFSoloWidth" ref={container}></div>
     </div>
   );

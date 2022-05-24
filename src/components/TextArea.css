@@ -5,7 +5,8 @@
 
 .textAreaTextArea {
   width: calc(100% - 20px);
-  height: calc(100% - 20px);
+  margin-top: var(--header-padding);
+  height: calc(100% - 20px - var(--header-padding));
   border: 0;
   outline: 0;
   padding: 10px;
@@ -17,7 +18,7 @@
 
 .textAreaDismiss {
   position: absolute;
-  top: 0;
+  top: var(--header-padding);
   right: 0;
   width: 30px;
   height: 30px;

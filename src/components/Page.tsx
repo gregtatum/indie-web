@@ -2,12 +2,14 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { getEnv } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
+import { useShouldHideHeader } from './hooks';
 
 import './Page.css';
 
 export function Settings() {
+  const hideHeaderRef = useShouldHideHeader();
   return (
-    <div className="page">
+    <div className="page" ref={hideHeaderRef}>
       <div className="pageInner">
         <h2>Your Dropbox Account</h2>
         <p>
@@ -27,8 +29,9 @@ export function Settings() {
 }
 
 export function Privacy() {
+  const hideHeaderRef = useShouldHideHeader();
   return (
-    <div className="page">
+    <div className="page" ref={hideHeaderRef}>
       <div className="pageInner">
         <h1>Privacy Policy and Usage</h1>
 

@@ -6,6 +6,7 @@ import { TextArea } from './TextArea';
 
 import './ViewChopro.css';
 import { ensureExists, maybeGetProperty } from 'src/utils';
+import { useShouldHideHeader } from './hooks';
 
 export function ViewChopro() {
   const dispatch = Redux.useDispatch();
@@ -32,6 +33,8 @@ export function ViewChopro() {
     }
   }, [request]);
 
+  const hideHeaderRef = useShouldHideHeader();
+
   switch (request?.type) {
     case 'download-file-received': {
       if (request.value.error) {
@@ -46,7 +49,7 @@ export function ViewChopro() {
       const text = ensureExists(request.value.text, 'text');
       if (hideEditor) {
         return (
-          <div className="viewChoproSolo">
+          <div className="viewChoproSolo" ref={hideHeaderRef}>
             <RenderedSong />
           </div>
         );

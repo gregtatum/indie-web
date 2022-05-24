@@ -49,6 +49,10 @@ export function getIsDraggingSplitter(state: State) {
   return state.app.isDraggingSplitter;
 }
 
+export function shouldHideHeader(state: State) {
+  return state.app.shouldHideHeader;
+}
+
 function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,

@@ -91,3 +91,7 @@ export function connectOfflineDB(db: T.OfflineDB) {
 export function invalidatePath(path: string) {
   return { type: 'invalidate-path' as const, path };
 }
+
+export function shouldHideHeader(hide: boolean) {
+  return { type: 'should-hide-header' as const, hide };
+}

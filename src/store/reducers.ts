@@ -247,6 +247,15 @@ function offlineDB(
   }
 }
 
+function shouldHideHeader(state: boolean = false, action: T.Action): boolean {
+  switch (action.type) {
+    case 'should-hide-header':
+      return action.hide;
+    default:
+      return state;
+  }
+}
+
 export const app = combineReducers({
   dropboxOauth,
   listFilesCache,
@@ -259,6 +268,7 @@ export const app = combineReducers({
   hideEditor,
   isDraggingSplitter,
   offlineDB,
+  shouldHideHeader,
 });
 
 export type AppState = ReturnType<typeof app>;

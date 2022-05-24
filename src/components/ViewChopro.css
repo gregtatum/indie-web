@@ -8,6 +8,8 @@
 
 .viewChoproSolo {
   overflow: auto;
+  height: calc(100% - var(--header-padding));
+  padding-top: var(--header-padding);
 }
 
 .viewChoproSplit > * {
@@ -48,6 +50,7 @@
 .viewChoproSplitEnd {
   right: 0;
   overflow: auto;
+  padding-top: var(--header-padding);
 }
 
 .viewChoproMessage, .viewChoproError {
