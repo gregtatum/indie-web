@@ -16,7 +16,8 @@ const config = {
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx'],
     alias: {
-      crypto: path.resolve(__dirname, 'src/logic/crypto-mock'),
+      crypto: path.resolve(__dirname, 'src/logic/empty-mock'),
+      util: path.resolve(__dirname, 'src/logic/empty-mock'),
     },
   },
   output: {
