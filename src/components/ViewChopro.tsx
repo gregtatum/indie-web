@@ -16,12 +16,12 @@ export function ViewChopro() {
 
   React.useEffect(() => {
     if (songTitle) {
-      document.title = '🎵 ' + songTitle;
+      document.title = songTitle;
     } else {
       if (path.startsWith('/')) {
-        document.title = '🎵 ' + path.slice(1);
+        document.title = path.slice(1);
       } else {
-        document.title = '🎵 ' + path;
+        document.title = path;
       }
     }
   }, [path, songTitle]);

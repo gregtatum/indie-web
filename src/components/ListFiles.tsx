@@ -21,7 +21,7 @@ export function ListFiles() {
 
   React.useEffect(() => {
     if (path === '/') {
-      document.title = '🎵 Browser Chords';
+      document.title = 'Browser Chords';
     } else {
       if (path.startsWith('/')) {
         document.title = '📁 ' + (activeFileDisplayPath || path).slice(1);

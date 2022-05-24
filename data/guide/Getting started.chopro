@@ -1,0 +1,43 @@
+{title: Getting started}
+{subtitle: A guide for working with 🎵 Browser Chords}
+
+Dropbox:
+
+All files are stored in your Dropbox under the following folder.
+
+Dropbox » Apps » Chords
+
+You may edit the files locally or on 🎵 Browser Chords.
+
+
+ChordPro:
+
+You can type directly in the editor in the left.
+And then hit save in the top right, or Ctrl+S or Cmd+S
+Chords are written inline like [Am]
+[C]You can add [Gsus2]multiple chords to a [D7]line.
+
+https://www.chordpro.org/chordpro/index.html
+
+Directives supported
+
+ • title      {title: My Title}
+ • subtitle   {subtitle: My Sub Title}
+ • image      {image: src="path/to/dropbox-file.txt"}
+ • key        {key: Am}
+
+
+Spotify:
+
+Spotify is available by clicking the green button at the top
+of the sheet. It opens Spotify with a search built from the
+title and subtitle.
+
+
+PDF:
+
+PDF viewing is also supported, but there are no editing features.
+To give this a try, download some free PDFs from the following.
+
+https://www.vgleadsheets.com/
+
