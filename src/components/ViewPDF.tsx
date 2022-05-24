@@ -22,11 +22,9 @@ export function ViewPDF() {
     if (songTitle) {
       document.title = songTitle;
     } else {
-      if (path.startsWith('/')) {
-        document.title = path.slice(1);
-      } else {
-        document.title = path;
-      }
+      const parts = path.split('/');
+      const file = parts[parts.length - 1];
+      document.title = file.replace(/\.pdf$/, '');
     }
   }, [path, songTitle]);
 
