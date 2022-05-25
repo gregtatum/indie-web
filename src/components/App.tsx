@@ -8,6 +8,7 @@ import { Header } from './Header';
 import { ListFiles } from './ListFiles';
 import { ViewChopro } from './ViewChopro';
 import { ViewPDF } from './ViewPDF';
+import { ViewImage } from './ViewImage';
 
 import { Messages } from './Messages';
 import './App.css';
@@ -44,6 +45,16 @@ function ViewPDFRouter() {
   return null;
 }
 
+function ViewImageRouter() {
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const dispatch = Redux.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewImage(path));
+  }, [path]);
+  return null;
+}
+
 function SettingsRouter() {
   const dispatch = Redux.useDispatch();
   React.useEffect(() => {
@@ -76,6 +87,9 @@ export function App() {
         <Router.Route path="pdf" element={<ViewPDFRouter />}>
           <Router.Route path="*" element={<ViewPDFRouter />} />
         </Router.Route>
+        <Router.Route path="image" element={<ViewImageRouter />}>
+          <Router.Route path="*" element={<ViewImageRouter />} />
+        </Router.Route>
       </Router.Routes>
       <LinkDropbox>
         <div className="appView">
@@ -102,6 +116,8 @@ function Views() {
       return <ViewChopro key={path} />;
     case 'view-pdf':
       return <ViewPDF key={path} />;
+    case 'view-image':
+      return <ViewImage key={path} />;
     case 'settings':
       return <Settings key={path} />;
     case 'privacy':

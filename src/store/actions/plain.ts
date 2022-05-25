@@ -54,6 +54,10 @@ export function viewPDF(path: string) {
   return { type: 'view-pdf' as const, path };
 }
 
+export function viewImage(path: string) {
+  return { type: 'view-image' as const, path };
+}
+
 export function viewLinkDropbox() {
   return { type: 'view-link-dropbox' as const };
 }

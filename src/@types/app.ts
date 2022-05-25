@@ -48,6 +48,7 @@ export interface ParsedChordPro {
 export type View =
   | 'view-file'
   | 'view-pdf'
+  | 'view-image'
   | 'list-files'
   | 'settings'
   | 'privacy';

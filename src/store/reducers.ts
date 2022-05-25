@@ -156,6 +156,7 @@ function path(state = '/', action: T.Action): string {
     case 'view-list-files':
     case 'view-file':
     case 'view-pdf':
+    case 'view-image':
       return action.path;
     default:
       return state;
@@ -183,6 +184,8 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'view-file';
     case 'view-pdf':
       return 'view-pdf';
+    case 'view-image':
+      return 'view-image';
     case 'view-settings':
       return 'settings';
     case 'view-privacy':

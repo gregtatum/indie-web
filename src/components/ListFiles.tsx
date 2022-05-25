@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
-import { A, $ } from 'src';
+import { A, T, $ } from 'src';
 import { ensureExists, getStringProp } from 'src/utils';
 import { useRetainScroll } from './hooks';
 
@@ -9,6 +9,26 @@ Router.useNavigationType;
 
 import './ListFiles.css';
 import { UnhandledCaseError } from '../utils';
+
+// List taken from: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
+const imageExtensions = new Set([
+  'apng',
+  'avif',
+  'gif',
+  'jpg',
+  'jpeg',
+  'jfif',
+  'pjpeg',
+  'pjp',
+  'png',
+  'svg',
+  'webp',
+  'bmp',
+  'ico',
+  'cur',
+  'tif',
+  'tiff',
+]);
 
 export function ListFiles() {
   const path = Redux.useSelector($.getPath);
@@ -24,9 +44,9 @@ export function ListFiles() {
       document.title = 'Browser Chords';
     } else {
       if (path.startsWith('/')) {
-        document.title = '📁 ' + (activeFileDisplayPath || path).slice(1);
+        document.title = (activeFileDisplayPath || path).slice(1);
       } else {
-        document.title = '📁 ' + (activeFileDisplayPath || path);
+        document.title = activeFileDisplayPath || path;
       }
     }
   }, [activeFileDisplayPath]);
@@ -49,6 +69,8 @@ export function ListFiles() {
     }
   }, [activeFileDisplayPath, request]);
 
+  const [filter, setFilter] = React.useState<string>('');
+
   switch (request?.type) {
     case 'list-files-received': {
       let parent = null;
@@ -56,15 +78,13 @@ export function ListFiles() {
         const parts = path.split('/');
         parts.pop();
         parent = (
-          <div className="listFilesFile">
-            <Router.Link
-              className="listFilesFileLink"
-              to={`/folder${parts.join('/')}`}
-            >
-              <span className="listFilesIcon">↩</span>
-              ..
-            </Router.Link>
-          </div>
+          <Router.Link
+            className="listFilesBack"
+            to={`/folder${parts.join('/')}`}
+            aria-label="Back"
+          >
+            ←
+          </Router.Link>
         );
       }
       // Remove any dot files.
@@ -74,66 +94,32 @@ export function ListFiles() {
 
       return (
         <>
-          <div className="listFiles" ref={scrollRef}>
-            {parent}
-            {visibleFiles.map((entry) => {
-              const { name, id, path_display } = entry;
-              const isFolder = entry['.tag'] === 'folder';
-              const isChordPro = !isFolder && name.endsWith('.chopro');
-              const isPDF = !isFolder && name.endsWith('.pdf');
-              let icon = '📄';
-              if (isFolder) {
-                icon = '📁';
-              } else if (isChordPro) {
-                icon = '🎵';
-              }
-              let link = (
-                <div className="listFilesFileEmpty">
-                  <span className="listFilesIcon">{icon}</span>
-                  {name}
-                </div>
-              );
-              if (path_display) {
-                if (isFolder) {
-                  link = (
-                    <Router.Link
-                      className="listFilesFileLink"
-                      to={`/folder${path_display}`}
-                    >
-                      <span className="listFilesIcon">{icon}</span>
-                      {name}
-                    </Router.Link>
+          <div className="listFiles">
+            <div className="listFilesFilter">
+              {parent}
+              <input
+                className="listFilesFilterInput"
+                type="text"
+                placeholder="Filter files"
+                onChange={(event) => {
+                  setFilter(event.target.value.toLowerCase());
+                }}
+              />
+            </div>
+            <div className="listFilesList" ref={scrollRef}>
+              {visibleFiles
+                .filter((file) =>
+                  filter ? file.name.toLowerCase().includes(filter) : true,
+                )
+                .map((file) => {
+                  return (
+                    <div className="listFilesFile">
+                      <File key={file.id} dropboxFile={file} />
+                    </div>
                   );
-                } else if (isChordPro) {
-                  link = (
-                    <Router.Link
-                      className="listFilesFileLink"
-                      to={`/file${path_display}`}
-                    >
-                      <span className="listFilesIcon">{icon}</span>
-                      {name}
-                    </Router.Link>
-                  );
-                } else if (isPDF) {
-                  link = (
-                    <Router.Link
-                      className="listFilesFileLink"
-                      to={`/pdf${path_display}`}
-                    >
-                      <span className="listFilesIcon">{icon}</span>
-                      {name}
-                    </Router.Link>
-                  );
-                }
-              }
-
-              return (
-                <div className="listFilesFile" key={id}>
-                  {link}
-                </div>
-              );
-            })}
-            <CreateChordProButton path={path} />
+                })}
+              <CreateChordProButton path={path} />
+            </div>
           </div>
         </>
       );
@@ -249,5 +235,82 @@ function CreateChordProButton(props: { path: string }) {
     >
       Create ChordPro File
     </button>
+  );
+}
+
+function File(props: { dropboxFile: T.DropboxFile }) {
+  const { name, path_display } = props.dropboxFile;
+  const isFolder = props.dropboxFile['.tag'] === 'folder';
+  const nameParts = name.split('.');
+  const extension =
+    nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
+  let displayName: React.ReactNode = name;
+  if (extension) {
+    displayName = (
+      <>
+        {nameParts.slice(0, -1).join('.')}.
+        <span className="listFilesExtension">
+          {nameParts[nameParts.length - 1]}
+        </span>
+      </>
+    );
+  }
+  const isChordPro = !isFolder && extension === 'chopro';
+  const isPDF = !isFolder && extension === 'pdf';
+  const isImage = !isFolder && imageExtensions.has(extension);
+
+  let icon = '📄';
+  if (isFolder) {
+    icon = '📁';
+  } else if (isChordPro) {
+    icon = '🎵';
+  }
+
+  if (path_display) {
+    if (isFolder) {
+      return (
+        <Router.Link
+          className="listFilesFileLink"
+          to={`/folder${path_display}`}
+        >
+          <span className="listFilesIcon">{icon}</span>
+          {displayName}
+        </Router.Link>
+      );
+    }
+
+    if (isChordPro) {
+      return (
+        <Router.Link className="listFilesFileLink" to={`/file${path_display}`}>
+          <span className="listFilesIcon">{icon}</span>
+          {displayName}
+        </Router.Link>
+      );
+    }
+
+    if (isPDF) {
+      return (
+        <Router.Link className="listFilesFileLink" to={`/pdf${path_display}`}>
+          <span className="listFilesIcon">{icon}</span>
+          {displayName}
+        </Router.Link>
+      );
+    }
+
+    if (isImage) {
+      return (
+        <Router.Link className="listFilesFileLink" to={`/image${path_display}`}>
+          <span className="listFilesIcon">{icon}</span>
+          {displayName}
+        </Router.Link>
+      );
+    }
+  }
+
+  return (
+    <div className="listFilesFileEmpty">
+      <span className="listFilesIcon">{icon}</span>
+      {displayName}
+    </div>
   );
 }

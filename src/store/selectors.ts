@@ -205,6 +205,21 @@ export const getActivePDF = dangerousSelector(
   'Active file was not downloaded while parsing file.',
 );
 
+export const getActiveImageOrNull = createSelector(
+  getActiveBlobOrNull,
+  async (blob) => {
+    if (!blob) {
+      return null;
+    }
+    return URL.createObjectURL(blob);
+  },
+);
+
+export const getActiveImage = dangerousSelector(
+  getActiveImageOrNull,
+  'Active file was not downloaded while processing file.',
+);
+
 export const getActiveFileSongKey = createSelector(
   getActiveFileParsed,
   ({ directives }): string | null => {
