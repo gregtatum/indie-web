@@ -1,0 +1,16 @@
+.viewImage {
+  overflow: auto;
+  height: calc(100% - var(--header-padding));
+  width: 100%;
+  justify-content: center;
+  display: flex;
+  padding-top: var(--header-padding);
+}
+
+.viewImageWidth {
+  max-width: 1000px;
+}
+
+.viewImageWidth img {
+  max-width: 100%;
+}

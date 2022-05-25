@@ -1,6 +1,10 @@
 :root {
   --header-padding: 41px;
-  --header-transform-y: -50px
+  --header-gap: 9px;
+  --header-transform-y: -50px;
+  --font-size-normal: 16px;
+  --font-size-small: 13px;
+  --font-size-song: 14px;
 }
 
 @keyframes fadein {
@@ -24,6 +28,7 @@ body, .appRoot {
   align-items: center;
   flex-direction: column;
   font-family: sans-serif;
+  font-size: var(--font-size-normal);
 }
 
 body, html {
@@ -46,7 +51,7 @@ a {
   color: #000;
   background-color: #eee;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   cursor: pointer;
   opacity: 0.9;
   text-decoration: none;

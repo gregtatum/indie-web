@@ -12,7 +12,7 @@
   padding: 10px;
   resize: none;
   font-family: 'Roboto Mono', monospace;
-  font-size: 13px;
+  font-size: var(--font-size-song);
   background: linear-gradient(270deg, #ddd7d3 0px, #f3efed 60px);
 }
 

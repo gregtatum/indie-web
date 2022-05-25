@@ -24,7 +24,7 @@
   margin-inline-start: 14px;
   border-radius: 3px;
   padding: 4px 10px;
-  font-size: 13px;
+  font-size: var(--font-size-small);
   border: 1px solid #8c8c8c;
 }
 

@@ -1,8 +1,47 @@
-.listFiles, .listFilesBlocks {
-  width: 100%;
-  height: calc(100% - var(--header-padding));
+.listFiles {
+  inset: var(--header-padding) 0 0 0;
+  display: flex;
+  position: absolute;
+  flex-direction: column;
+}
+
+.listFilesList,
+.listFilesBlocks {
+  flex: 1;
   overflow: auto;
-  padding-top: var(--header-padding);
+}
+
+.listFilesBack {
+  width: 20px;
+  height: 20px;
+  position: relative;
+  display: inline-block;
+  background: #0002;
+  border-radius: 3px;
+  text-align: center;
+  padding: 4px;
+  text-decoration: none;
+  color: #000;
+}
+
+.listFilesBack:hover {
+  background: #0003;
+}
+
+.listFilesFilter {
+  --gap: 8px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  gap: var(--gap);
+  padding: var(--gap);
+}
+
+.listFilesFilterInput {
+  font-size: var(--font-size-small);
+  padding: 4px 9px;
+  flex: 1;
+  border: 1px solid #bbb;
+  border-radius: 14px;
 }
 
 .listFilesIcon {
@@ -30,7 +69,11 @@ a.listFilesFileLink, .listFilesFileEmpty {
 }
 
 .listFilesBlocks {
-  animation: fadein 500ms
+  animation: fadein 500ms;
+  height: calc(100% - var(--header-padding));
+  top: var(--header-padding);
+  position: absolute;
+  width: 100%;
 }
 
 .listFilesFileBlock {
@@ -66,7 +109,7 @@ a.listFilesFileLink, .listFilesFileEmpty {
 
 .listFilesCreateEditorInput {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--font-size-small);
 }
 
 .listFilesCreateEditor {
@@ -82,5 +125,9 @@ a.listFilesFileLink, .listFilesFileEmpty {
   padding: 8px;
   border-radius: 3px;
   border: 1px solid #f00;
-  font-size: 13px;
+  font-size: var(--font-size-small);
+}
+
+.listFilesExtension {
+  opacity: 0.6;
 }

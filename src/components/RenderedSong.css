@@ -7,7 +7,7 @@
   padding-bottom: 0;
   margin: 0 auto;
   max-height: calc(100% - 50px);
-  font-size: 14px;
+  font-size: var(--font-size-song);
   font-family: 'Roboto Mono', monospace;
 }
 
@@ -117,7 +117,7 @@
   border: 1px solid #888;
   border-radius: 4px;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-song);
   margin: 10px 0;
 }
 

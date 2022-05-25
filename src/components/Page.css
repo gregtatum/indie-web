@@ -9,7 +9,7 @@
 }
 
 .page .button {
-  font-size: 15px;
+  font-size: var(--font-size-normal);
   padding: 0.2em 0.5em;
 }
 

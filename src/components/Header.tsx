@@ -11,7 +11,8 @@ export function Header() {
   const path = Redux.useSelector($.getActiveFileDisplayPath);
   let title = (
     <div className="headerTitle" key="home">
-      🎵 Browser Chords
+      <span>🎵</span>
+      <span className="headerTitleTitle">Browser Chords</span>
     </div>
   );
   switch (view) {
@@ -103,7 +104,7 @@ function Path({ path, title }: { path: string; title?: string }) {
     if (breadcrumbs.length === 0) {
       breadcrumbs.push(
         <Router.Link key="/" to="/">
-          home
+          Home
         </Router.Link>,
       );
     } else {
@@ -120,8 +121,8 @@ function Path({ path, title }: { path: string; title?: string }) {
   backParts.pop();
 
   return (
-    <div className="headerPath" key={path}>
-      <div className="headerPathFull">
+    <>
+      <div className="headerPath headerPathFull" key={path}>
         <span>🎵</span>
         {breadcrumbs}
         <span>»</span>
@@ -130,13 +131,13 @@ function Path({ path, title }: { path: string; title?: string }) {
         ) : null}
         {title ? <span>{title}</span> : null}
       </div>
-      <div className="headerPathMobile">
+      <div className="headerPath headerPathMobile" key={path}>
         <Router.Link
           to={`/folder${backParts.join('/')}`}
           className="headerPathBack"
           aria-label="back"
         ></Router.Link>
       </div>
-    </div>
+    </>
   );
 }

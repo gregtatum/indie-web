@@ -1,9 +1,11 @@
 .header {
-  padding: 9px;
+  height: 40px;
   display: flex;
   border-bottom: 2px solid #ccc;
   box-shadow: 0 0 7px #00000045;
   background-color: #fff;
+  align-items: center;
+  line-height: 1;
 }
 
 .headerWrapper {
@@ -18,25 +20,27 @@
   flex: 1;
 }
 
-.headerPath, .headerPathFull {
+.headerPath,
+.headerTitle {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  gap: var(--header-gap);
+  padding: var(--header-gap);
 }
 
 .headerEnd {
+  display: flex;
   flex-shrink: 0;
+  padding: var(--header-gap);
 }
 
 .headerStart {
+  display: flex;
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
-}
-
-.headerPathFull > * {
-  margin-inline-end: 9px;
-  display: inline-block;
 }
 
 .headerPathFull > a {
