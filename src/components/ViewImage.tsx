@@ -5,9 +5,10 @@ import { A, $ } from 'src';
 import './ViewImage.css';
 import { maybeGetProperty, UnhandledCaseError } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
-import { usePromiseSelector } from './hooks';
+import { usePromiseSelector, useResetScrollTop } from './hooks';
 
 export function ViewImage() {
+  useResetScrollTop();
   const dispatch = Redux.useDispatch();
   const path = Redux.useSelector($.getPath);
   const request = Redux.useSelector($.getDownloadBlobCache).get(path);

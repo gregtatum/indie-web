@@ -2,8 +2,6 @@ import * as React from 'react';
 import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { Selector } from 'src/@types';
-import { A, $ } from 'src';
-import { ensureExists } from 'src/utils';
 
 type PromiseState<T> =
   | { type: 'pending' }
@@ -73,72 +71,14 @@ export function useRetainScroll(uniqueName: string) {
   return scrollRef;
 }
 
-export function useShouldHideHeader() {
-  const scrollRef = React.useRef<HTMLDivElement | null>(null);
-  const { dispatch, getState } = Redux.useStore();
-
+/**
+ * Resets the document's scrollTop when the element is loaded.
+ */
+export function useResetScrollTop() {
   React.useEffect(() => {
-    const { current: container } = scrollRef;
-    if (container === null) {
-      return () => {};
+    const { scrollingElement } = document;
+    if (scrollingElement) {
+      scrollingElement.scrollTop = 0;
     }
-    const headerPaddingStr =
-      getComputedStyle(container).getPropertyValue('--header-padding');
-    if (!headerPaddingStr) {
-      throw new Error('Expected to find a headerPadding style');
-    }
-    headerPaddingStr.replace('px', '');
-    const headerPadding = parseInt(headerPaddingStr, 10) * 0.5;
-    let prevScroll = 0;
-
-    // Measure the height of the container using a resize observer.
-    let containerHeight = 0;
-    const resizeObserver = new ResizeObserver(
-      (resizes: ResizeObserverEntry[]) => {
-        const [resize] = resizes;
-        if (resizes.length !== 1) {
-          throw new Error('Expected only 1 resize entry.');
-        }
-        containerHeight = ensureExists(
-          resize.borderBoxSize[0].blockSize,
-          'Could not read the blockSize',
-        );
-      },
-    );
-    resizeObserver.observe(container);
-
-    const onScroll = () => {
-      const dx = container.scrollTop - prevScroll;
-      prevScroll = container.scrollTop;
-      if (dx > 0) {
-        // Scrolling down;
-        if (
-          container.scrollTop > headerPadding &&
-          !$.shouldHideHeader(getState())
-        ) {
-          dispatch(A.shouldHideHeader(true));
-        }
-      } else {
-        // Scrolling up.
-        if (
-          // iPad registers scrolling when it drags past the end of the document.
-          // Ensure the header doesn't come back when that happens.
-          container.scrollHeight - container.scrollTop > containerHeight &&
-          $.shouldHideHeader(getState())
-        ) {
-          dispatch(A.shouldHideHeader(false));
-        }
-      }
-    };
-
-    container.addEventListener('scroll', onScroll);
-    return () => {
-      container.removeEventListener('scroll', onScroll);
-      if ($.shouldHideHeader(getState())) {
-        dispatch(A.shouldHideHeader(false));
-      }
-    };
-  });
-
-  return scrollRef;
+  }, []);
 }

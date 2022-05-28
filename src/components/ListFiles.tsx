@@ -3,7 +3,7 @@ import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { A, T, $ } from 'src';
 import { ensureExists, getStringProp } from 'src/utils';
-import { useRetainScroll } from './hooks';
+import { useResetScrollTop, useRetainScroll } from './hooks';
 
 Router.useNavigationType;
 
@@ -31,6 +31,7 @@ const imageExtensions = new Set([
 ]);
 
 export function ListFiles() {
+  useResetScrollTop();
   const path = Redux.useSelector($.getPath);
   const activeFileDisplayPath = Redux.useSelector($.getActiveFileDisplayPath);
   const dispatch = Redux.useDispatch();

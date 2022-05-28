@@ -4,12 +4,70 @@ import { $, A } from 'src';
 import * as Router from 'react-router-dom';
 
 import './Header.css';
-import { UnhandledCaseError } from '../utils';
+import { ensureExists, UnhandledCaseError } from '../utils';
 
 export function Header() {
   const view = Redux.useSelector($.getView);
   const path = Redux.useSelector($.getActiveFileDisplayPath);
+  const [shouldHideHeader, setShouldHideHeader] = React.useState(false);
   const key = view + path;
+
+  const headerStyle: React.CSSProperties = {};
+  if (shouldHideHeader) {
+    headerStyle.transform = 'translateY(var(--header-transform-y))';
+  }
+
+  React.useEffect(function trackScrolling() {
+    const { scrollingElement } = document;
+    if (!scrollingElement) {
+      return () => {};
+    }
+    let headerPadding: number;
+    {
+      const headerPaddingStr =
+        getComputedStyle(scrollingElement).getPropertyValue('--header-padding');
+      if (!headerPaddingStr) {
+        throw new Error('Expected to find a headerPadding style');
+      }
+      headerPaddingStr.replace('px', '');
+      headerPadding = parseInt(headerPaddingStr, 10) * 0.5;
+    }
+
+    let _prevScroll = 0;
+    let _shouldHideHeader = false;
+
+    const onScroll = () => {
+      const { scrollTop } = scrollingElement;
+      const dx = scrollTop - _prevScroll;
+      _prevScroll = scrollTop;
+      if (scrollTop === 0) {
+        _shouldHideHeader = false;
+        setShouldHideHeader(false);
+      } else if (dx > 0) {
+        // Scrolling down;
+        if (scrollTop > headerPadding && !_shouldHideHeader) {
+          _shouldHideHeader = true;
+          setShouldHideHeader(true);
+        }
+      } else {
+        // Scrolling up.
+        if (
+          // iPad registers scrolling when it drags past the end of the document.
+          // Ensure the header doesn't come back when that happens.
+          scrollingElement.scrollHeight - scrollTop > window.innerHeight &&
+          _shouldHideHeader
+        ) {
+          _shouldHideHeader = false;
+          setShouldHideHeader(false);
+        }
+      }
+    };
+
+    document.addEventListener('scroll', onScroll);
+    return () => {
+      document.removeEventListener('scroll', onScroll);
+    };
+  }, []);
 
   let title = (
     <div className="headerTitle" key={key}>
@@ -40,20 +98,13 @@ export function Header() {
       throw new UnhandledCaseError(view, 'View');
   }
 
-  const headerWrapperStyle: React.CSSProperties = {};
-  if (Redux.useSelector($.shouldHideHeader)) {
-    headerWrapperStyle.transform = 'translateY(var(--header-transform-y))';
-  }
-
   return (
-    <div className="headerWrapper" style={headerWrapperStyle}>
-      <div className="header">
-        <div className="headerStart">{title}</div>
-        <div className="headerEnd">
-          <SaveFileButton />
-          <RequestFullScreen />
-          <SettingsButton />
-        </div>
+    <div className="header" style={headerStyle}>
+      <div className="headerStart">{title}</div>
+      <div className="headerEnd">
+        <SaveFileButton />
+        <RequestFullScreen />
+        <SettingsButton />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 .header {
   position: fixed;
+  top: 0;
   width: 100%;
   height: 40px;
   display: flex;
@@ -8,13 +9,6 @@
   background-color: #fff;
   align-items: center;
   line-height: 1;
-}
-
-.headerWrapper {
-  position: fixed;
-  top: 0;
-  height: 0;
-  overflow: visible;
   z-index: 1; /* Place above the contents */
   transition: transform 150ms;
 }

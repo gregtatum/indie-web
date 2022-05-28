@@ -77,12 +77,14 @@ code {
 
 @media all and (display-mode: fullscreen) {
   [data-fullscreen] {
-    overflow: auto;
     background-color: #fff;
     margin: 0 auto;
-    max-width: 100%;
+    position: absolute;
+    inset: 0;
+    overflow-y: scroll;
   }
 }
+
 
 .appView {
   padding-top: var(--header-padding);

@@ -8,11 +8,12 @@ import { UnlinkDropbox } from './LinkDropbox';
 import {
   usePromiseSelector,
   useInfalliblePromise,
-  useShouldHideHeader,
+  useResetScrollTop,
 } from './hooks';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 export function ViewPDF() {
+  useResetScrollTop();
   const dispatch = Redux.useDispatch();
   const path = Redux.useSelector($.getPath);
   const request = Redux.useSelector($.getDownloadBlobCache).get(path);
@@ -94,7 +95,6 @@ function PDF({ pdf }: PDFProps) {
     return Promise.all(pages);
   }, [pdf]);
   const pages = useInfalliblePromise(getAllPages);
-  const hideHeaderRef = useShouldHideHeader();
 
   React.useEffect(() => {
     const div = container.current;
@@ -131,7 +131,7 @@ function PDF({ pdf }: PDFProps) {
   }, [pages]);
 
   return (
-    <div className="viewPDFSolo" ref={hideHeaderRef} data-fullscreen>
+    <div className="viewPDFSolo" data-fullscreen>
       <div className="viewPDFSoloWidth" ref={container}></div>
     </div>
   );
