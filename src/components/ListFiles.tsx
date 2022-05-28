@@ -3,7 +3,7 @@ import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { A, T, $ } from 'src';
 import { ensureExists, getStringProp } from 'src/utils';
-import { useResetScrollTop, useRetainScroll } from './hooks';
+import { useRetainScroll } from './hooks';
 
 Router.useNavigationType;
 
@@ -31,14 +31,11 @@ const imageExtensions = new Set([
 ]);
 
 export function ListFiles() {
-  useResetScrollTop();
+  useRetainScroll();
   const path = Redux.useSelector($.getPath);
   const activeFileDisplayPath = Redux.useSelector($.getActiveFileDisplayPath);
   const dispatch = Redux.useDispatch();
   const request = Redux.useSelector($.getListFilesCache).get(path);
-  const scrollRef = useRetainScroll(
-    request?.type ?? 'none' + window.location.href,
-  );
 
   React.useEffect(() => {
     if (path === '/') {
@@ -65,7 +62,6 @@ export function ListFiles() {
       request?.type === 'list-files-received' &&
       request.value.length === 0
     ) {
-      console.log(`!!! here`, A.createInitialFiles);
       dispatch(A.createInitialFiles());
     }
   }, [activeFileDisplayPath, request]);
@@ -107,7 +103,7 @@ export function ListFiles() {
                 }}
               />
             </div>
-            <div className="listFilesList" ref={scrollRef}>
+            <div className="listFilesList">
               {visibleFiles
                 .filter((file) =>
                   filter ? file.name.toLowerCase().includes(filter) : true,

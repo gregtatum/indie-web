@@ -193,3 +193,29 @@ export function dropboxErrorMessage(error: any): string {
 
   return 'There was an error with Dropbox';
 }
+
+let isSettingScrollTop = false;
+
+/**
+ * Listeners should ignore this, as it wasn't user generated.
+ */
+export function setScrollTop(scrollTop: number) {
+  isSettingScrollTop = true;
+  const { scrollingElement } = document;
+  if (scrollingElement) {
+    scrollingElement.scrollTop = scrollTop;
+  }
+  // Go ahead and give a full rAF cycle to ignore user events.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      isSettingScrollTop = false;
+    });
+  });
+}
+
+/**
+ * See if the app is setting the scrolltop, as it may be ignorable.
+ */
+export function isAppSettingScrollTop(): boolean {
+  return isSettingScrollTop;
+}

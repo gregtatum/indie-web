@@ -6,10 +6,10 @@ import { TextArea } from './TextArea';
 
 import './ViewChopro.css';
 import { ensureExists, maybeGetProperty } from 'src/utils';
-import { useResetScrollTop } from './hooks';
+import { useRetainScroll } from './hooks';
 
 export function ViewChopro() {
-  useResetScrollTop();
+  useRetainScroll();
   const dispatch = Redux.useDispatch();
   const path = Redux.useSelector($.getPath);
   const request = Redux.useSelector($.getDownloadFileCache).get(path);

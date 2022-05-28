@@ -2,12 +2,12 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { getEnv } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
-import { useResetScrollTop } from './hooks';
+import { useRetainScroll } from './hooks';
 
 import './Page.css';
 
 export function Settings() {
-  useResetScrollTop();
+  useRetainScroll();
   return (
     <div className="page">
       <div className="pageInner">
@@ -29,7 +29,7 @@ export function Settings() {
 }
 
 export function Privacy() {
-  useResetScrollTop();
+  useRetainScroll();
   return (
     <div className="page">
       <div className="pageInner">

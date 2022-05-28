@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { Selector } from 'src/@types';
+import { setScrollTop } from 'src/utils';
 
 type PromiseState<T> =
   | { type: 'pending' }
@@ -44,41 +45,23 @@ export function usePromiseSelector<T>(
 }
 
 const scrollTops = new Map<string, number>();
-export function useRetainScroll(uniqueName: string) {
+
+export function useRetainScroll() {
   const navigationType = Router.useNavigationType();
-  const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
-  React.useEffect(() => {
-    const { current } = scrollRef;
-    if (current === null) {
-      return () => {};
-    }
-    if (navigationType === 'POP') {
-      const scrollTop = scrollTops.get(uniqueName);
-      if (scrollTop) {
-        current.scrollTop = scrollTop;
-      }
-    }
-    const onScroll = () => {
-      scrollTops.set(uniqueName, current.scrollTop);
-    };
-    current.addEventListener('scroll', onScroll);
-    return () => {
-      current.removeEventListener('scroll', onScroll);
-    };
-  }, [uniqueName, navigationType]);
-
-  return scrollRef;
-}
-
-/**
- * Resets the document's scrollTop when the element is loaded.
- */
-export function useResetScrollTop() {
   React.useEffect(() => {
     const { scrollingElement } = document;
-    if (scrollingElement) {
-      scrollingElement.scrollTop = 0;
+    if (scrollingElement === null) {
+      return () => {};
     }
-  }, []);
+    const scrollTop = scrollTops.get(window.location.href);
+    setScrollTop(navigationType === 'POP' && scrollTop ? scrollTop : 0);
+    const onScroll = () => {
+      scrollTops.set(window.location.href, scrollingElement.scrollTop);
+    };
+    document.addEventListener('scroll', onScroll);
+    return () => {
+      document.removeEventListener('scroll', onScroll);
+    };
+  }, [window.location.href, navigationType]);
 }

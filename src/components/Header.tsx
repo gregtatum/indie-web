@@ -2,9 +2,9 @@ import * as React from 'react';
 import * as Redux from 'react-redux';
 import { $, A } from 'src';
 import * as Router from 'react-router-dom';
+import { isAppSettingScrollTop, UnhandledCaseError } from 'src/utils';
 
 import './Header.css';
-import { ensureExists, UnhandledCaseError } from '../utils';
 
 export function Header() {
   const view = Redux.useSelector($.getView);
@@ -37,6 +37,12 @@ export function Header() {
     let _shouldHideHeader = false;
 
     const onScroll = () => {
+      if (isAppSettingScrollTop()) {
+        // The app is setting the scrollTop.
+        // Note: This doesn't always trigger on navigation events for some reason.
+        setShouldHideHeader(false);
+        return;
+      }
       const { scrollTop } = scrollingElement;
       const dx = scrollTop - _prevScroll;
       _prevScroll = scrollTop;

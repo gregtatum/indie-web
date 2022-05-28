@@ -8,12 +8,12 @@ import { UnlinkDropbox } from './LinkDropbox';
 import {
   usePromiseSelector,
   useInfalliblePromise,
-  useResetScrollTop,
+  useRetainScroll,
 } from './hooks';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 export function ViewPDF() {
-  useResetScrollTop();
+  useRetainScroll();
   const dispatch = Redux.useDispatch();
   const path = Redux.useSelector($.getPath);
   const request = Redux.useSelector($.getDownloadBlobCache).get(path);
