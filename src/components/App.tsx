@@ -94,9 +94,7 @@ export function App() {
       <LinkDropbox>
         <div className="appView">
           <Header />
-          <div className="appViewContents">
-            <Views />
-          </div>
+          <Views />
         </div>
       </LinkDropbox>
       <Messages />

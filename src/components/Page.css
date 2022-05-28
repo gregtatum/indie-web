@@ -1,11 +1,8 @@
 .page {
-  overflow: auto;
-  height: calc(100% - var(--header-padding));
   width: 100%;
   justify-content: center;
   display: flex;
   line-height: 1.4;
-  padding-top: var(--header-padding);
 }
 
 .page .button {

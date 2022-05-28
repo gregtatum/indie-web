@@ -1,7 +1,5 @@
 .listFiles {
-  inset: var(--header-padding) 0 0 0;
   display: flex;
-  position: absolute;
   flex-direction: column;
 }
 

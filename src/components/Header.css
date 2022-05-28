@@ -1,4 +1,6 @@
 .header {
+  position: fixed;
+  width: 100%;
   height: 40px;
   display: flex;
   border-bottom: 2px solid #ccc;
@@ -9,9 +11,10 @@
 }
 
 .headerWrapper {
-  position: relative;
-  overflow: visible;
+  position: fixed;
+  top: 0;
   height: 0;
+  overflow: visible;
   z-index: 1; /* Place above the contents */
   transition: transform 150ms;
 }
