@@ -107,21 +107,22 @@ export function App() {
 function Views() {
   const view = Redux.useSelector($.getView);
   const path = Redux.useSelector($.getPath);
+  const key = view + path;
   switch (view) {
     case null:
       return null;
     case 'list-files':
-      return <ListFiles key={path} />;
+      return <ListFiles key={key} />;
     case 'view-file':
-      return <ViewChopro key={path} />;
+      return <ViewChopro key={key} />;
     case 'view-pdf':
-      return <ViewPDF key={path} />;
+      return <ViewPDF key={key} />;
     case 'view-image':
-      return <ViewImage key={path} />;
+      return <ViewImage key={key} />;
     case 'settings':
-      return <Settings key={path} />;
+      return <Settings key={key} />;
     case 'privacy':
-      return <Privacy key={path} />;
+      return <Privacy key={key} />;
     default:
       throw new UnhandledCaseError(view, 'view');
   }

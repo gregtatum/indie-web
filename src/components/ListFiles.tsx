@@ -113,8 +113,8 @@ export function ListFiles() {
                 )
                 .map((file) => {
                   return (
-                    <div className="listFilesFile">
-                      <File key={file.id} dropboxFile={file} />
+                    <div key={file.id} className="listFilesFile">
+                      <File dropboxFile={file} />
                     </div>
                   );
                 })}

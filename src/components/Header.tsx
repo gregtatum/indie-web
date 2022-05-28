@@ -9,9 +9,10 @@ import { UnhandledCaseError } from '../utils';
 export function Header() {
   const view = Redux.useSelector($.getView);
   const path = Redux.useSelector($.getActiveFileDisplayPath);
+  const key = view + path;
 
   let title = (
-    <div className="headerTitle" key="home">
+    <div className="headerTitle" key={key}>
       <span>🎵</span>
       <span className="headerTitleTitle">Browser Chords</span>
     </div>
@@ -20,21 +21,19 @@ export function Header() {
     case null:
       break;
     case 'settings':
-      title = <Path path="/" key="settings" title="⚙️ Settings" />;
+      title = <Path path="/" key={key} title="⚙️ Settings" />;
       break;
     case 'privacy':
-      title = (
-        <Path path="/" key="settings" title="👀 Privacy Policy and Usage" />
-      );
+      title = <Path path="/" key={key} title="👀 Privacy Policy and Usage" />;
       break;
     case 'view-file':
     case 'view-pdf':
     case 'view-image':
-      title = <Path key={path} path={path} />;
+      title = <Path key={key} path={path} />;
       break;
     case 'list-files':
       if (location.pathname !== '/folder' && location.pathname !== '/') {
-        title = <Path key={path} path={path} />;
+        title = <Path key={key} path={path} />;
       }
       break;
     default:
@@ -152,7 +151,7 @@ function Path({ path, title }: { path: string; title?: string }) {
 
   return (
     <>
-      <div className="headerPath headerPathFull" key={path}>
+      <div className="headerPath headerPathFull" key={'full' + path}>
         <span>🎵</span>
         {breadcrumbs}
         <span>»</span>
@@ -161,7 +160,7 @@ function Path({ path, title }: { path: string; title?: string }) {
         ) : null}
         {title ? <span>{title}</span> : null}
       </div>
-      <div className="headerPath headerPathMobile" key={path}>
+      <div className="headerPath headerPathMobile" key={'mobile' + path}>
         <Router.Link
           to={`/folder${backParts.join('/')}`}
           className="headerPathBack"
