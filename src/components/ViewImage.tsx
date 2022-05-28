@@ -66,7 +66,7 @@ function LoadImage() {
         return <div className="viewImageLoading">Error loading PDF.</div>;
       }
       return (
-        <div className="viewImage">
+        <div className="viewImage" data-fullscreen>
           <div className="viewImageWidth">
             <img src={image.value} />
           </div>

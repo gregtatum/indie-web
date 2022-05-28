@@ -82,6 +82,15 @@ code {
   border-radius: 3px;
 }
 
+@media all and (display-mode: fullscreen) {
+  [data-fullscreen] {
+    overflow: auto;
+    background-color: #fff;
+    margin: 0 auto;
+    max-width: 100%;
+  }
+}
+
 .appView {
   flex: 1;
   width: 100%;

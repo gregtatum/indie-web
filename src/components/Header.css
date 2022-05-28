@@ -34,6 +34,7 @@
   display: flex;
   flex-shrink: 0;
   padding: var(--header-gap);
+  gap: var(--header-gap);
 }
 
 .headerStart {
@@ -84,7 +85,6 @@
   color: #fff;
   background-color: #0070ff;
   border: 1px solid #004195;
-  margin-inline: 6px;
 }
 
 @media (max-width: 500px) {

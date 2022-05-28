@@ -48,7 +48,7 @@ export function RenderedSong() {
   const folderPath = parts.slice(0, parts.length - 1).join('/');
 
   return (
-    <div className="renderedSong" key={path}>
+    <div className="renderedSong" key={path} data-fullscreen>
       <div className="renderedSongHeader">
         <div className="renderedSongHeaderTitle">
           <h1>

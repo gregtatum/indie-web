@@ -9,6 +9,7 @@ import { UnhandledCaseError } from '../utils';
 export function Header() {
   const view = Redux.useSelector($.getView);
   const path = Redux.useSelector($.getActiveFileDisplayPath);
+
   let title = (
     <div className="headerTitle" key="home">
       <span>🎵</span>
@@ -51,10 +52,39 @@ export function Header() {
         <div className="headerStart">{title}</div>
         <div className="headerEnd">
           <SaveFileButton />
+          <RequestFullScreen />
           <SettingsButton />
         </div>
       </div>
     </div>
+  );
+}
+
+function RequestFullScreen() {
+  const canGoFullScreen = Redux.useSelector($.canGoFullScreen);
+  if (!canGoFullScreen) {
+    return null;
+  }
+  return (
+    <button
+      type="button"
+      className="button"
+      onClick={() => {
+        const element = document.querySelector('[data-fullscreen]');
+        if (!element) {
+          console.error('No [data-fullscreen] was found.');
+          return;
+        }
+        if (element.requestFullscreen) {
+          element.requestFullscreen();
+        }
+        if ((element as any).webkitRequestFullscreen) {
+          (element as any).webkitRequestFullscreen();
+        }
+      }}
+    >
+      Fullscreen
+    </button>
   );
 }
 

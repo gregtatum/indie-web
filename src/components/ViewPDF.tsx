@@ -131,7 +131,7 @@ function PDF({ pdf }: PDFProps) {
   }, [pages]);
 
   return (
-    <div className="viewPDFSolo" ref={hideHeaderRef}>
+    <div className="viewPDFSolo" ref={hideHeaderRef} data-fullscreen>
       <div className="viewPDFSoloWidth" ref={container}></div>
     </div>
   );

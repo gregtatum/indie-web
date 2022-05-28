@@ -1,7 +1,7 @@
 import { State } from 'src/@types';
 import { Dropbox } from 'dropbox';
 import { createSelector } from 'reselect';
-import { ensureExists } from 'src/utils';
+import { ensureExists, UnhandledCaseError } from 'src/utils';
 import { parseChordPro } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 
@@ -300,3 +300,25 @@ export const getActiveFileDisplayPath = createSelector(
     return path;
   },
 );
+
+export function canGoFullScreen(state: State) {
+  const view = getView(state);
+  switch (view) {
+    case null:
+      return false;
+    case 'view-file':
+    case 'view-pdf':
+    case 'view-image':
+      return (
+        true &&
+        (document.fullscreenEnabled ||
+          (document as any).webkitFullscreenEnabled)
+      );
+    case 'list-files':
+    case 'settings':
+    case 'privacy':
+      return false;
+    default:
+      throw new UnhandledCaseError(view, 'view');
+  }
+}
