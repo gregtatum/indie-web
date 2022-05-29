@@ -75,6 +75,15 @@ code {
   border-radius: 3px;
 }
 
+.centered {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-flow: column;
+}
+
 @media all and (display-mode: fullscreen) {
   [data-fullscreen] {
     background-color: #fff;

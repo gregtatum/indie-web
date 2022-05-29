@@ -26,6 +26,15 @@ export async function init(): Promise<void> {
     getState: store.getState,
     $,
     A,
+    expireOauth() {
+      const oauth = $.getDropboxOauth(store.getState());
+      if (!oauth) {
+        return;
+      }
+      store.dispatch(
+        A.setDropboxAccessToken(oauth.accessToken, 0, oauth.refreshToken),
+      );
+    },
   });
   mountReact(store);
 }

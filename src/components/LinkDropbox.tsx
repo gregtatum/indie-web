@@ -214,11 +214,14 @@ export function LinkDropbox(props: { children: any }) {
 
   if (isDropboxInitiallyExpired) {
     return (
-      <div className="linkDropbox">
-        <div className="linkDropboxDescription">
-          <h3>Accessing Your Dropbox…</h3>
-          <p>{authError ? authError : null}</p>
-        </div>
+      <div className="linkDropboxAuth centered">
+        <img
+          src="/logo.png"
+          width="148"
+          height="179"
+          alt="Accessing Your Dropbox…"
+        />
+        <p>{authError ? authError : null}</p>
       </div>
     );
   }
