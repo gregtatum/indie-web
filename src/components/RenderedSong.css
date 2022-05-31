@@ -25,6 +25,8 @@
 
 .renderedSongHeader {
   display: flex;
+  /* Leave space for the sticky header */
+  margin-inline-end: 70px;
 }
 
 .renderedSongHeaderTitle {
@@ -102,10 +104,22 @@
   white-space: pre-wrap;
 }
 
-.renderedSongHeaderDetails {
+.renderedSongStickyHeader {
   margin-left: 15px;
-  padding-top: 7px;
   text-align: right;
+  position: sticky;
+  top: var(--header-padding);
+  height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  z-index: 1;
+}
+
+.renderedSongStickyHeaderRow {
+  background: #fff;
+  padding: 7px;
+  padding-inline-end: 0;
 }
 
 .renderedSongEndPadding {
@@ -118,7 +132,6 @@
   border-radius: 4px;
   padding: 2px 8px;
   font-size: var(--font-size-song);
-  margin: 10px 0;
 }
 
 a.renderedSongHeaderSpotify {

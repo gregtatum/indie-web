@@ -47,19 +47,23 @@
   width: 20px;
   height: 20px;
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #0001;
   border-radius: 3px;
   text-align: center;
   padding: 4px;
 }
 
+
 a.listFilesFileLink, .listFilesFileEmpty {
   padding: 8px;
-  display: block;
+  display: flex;
   border-bottom: 1px solid #ddd;
   text-decoration: none;
   color: #000;
+  align-items: center;
 }
 
 .listFilesFile a:hover {

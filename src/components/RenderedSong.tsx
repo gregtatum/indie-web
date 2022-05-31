@@ -49,6 +49,20 @@ export function RenderedSong() {
 
   return (
     <div className="renderedSong" key={path} data-fullscreen>
+      <div className="renderedSongStickyHeader">
+        {fileKey ? (
+          <div className="renderedSongStickyHeaderRow">Key: {fileKey}</div>
+        ) : null}
+        {hideEditor ? (
+          <button
+            className="renderedSongEdit"
+            type="button"
+            onClick={() => dispatch(A.hideEditor(false))}
+          >
+            Edit
+          </button>
+        ) : null}
+      </div>
       <div className="renderedSongHeader">
         <div className="renderedSongHeaderTitle">
           <h1>
@@ -63,20 +77,6 @@ export function RenderedSong() {
             </a>
           </h1>
           {directives.subtitle ? <h2>{directives.subtitle}</h2> : null}
-        </div>
-        <div className="renderedSongHeaderDetails">
-          {fileKey ? (
-            <div className="renderedSongHeaderRow">Key: {fileKey}</div>
-          ) : null}
-          {hideEditor ? (
-            <button
-              className="renderedSongEdit"
-              type="button"
-              onClick={() => dispatch(A.hideEditor(false))}
-            >
-              Edit
-            </button>
-          ) : null}
         </div>
       </div>
       {lines.map((line, lineIndex) => {
