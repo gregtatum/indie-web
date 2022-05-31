@@ -7,7 +7,8 @@ const normalizeDirectives = new Map([
 ]);
 
 // Taken from: https://www.chordpro.org/chordpro/chordpro-chords/
-const extensions = new Set([
+const extensions = [
+  '+',
   '2',
   '3',
   '4',
@@ -45,9 +46,11 @@ const extensions = new Set([
   '7sus',
   '7susadd3',
   '7+',
+  '+7',
   '7alt',
   '9',
   '9+',
+  '+9',
   '9#5',
   '9b5',
   '9-5',
@@ -92,7 +95,7 @@ const extensions = new Set([
   '7sus4',
   '13sus2',
   '13sus4',
-]);
+];
 
 function noteOrNull(v: string): T.Note | null {
   // prettier-ignore
@@ -114,18 +117,32 @@ function ensureNote(v: string): T.Note {
   return ensureExists(noteOrNull(v), 'expected note');
 }
 
-export function parseChord(text: string): T.Chord | null {
-  if (text === '') {
-    return null;
+export function parseChord(text: string): T.Chord {
+  const chord = parseChordImpl(text);
+  if (chord.baseNote?.length) {
+    if (chord.extras?.length) {
+      chord.chordText = text.slice(0, -chord.extras.length);
+    } else {
+      chord.chordText = text.trim();
+    }
   }
+  return chord;
+}
+function parseChordImpl(text: string): T.Chord {
   text = text.trim();
+  if (text === '') {
+    return { text, extras: text };
+  }
   const baseNoteResult = text.match(/^([A-G][b#]?)/);
   //                                 ^                 match the beginning
   //                                  (          )     capture
   //                                   [A-G]           capital A-G
   //                                        [b#]?      flat or sharp
   if (!baseNoteResult) {
-    return null;
+    return {
+      text,
+      extras: text,
+    };
   }
   const [, baseNote] = baseNoteResult;
   // eslint-disable-next-line prefer-const
@@ -137,15 +154,14 @@ export function parseChord(text: string): T.Chord | null {
   };
   if (slash) {
     const result = slash.match(/^([A-G][b#]?)\s*$/);
-    //           ^                 match the beginning
-    //            (          )     capture
-    //             [A-G]           capital A-G
-    //                  [b#]?      flat or sharp
-    if (!result) {
+    //                          ^                 match the beginning
+    //                           (          )     capture
+    //                            [A-G]           capital A-G
+    //                                 [b#]?      flat or sharp
+    if (result) {
       // Invalid slash chord.
-      return null;
+      chord.slash = ensureNote(result[1]);
     }
-    chord.slash = ensureNote(result[1]);
   }
   const addResult = rest.match(/(add\d+)$/);
   if (addResult) {
@@ -162,14 +178,6 @@ export function parseChord(text: string): T.Chord | null {
     rest = rest.slice(1);
   }
 
-  if (rest.includes('+')) {
-    if (chord.type === 'minor') {
-      return null;
-    }
-    chord.type = 'augmented';
-    rest = rest.replace('+', '');
-  }
-
   if (rest === 'sus2') {
     chord.type = 'sus2';
     rest = '';
@@ -177,24 +185,31 @@ export function parseChord(text: string): T.Chord | null {
 
   if (rest === 'sus' || rest === 'sus4') {
     if (chord.type !== 'major') {
-      return null;
+      chord.extras = rest;
+      return chord;
     }
     chord.type = 'sus4';
     rest = '';
   }
 
-  if (extensions.has(rest)) {
-    chord.embellishment = rest;
-    rest = '';
+  let longestMatch = '';
+  for (const extension of extensions) {
+    if (rest.startsWith(extension)) {
+      if (extension.length > longestMatch.length) {
+        longestMatch = extension;
+      }
+    }
   }
-
-  if (rest.match(/^\d+$/)) {
-    chord.embellishment = rest;
-    rest = '';
+  if (longestMatch.length > 0) {
+    if (longestMatch.includes('+')) {
+      chord.type = 'augmented';
+    }
+    chord.embellishment = longestMatch;
+    rest = rest.slice(longestMatch.length);
   }
 
   if (rest.trim()) {
-    return null;
+    chord.extras = rest;
   }
 
   return chord;

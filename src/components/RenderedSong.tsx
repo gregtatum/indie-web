@@ -101,7 +101,12 @@ export function RenderedSong() {
                       className="renderedSongLineChord"
                       key={`${span.chord.text}-${spanIndex}`}
                     >
-                      {span.chord.text}
+                      <span className="renderedSongLineChordText">
+                        {span.chord.chordText}
+                      </span>
+                      <span className="renderedSongLineChordExtras">
+                        {span.chord.extras}
+                      </span>
                     </span>
                   );
                   return <div />;

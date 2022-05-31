@@ -20,11 +20,15 @@ export type ChordType =
 
 export interface Chord {
   text: string;
-  baseNote: Note;
+  baseNote?: Note;
   type?: ChordType;
   embellishment?: string;
   slash?: Note;
   add?: string;
+  // The text of the chord, e.g. [C (strum)] would be "C".
+  chordText?: string;
+  // Extra text, e.g. [C (strum)] would be " (strum)".
+  extras?: string;
 }
 
 export type LineContent = 'mixed' | 'chords' | 'text';

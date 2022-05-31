@@ -82,6 +82,11 @@
   top: -17px;
   width: 0;
   display: inline-block;
+  white-space: nowrap;
+}
+
+.renderedSongLineChordExtras {
+  font-weight: normal;
 }
 
 .renderedSongLine-chords .renderedSongLineChord {
