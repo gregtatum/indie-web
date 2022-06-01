@@ -24,6 +24,6 @@
 
 @media (min-width: 900px) {
   .pageInner {
-    max-width: 900px;
+    max-width: var(--page-max-width);
   }
 }

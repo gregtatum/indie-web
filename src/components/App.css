@@ -5,6 +5,9 @@
   --font-size-normal: 16px;
   --font-size-small: 13px;
   --font-size-song: 14px;
+  /* Grep for media queries if changing */
+  --page-max-width: 900px;
+  --page-padding: 50px;
 }
 
 @keyframes fadein {

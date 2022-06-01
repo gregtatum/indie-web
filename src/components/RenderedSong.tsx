@@ -49,6 +49,16 @@ export function RenderedSong() {
 
   return (
     <div className="renderedSong" key={path} data-fullscreen>
+      <button
+        type="button"
+        className="renderedSongButton renderedSongButtonBack"
+        aria-label="Back"
+      ></button>
+      <button
+        type="button"
+        className="renderedSongButton renderedSongButtonNext"
+        aria-label="Next"
+      ></button>
       <div className="renderedSongStickyHeader">
         {fileKey ? (
           <div className="renderedSongStickyHeaderRow">Key: {fileKey}</div>
