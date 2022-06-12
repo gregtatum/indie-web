@@ -147,21 +147,34 @@ a.renderedSongHeaderSpotify {
 }
 
 .renderedSongButton {
-  background: none;
-  border: none;
-  margin: 0;
-  padding: 0;
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  width: var(--page-padding);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 300ms;
-  background: linear-gradient(var(--rotation), #004eca55 0%, #004eca00 100%);
+  display: none;
+}
+
+@media (hover: hover) {
+  .renderedSongButton {
+    touch-action: none;
+    background: none;
+    border: none;
+    margin: 0;
+    padding: 0;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: var(--page-padding);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 300ms;
+    background: linear-gradient(var(--rotation), #004eca55 0%, #004eca00 100%);
+  }
+
+  .renderedSongButton:hover,
+  .renderedSongButton:focus {
+    opacity: 1;
+    background: linear-gradient(var(--rotation), #004eca55 0%, #004eca00 100%);
+  }
 }
 
 @media (max-width: 500px) {
@@ -174,12 +187,6 @@ a.renderedSongHeaderSpotify {
   .renderedSongButton {
     width: calc(50% - (var(--page-max-width) / 2) - var(--page-padding));
   }
-}
-
-.renderedSongButton:hover,
-.renderedSongButton:focus {
-  opacity: 1;
-  outline: none;
 }
 
 .renderedSongButtonNext {

@@ -219,3 +219,7 @@ export function setScrollTop(scrollTop: number) {
 export function isAppSettingScrollTop(): boolean {
   return isSettingScrollTop;
 }
+
+export function getDirName(path: string): string {
+  return path.split('/').slice(0, -1).join('/');
+}

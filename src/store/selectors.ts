@@ -1,10 +1,11 @@
-import { State } from 'src/@types';
+import * as T from 'src/@types';
 import { Dropbox } from 'dropbox';
 import { createSelector } from 'reselect';
-import { ensureExists, UnhandledCaseError } from 'src/utils';
+import { ensureExists, getDirName, UnhandledCaseError } from 'src/utils';
 import { parseChordPro } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 
+type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
@@ -322,3 +323,49 @@ export function canGoFullScreen(state: State) {
       throw new UnhandledCaseError(view, 'view');
   }
 }
+
+type NextPrevSong = Partial<{
+  nextSong: T.DropboxFile;
+  prevSong: T.DropboxFile;
+}>;
+
+export const getNextPrevSong = createSelector(
+  getPath,
+  getListFilesCache,
+  (path, listFilesCache): NextPrevSong => {
+    const results: NextPrevSong = {};
+    const folder = getDirName(path);
+
+    // Only return values if the folders are requested.
+    const listFiles = listFilesCache.get(folder);
+    if (!listFiles || listFiles.type === 'list-files-requested') {
+      return results;
+    }
+    const filesAndFolders = listFiles.value;
+    if (!filesAndFolders) {
+      return results;
+    }
+
+    // Remove any folders since we wouldn't want to go next to one.
+    const files = filesAndFolders.filter((file) => file['.tag'] === 'file');
+
+    // Look up the index.
+    const pathLower = path.toLowerCase();
+    const index = files.findIndex((file) => file.path_lower === pathLower);
+
+    if (index === -1) {
+      console.error('File not found in folder listing.');
+      return results;
+    }
+
+    if (index > 0) {
+      results.prevSong = files[index - 1];
+    }
+
+    if (index < files.length - 1) {
+      results.nextSong = files[index + 1];
+    }
+
+    return results;
+  },
+);

@@ -1,10 +1,10 @@
 import * as React from 'react';
 import * as Redux from 'react-redux';
 import { A, $, T } from 'src';
-
-import './RenderedSong.css';
+import * as Router from 'react-router-dom';
 import { UnhandledCaseError } from 'src/utils';
 import { pathJoin } from '../utils';
+import './RenderedSong.css';
 
 function getSpotifyLink(
   { title, subtitle }: Record<string, string>,
@@ -31,14 +31,10 @@ export function RenderedSong() {
   const path = Redux.useSelector($.getPath);
   const displayPath = Redux.useSelector($.getActiveFileDisplayPath);
   const fileKey = Redux.useSelector($.getActiveFileSongKey);
+  const { nextSong, prevSong } = Redux.useSelector($.getNextPrevSong);
   const hideEditor = Redux.useSelector($.getHideEditor);
   const { directives, lines } = Redux.useSelector($.getActiveFileParsed);
   const dispatch = Redux.useDispatch();
-  React.useEffect(() => {
-    document.addEventListener('touchstart', (event) => {
-      console.log({ event, target: event.target });
-    });
-  }, []);
 
   const parts = displayPath.split('/');
   let fileName = parts[parts.length - 1].replace('.chopro', '');
@@ -49,16 +45,24 @@ export function RenderedSong() {
 
   return (
     <div className="renderedSong" key={path} data-fullscreen>
-      <button
-        type="button"
-        className="renderedSongButton renderedSongButtonBack"
-        aria-label="Back"
-      ></button>
-      <button
-        type="button"
-        className="renderedSongButton renderedSongButtonNext"
-        aria-label="Next"
-      ></button>
+      {hideEditor && prevSong?.path_display ? (
+        <Router.Link
+          to={'/file' + prevSong.path_display}
+          type="button"
+          className="renderedSongButton renderedSongButtonBack"
+          aria-label="Back"
+          title={prevSong.name}
+        ></Router.Link>
+      ) : null}
+      {hideEditor && nextSong?.path_display ? (
+        <Router.Link
+          to={'/file' + nextSong.path_display}
+          type="button"
+          className="renderedSongButton renderedSongButtonNext"
+          aria-label="Next"
+          title={nextSong.name}
+        ></Router.Link>
+      ) : null}
       <div className="renderedSongStickyHeader">
         {fileKey ? (
           <div className="renderedSongStickyHeaderRow">Key: {fileKey}</div>

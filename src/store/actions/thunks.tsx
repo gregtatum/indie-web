@@ -1,7 +1,7 @@
 import { Thunk } from 'src/@types';
 import * as React from 'react';
 import { $, T } from 'src';
-import { dropboxErrorMessage, getGeneration } from 'src/utils';
+import { dropboxErrorMessage, getDirName, getGeneration } from 'src/utils';
 import type { files } from 'dropbox';
 import * as Plain from './plain';
 
@@ -102,6 +102,8 @@ export function downloadFile(path: string): Thunk {
     const generation = getGeneration();
     const args = { path };
     dispatch({ type: 'download-file-requested', generation, args });
+
+    // Kick off the request.
     $.getDropbox(getState())
       .filesDownload({ path })
       .then(async ({ result }) => {
@@ -122,6 +124,14 @@ export function downloadFile(path: string): Thunk {
           value,
         };
         dispatch(action);
+
+        // For things like back and next, ensure we have a copy of the prev/next
+        // songs in the folder.
+        const cache = $.getListFilesCache(getState());
+        const folder = getDirName(path);
+        if (!cache.get(folder)) {
+          dispatch(listFiles(folder));
+        }
       })
       .catch((response) => {
         let error;
