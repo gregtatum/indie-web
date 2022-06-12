@@ -1,5 +1,6 @@
 .renderedSong {
   padding: var(--page-padding);
+  animation: fadein 200ms;
   /**
    * The end padding was being applied inconsistantly between browsers
    * See .renderedSongEndPadding

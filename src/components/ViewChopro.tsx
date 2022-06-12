@@ -7,6 +7,7 @@ import { TextArea } from './TextArea';
 import './ViewChopro.css';
 import { ensureExists, maybeGetProperty } from 'src/utils';
 import { useRetainScroll } from './hooks';
+import { useBackNextSwipe } from './shared/swipes';
 
 export function ViewChopro() {
   useRetainScroll();
@@ -15,6 +16,8 @@ export function ViewChopro() {
   const request = Redux.useSelector($.getDownloadFileCache).get(path);
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
   const hideEditor = Redux.useSelector($.getHideEditor);
+  const div = React.useRef(null);
+  useBackNextSwipe(div);
 
   React.useEffect(() => {
     if (songTitle) {
@@ -48,7 +51,7 @@ export function ViewChopro() {
       const text = ensureExists(request.value.text, 'text');
       if (hideEditor) {
         return (
-          <div className="viewChoproSolo">
+          <div className="viewChoproSolo" ref={div} key={path}>
             <RenderedSong />
           </div>
         );
