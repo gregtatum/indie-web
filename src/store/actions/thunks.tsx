@@ -179,6 +179,14 @@ export function downloadBlob(path: string): Thunk {
           value,
         };
         dispatch(action);
+
+        // For things like back and next, ensure we have a copy of the prev/next
+        // songs in the folder.
+        const cache = $.getListFilesCache(getState());
+        const folder = getDirName(path);
+        if (!cache.get(folder)) {
+          dispatch(listFiles(folder));
+        }
       })
       .catch((error) => {
         const cache = $.getDownloadFileCache(getState()).get(path);
