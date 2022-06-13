@@ -41,7 +41,7 @@ export function ViewPDF() {
       if (request.value.error) {
         console.error(request.value.error);
         return (
-          <div>
+          <div className="status">
             There was an error:
             {maybeGetProperty(request.value.error, 'message')}
           </div>
@@ -51,7 +51,7 @@ export function ViewPDF() {
     }
     case 'download-blob-failed': {
       return (
-        <div className="viewPDFError">
+        <div className="status">
           <div>
             <p>Unable to access DropBox account.</p>
             <UnlinkDropbox />
@@ -61,7 +61,7 @@ export function ViewPDF() {
     }
     case 'download-blob-requested':
     default:
-      return <div className="viewPDFMessage">Requesting pdf.</div>;
+      return <div className="status">Downloading…</div>;
   }
 }
 
@@ -70,13 +70,13 @@ function LoadPDF() {
   switch (pdf.type) {
     case 'fulfilled':
       if (!pdf.value) {
-        return <div className="viewPDFLoading">Error loading PDF.</div>;
+        return <div className="status">Error downloading PDF</div>;
       }
       return <PDF pdf={pdf.value} />;
     case 'pending':
-      return <div className="viewPDFLoading">Loading PDF.</div>;
+      return <div className="status">Rendering PDF</div>;
     case 'rejected':
-      return <div className="viewPDFLoading">Error loading PDF.</div>;
+      return <div className="status">Error loading PDF</div>;
     default:
       throw new UnhandledCaseError(pdf, 'promise');
   }

@@ -67,7 +67,7 @@ export function ViewChopro() {
     }
     case 'download-file-failed': {
       return (
-        <div className="viewChoproError">
+        <div className="status">
           <div>
             <p>{request.error}</p>
           </div>
@@ -76,7 +76,7 @@ export function ViewChopro() {
     }
     case 'download-file-requested':
     default:
-      return <div className="viewChoproMessage">Requesting file.</div>;
+      return <div className="status">Downloading…</div>;
   }
 }
 

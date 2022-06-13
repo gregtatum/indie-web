@@ -36,7 +36,7 @@ export function ViewImage() {
       if (request.value.error) {
         console.error(request.value.error);
         return (
-          <div>
+          <div className="status">
             There was an error:
             {maybeGetProperty(request.value.error, 'message')}
           </div>
@@ -46,7 +46,7 @@ export function ViewImage() {
     }
     case 'download-blob-failed': {
       return (
-        <div className="viewImageError">
+        <div className="status">
           <div>
             <p>Unable to access DropBox account.</p>
             <UnlinkDropbox />
@@ -56,7 +56,7 @@ export function ViewImage() {
     }
     case 'download-blob-requested':
     default:
-      return <div className="viewImageMessage">Requesting image.</div>;
+      return <div className="status">Downloading…</div>;
   }
 }
 

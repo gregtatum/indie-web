@@ -1,6 +1,7 @@
 .viewImage {
   justify-content: center;
   display: flex;
+  animation: fadein 200ms;
 }
 
 .viewImageWidth {

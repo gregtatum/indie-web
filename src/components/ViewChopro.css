@@ -52,17 +52,3 @@
   right: 0;
   overflow: auto;
 }
-
-.viewChoproMessage, .viewChoproError {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  text-align: center;
-  flex-flow: column;
-  justify-content: center;
-}
-
-.viewChoproMessage {
-  animation: fadeindelay 1500ms;
-}

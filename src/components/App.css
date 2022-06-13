@@ -97,6 +97,17 @@ code {
   }
 }
 
+/**
+ * Display a status to the user like "Download file failed" or "Loading file"
+ */
+.status {
+  inset: var(--header-padding) 0 0 0;
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadein 1000ms;
+}
 
 .appView {
   padding-top: var(--header-padding);
