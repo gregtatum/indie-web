@@ -6,6 +6,7 @@ import './ViewImage.css';
 import { maybeGetProperty, UnhandledCaseError } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
 import { usePromiseSelector, useRetainScroll } from './hooks';
+import { NextPrevLinks, useBackNextSwipe } from './shared/swipes';
 
 export function ViewImage() {
   useRetainScroll();
@@ -61,13 +62,17 @@ export function ViewImage() {
 
 function LoadImage() {
   const image = usePromiseSelector($.getActiveImage);
+  const swipeDiv = React.useRef(null);
+  useBackNextSwipe(swipeDiv);
+
   switch (image.type) {
     case 'fulfilled':
       if (!image.value) {
         return <div className="viewImageLoading">Error loading PDF.</div>;
       }
       return (
-        <div className="viewImage" data-fullscreen>
+        <div className="viewImage" data-fullscreen ref={swipeDiv}>
+          <NextPrevLinks />
           <div className="viewImageWidth">
             <img src={image.value} />
           </div>

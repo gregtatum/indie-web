@@ -83,14 +83,14 @@ export function useBackNextSwipe(
         event.preventDefault();
         if (adx > pxSwipeThreshold) {
           if (dx < 0) {
-            if (nextSong?.path_display) {
+            if (nextSong) {
               touchId = null;
               interaction = 'none';
-              navigate('/file' + nextSong.path_display);
+              navigate(nextSong.url);
             }
           } else {
-            if (prevSong?.path_display) {
-              navigate('/file' + prevSong.path_display);
+            if (prevSong) {
+              navigate(prevSong.url);
             }
           }
         } else {
@@ -132,4 +132,30 @@ export function useBackNextSwipe(
 
     return () => removeHandlers;
   });
+}
+
+export function NextPrevLinks() {
+  const { nextSong, prevSong } = Redux.useSelector($.getNextPrevSong);
+  return (
+    <>
+      {prevSong ? (
+        <Router.Link
+          to={prevSong.url}
+          type="button"
+          className="renderedSongButton renderedSongButtonBack"
+          aria-label="Back"
+          title={prevSong.name}
+        ></Router.Link>
+      ) : null}
+      {nextSong ? (
+        <Router.Link
+          to={nextSong.url}
+          type="button"
+          className="renderedSongButton renderedSongButtonNext"
+          aria-label="Next"
+          title={nextSong.name}
+        ></Router.Link>
+      ) : null}
+    </>
+  );
 }

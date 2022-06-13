@@ -16,8 +16,8 @@ export function ViewChopro() {
   const request = Redux.useSelector($.getDownloadFileCache).get(path);
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
   const hideEditor = Redux.useSelector($.getHideEditor);
-  const div = React.useRef(null);
-  useBackNextSwipe(div);
+  const swipeDiv = React.useRef(null);
+  useBackNextSwipe(swipeDiv);
 
   React.useEffect(() => {
     if (songTitle) {
@@ -51,7 +51,7 @@ export function ViewChopro() {
       const text = ensureExists(request.value.text, 'text');
       if (hideEditor) {
         return (
-          <div className="viewChoproSolo" ref={div} key={path}>
+          <div className="viewChoproSolo" ref={swipeDiv} key={path}>
             <RenderedSong />
           </div>
         );

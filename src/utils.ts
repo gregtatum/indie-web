@@ -223,3 +223,45 @@ export function isAppSettingScrollTop(): boolean {
 export function getDirName(path: string): string {
   return path.split('/').slice(0, -1).join('/');
 }
+
+// List taken from: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
+export const imageExtensions = new Set([
+  'apng',
+  'avif',
+  'gif',
+  'jpg',
+  'jpeg',
+  'jfif',
+  'pjpeg',
+  'pjp',
+  'png',
+  'svg',
+  'webp',
+  'bmp',
+  'ico',
+  'cur',
+  'tif',
+  'tiff',
+]);
+
+export function getUrlForFile(path: string): string | null {
+  let extension;
+  for (let i = path.length; i >= 0; i--) {
+    if (path[i] === '/') {
+      break;
+    }
+    if (path[i] === '.') {
+      extension = path.slice(i - path.length + 1);
+    }
+  }
+  if (extension === 'pdf') {
+    return '/pdf' + path;
+  }
+  if (extension === 'chopro' || extension === 'chordpro') {
+    return '/file' + path;
+  }
+  if (extension && imageExtensions.has(extension)) {
+    return '/image' + path;
+  }
+  return null;
+}

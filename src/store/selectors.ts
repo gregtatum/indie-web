@@ -1,7 +1,12 @@
 import * as T from 'src/@types';
 import { Dropbox } from 'dropbox';
 import { createSelector } from 'reselect';
-import { ensureExists, getDirName, UnhandledCaseError } from 'src/utils';
+import {
+  ensureExists,
+  getDirName,
+  getUrlForFile,
+  UnhandledCaseError,
+} from 'src/utils';
 import { parseChordPro } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 
@@ -324,9 +329,14 @@ export function canGoFullScreen(state: State) {
   }
 }
 
+interface SongLink {
+  url: string;
+  name: string;
+}
+
 type NextPrevSong = Partial<{
-  nextSong: T.DropboxFile;
-  prevSong: T.DropboxFile;
+  nextSong: SongLink;
+  prevSong: SongLink;
 }>;
 
 export const getNextPrevSong = createSelector(
@@ -346,24 +356,46 @@ export const getNextPrevSong = createSelector(
       return results;
     }
 
-    // Remove any folders since we wouldn't want to go next to one.
-    const files = filesAndFolders.filter((file) => file['.tag'] === 'file');
-
-    // Look up the index.
     const pathLower = path.toLowerCase();
-    const index = files.findIndex((file) => file.path_lower === pathLower);
 
-    if (index === -1) {
+    const songLinks: SongLink[] = [];
+    let index: number | null = null;
+    for (const file of filesAndFolders) {
+      // Ignore folders.
+      if (file['.tag'] === 'folder') {
+        continue;
+      }
+
+      // Ensure it's something we can open.
+      const url = getUrlForFile(file.path_display ?? '');
+      if (!url) {
+        continue;
+      }
+
+      // See if this is the current URL.
+      if (file.path_lower === pathLower) {
+        index = songLinks.length;
+      }
+
+      songLinks.push({
+        url,
+        name: file.name,
+      });
+    }
+
+    // Now determine the previous and next songs from the available songs.
+
+    if (index === null) {
       console.error('File not found in folder listing.');
       return results;
     }
 
     if (index > 0) {
-      results.prevSong = files[index - 1];
+      results.prevSong = songLinks[index - 1];
     }
 
-    if (index < files.length - 1) {
-      results.nextSong = files[index + 1];
+    if (index < songLinks.length - 1) {
+      results.nextSong = songLinks[index + 1];
     }
 
     return results;

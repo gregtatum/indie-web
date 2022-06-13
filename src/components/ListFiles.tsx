@@ -2,33 +2,13 @@ import * as React from 'react';
 import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { A, T, $ } from 'src';
-import { ensureExists, getStringProp } from 'src/utils';
+import { ensureExists, getStringProp, imageExtensions } from 'src/utils';
 import { useRetainScroll } from './hooks';
 
 Router.useNavigationType;
 
 import './ListFiles.css';
 import { UnhandledCaseError } from '../utils';
-
-// List taken from: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
-const imageExtensions = new Set([
-  'apng',
-  'avif',
-  'gif',
-  'jpg',
-  'jpeg',
-  'jfif',
-  'pjpeg',
-  'pjp',
-  'png',
-  'svg',
-  'webp',
-  'bmp',
-  'ico',
-  'cur',
-  'tif',
-  'tiff',
-]);
 
 export function ListFiles() {
   useRetainScroll();
