@@ -4,7 +4,7 @@ import { A, $, T } from 'src';
 import { UnhandledCaseError } from 'src/utils';
 import { pathJoin } from '../utils';
 import './RenderedSong.css';
-import { NextPrevLinks } from './shared/swipes';
+import { NextPrevLinks } from './NextPrev';
 
 function getSpotifyLink(
   { title, subtitle }: Record<string, string>,

@@ -6,7 +6,7 @@ import './ViewImage.css';
 import { maybeGetProperty, UnhandledCaseError } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
 import { usePromiseSelector, useRetainScroll } from './hooks';
-import { NextPrevLinks, useBackNextSwipe } from './shared/swipes';
+import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 
 export function ViewImage() {
   useRetainScroll();
@@ -63,7 +63,7 @@ export function ViewImage() {
 function LoadImage() {
   const image = usePromiseSelector($.getActiveImage);
   const swipeDiv = React.useRef(null);
-  useBackNextSwipe(swipeDiv);
+  useNextPrevSwipe(swipeDiv);
 
   switch (image.type) {
     case 'fulfilled':

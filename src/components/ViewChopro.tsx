@@ -7,7 +7,7 @@ import { TextArea } from './TextArea';
 import './ViewChopro.css';
 import { ensureExists, maybeGetProperty } from 'src/utils';
 import { useRetainScroll } from './hooks';
-import { useBackNextSwipe } from './shared/swipes';
+import { useNextPrevSwipe } from './NextPrev';
 
 export function ViewChopro() {
   useRetainScroll();
@@ -17,7 +17,7 @@ export function ViewChopro() {
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
   const hideEditor = Redux.useSelector($.getHideEditor);
   const swipeDiv = React.useRef(null);
-  useBackNextSwipe(swipeDiv);
+  useNextPrevSwipe(swipeDiv);
 
   React.useEffect(() => {
     if (songTitle) {

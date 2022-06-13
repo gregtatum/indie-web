@@ -5,7 +5,7 @@ import { $ } from 'src';
 
 function noop() {}
 
-export function useBackNextSwipe(
+export function useNextPrevSwipe(
   ref: React.MutableRefObject<null | HTMLElement>,
 ) {
   const prevRef = React.useRef(ref.current);

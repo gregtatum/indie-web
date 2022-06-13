@@ -11,7 +11,7 @@ import {
   useRetainScroll,
 } from './hooks';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { NextPrevLinks, useBackNextSwipe } from './shared/swipes';
+import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 
 export function ViewPDF() {
   useRetainScroll();
@@ -88,7 +88,7 @@ interface PDFProps {
 
 function PDF({ pdf }: PDFProps) {
   const swipeDiv = React.useRef(null);
-  useBackNextSwipe(swipeDiv);
+  useNextPrevSwipe(swipeDiv);
 
   const container = React.useRef<HTMLDivElement | null>(null);
   const getAllPages = React.useMemo(() => {
