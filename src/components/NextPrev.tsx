@@ -3,6 +3,8 @@ import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { $ } from 'src';
 
+import './NextPrev.css';
+
 function noop() {}
 
 export function useNextPrevSwipe(
@@ -142,7 +144,7 @@ export function NextPrevLinks() {
         <Router.Link
           to={prevSong.url}
           type="button"
-          className="renderedSongButton renderedSongButtonBack"
+          className="nextPrev nextPrevBack"
           aria-label="Back"
           title={prevSong.name}
         ></Router.Link>
@@ -151,7 +153,7 @@ export function NextPrevLinks() {
         <Router.Link
           to={nextSong.url}
           type="button"
-          className="renderedSongButton renderedSongButtonNext"
+          className="nextPrev nextPrevNext"
           aria-label="Next"
           title={nextSong.name}
         ></Router.Link>
