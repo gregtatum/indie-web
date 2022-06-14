@@ -191,7 +191,7 @@ export function dropboxErrorMessage(error: any): string {
     }
   }
 
-  return 'There was an error with Dropbox';
+  return 'There was an error with Dropbox. Try refreshing?';
 }
 
 let isSettingScrollTop = false;
