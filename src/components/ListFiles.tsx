@@ -215,7 +215,9 @@ function CreateChordProButton(props: { path: string }) {
   );
 }
 
-function File(props: { dropboxFile: T.DropboxFile }) {
+function File(props: {
+  dropboxFile: T.FileMetadataReference | T.FolderMetadataReference;
+}) {
   const { name, path_display } = props.dropboxFile;
   const isFolder = props.dropboxFile['.tag'] === 'folder';
   const nameParts = name.split('.');

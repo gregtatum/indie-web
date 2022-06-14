@@ -6,7 +6,7 @@ const version = 1;
 
 export async function getDB(): Promise<T.Thunk> {
   return async (dispatch) => {
-    const db = await idb.openDB(name, version, {
+    const db: T.OfflineDB = await idb.openDB<T.OfflineDBSchema>(name, version, {
       /**
        * Called if this version of the database has never been opened before. Use it to
        * specify the schema for the database.
@@ -17,17 +17,16 @@ export async function getDB(): Promise<T.Thunk> {
        * @param transaction The transaction for this upgrade. This is useful if you need to get data
        * from other stores as part of a migration.
        */
-      upgrade(
-        _database: T.OfflineDB,
-        _oldVersion: number,
-        _newVersion: number | null,
-        _transaction: idb.IDBPTransaction<
-          unknown,
-          idb.StoreNames<unknown>[],
-          'versionchange'
-        >,
-      ): void {
-        // …
+      upgrade(db, _oldVersion, _newVersion, _transaction): void {
+        const files = db.createObjectStore('files', {
+          keyPath: 'path_display',
+        });
+        files.createIndex('by-content_hash', 'content_hash');
+        files.createIndex('by-id', 'id');
+
+        db.createObjectStore('folderListings', {
+          keyPath: 'folder.path_display',
+        });
       },
 
       /**
@@ -78,4 +77,44 @@ export async function getDB(): Promise<T.Thunk> {
 
     dispatch(A.connectOfflineDB(db));
   };
+}
+
+export function getFolderListing(db: T.OfflineDB, pathDisplay: string) {
+  return db.get('folderListings', pathDisplay);
+}
+
+export async function addFolderListing(
+  db: T.OfflineDB,
+  folder: T.FolderMetadataReference,
+  files: Array<T.FolderMetadataReference | T.FileMetadataReference>,
+) {
+  const { path_display } = folder;
+  if (!path_display) {
+    console.error(
+      'A folder did not have a display path, it could not be saved.',
+    );
+    return;
+  }
+  const row: T.OfflineDBFolderListingRow = {
+    dateStored: new Date(),
+    folder,
+    files,
+  };
+
+  await db.put('folderListings', row, path_display);
+}
+
+export function getFile(db: T.OfflineDB, pathDisplay: string) {
+  return db.get('files', pathDisplay);
+}
+
+export async function addFile(db: T.OfflineDB, file: T.DownloadFileResponse) {
+  const tx = db.transaction('files', 'readwrite');
+  const store = tx.objectStore('files');
+  const offlineFile = await store.get(file.path_display);
+  if (offlineFile && offlineFile.content_hash === file.content_hash) {
+    // No need to update the offline file.
+    return;
+  }
+  await store.put(file, file.path_display);
 }

@@ -6,7 +6,8 @@ import {
 } from 'redux';
 import thunk from 'redux-thunk';
 import { reducers } from 'src/store/reducers';
-import { Store, Action } from 'src/@types';
+import { Store, Action, State } from 'src/@types';
+import { T } from 'src';
 
 /**
  * Create a more minimalist action logger.
@@ -42,4 +43,76 @@ export function createStore(): Store {
   );
 
   return store as any;
+}
+
+function blobToBase64(blob: Blob | undefined): Promise<undefined | string> {
+  if (!blob) {
+    return Promise.resolve(undefined);
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => {
+      const { result } = reader;
+      if (typeof result === 'string') {
+        resolve(result);
+      } else {
+        reject(new Error());
+      }
+    };
+  });
+}
+
+async function serializeDownloadBlobCache(
+  downloadBlobCache: T.DownloadBlobCache,
+): Promise<any> {
+  const cache: Array<any> = [];
+  for (const [k, v] of downloadBlobCache.entries()) {
+    if (v.type === 'download-blob-requested' || !v.value) {
+      cache.push([k, v]);
+    } else {
+      cache.push([
+        k,
+        {
+          ...v,
+          value: {
+            ...v.value,
+            fileBlob: await blobToBase64(v.value.fileBlob),
+          },
+        },
+      ]);
+    }
+  }
+  return cache;
+}
+
+// TODO - This could be written more type safe with a Entries<Map<K,V>> type
+// and with a ToRecord<Interface> type. A pseudo-recursive Serializable type
+// can be made with:
+//
+// type SerializableImpl<T> = Record<string, T> | null | string | number;
+// type Serializable = SerializeImpl<SerializeImpl<SerializeImpl<never>>>;
+export async function serializeState(state: State): Promise<unknown> {
+  const { listFilesCache, downloadFileCache, downloadBlobCache } = state.app;
+
+  return {
+    app: {
+      ...state.app,
+      listFilesCache: [...listFilesCache.entries()],
+      downloadFileCache: [...downloadFileCache.entries()],
+      downloadBlobCache: await serializeDownloadBlobCache(downloadBlobCache),
+    },
+  };
+}
+
+export function deserializeState(state: any): State {
+  const { listFilesCache, downloadFileCache, downloadBlobCache } = state.app;
+  return {
+    app: {
+      ...state.app,
+      listFilesCache: new Map(listFilesCache),
+      downloadFileCache: new Map(downloadFileCache),
+      downloadBlobCache: new Map(downloadBlobCache),
+    },
+  };
 }

@@ -81,9 +81,9 @@ export interface DownloadFileResponse {
   fileBlob: Blob;
 }
 
-export type DropboxFile =
-  | files.FileMetadataReference
-  | files.FolderMetadataReference;
+// Re-export the dropbox types
+export type FileMetadataReference = files.FileMetadataReference;
+export type FolderMetadataReference = files.FolderMetadataReference;
 
 export type Message = {
   message: React.ReactNode;

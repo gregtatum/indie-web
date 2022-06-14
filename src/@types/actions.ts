@@ -50,7 +50,7 @@ export namespace APICalls {
   export type ListFiles = APIAction<
     'list-files',
     { path: string },
-    Array<App.DropboxFile>
+    Array<App.FileMetadataReference | App.FolderMetadataReference>
   >;
   export type DownloadFile = APIAction<
     'download-file',
