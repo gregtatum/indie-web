@@ -1,4 +1,5 @@
-import { type files } from 'dropbox';
+import type * as idb from 'idb';
+import { OfflineDB } from 'src/logic/offline-db';
 
 // prettier-ignore
 export type Note =
@@ -60,30 +61,40 @@ export type View =
 export type DownloadedTextFile = {
   text?: string;
   error?: unknown;
-  metadata?: files.FileMetadata;
+  metadata?: FileMetadata;
 };
-export type DownloadedBlob = { fileBlob?: Blob; error?: unknown };
+
+export type DownloadedBlob = {
+  metadata?: FileMetadata;
+  blob?: Blob;
+  error?: unknown;
+};
 
 /**
- * This response didn't match what I actually got.
+ * Dropbox types with nothing optional.
  */
-export interface DownloadFileResponse {
+export interface FileMetadata {
+  type: 'file';
   name: string; // '500 Miles _ Surrender.chopro';
-  path_lower: string; // '/500 miles _ surrender.chopro';
-  path_display: string; // '/500 Miles _ Surrender.chopro';
+  path: string; // '/500 Miles _ Surrender.chopro';
   id: string; // 'id:ywUpYqVN8XAAAAAAAAAACw';
-  client_modified: string; // '2022-04-22T16:39:21Z';
-  server_modified: string; // '2022-04-24T17:54:38Z';
+  clientModified: string; // '2022-04-22T16:39:21Z';
+  serverModified: string; // '2022-04-24T17:54:38Z';
   rev: string; // '015dd6a2747a0250000000266f484e0';
   size: number; //3296;
-  is_downloadable: boolean; // true;
-  content_hash: string; // 'bb6d43dfb6aff9dca4ff4d51f0146b64bdf325c73cd63193189b26ca052a2c51';
-  fileBlob: Blob;
+  isDownloadable: boolean; // true;
+  hash: string; // 'bb6d43dfb6aff9dca4ff4d51f0146b64bdf325c73cd63193189b26ca052a2c51';
 }
 
-// Re-export the dropbox types
-export type FileMetadataReference = files.FileMetadataReference;
-export type FolderMetadataReference = files.FolderMetadataReference;
+/**
+ * Dropbox types with nothing optional.
+ */
+export interface FolderMetadata {
+  type: 'folder';
+  name: string; // 'Bent and Bruised';
+  path: string; // '/Bent and Bruised';
+  id: string; // 'id:ywUpYqVN8XAAAAAAAAAAPA';
+}
 
 export type Message = {
   message: React.ReactNode;
@@ -96,3 +107,45 @@ export interface DropboxOauth {
   // Timestamp in milliseconds
   expires: number;
 }
+
+export interface FolderListingRow {
+  storedAt: Date;
+  path: string;
+  files: Array<FolderMetadata | FileMetadata>;
+}
+
+export type FileRow = StoredTextFile | StoredBlobFile;
+
+export type StoredTextFile = {
+  metadata: FileMetadata;
+  storedAt: Date;
+  type: 'text';
+  text: string;
+};
+
+export type StoredBlobFile = {
+  metadata: FileMetadata;
+  storedAt: Date;
+  type: 'blob';
+  blob: Blob;
+};
+
+export interface OfflineDBSchema extends idb.DBSchema {
+  files: {
+    value: FileRow;
+    key: string;
+    indexes: {
+      'by-hash': string;
+      'by-id': string;
+    };
+  };
+  folderListings: {
+    value: FolderListingRow;
+    key: string;
+  };
+}
+
+export type OfflineDBState =
+  | { phase: 'connecting'; db: null }
+  | { phase: 'connected'; db: OfflineDB }
+  | { phase: 'disconnected'; db: null };

@@ -13,7 +13,9 @@ import type * as PDFJS from 'pdfjs-dist';
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
+if (process.env.NODE_ENV !== 'test') {
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
+}
 
 export function getView(state: State) {
   return state.app.view;
@@ -57,6 +59,14 @@ export function getIsDraggingSplitter(state: State) {
 
 export function shouldHideHeader(state: State) {
   return state.app.shouldHideHeader;
+}
+
+export function getOfflineDBConnection(state: State) {
+  return state.app.offlineDB;
+}
+
+export function getOfflineDB(state: State) {
+  return getOfflineDBConnection(state).db;
 }
 
 function dangerousSelector<T>(
@@ -177,15 +187,15 @@ export const getActiveBlobOrNull = createSelector(
     }
     if (
       downloadFileRequest.type === 'download-blob-received' &&
-      downloadFileRequest.value.fileBlob
+      downloadFileRequest.value.blob
     ) {
-      return downloadFileRequest.value.fileBlob;
+      return downloadFileRequest.value.blob;
     }
     if (
       downloadFileRequest.type === 'download-blob-failed' &&
-      downloadFileRequest.value?.fileBlob
+      downloadFileRequest.value?.blob
     ) {
-      return downloadFileRequest.value.fileBlob;
+      return downloadFileRequest.value.blob;
     }
     return null;
   },
@@ -274,8 +284,8 @@ export const getActiveFileDisplayPath = createSelector(
       downloadFile.value
     ) {
       const { metadata } = downloadFile.value;
-      if (metadata?.path_display) {
-        return metadata.path_display;
+      if (metadata?.path) {
+        return metadata.path;
       }
     }
 
@@ -286,18 +296,15 @@ export const getActiveFileDisplayPath = createSelector(
       listFiles.value
     ) {
       const files = listFiles.value;
-      const file = files.find((file) => file.path_display === path);
-      if (file?.path_display) {
-        return file.path_display;
+      const file = files.find((file) => file.path === path);
+      if (file?.path) {
+        return file.path;
       }
       const activeFileWithSlash = path + '/';
       for (const file of files) {
-        if (
-          file?.path_display?.startsWith(activeFileWithSlash) &&
-          file.path_display
-        ) {
+        if (file?.path?.startsWith(activeFileWithSlash) && file.path) {
           const parts = path.split('/');
-          const displayParts = file.path_display.split('/');
+          const displayParts = file.path.split('/');
           return displayParts.slice(0, parts.length).join('/');
         }
       }
@@ -362,18 +369,18 @@ export const getNextPrevSong = createSelector(
     let index: number | null = null;
     for (const file of filesAndFolders) {
       // Ignore folders.
-      if (file['.tag'] === 'folder') {
+      if (file.type === 'folder') {
         continue;
       }
 
       // Ensure it's something we can open.
-      const url = getUrlForFile(file.path_display ?? '');
+      const url = getUrlForFile(file.path ?? '');
       if (!url) {
         continue;
       }
 
       // See if this is the current URL.
-      if (file.path_lower === pathLower) {
+      if (file.path.toLowerCase() === pathLower) {
         index = songLinks.length;
       }
 

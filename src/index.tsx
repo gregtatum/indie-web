@@ -4,22 +4,26 @@ import { Provider } from 'react-redux';
 import { createStore } from './store/create-store';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
-import { mockGoogleAnalytics } from 'src/utils';
+import { maybeMockGoogleAnalytics } from 'src/utils';
 
 import * as A from 'src/store/actions';
 import * as $ from 'src/store/selectors';
+import { openDB } from 'src/logic/offline-db';
 
 export * as A from 'src/store/actions';
 export * as $ from 'src/store/selectors';
 export * as T from 'src/@types';
 
-init();
+if (process.env.NODE_ENV !== 'test') {
+  init();
+}
 
 export async function init(): Promise<void> {
-  mockGoogleAnalytics();
+  maybeMockGoogleAnalytics();
   initServiceWorker();
 
   const store = createStore();
+
   Object.assign(window as any, {
     store,
     dispatch: store.dispatch,
@@ -36,6 +40,8 @@ export async function init(): Promise<void> {
       );
     },
   });
+
+  await store.dispatch(openDB());
   mountReact(store);
 }
 
@@ -61,7 +67,10 @@ function mountReact(store: T.Store): void {
 }
 
 function initServiceWorker() {
-  if (process.env.NODE_ENV === 'development') {
+  if (
+    process.env.NODE_ENV === 'development' ||
+    process.env.NODE_ENV === 'test'
+  ) {
     return;
   }
   window.addEventListener('load', async () => {

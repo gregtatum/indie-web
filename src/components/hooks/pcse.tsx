@@ -54,6 +54,9 @@ class BufferSerializer {
 }
 
 async function sha256Base64(string: string): Promise<string> {
+  if (process.env.NODE_ENV === 'test') {
+    return 'fakebase64';
+  }
   const encoder = new TextEncoder();
   const data = encoder.encode(string);
   const buffer = await window.crypto.subtle.digest('SHA-256', data);
@@ -62,7 +65,9 @@ async function sha256Base64(string: string): Promise<string> {
 
 function generateRandomString(): string {
   const array = new Uint8Array(32);
-  window.crypto.getRandomValues(array);
+  if (process.env.NODE_ENV !== 'test') {
+    window.crypto.getRandomValues(array);
+  }
   return new BufferSerializer(array.buffer).toHexString();
 }
 

@@ -3,8 +3,8 @@
  */
 export * from './app';
 export * from './actions';
-export * from './db';
 
+export type { OfflineDB } from 'src/logic/offline-db';
 import type { State } from 'src/store/reducers';
 export type { AppState, State } from 'src/store/reducers';
 import type * as Thunks from 'src/store/actions/thunks';

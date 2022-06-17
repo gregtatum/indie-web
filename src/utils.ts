@@ -35,7 +35,7 @@ export function getEnv(key: string): string {
  * Mock out Google Analytics for anything that's not production so that we have run-time
  * code coverage in development and testing.
  */
-export function mockGoogleAnalytics() {
+export function maybeMockGoogleAnalytics() {
   if (process.env.NODE_ENV === 'development') {
     (window as any).ga = (event: any, ...payload: any[]) => {
       const style = 'color: #FF6D00; font-weight: bold';

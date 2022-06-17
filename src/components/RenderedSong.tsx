@@ -5,6 +5,7 @@ import { UnhandledCaseError } from 'src/utils';
 import { pathJoin } from '../utils';
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
+import { fixupFileMetadata } from 'src/logic/offline-db';
 
 function getSpotifyLink(
   { title, subtitle }: Record<string, string>,
@@ -151,6 +152,7 @@ function DropboxImage({
   const dropbox = Redux.useSelector($.getDropbox);
   const [objectUrl, setObjectUrl] = React.useState<string>('');
   const generationRef = React.useRef(0);
+  const { getState } = Redux.useStore();
 
   React.useEffect(() => {
     return () => {
@@ -167,22 +169,44 @@ function DropboxImage({
       setObjectUrl(imageCache[src]);
       return;
     }
-
     const generation = ++generationRef.current;
+    const db = $.getOfflineDB(getState());
 
-    dropbox
-      .filesDownload({ path: src })
-      .then(async ({ result }) => {
-        if (generation !== generationRef.current) {
-          return;
+    const handleBlob = (blob: Blob) => {
+      if (generation !== generationRef.current) {
+        return;
+      }
+
+      imageCache[src] = URL.createObjectURL(blob);
+      setObjectUrl(imageCache[src]);
+    };
+
+    (async () => {
+      if (db) {
+        try {
+          const file = await db.getFile(src);
+          if (file?.type === 'blob') {
+            handleBlob(file.blob);
+          }
+        } catch (error) {
+          console.error('Error with indexeddb', error);
         }
-        const { fileBlob } = result as T.DownloadFileResponse;
-        imageCache[src] = URL.createObjectURL(fileBlob);
-        setObjectUrl(imageCache[src]);
-      })
-      .catch((error) => {
-        console.error('<DropboxImage /> error:', error);
-      });
+      }
+
+      dropbox
+        .filesDownload({ path: src })
+        .then(async ({ result }) => {
+          const { fileBlob } = result as any;
+          handleBlob(fileBlob);
+          if (db) {
+            const metadata = fixupFileMetadata(result);
+            db.addBlobFile(metadata, fileBlob);
+          }
+        })
+        .catch((error) => {
+          console.error('<DropboxImage /> error:', error);
+        });
+    })();
   }, [dropbox, src]);
 
   return <img {...props} src={objectUrl} />;

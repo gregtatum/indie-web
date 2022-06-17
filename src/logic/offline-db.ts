@@ -1,12 +1,15 @@
 import * as idb from 'idb';
 import { A, T } from 'src';
+import type { files } from 'dropbox';
 
-const name = 'browser-chords';
-const version = 1;
+function log(key: string, ...args: any[]) {
+  const style = 'color: #FF006D; font-weight: bold';
+  console.log(`[offline-db] %c"${key}"`, style, ...args);
+}
 
-export async function getDB(): Promise<T.Thunk> {
+export function openDB(): T.Thunk<Promise<OfflineDB>> {
   return async (dispatch) => {
-    const db: T.OfflineDB = await idb.openDB<T.OfflineDBSchema>(name, version, {
+    const db = await idb.openDB<T.OfflineDBSchema>('browser-chords', 1, {
       /**
        * Called if this version of the database has never been opened before. Use it to
        * specify the schema for the database.
@@ -19,13 +22,13 @@ export async function getDB(): Promise<T.Thunk> {
        */
       upgrade(db, _oldVersion, _newVersion, _transaction): void {
         const files = db.createObjectStore('files', {
-          keyPath: 'path_display',
+          keyPath: 'metadata.path',
         });
-        files.createIndex('by-content_hash', 'content_hash');
-        files.createIndex('by-id', 'id');
+        files.createIndex('by-hash', 'metadata.hash');
+        files.createIndex('by-id', 'metadata.id');
 
         db.createObjectStore('folderListings', {
-          keyPath: 'folder.path_display',
+          keyPath: 'path',
         });
       },
 
@@ -75,46 +78,109 @@ export async function getDB(): Promise<T.Thunk> {
       },
     });
 
-    dispatch(A.connectOfflineDB(db));
+    const wrappedDB = new OfflineDB(db);
+    dispatch(A.connectOfflineDB(wrappedDB));
+    return wrappedDB;
   };
 }
 
-export function getFolderListing(db: T.OfflineDB, pathDisplay: string) {
-  return db.get('folderListings', pathDisplay);
+export class OfflineDB {
+  #db: idb.IDBPDatabase<T.OfflineDBSchema>;
+  constructor(db: idb.IDBPDatabase<T.OfflineDBSchema>) {
+    this.#db = db;
+  }
+
+  async getFolderListing(path: string) {
+    const listing = await this.#db.get('folderListings', path);
+    log('getFolderListing', path, { listing });
+    return listing;
+  }
+
+  async addFolderListing(
+    path: string,
+    files: Array<T.FolderMetadata | T.FileMetadata>,
+  ) {
+    const row: T.FolderListingRow = {
+      storedAt: new Date(),
+      path,
+      files,
+    };
+    log('addFolderListing', path, files);
+    await this.#db.put('folderListings', row);
+  }
+
+  async getFile(path: string) {
+    const file = await this.#db.get('files', path);
+    log('getFile', path, { metadata: file?.metadata });
+    return file;
+  }
+
+  async #getFileStoreIfNeedsUpdating(metadata: T.FileMetadata) {
+    const tx = this.#db.transaction('files', 'readwrite');
+    const store = tx.objectStore('files');
+    const offline = await store.get(metadata.path);
+    if (offline && offline.metadata.hash === metadata.hash) {
+      // No need to update the offline file.
+      return null;
+    }
+    return store;
+  }
+
+  async addTextFile(metadata: T.FileMetadata, text: string) {
+    const store = await this.#getFileStoreIfNeedsUpdating(metadata);
+    if (store) {
+      await store.put({ metadata, storedAt: new Date(), type: 'text', text });
+      log('addTextFile', metadata.path, { metadata, text: { text } });
+    } else {
+      log('addTextFile', 'hash match');
+    }
+  }
+
+  async addBlobFile(metadata: T.FileMetadata, blob: Blob) {
+    const store = await this.#getFileStoreIfNeedsUpdating(metadata);
+    if (store) {
+      await store.put({ metadata, storedAt: new Date(), type: 'blob', blob });
+      log('addBlobFile', metadata.path, metadata, blob);
+    } else {
+      log('addBlobFile', 'hash match');
+    }
+  }
 }
 
-export async function addFolderListing(
-  db: T.OfflineDB,
-  folder: T.FolderMetadataReference,
-  files: Array<T.FolderMetadataReference | T.FileMetadataReference>,
-) {
-  const { path_display } = folder;
-  if (!path_display) {
-    console.error(
-      'A folder did not have a display path, it could not be saved.',
-    );
-    return;
+export function fixupMetadata(
+  rawMetadata: files.FileMetadataReference | files.FolderMetadataReference,
+): T.FileMetadata | T.FolderMetadata {
+  if (rawMetadata['.tag'] === 'file') {
+    return fixupFileMetadata(rawMetadata);
+  } else {
+    return fixupFolderMetadata(rawMetadata);
   }
-  const row: T.OfflineDBFolderListingRow = {
-    dateStored: new Date(),
-    folder,
-    files,
+}
+
+export function fixupFileMetadata(
+  rawMetadata: files.FileMetadata | files.FileMetadataReference,
+): T.FileMetadata {
+  return {
+    type: 'file',
+    name: rawMetadata.name,
+    path: rawMetadata.path_display ?? '',
+    id: rawMetadata.id,
+    clientModified: rawMetadata.client_modified,
+    serverModified: rawMetadata.server_modified,
+    rev: rawMetadata.rev,
+    size: rawMetadata.size,
+    isDownloadable: rawMetadata.is_downloadable ?? false,
+    hash: rawMetadata.content_hash ?? '',
   };
-
-  await db.put('folderListings', row, path_display);
 }
 
-export function getFile(db: T.OfflineDB, pathDisplay: string) {
-  return db.get('files', pathDisplay);
-}
-
-export async function addFile(db: T.OfflineDB, file: T.DownloadFileResponse) {
-  const tx = db.transaction('files', 'readwrite');
-  const store = tx.objectStore('files');
-  const offlineFile = await store.get(file.path_display);
-  if (offlineFile && offlineFile.content_hash === file.content_hash) {
-    // No need to update the offline file.
-    return;
-  }
-  await store.put(file, file.path_display);
+export function fixupFolderMetadata(
+  rawMetadata: files.FolderMetadataReference,
+): T.FolderMetadata {
+  return {
+    type: 'folder',
+    name: rawMetadata.name,
+    path: rawMetadata.path_display ?? '',
+    id: rawMetadata.id,
+  };
 }

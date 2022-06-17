@@ -1,5 +1,5 @@
+import { OfflineDB } from 'src/logic/offline-db';
 import * as App from './app';
-import * as DB from './db';
 
 export type Action =
   | {
@@ -24,7 +24,7 @@ export type Action =
   | { type: 'dragging-splitter'; isDragging: boolean }
   | { type: 'expired-access-token' }
   | { type: 'disconnect-offline-db' }
-  | { type: 'connect-offline-db'; db: DB.OfflineDB }
+  | { type: 'connect-offline-db'; db: OfflineDB }
   | {
       type: 'add-message';
       message: React.ReactNode;
@@ -50,7 +50,7 @@ export namespace APICalls {
   export type ListFiles = APIAction<
     'list-files',
     { path: string },
-    Array<App.FileMetadataReference | App.FolderMetadataReference>
+    Array<App.FileMetadata | App.FolderMetadata>
   >;
   export type DownloadFile = APIAction<
     'download-file',

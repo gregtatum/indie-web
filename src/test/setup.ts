@@ -3,6 +3,8 @@ import fetchMock from 'fetch-mock-jest';
 import { Headers, Request, Response } from 'node-fetch';
 import { join } from 'path';
 
+require('fake-indexeddb/auto');
+
 require('dotenv').config({ path: join(__dirname, '../../.env.test') });
 
 beforeEach(function () {
@@ -13,6 +15,9 @@ beforeEach(function () {
 });
 
 afterEach(() => {
+  const FDBFactory = require('fake-indexeddb/lib/FDBFactory');
+  indexedDB = new FDBFactory();
+
   jest.resetAllMocks();
   jest.restoreAllMocks();
   jest.clearAllTimers();

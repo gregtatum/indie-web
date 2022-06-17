@@ -215,11 +215,9 @@ function CreateChordProButton(props: { path: string }) {
   );
 }
 
-function File(props: {
-  dropboxFile: T.FileMetadataReference | T.FolderMetadataReference;
-}) {
-  const { name, path_display } = props.dropboxFile;
-  const isFolder = props.dropboxFile['.tag'] === 'folder';
+function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
+  const { name, path } = props.dropboxFile;
+  const isFolder = props.dropboxFile.type === 'folder';
   const nameParts = name.split('.');
   const extension =
     nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
@@ -245,13 +243,10 @@ function File(props: {
     icon = '🎵';
   }
 
-  if (path_display) {
+  if (path) {
     if (isFolder) {
       return (
-        <Router.Link
-          className="listFilesFileLink"
-          to={`/folder${path_display}`}
-        >
+        <Router.Link className="listFilesFileLink" to={`/folder${path}`}>
           <span className="listFilesIcon">{icon}</span>
           {displayName}
         </Router.Link>
@@ -260,7 +255,7 @@ function File(props: {
 
     if (isChordPro) {
       return (
-        <Router.Link className="listFilesFileLink" to={`/file${path_display}`}>
+        <Router.Link className="listFilesFileLink" to={`/file${path}`}>
           <span className="listFilesIcon">{icon}</span>
           {displayName}
         </Router.Link>
@@ -269,7 +264,7 @@ function File(props: {
 
     if (isPDF) {
       return (
-        <Router.Link className="listFilesFileLink" to={`/pdf${path_display}`}>
+        <Router.Link className="listFilesFileLink" to={`/pdf${path}`}>
           <span className="listFilesIcon">{icon}</span>
           {displayName}
         </Router.Link>
@@ -278,7 +273,7 @@ function File(props: {
 
     if (isImage) {
       return (
-        <Router.Link className="listFilesFileLink" to={`/image${path_display}`}>
+        <Router.Link className="listFilesFileLink" to={`/image${path}`}>
           <span className="listFilesIcon">{icon}</span>
           {displayName}
         </Router.Link>
