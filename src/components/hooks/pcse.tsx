@@ -104,7 +104,7 @@ export function getRedirectUri() {
 }
 
 let _authorizeUrl: string | null = null;
-async function getDropboxAuthorizeUrl(codeChallenge: string) {
+function getDropboxAuthorizeUrl(codeChallenge: string) {
   if (!_authorizeUrl) {
     _authorizeUrl =
       'https://www.dropbox.com/oauth2/authorize?' +
@@ -125,7 +125,7 @@ export function useCodeVerifier() {
   React.useEffect(() => {
     (async () => {
       const { codeChallenge } = await getCodes();
-      const url = await getDropboxAuthorizeUrl(codeChallenge);
+      const url = getDropboxAuthorizeUrl(codeChallenge);
       setAuthorizationUrl(url);
     })().catch((error) => {
       console.error('Error getting dropbox authorization url:', error);
