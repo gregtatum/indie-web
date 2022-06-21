@@ -3,6 +3,7 @@ import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { Selector } from 'src/@types';
 import { setScrollTop } from 'src/utils';
+import { T } from 'src';
 
 type PromiseState<T> =
   | { type: 'pending' }
@@ -64,4 +65,8 @@ export function useRetainScroll() {
       document.removeEventListener('scroll', onScroll);
     };
   }, [window.location.href, navigationType]);
+}
+
+export function useStore() {
+  return Redux.useStore() as T.Store;
 }

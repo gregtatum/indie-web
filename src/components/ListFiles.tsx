@@ -3,7 +3,7 @@ import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { A, T, $ } from 'src';
 import { ensureExists, getStringProp, imageExtensions } from 'src/utils';
-import { useRetainScroll } from './hooks';
+import { useRetainScroll, useStore } from './hooks';
 
 Router.useNavigationType;
 
@@ -125,6 +125,7 @@ export function ListFiles() {
 function CreateChordProButton(props: { path: string }) {
   type Phase = 'not-editing' | 'editing' | 'submitting';
   const dropbox = Redux.useSelector($.getDropbox);
+  const { dispatch, getState } = useStore();
   const [phase, setPhase] = React.useState<Phase>('not-editing');
   const input = React.useRef<HTMLInputElement | null>(null);
   const navigate = Router.useNavigate();
@@ -155,22 +156,35 @@ function CreateChordProButton(props: { path: string }) {
     path += inputEl.value;
     const title = inputEl.value.replace(/\.chopro$/, '');
     setPhase('submitting');
+    let contents = `{title: ${title}}\n{subtitle: Unknown}`;
+    const match = /^(.*) - (.*).*$/.exec(title);
+    if (match) {
+      contents = `{title: ${match[1]}}\n{subtitle: ${match[2]}}`;
+    }
     dropbox
       .filesUpload({
         path,
-        contents: `{title: ${title}}\n{subtitle: Unknown}`,
+        contents,
         mode: {
           '.tag': 'add',
         },
       })
       .then(
         (response) => {
+          // The directory listing is now stale, fetch it again.
+          dispatch(A.listFiles(props.path));
+          if ($.getHideEditor(getState())) {
+            dispatch(A.hideEditor(false));
+          }
           navigate('file' + (response.result.path_display ?? path));
         },
         (error) => {
-          setError(
-            getStringProp(error, 'message') ?? 'There was a Dropbox API error',
-          );
+          let err =
+            getStringProp(error, 'message') ?? 'There was a Dropbox API error';
+          if (error?.status === 409) {
+            err = 'That file already exists, please choose a different name.';
+          }
+          setError(err);
         },
       );
   }
