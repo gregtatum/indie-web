@@ -163,3 +163,19 @@ a.renderedSongHeaderSpotify {
     max-width: var(--page-max-width);
   }
 }
+
+@media all and (display-mode: fullscreen) {
+  .renderedSong,
+  .viewChoproSolo .renderedSong {
+    /* The full screen div is always full width. Use padding for centering. */
+    --padding: calc(
+      max(
+        (100vw - var(--page-max-width)) / 2,
+        20px
+      )
+    );
+    padding-left: var(--padding);
+    padding-right: var(--padding);
+    max-width: 100%;
+  }
+}
