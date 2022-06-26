@@ -116,29 +116,51 @@ export function Header() {
   );
 }
 
+function goFullScreen() {
+  const element = document.querySelector('[data-fullscreen]');
+  if (!element) {
+    console.error('No [data-fullscreen] was found.');
+    return;
+  }
+  if (element.requestFullscreen) {
+    element.requestFullscreen();
+  }
+  if ((element as any).webkitRequestFullscreen) {
+    (element as any).webkitRequestFullscreen();
+  }
+}
+
+function fullScreenEventHandler(event: KeyboardEvent) {
+  if (
+    event.key === 'f' &&
+    !event.shiftKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey
+  ) {
+    goFullScreen();
+  }
+}
+
 function RequestFullScreen() {
   const canGoFullScreen = Redux.useSelector($.canGoFullScreen);
+  React.useEffect(() => {
+    if (canGoFullScreen) {
+      document.addEventListener('keyup', fullScreenEventHandler);
+    } else {
+      document.removeEventListener('keyup', fullScreenEventHandler);
+    }
+    return () => {
+      document.removeEventListener('keyup', fullScreenEventHandler);
+    };
+  }, [canGoFullScreen]);
+
   if (!canGoFullScreen) {
     return null;
   }
+
   return (
-    <button
-      type="button"
-      className="button"
-      onClick={() => {
-        const element = document.querySelector('[data-fullscreen]');
-        if (!element) {
-          console.error('No [data-fullscreen] was found.');
-          return;
-        }
-        if (element.requestFullscreen) {
-          element.requestFullscreen();
-        }
-        if ((element as any).webkitRequestFullscreen) {
-          (element as any).webkitRequestFullscreen();
-        }
-      }}
-    >
+    <button type="button" className="button" onClick={goFullScreen}>
       Fullscreen
     </button>
   );

@@ -320,13 +320,10 @@ export function canGoFullScreen(state: State) {
     case null:
       return false;
     case 'view-file':
+      return document.fullscreenEnabled && getHideEditor(state);
     case 'view-pdf':
     case 'view-image':
-      return (
-        true &&
-        (document.fullscreenEnabled ||
-          (document as any).webkitFullscreenEnabled)
-      );
+      return document.fullscreenEnabled;
     case 'list-files':
     case 'settings':
     case 'privacy':
