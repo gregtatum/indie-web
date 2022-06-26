@@ -40,6 +40,7 @@ export type TextOrChord =
 
 export type LineType =
   | { type: 'section'; text: string }
+  | { type: 'comment'; text: string; italic: boolean }
   | { type: 'image'; src: string }
   | { type: 'space' }
   | { type: 'link'; href: string }

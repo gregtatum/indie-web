@@ -129,10 +129,26 @@ export function RenderedSong() {
             );
           case 'link':
             return (
-              <a href={line.href} target="_blank" rel="noreferrer">
+              <a
+                href={line.href}
+                target="_blank"
+                rel="noreferrer"
+                key={lineKey}
+              >
                 {line.href}
               </a>
             );
+          case 'comment': {
+            let className = 'renderedSongComment';
+            if (line.italic) {
+              className += ' renderedSongItalic';
+            }
+            return (
+              <div className={className} key={lineKey}>
+                {line.text}
+              </div>
+            );
+          }
           default:
             throw new UnhandledCaseError(line, 'LineType');
         }
@@ -238,6 +254,9 @@ function getLineTypeKey(line: T.LineType, index: number): string {
     }
     case 'image': {
       return 'image:' + index + line.src;
+    }
+    case 'comment': {
+      return 'comment:' + index + line.text;
     }
     default:
       throw new UnhandledCaseError(line, 'LineType');

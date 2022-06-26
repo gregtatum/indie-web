@@ -338,4 +338,53 @@ describe('parseChordPro', () => {
       title: `\\/alentine's "Day"`,
     });
   });
+
+  it('can parse comments', () => {
+    expect(
+      parseChordPro(stripIndent`
+        {comment: This is a comment}
+        Bare line
+        {c: Another comment}
+        {ci: Another one}
+        {comment_italic: Italic one}
+        {COMMENT: Directives are case insensitive}
+      `),
+    ).toMatchInlineSnapshot(`
+      Object {
+        "directives": Object {},
+        "lines": Array [
+          Object {
+            "text": "This is a comment",
+            "type": "comment",
+          },
+          Object {
+            "content": "text",
+            "spans": Array [
+              Object {
+                "text": "Bare line",
+                "type": "text",
+              },
+            ],
+            "type": "line",
+          },
+          Object {
+            "text": "Another comment",
+            "type": "comment",
+          },
+          Object {
+            "text": "Another one",
+            "type": "comment",
+          },
+          Object {
+            "text": "Italic one",
+            "type": "comment",
+          },
+          Object {
+            "text": "Directives are case insensitive",
+            "type": "comment",
+          },
+        ],
+      }
+    `);
+  });
 });

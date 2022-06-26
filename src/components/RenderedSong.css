@@ -66,6 +66,16 @@
   max-width: 100%;
 }
 
+.renderedSongComment {
+  font-weight: bold;
+  color: #666;
+  margin: 4px 0;
+}
+
+.renderedSongItalic {
+  font-style: italic;
+}
+
 .renderedSongLine-chords {
   margin: 3px 0;
 }

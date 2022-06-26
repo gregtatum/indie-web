@@ -4,6 +4,13 @@ import { ensureExists } from 'src/utils';
 const normalizeDirectives = new Map([
   ['t', 'title'],
   ['st', 'subtitle'],
+  ['img', 'image'],
+  // https://www.chordpro.org/chordpro/directives-comment/
+  ['c', 'comment'],
+  ['comment_box', 'comment'],
+  ['comment_italic', 'comment'],
+  ['ci', 'comment'],
+  ['highlight', 'comment'],
 ]);
 
 // Taken from: https://www.chordpro.org/chordpro/chordpro-chords/
@@ -358,10 +365,10 @@ export function parseChordPro(text: string): T.ParsedChordPro {
   for (const line of text.split('\n')) {
     const metaResult = matchMeta.exec(line);
     if (metaResult) {
-      const [, key, value] = metaResult;
+      const [, keyCased, value] = metaResult;
+      const key = keyCased.toLowerCase();
       const directive = normalizeDirectives.get(key) || key;
       switch (directive) {
-        case 'img':
         case 'image': {
           const { src } = parseAttributes(value);
           if (src) {
@@ -369,6 +376,13 @@ export function parseChordPro(text: string): T.ParsedChordPro {
           }
           break;
         }
+        case 'comment':
+          lines.push({
+            type: 'comment',
+            text: value,
+            italic: key === 'comment_italic' || key === 'ci',
+          });
+          break;
         default:
           directives[directive] = value;
       }

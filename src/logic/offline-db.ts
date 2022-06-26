@@ -4,7 +4,9 @@ import type { files } from 'dropbox';
 
 function log(key: string, ...args: any[]) {
   const style = 'color: #FF006D; font-weight: bold';
-  console.log(`[offline-db] %c"${key}"`, style, ...args);
+  if (process.env.NODE_ENV !== 'test') {
+    console.log(`[offline-db] %c"${key}"`, style, ...args);
+  }
 }
 
 export function openDB(): T.Thunk<Promise<OfflineDB>> {
