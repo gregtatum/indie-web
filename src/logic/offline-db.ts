@@ -147,6 +147,10 @@ export class OfflineDB {
       log('addBlobFile', 'hash match');
     }
   }
+
+  async close() {
+    this.#db.close();
+  }
 }
 
 export function fixupMetadata(

@@ -24,6 +24,7 @@ describe('offline db', () => {
     }
     expect(fileRow.text).toEqual(text);
     expect(fileRow.metadata.path).toEqual(path);
+    db.close();
   });
 
   // Fake indexeddb doesn't support blobs.
@@ -45,6 +46,7 @@ describe('offline db', () => {
     }
     expect(await fileRow.blob.text()).toEqual(text);
     expect(fileRow.metadata.path).toEqual(path);
+    db.close();
   });
 
   it('can add a folder listing', async () => {
@@ -65,5 +67,6 @@ describe('offline db', () => {
     const folderListings = ensureExists(await db.getFolderListing(path));
     expect(folderListings.files).toEqual(files);
     expect(folderListings.path).toEqual(path);
+    db.close();
   });
 });

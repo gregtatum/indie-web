@@ -3,8 +3,8 @@ import fetchMock from 'fetch-mock-jest';
 import { Headers, Request, Response } from 'node-fetch';
 import { join } from 'path';
 import { resetTestGeneration } from './fixtures';
-
-require('fake-indexeddb/auto');
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 
 require('dotenv').config({ path: join(__dirname, '../../.env.test') });
 
@@ -12,6 +12,7 @@ const originalEnv = process.env;
 
 beforeEach(function () {
   jest.resetModules();
+  global.indexedDB = new IDBFactory();
   global.fetch = fetchMock.sandbox();
   (global as any).Headers = Headers;
   (global as any).Request = Request;
