@@ -354,6 +354,7 @@ describe('parseChordPro', () => {
         "directives": Object {},
         "lines": Array [
           Object {
+            "italic": false,
             "text": "This is a comment",
             "type": "comment",
           },
@@ -368,18 +369,22 @@ describe('parseChordPro', () => {
             "type": "line",
           },
           Object {
+            "italic": false,
             "text": "Another comment",
             "type": "comment",
           },
           Object {
+            "italic": true,
             "text": "Another one",
             "type": "comment",
           },
           Object {
+            "italic": true,
             "text": "Italic one",
             "type": "comment",
           },
           Object {
+            "italic": false,
             "text": "Directives are case insensitive",
             "type": "comment",
           },

@@ -42,6 +42,10 @@ export function LinkDropbox(props: { children: any }) {
     if (!oauth) {
       return;
     }
+    if (oauth.expires === Infinity) {
+      // This is most likely a test that is opting out of refresh token behavior.
+      return;
+    }
     if (oauth.expires > Date.now()) {
       setTimeout(useRefreshToken, oauth.expires - Date.now());
       return;

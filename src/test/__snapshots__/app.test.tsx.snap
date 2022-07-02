@@ -1,0 +1,85 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`app can render 1`] = `
+<div
+  class="linkDropboxHome"
+>
+  <div
+    class="linkDropboxBegin"
+  >
+    <div
+      class="linkDropbox"
+    >
+      <div
+        class="linkDropboxDescription"
+      >
+        <h1
+          class="linkDropboxH1"
+        >
+          🎵 Browser Chords
+        </h1>
+        <h2
+          class="linkDropboxH2"
+        >
+          A Greg Tatum Web App
+        </h2>
+        <p>
+          Manage tabs, chords, and sheet music in Dropbox. Access and edit them directly in the browser, from anywhere.
+        </p>
+        <p>
+          Privacy is important. This app will only be given access to the 
+          <code>
+            Dropbox/Apps/Chords
+          </code>
+           folder in Dropbox to manage files. See the
+           
+          <a
+            href="/privacy"
+          >
+            privacy policy
+          </a>
+           for more details. The source code is on
+           
+          <a
+            href="https://github.com/gregtatum/browser-chords"
+          >
+            GitHub
+          </a>
+          .
+        </p>
+      </div>
+      <div>
+        <a
+          class="linkDropboxConnect"
+          href="https://www.dropbox.com/oauth2/authorize?response_type=code&code_challenge_method=S256&client_id=FAKE_DROPBOX_CLIENT_ID&code_challenge=fakebase64&redirect_uri=http%3A%2F%2Flocalhost%2Flogin&token_access_type=offline"
+        >
+          Connect Dropbox
+        </a>
+      </div>
+    </div>
+  </div>
+  <div
+    class="linkDropboxEnd"
+  >
+    <div
+      class="linkDropboxScroller"
+    >
+      <img
+        height="1500"
+        src="/Chords.tiny.png"
+        width="1125"
+      />
+      <img
+        height="1500"
+        src="/Songs.tiny.png"
+        width="1125"
+      />
+      <img
+        height="1500"
+        src="/Sheet.tiny.png"
+        width="1125"
+      />
+    </div>
+  </div>
+</div>
+`;

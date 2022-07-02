@@ -34,7 +34,7 @@ export const logger =
 export function createStore(): Store {
   const middlewares: Middleware[] = [thunk];
 
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV !== 'test') {
     middlewares.push(logger as any);
   }
   const store = reduxCreateStore(

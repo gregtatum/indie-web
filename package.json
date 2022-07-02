@@ -43,8 +43,9 @@
     "roots": [
       "src/test"
     ],
+    "setupFiles": ["./src/test/setupFiles.ts"],
     "setupFilesAfterEnv": [
-      "./src/test/setup.ts"
+      "./src/test/setupAfterEnv.ts"
     ],
     "verbose": true
   },

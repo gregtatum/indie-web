@@ -71,7 +71,7 @@ export function ListFiles() {
 
       return (
         <>
-          <div className="listFiles">
+          <div className="listFiles" data-testid="list-files">
             <div className="listFilesFilter">
               {parent}
               <input

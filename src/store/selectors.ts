@@ -92,18 +92,24 @@ export const getDropboxOrNull = createSelector(
       fakeDropbox[key] = (...args: any[]) => {
         // First log the request.
         const style = 'color: #006DFF; font-weight: bold';
-        console.log(`[dropbox] calling %c"${key}"`, style, ...args);
+        if (process.env.NODE_ENV !== 'test') {
+          console.log(`[dropbox] calling %c"${key}"`, style, ...args);
+        }
 
         // Monitor the response, and pass on the promise result.
         return new Promise((resolve, reject) => {
           const result = (dropbox as any)[key](...args);
           result.then(
             (response: any) => {
-              console.log(`[dropbox] response %c"${key}"`, style, response);
+              if (process.env.NODE_ENV !== 'test') {
+                console.log(`[dropbox] response %c"${key}"`, style, response);
+              }
               resolve(response);
             },
             (error: any) => {
-              console.log(`[dropbox] error %c"${key}"`, style, error);
+              if (process.env.NODE_ENV !== 'test') {
+                console.log(`[dropbox] error %c"${key}"`, style, error);
+              }
               reject(error);
             },
           );
