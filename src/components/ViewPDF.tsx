@@ -3,8 +3,7 @@ import * as Redux from 'react-redux';
 import { A, $ } from 'src';
 
 import './ViewPDF.css';
-import { ensureExists, maybeGetProperty, UnhandledCaseError } from 'src/utils';
-import { UnlinkDropbox } from './LinkDropbox';
+import { ensureExists, UnhandledCaseError } from 'src/utils';
 import {
   usePromiseSelector,
   useInfalliblePromise,
@@ -17,7 +16,8 @@ export function ViewPDF() {
   useRetainScroll();
   const dispatch = Redux.useDispatch();
   const path = Redux.useSelector($.getPath);
-  const request = Redux.useSelector($.getDownloadBlobCache).get(path);
+  const blob = Redux.useSelector($.getDownloadBlobCache).get(path);
+  const error = Redux.useSelector($.getDownloadFileErrors).get(path);
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
 
   React.useEffect(() => {
@@ -31,38 +31,32 @@ export function ViewPDF() {
   }, [path, songTitle]);
 
   React.useEffect(() => {
-    if (!request) {
+    if (!blob) {
       dispatch(A.downloadBlob(path));
     }
-  }, [request]);
+  }, [blob]);
 
-  switch (request?.type) {
-    case 'download-blob-received': {
-      if (request.value.error) {
-        console.error(request.value.error);
-        return (
-          <div className="status">
-            There was an error:
-            {maybeGetProperty(request.value.error, 'message')}
-          </div>
-        );
-      }
-      return <LoadPDF />;
-    }
-    case 'download-blob-failed': {
+  const swipeDiv = React.useRef(null);
+  useNextPrevSwipe(swipeDiv);
+
+  if (!blob) {
+    if (error) {
       return (
-        <div className="status">
-          <div>
-            <p>Unable to access DropBox account.</p>
-            <UnlinkDropbox />
-          </div>
+        <div className="status" ref={swipeDiv}>
+          <NextPrevLinks />
+          There was an error: {error}
         </div>
       );
     }
-    case 'download-blob-requested':
-    default:
-      return <div className="status">Downloading…</div>;
+    return (
+      <div className="status" ref={swipeDiv}>
+        <NextPrevLinks />
+        Downloading…
+      </div>
+    );
   }
+
+  return <LoadPDF />;
 }
 
 function LoadPDF() {

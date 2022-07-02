@@ -5,15 +5,15 @@ import { RenderedSong } from './RenderedSong';
 import { TextArea } from './TextArea';
 
 import './ViewChopro.css';
-import { ensureExists, maybeGetProperty } from 'src/utils';
 import { useRetainScroll } from './hooks';
-import { useNextPrevSwipe } from './NextPrev';
+import { useNextPrevSwipe, NextPrevLinks } from './NextPrev';
 
 export function ViewChopro() {
   useRetainScroll();
   const dispatch = Redux.useDispatch();
   const path = Redux.useSelector($.getPath);
-  const request = Redux.useSelector($.getDownloadFileCache).get(path);
+  const textFile = Redux.useSelector($.getDownloadFileCache).get(path);
+  const error = Redux.useSelector($.getDownloadFileErrors).get(path);
   const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
   const hideEditor = Redux.useSelector($.getHideEditor);
   const swipeDiv = React.useRef(null);
@@ -32,52 +32,44 @@ export function ViewChopro() {
   }, [path, songTitle]);
 
   React.useEffect(() => {
-    if (!request) {
+    if (textFile === undefined) {
       dispatch(A.downloadFile(path));
     }
-  }, [request]);
+  }, [textFile]);
 
-  switch (request?.type) {
-    case 'download-file-received': {
-      if (request.value.error) {
-        console.error(request.value.error);
-        return (
-          <div>
-            There was an error:
-            {maybeGetProperty(request.value.error, 'message')}
-          </div>
-        );
-      }
-      const text = ensureExists(request.value.text, 'text');
-      if (hideEditor) {
-        return (
-          <div className="viewChoproSolo" ref={swipeDiv} key={path}>
-            <RenderedSong />
-          </div>
-        );
-      }
+  if (textFile === undefined) {
+    if (error) {
       return (
-        <Splitter
-          className="viewChoproSplit"
-          start={<TextArea path={path} text={text} originalRequest={request} />}
-          end={<RenderedSong />}
-          persistLocalStorage="viewChoproSplitterOffset"
-        />
-      );
-    }
-    case 'download-file-failed': {
-      return (
-        <div className="status">
-          <div>
-            <p>{request.error}</p>
-          </div>
+        <div className="status" ref={swipeDiv}>
+          <NextPrevLinks />
+          {error}
         </div>
       );
     }
-    case 'download-file-requested':
-    default:
-      return <div className="status">Downloading…</div>;
+    return (
+      <div className="status" ref={swipeDiv}>
+        <NextPrevLinks />
+        Downloading…
+      </div>
+    );
   }
+
+  if (hideEditor) {
+    return (
+      <div className="viewChoproSolo" ref={swipeDiv} key={path}>
+        <RenderedSong />
+      </div>
+    );
+  }
+
+  return (
+    <Splitter
+      className="viewChoproSplit"
+      start={<TextArea path={path} textFile={textFile} />}
+      end={<RenderedSong />}
+      persistLocalStorage="viewChoproSplitterOffset"
+    />
+  );
 }
 
 interface SplitterProps {

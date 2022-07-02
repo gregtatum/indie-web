@@ -60,15 +60,13 @@ export type View =
   | 'privacy';
 
 export type DownloadedTextFile = {
-  text?: string;
-  error?: unknown;
-  metadata?: FileMetadata;
+  metadata: FileMetadata;
+  text: string;
 };
 
 export type DownloadedBlob = {
-  metadata?: FileMetadata;
-  blob?: Blob;
-  error?: unknown;
+  metadata: FileMetadata;
+  blob: Blob;
 };
 
 /**
@@ -150,3 +148,7 @@ export type OfflineDBState =
   | { phase: 'connecting'; db: null }
   | { phase: 'connected'; db: OfflineDB }
   | { phase: 'disconnected'; db: null };
+
+export type ListFilesCache = Map<string, Array<FileMetadata | FolderMetadata>>;
+export type DownloadFileCache = Map<string, DownloadedTextFile>;
+export type DownloadBlobCache = Map<string, DownloadedBlob>;

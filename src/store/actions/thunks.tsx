@@ -17,15 +17,12 @@ const DEFAULT_MESSAGE_DELAY = 3000;
  * These will all be collected on the global `T` export in `src`.
  */
 export type PlainActions =
-  | T.APICalls.ListFiles
-  | T.APICalls.DownloadFile
-  | T.APICalls.DownloadBlob
   // See PlainActions in src/@types/index.ts for details on this next line.
-  | T.Values<{
-      [FnName in keyof typeof PlainInternal]: ReturnType<
-        typeof PlainInternal[FnName]
-      >;
-    }>;
+  T.Values<{
+    [FnName in keyof typeof PlainInternal]: ReturnType<
+      typeof PlainInternal[FnName]
+    >;
+  }>;
 
 /**
  * These should only be used internally in thunks.
@@ -38,6 +35,44 @@ namespace PlainInternal {
   export function dismissAllMessages() {
     return { type: 'dismiss-all-messages' as const };
   }
+
+  export function listFilesRequested(path: string) {
+    return { type: 'list-files-requested' as const, path };
+  }
+
+  export function listFilesReceived(
+    path: string,
+    files: Array<T.FileMetadata | T.FolderMetadata>,
+  ) {
+    return { type: 'list-files-received' as const, path, files };
+  }
+
+  export function listFilesError(path: string, error: string) {
+    return { type: 'list-files-error' as const, path, error };
+  }
+
+  export function downloadFileRequested(path: string) {
+    return { type: 'download-file-requested' as const, path };
+  }
+
+  export function downloadFileReceived(path: string, file: T.StoredTextFile) {
+    return { type: 'download-file-received' as const, path, file };
+  }
+
+  export function downloadFileError(path: string, error: string) {
+    return { type: 'download-file-error' as const, path, error };
+  }
+
+  export function downloadBlobRequested(path: string) {
+    return { type: 'download-blob-requested' as const, path };
+  }
+
+  export function downloadBlobReceived(
+    path: string,
+    blobFile: T.StoredBlobFile,
+  ) {
+    return { type: 'download-blob-received' as const, path, blobFile };
+  }
 }
 
 export function listFiles(path = ''): Thunk {
@@ -48,27 +83,14 @@ export function listFiles(path = ''): Thunk {
       dropboxPath = '';
     }
 
-    const generation = getGeneration();
-    const args = { path };
-    dispatch({ type: 'list-files-requested', generation, args });
-
-    const handleFileListing = (
-      value: Array<T.FileMetadata | T.FolderMetadata>,
-    ) => {
-      dispatch({
-        type: 'list-files-received',
-        generation,
-        args,
-        value,
-      });
-    };
+    dispatch(PlainInternal.listFilesRequested(path));
 
     const db = $.getOfflineDB(getState());
     if (db) {
       try {
         const offlineListing = await db.getFolderListing(path);
         if (offlineListing) {
-          handleFileListing(offlineListing.files);
+          dispatch(PlainInternal.listFilesReceived(path, offlineListing.files));
         }
       } catch (error) {
         console.error('Error with indexeddb', error);
@@ -96,41 +118,24 @@ export function listFiles(path = ''): Thunk {
         // Sort by file name second.
         return a.name.localeCompare(b.name);
       });
-      handleFileListing(files);
+      dispatch(PlainInternal.listFilesReceived(path, files));
       if (db) {
         db.addFolderListing(path, files);
       }
     } catch (response) {
-      const cache = $.getListFilesCache(getState()).get(path);
-
-      dispatch({
-        type: 'list-files-failed',
-        generation,
-        args,
-        value:
-          cache?.type === 'list-files-received' ||
-          cache?.type === 'list-files-failed'
-            ? cache.value
-            : undefined,
-        error: dropboxErrorMessage(response),
-      });
+      dispatch(
+        PlainInternal.listFilesError(path, dropboxErrorMessage(response)),
+      );
     }
   };
 }
 
 export function downloadFile(path: string): Thunk {
   return async (dispatch, getState) => {
-    const generation = getGeneration();
-    const args = { path };
-    dispatch({ type: 'download-file-requested', generation, args });
+    dispatch(PlainInternal.downloadFileRequested(path));
 
-    const handleFile = (value: T.FileRow) => {
-      dispatch({
-        type: 'download-file-received',
-        generation,
-        args,
-        value,
-      });
+    const handleFile = (file: T.StoredTextFile) => {
+      dispatch(PlainInternal.downloadFileReceived(path, file));
 
       // For things like back and next, ensure we have a copy of the prev/next
       // songs in the folder.
@@ -170,12 +175,12 @@ export function downloadFile(path: string): Thunk {
       try {
         text = await fileBlob.text();
       } catch (error) {
-        dispatch({
-          type: 'download-file-failed',
-          generation,
-          args,
-          error: 'Failed to get the text from the downloaded file.',
-        });
+        dispatch(
+          PlainInternal.downloadFileError(
+            path,
+            'Failed to get the text from the downloaded file.',
+          ),
+        );
         return;
       }
 
@@ -196,36 +201,17 @@ export function downloadFile(path: string): Thunk {
       } else {
         error = dropboxErrorMessage(response);
       }
-      const cache = $.getDownloadFileCache(getState()).get(path);
-      const action: T.Action = {
-        type: 'download-file-failed',
-        generation,
-        args,
-        value:
-          cache?.type === 'download-file-received' ||
-          cache?.type === 'download-file-failed'
-            ? cache.value
-            : undefined,
-        error,
-      };
-      dispatch(action);
+      dispatch(PlainInternal.downloadFileError(path, error));
     }
   };
 }
 
 export function downloadBlob(path: string): Thunk {
   return async (dispatch, getState) => {
-    const generation = getGeneration();
-    const args = { path };
-    dispatch({ type: 'download-blob-requested', generation, args });
+    dispatch(PlainInternal.downloadBlobRequested(path));
 
-    const handleBlob = (value: T.StoredBlobFile) => {
-      dispatch({
-        type: 'download-blob-received',
-        generation,
-        args,
-        value,
-      });
+    const handleBlob = (blobFile: T.StoredBlobFile) => {
+      dispatch(PlainInternal.downloadBlobReceived(path, blobFile));
 
       // For things like back and next, ensure we have a copy of the prev/next
       // songs in the folder.
@@ -266,68 +252,47 @@ export function downloadBlob(path: string): Thunk {
         db.addBlobFile(metadata, blob);
       }
     } catch (error) {
-      const cache = $.getDownloadFileCache(getState()).get(path);
-      const action: T.Action = {
-        type: 'download-blob-failed',
-        generation,
-        args,
-        value:
-          cache?.type === 'download-file-received' ||
-          cache?.type === 'download-file-failed'
-            ? cache.value
-            : undefined,
-        error:
-          (error as any)?.message ??
-          (error as any)?.toString() ??
-          'There was a Dropbox API error',
-      };
-      dispatch(action);
+      dispatch(
+        PlainInternal.downloadFileError(path, dropboxErrorMessage(error)),
+      );
     }
   };
 }
 
-export function saveFile(
-  pathLowercase: string,
-  contents: string,
-  originalFileRequest: T.APICalls.DownloadFile,
-): Thunk {
+export function saveFile(path: string, text: string): Thunk {
   return async (dispatch, getState) => {
     const dropbox = $.getDropbox(getState());
-    if (originalFileRequest.type === 'download-file-requested') {
-      throw new Error('Logic error, the download file is being requested');
-    }
-    const savePath = originalFileRequest.value?.metadata?.path ?? pathLowercase;
 
     const messageGeneration = dispatch(
       addMessage({
         message: (
           <>
-            Saving <code>{savePath}</code>
+            Saving <code>{path}</code>
           </>
         ),
       }),
     );
     try {
       const { result } = await dropbox.filesUpload({
-        path: savePath,
-        contents,
+        path,
+        contents: text,
         mode: {
           '.tag': 'overwrite',
         },
       });
-      dispatch({
-        type: 'download-file-received',
-        generation: originalFileRequest.generation,
-        args: originalFileRequest.args,
-        value: {
-          text: contents,
-        },
-      });
+      dispatch(
+        PlainInternal.downloadFileReceived(path, {
+          metadata: fixupFileMetadata(result),
+          storedAt: new Date(),
+          type: 'text',
+          text,
+        }),
+      );
       dispatch(
         addMessage({
           message: (
             <>
-              Saved <code>{savePath}</code>
+              Saved <code>{path}</code>
             </>
           ),
           generation: messageGeneration,
@@ -338,7 +303,7 @@ export function saveFile(
       // Save the updated file to the offline db.
       const db = $.getOfflineDB(getState());
       if (db) {
-        await db.addTextFile(fixupFileMetadata(result), contents);
+        await db.addTextFile(fixupFileMetadata(result), text);
       }
       return result;
     } catch (error) {
@@ -346,7 +311,7 @@ export function saveFile(
         addMessage({
           message: (
             <>
-              Unable to save <code>{savePath}</code>
+              Unable to save <code>{path}</code>
             </>
           ),
           generation: messageGeneration,

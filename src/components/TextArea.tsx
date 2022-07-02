@@ -7,8 +7,7 @@ import './TextArea.css';
 
 export function TextArea(props: {
   path: string;
-  text: string;
-  originalRequest: T.APICalls.DownloadFile;
+  textFile: T.DownloadedTextFile;
 }) {
   const isDragging = Redux.useSelector($.getIsDraggingSplitter);
   const dispatch = Redux.useDispatch();
@@ -46,7 +45,7 @@ export function TextArea(props: {
       <textarea
         spellCheck="false"
         className="textAreaTextArea"
-        defaultValue={props.text}
+        defaultValue={props.textFile.text}
         onChange={(event) => throttledOnChange(event.target.value)}
         style={style}
         onKeyDown={async (event) => {
@@ -54,7 +53,7 @@ export function TextArea(props: {
           if ((metaKey || ctrlKey) && code === 'KeyS') {
             event.preventDefault();
             const text = (target as HTMLTextAreaElement).value;
-            await dispatch(A.saveFile(props.path, text, props.originalRequest));
+            await dispatch(A.saveFile(props.path, text));
             if (text === (target as HTMLTextAreaElement).value) {
               // Invalidate the modified state.
             }

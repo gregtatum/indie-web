@@ -33,6 +33,14 @@ export function getDownloadFileCache(state: State) {
   return state.app.downloadFileCache;
 }
 
+export function getDownloadFileErrors(state: State) {
+  return state.app.downloadFileErrors;
+}
+
+export function getListFilesErrors(state: State) {
+  return state.app.listFileErrors;
+}
+
 export function getDownloadBlobCache(state: State) {
   return state.app.downloadBlobCache;
 }
@@ -143,23 +151,12 @@ export const getActiveFileTextOrNull = createSelector(
     if (modifiedText) {
       return modifiedText;
     }
-    const downloadFileRequest = downloadFileCache.get(path);
-    if (!downloadFileRequest) {
+    const downloadedFile = downloadFileCache.get(path);
+    if (!downloadedFile) {
       return null;
     }
-    if (
-      downloadFileRequest.type === 'download-file-received' &&
-      typeof downloadFileRequest.value.text === 'string'
-    ) {
-      return downloadFileRequest.value.text;
-    }
-    if (
-      downloadFileRequest.type === 'download-file-failed' &&
-      typeof downloadFileRequest.value?.text === 'string'
-    ) {
-      return downloadFileRequest.value.text;
-    }
-    return null;
+
+    return downloadedFile.text;
   },
 );
 
@@ -186,25 +183,8 @@ export const getActiveFileParsed = dangerousSelector(
 export const getActiveBlobOrNull = createSelector(
   getDownloadBlobCache,
   getPath,
-  (downloadBlobCache, path): Blob | null => {
-    const downloadFileRequest = downloadBlobCache.get(path);
-    if (!downloadFileRequest) {
-      return null;
-    }
-    if (
-      downloadFileRequest.type === 'download-blob-received' &&
-      downloadFileRequest.value.blob
-    ) {
-      return downloadFileRequest.value.blob;
-    }
-    if (
-      downloadFileRequest.type === 'download-blob-failed' &&
-      downloadFileRequest.value?.blob
-    ) {
-      return downloadFileRequest.value.blob;
-    }
-    return null;
-  },
+  (downloadBlobCache, path): Blob | null =>
+    downloadBlobCache.get(path)?.blob ?? null,
 );
 
 export const getActiveBlob = dangerousSelector(
@@ -283,25 +263,14 @@ export const getActiveFileDisplayPath = createSelector(
   getDownloadFileCache,
   getListFilesCache,
   (path, downloadFilesCache, listFilesCache) => {
-    const downloadFile = downloadFilesCache.get(path);
-    if (
-      downloadFile &&
-      downloadFile.type !== 'download-file-requested' &&
-      downloadFile.value
-    ) {
-      const { metadata } = downloadFile.value;
-      if (metadata?.path) {
-        return metadata.path;
-      }
+    const downloadedTextFile = downloadFilesCache.get(path);
+
+    if (downloadedTextFile) {
+      return downloadedTextFile.metadata.path;
     }
 
-    const listFiles = listFilesCache.get(path);
-    if (
-      listFiles &&
-      listFiles.type !== 'list-files-requested' &&
-      listFiles.value
-    ) {
-      const files = listFiles.value;
+    const files = listFilesCache.get(path);
+    if (files) {
       const file = files.find((file) => file.path === path);
       if (file?.path) {
         return file.path;
@@ -358,11 +327,7 @@ export const getNextPrevSong = createSelector(
 
     // Only return values if the folders are requested.
     const listFiles = listFilesCache.get(folder);
-    if (!listFiles || listFiles.type === 'list-files-requested') {
-      return results;
-    }
-    const filesAndFolders = listFiles.value;
-    if (!filesAndFolders) {
+    if (!listFiles) {
       return results;
     }
 
@@ -370,7 +335,7 @@ export const getNextPrevSong = createSelector(
 
     const songLinks: SongLink[] = [];
     let index: number | null = null;
-    for (const file of filesAndFolders) {
+    for (const file of listFiles) {
       // Ignore folders.
       if (file.type === 'folder') {
         continue;

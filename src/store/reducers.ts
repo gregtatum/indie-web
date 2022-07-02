@@ -48,26 +48,40 @@ function dropboxOauth(
   }
 }
 
+function listFileErrors(
+  state: Map<string, string> = new Map(),
+  action: T.Action,
+): Map<string, string> {
+  switch (action.type) {
+    case 'list-files-received': {
+      const { path } = action;
+      if (state.has(path)) {
+        const newState = new Map(state);
+        newState.delete(path);
+        return newState;
+      }
+      return state;
+    }
+    case 'list-files-error': {
+      const { error, path } = action;
+      const newState = new Map(state);
+      newState.set(path, error);
+      return newState;
+    }
+    default:
+      return state;
+  }
+}
+
 function listFilesCache(
   state: T.ListFilesCache = new Map(),
   action: T.Action,
 ): T.ListFilesCache {
   switch (action.type) {
-    case 'list-files-requested': {
+    case 'list-files-received': {
+      const { path, files } = action;
       const newState = new Map(state);
-      newState.set(action.args.path, action);
-      return newState;
-    }
-    case 'list-files-received':
-    case 'list-files-failed': {
-      const newState = new Map(state);
-      const cache = state.get(action.args.path);
-      if (cache) {
-        if (cache.generation > action.generation) {
-          return state; // The request is stale.
-        }
-      }
-      newState.set(action.args.path, action);
+      newState.set(path, files);
       return newState;
     }
     case 'clear-api-cache':
@@ -84,26 +98,41 @@ function listFilesCache(
   }
 }
 
+function downloadFileErrors(
+  state: Map<string, string> = new Map(),
+  action: T.Action,
+): Map<string, string> {
+  switch (action.type) {
+    case 'download-file-received':
+    case 'download-blob-received': {
+      const { path } = action;
+      if (state.has(path)) {
+        const newState = new Map(state);
+        newState.delete(path);
+        return newState;
+      }
+      return state;
+    }
+    case 'download-file-error': {
+      const { error, path } = action;
+      const newState = new Map(state);
+      newState.set(path, error);
+      return newState;
+    }
+    default:
+      return state;
+  }
+}
+
 function downloadFileCache(
   state: T.DownloadFileCache = new Map(),
   action: T.Action,
 ): T.DownloadFileCache {
   switch (action.type) {
-    case 'download-file-requested': {
+    case 'download-file-received': {
       const newState = new Map(state);
-      newState.set(action.args.path, action);
-      return newState;
-    }
-    case 'download-file-received':
-    case 'download-file-failed': {
-      const newState = new Map(state);
-      const cache = state.get(action.args.path);
-      if (cache) {
-        if (cache.generation > action.generation) {
-          return state; // The request is stale.
-        }
-      }
-      newState.set(action.args.path, action);
+      const { path, file } = action;
+      newState.set(path, file);
       return newState;
     }
     case 'clear-api-cache':
@@ -125,21 +154,10 @@ function downloadBlobCache(
   action: T.Action,
 ): T.DownloadBlobCache {
   switch (action.type) {
-    case 'download-blob-requested': {
+    case 'download-blob-received': {
       const newState = new Map(state);
-      newState.set(action.args.path, action);
-      return newState;
-    }
-    case 'download-blob-received':
-    case 'download-blob-failed': {
-      const newState = new Map(state);
-      const cache = state.get(action.args.path);
-      if (cache) {
-        if (cache.generation > action.generation) {
-          return state; // The request is stale.
-        }
-      }
-      newState.set(action.args.path, action);
+      const { path, blobFile } = action;
+      newState.set(path, blobFile);
       return newState;
     }
 
@@ -262,7 +280,9 @@ function shouldHideHeader(state: boolean = false, action: T.Action): boolean {
 export const app = combineReducers({
   dropboxOauth,
   listFilesCache,
+  listFileErrors,
   downloadFileCache,
+  downloadFileErrors,
   downloadBlobCache,
   path,
   view,

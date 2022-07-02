@@ -90,21 +90,14 @@ async function serializeDownloadBlobCache(
   downloadBlobCache: T.DownloadBlobCache,
 ): Promise<any> {
   const cache: Array<any> = [];
-  for (const [k, v] of downloadBlobCache.entries()) {
-    if (v.type === 'download-blob-requested' || !v.value) {
-      cache.push([k, v]);
-    } else {
-      cache.push([
-        k,
-        {
-          ...v,
-          value: {
-            ...v.value,
-            blob: await blobToBase64(v.value.blob),
-          },
-        },
-      ]);
-    }
+  for (const [k, { metadata, blob }] of downloadBlobCache.entries()) {
+    cache.push([
+      k,
+      {
+        metadata,
+        blob: await blobToBase64(blob),
+      },
+    ]);
   }
   return cache;
 }

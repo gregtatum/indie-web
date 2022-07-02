@@ -193,7 +193,7 @@ function SaveFileButton() {
     <button
       className="button headerSaveFile"
       onClick={() => {
-        dispatch(A.saveFile(path, text, request));
+        dispatch(A.saveFile(path, text));
       }}
     >
       Save

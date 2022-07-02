@@ -2,7 +2,6 @@
  * Re-exports.
  */
 export * from './app';
-export * from './actions';
 
 export type { OfflineDB } from 'src/logic/offline-db';
 import type { State } from 'src/store/reducers';

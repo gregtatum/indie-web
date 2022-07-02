@@ -15,7 +15,8 @@ export function ListFiles() {
   const path = Redux.useSelector($.getPath);
   const activeFileDisplayPath = Redux.useSelector($.getActiveFileDisplayPath);
   const dispatch = Redux.useDispatch();
-  const request = Redux.useSelector($.getListFilesCache).get(path);
+  const files = Redux.useSelector($.getListFilesCache).get(path);
+  const error = Redux.useSelector($.getListFilesErrors).get(path);
 
   React.useEffect(() => {
     if (path === '/') {
@@ -30,96 +31,90 @@ export function ListFiles() {
   }, [activeFileDisplayPath]);
 
   React.useEffect(() => {
-    if (!request) {
+    if (!files) {
       dispatch(A.listFiles(path));
     }
-  }, [request]);
+  }, [files]);
 
   // Create the initial files if needed.
   React.useEffect(() => {
-    if (
-      activeFileDisplayPath === '/' &&
-      request?.type === 'list-files-received' &&
-      request.value.length === 0
-    ) {
+    if (activeFileDisplayPath === '/' && files && files.length === 0) {
       dispatch(A.createInitialFiles());
     }
-  }, [activeFileDisplayPath, request]);
+  }, [activeFileDisplayPath, files]);
 
   const [filter, setFilter] = React.useState<string>('');
 
-  switch (request?.type) {
-    case 'list-files-received': {
-      let parent = null;
-      if (path !== '/') {
-        const parts = path.split('/');
-        parts.pop();
-        parent = (
-          <Router.Link
-            className="listFilesBack"
-            to={`/folder${parts.join('/')}`}
-            aria-label="Back"
-          >
-            ←
-          </Router.Link>
-        );
-      }
-      // Remove any dot files.
-      const visibleFiles = request.value.filter(
-        (entry) => entry.name[0] !== '.',
-      );
-
-      return (
-        <>
-          <div className="listFiles" data-testid="list-files">
-            <div className="listFilesFilter">
-              {parent}
-              <input
-                className="listFilesFilterInput"
-                type="text"
-                placeholder="Filter files"
-                onChange={(event) => {
-                  setFilter(event.target.value.toLowerCase());
-                }}
-              />
-            </div>
-            <div className="listFilesList">
-              {visibleFiles
-                .filter((file) =>
-                  filter ? file.name.toLowerCase().includes(filter) : true,
-                )
-                .map((file) => {
-                  return (
-                    <div key={file.id} className="listFilesFile">
-                      <File dropboxFile={file} />
-                    </div>
-                  );
-                })}
-              <CreateChordProButton path={path} />
-            </div>
-          </div>
-        </>
-      );
-    }
-    case 'list-files-failed':
+  if (!files) {
+    if (error) {
       return (
         <div className="appViewError">
           <p>Unable to list the Dropbox files.</p>
-          {typeof request.error === 'string' ? <p>{request.error}</p> : null}
+          {error}
         </div>
       );
-    case 'list-files-requested':
-    default:
-      return (
-        <div className="listFilesBlocks">
-          <div className="listFilesFileBlock"></div>
-          <div className="listFilesFileBlock"></div>
-          <div className="listFilesFileBlock"></div>
-          <div className="listFilesFileBlock"></div>
-          <div className="listFilesFileBlock"></div>
-        </div>
-      );
+    }
+
+    return (
+      <div className="listFilesBlocks">
+        <div className="listFilesFileBlock"></div>
+        <div className="listFilesFileBlock"></div>
+        <div className="listFilesFileBlock"></div>
+        <div className="listFilesFileBlock"></div>
+        <div className="listFilesFileBlock"></div>
+      </div>
+    );
   }
+
+  let parent = null;
+  if (path !== '/') {
+    const parts = path.split('/');
+    parts.pop();
+    parent = (
+      <Router.Link
+        className="listFilesBack"
+        to={`/folder${parts.join('/')}`}
+        aria-label="Back"
+      >
+        ←
+      </Router.Link>
+    );
+  }
+
+  // Remove any dot files.
+  const visibleFiles = files.filter((entry) => entry.name[0] !== '.');
+
+  return (
+    <>
+      <div className="listFiles" data-testid="list-files">
+        <div className="listFilesFilter">
+          {parent}
+          <input
+            className="listFilesFilterInput"
+            type="text"
+            placeholder="Filter files"
+            onChange={(event) => {
+              setFilter(event.target.value.toLowerCase());
+            }}
+          />
+        </div>
+        <div className="listFilesList">
+          {visibleFiles
+            .filter((file) =>
+              filter ? file.name.toLowerCase().includes(filter) : true,
+            )
+            .map((file) => {
+              return (
+                <div key={file.id} className="listFilesFile">
+                  <File dropboxFile={file} />
+                </div>
+              );
+            })}
+          <CreateChordProButton path={path} />
+        </div>
+      </div>
+    </>
+  );
 }
 
 function CreateChordProButton(props: { path: string }) {
