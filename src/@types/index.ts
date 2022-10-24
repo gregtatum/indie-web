@@ -5,7 +5,7 @@ export * from './app';
 
 export type { OfflineDB } from 'src/logic/offline-db';
 import type { State } from 'src/store/reducers';
-export type { AppState, State } from 'src/store/reducers';
+export type { State } from 'src/store/reducers';
 import type * as Thunks from 'src/store/actions/thunks';
 import type * as PlainActions from 'src/store/actions/plain';
 

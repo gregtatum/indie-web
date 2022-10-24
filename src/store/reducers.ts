@@ -292,7 +292,7 @@ function fileMenu(
   }
 }
 
-export const app = combineReducers({
+export const reducers = combineReducers({
   dropboxOauth,
   listFilesCache,
   listFileErrors,
@@ -310,9 +310,4 @@ export const app = combineReducers({
   fileMenu,
 });
 
-export type AppState = ReturnType<typeof app>;
-
-export const reducers = { app };
-export type State = {
-  app: AppState;
-};
+export type State = ReturnType<typeof reducers>;

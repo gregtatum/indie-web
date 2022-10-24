@@ -1,6 +1,5 @@
 import {
-  createStore as reduxCreateStore,
-  combineReducers,
+  legacy_createStore as reduxCreateStore,
   applyMiddleware,
   type Middleware,
 } from 'redux';
@@ -37,10 +36,7 @@ export function createStore(): Store {
   if (process.env.NODE_ENV !== 'test') {
     middlewares.push(logger as any);
   }
-  const store = reduxCreateStore(
-    combineReducers(reducers),
-    applyMiddleware(...middlewares),
-  );
+  const store = reduxCreateStore(reducers, applyMiddleware(...middlewares));
 
   return store as any;
 }
@@ -109,27 +105,23 @@ async function serializeDownloadBlobCache(
 // type SerializableImpl<T> = Record<string, T> | null | string | number;
 // type Serializable = SerializeImpl<SerializeImpl<SerializeImpl<never>>>;
 export async function serializeState(state: State): Promise<unknown> {
-  const { listFilesCache, downloadFileCache, downloadBlobCache } = state.app;
+  const { listFilesCache, downloadFileCache, downloadBlobCache } = state;
 
   return {
-    app: {
-      ...state.app,
-      listFilesCache: [...listFilesCache.entries()],
-      downloadFileCache: [...downloadFileCache.entries()],
-      downloadBlobCache: await serializeDownloadBlobCache(downloadBlobCache),
-      offlineDB: null,
-    },
+    ...state,
+    listFilesCache: [...listFilesCache.entries()],
+    downloadFileCache: [...downloadFileCache.entries()],
+    downloadBlobCache: await serializeDownloadBlobCache(downloadBlobCache),
+    offlineDB: null,
   };
 }
 
 export function deserializeState(state: any): State {
   const { listFilesCache, downloadFileCache, downloadBlobCache } = state.app;
   return {
-    app: {
-      ...state.app,
-      listFilesCache: new Map(listFilesCache),
-      downloadFileCache: new Map(downloadFileCache),
-      downloadBlobCache: new Map(downloadBlobCache),
-    },
+    ...state,
+    listFilesCache: new Map(listFilesCache),
+    downloadFileCache: new Map(downloadFileCache),
+    downloadBlobCache: new Map(downloadBlobCache),
   };
 }

@@ -18,59 +18,59 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export function getView(state: State) {
-  return state.app.view;
+  return state.view;
 }
 
 export function getDropboxOauth(state: State) {
-  return state.app.dropboxOauth;
+  return state.dropboxOauth;
 }
 
 export function getListFilesCache(state: State) {
-  return state.app.listFilesCache;
+  return state.listFilesCache;
 }
 
 export function getDownloadFileCache(state: State) {
-  return state.app.downloadFileCache;
+  return state.downloadFileCache;
 }
 
 export function getDownloadFileErrors(state: State) {
-  return state.app.downloadFileErrors;
+  return state.downloadFileErrors;
 }
 
 export function getListFilesErrors(state: State) {
-  return state.app.listFileErrors;
+  return state.listFileErrors;
 }
 
 export function getDownloadBlobCache(state: State) {
-  return state.app.downloadBlobCache;
+  return state.downloadBlobCache;
 }
 
 export function getPath(state: State) {
-  return state.app.path;
+  return state.path;
 }
 
 export function getModifiedText(state: State) {
-  return state.app.modifiedText;
+  return state.modifiedText;
 }
 
 export function getMessages(state: State) {
-  return state.app.messages;
+  return state.messages;
 }
 
 export function getHideEditor(state: State) {
-  return state.app.hideEditor;
+  return state.hideEditor;
 }
 
 export function getIsDraggingSplitter(state: State) {
-  return state.app.isDraggingSplitter;
+  return state.isDraggingSplitter;
 }
 
 export function shouldHideHeader(state: State) {
-  return state.app.shouldHideHeader;
+  return state.shouldHideHeader;
 }
 
 export function getOfflineDBConnection(state: State) {
-  return state.app.offlineDB;
+  return state.offlineDB;
 }
 
 export function getOfflineDB(state: State) {
@@ -78,7 +78,7 @@ export function getOfflineDB(state: State) {
 }
 
 export function getFileMenu(state: State) {
-  return state.app.fileMenu;
+  return state.fileMenu;
 }
 
 function dangerousSelector<T>(
