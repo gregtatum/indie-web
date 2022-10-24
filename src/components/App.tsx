@@ -14,6 +14,7 @@ import { Messages } from './Messages';
 import './App.css';
 import { UnhandledCaseError } from 'src/utils';
 import { Settings, Privacy } from './Page';
+import { Menus } from './Menus';
 
 function ListFilesRouter() {
   const params = Router.useParams();
@@ -98,6 +99,7 @@ export function App() {
         </div>
       </LinkDropbox>
       <Messages />
+      <Menus />
     </Router.BrowserRouter>
   );
 }

@@ -1,0 +1,58 @@
+.menus {
+  position: absolute;
+  width: 0;
+  height: 0;
+  z-index: 1;
+}
+
+.menusFile {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  box-shadow: 0 3px 11px #0002;
+  border-radius: 3px;
+  --spacing-w: 13px;
+  --spacing-h: 11px;
+  overflow: hidden;
+}
+
+.menusFileButton {
+  font-size: inherit;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+  padding: var(--spacing-h) var(--spacing-w);
+  text-align: left;
+  display: flex;
+  align-items: center;
+}
+
+.menusFileButton > .icon {
+  margin-right: var(--spacing-w);
+}
+
+.menusFileButton:hover {
+  background-color: #eee;
+}
+
+@keyframes menudown {
+  from { opacity: 0; transform: translateY(-10px); pointer-events: none; }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes menuup {
+  from { opacity: 0; transform: translateY(10px); pointer-events: none; }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.menusFileAnimateDown {
+  animation: menudown 80ms;
+}
+
+.menusFileAnimateUp {
+  animation: menuup 80ms;
+}

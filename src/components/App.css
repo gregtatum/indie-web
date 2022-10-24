@@ -134,3 +134,25 @@ code {
   align-items: center;
   text-align: center;
 }
+
+.icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+[data-icon="pencil-fill"] {
+  background: url("svg/pencil-fill.svg");
+}
+
+[data-icon="box-arrow-in-right"] {
+  background: url("svg/box-arrow-in-right.svg");
+}
+
+[data-icon="trash-fill"] {
+  background: url("svg/trash-fill.svg");
+}
+
+[data-icon="download"] {
+  background: url("svg/download.svg");
+}

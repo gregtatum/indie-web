@@ -251,41 +251,54 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   } else if (isChordPro) {
     icon = '🎵';
   }
+  const fileMenu = <FileMenu dropboxFile={props.dropboxFile} />;
 
   if (path) {
     if (isFolder) {
       return (
-        <Router.Link className="listFilesFileLink" to={`/folder${path}`}>
-          <span className="listFilesIcon">{icon}</span>
-          {displayName}
-        </Router.Link>
+        <>
+          <Router.Link className="listFilesFileLink" to={`/folder${path}`}>
+            <span className="listFilesIcon">{icon}</span>
+            <span className="listFileDisplayName">{displayName}</span>
+          </Router.Link>
+          {fileMenu}
+        </>
       );
     }
 
     if (isChordPro) {
       return (
-        <Router.Link className="listFilesFileLink" to={`/file${path}`}>
-          <span className="listFilesIcon">{icon}</span>
-          {displayName}
-        </Router.Link>
+        <>
+          <Router.Link className="listFilesFileLink" to={`/file${path}`}>
+            <span className="listFilesIcon">{icon}</span>
+            <span className="listFileDisplayName">{displayName}</span>
+          </Router.Link>
+          {fileMenu}
+        </>
       );
     }
 
     if (isPDF) {
       return (
-        <Router.Link className="listFilesFileLink" to={`/pdf${path}`}>
-          <span className="listFilesIcon">{icon}</span>
-          {displayName}
-        </Router.Link>
+        <>
+          <Router.Link className="listFilesFileLink" to={`/pdf${path}`}>
+            <span className="listFilesIcon">{icon}</span>
+            <span className="listFileDisplayName">{displayName}</span>
+          </Router.Link>
+          {fileMenu}
+        </>
       );
     }
 
     if (isImage) {
       return (
-        <Router.Link className="listFilesFileLink" to={`/image${path}`}>
-          <span className="listFilesIcon">{icon}</span>
-          {displayName}
-        </Router.Link>
+        <>
+          <Router.Link className="listFilesFileLink" to={`/image${path}`}>
+            <span className="listFilesIcon">{icon}</span>
+            <span className="listFileDisplayName">{displayName}</span>
+          </Router.Link>
+          {fileMenu}
+        </>
       );
     }
   }
@@ -293,7 +306,30 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   return (
     <div className="listFilesFileEmpty">
       <span className="listFilesIcon">{icon}</span>
-      {displayName}
+      <span className="listFileDisplayName">{displayName}</span>
     </div>
+  );
+}
+
+function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
+  const dispatch = Redux.useDispatch();
+  const button = React.useRef<null | HTMLButtonElement>(null);
+  return (
+    <button
+      type="button"
+      aria-label="File Menu"
+      className="listFilesFileMenu"
+      ref={button}
+      onClick={() => {
+        dispatch(
+          A.viewFileMenu({
+            file: props.dropboxFile,
+            element: ensureExists(button.current),
+          }),
+        );
+      }}
+    >
+      <span className="listFilesFileMenuIcon" />
+    </button>
   );
 }

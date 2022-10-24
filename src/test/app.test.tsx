@@ -68,8 +68,21 @@ describe('app', () => {
               >
                 📁
               </span>
-              My Cool Band
+              <span
+                class="listFileDisplayName"
+              >
+                My Cool Band
+              </span>
             </a>
+            <button
+              aria-label="File Menu"
+              class="listFilesFileMenu"
+              type="button"
+            >
+              <span
+                class="listFilesFileMenuIcon"
+              />
+            </button>
           </div>
           <div
             class="listFilesFile"
@@ -82,12 +95,16 @@ describe('app', () => {
               >
                 📄
               </span>
-              Clocks - Coldplay
-              .
               <span
-                class="listFilesExtension"
+                class="listFileDisplayName"
               >
-                chordpro
+                Clocks - Coldplay
+                .
+                <span
+                  class="listFilesExtension"
+                >
+                  chordpro
+                </span>
               </span>
             </div>
           </div>
@@ -102,12 +119,16 @@ describe('app', () => {
               >
                 📄
               </span>
-              Mellow Yellow - Donovan
-              .
               <span
-                class="listFilesExtension"
+                class="listFileDisplayName"
               >
-                chordpro
+                Mellow Yellow - Donovan
+                .
+                <span
+                  class="listFilesExtension"
+                >
+                  chordpro
+                </span>
               </span>
             </div>
           </div>

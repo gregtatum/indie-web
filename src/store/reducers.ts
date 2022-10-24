@@ -277,6 +277,21 @@ function shouldHideHeader(state: boolean = false, action: T.Action): boolean {
   }
 }
 
+function fileMenu(
+  state: T.ClickedFileMenu | null = null,
+  action: T.Action,
+): T.ClickedFileMenu | null {
+  switch (action.type) {
+    case 'view-file-menu':
+      return action.clickedFileMenu;
+    case 'dismiss-file-menu':
+      return null;
+      break;
+    default:
+      return state;
+  }
+}
+
 export const app = combineReducers({
   dropboxOauth,
   listFilesCache,
@@ -292,6 +307,7 @@ export const app = combineReducers({
   isDraggingSplitter,
   offlineDB,
   shouldHideHeader,
+  fileMenu,
 });
 
 export type AppState = ReturnType<typeof app>;

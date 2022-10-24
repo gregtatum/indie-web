@@ -99,3 +99,11 @@ export function invalidatePath(path: string) {
 export function shouldHideHeader(hide: boolean) {
   return { type: 'should-hide-header' as const, hide };
 }
+
+export function viewFileMenu(clickedFileMenu: T.ClickedFileMenu) {
+  return { type: 'view-file-menu' as const, clickedFileMenu };
+}
+
+export function dismissFileMenu() {
+  return { type: 'dismiss-file-menu' as const };
+}

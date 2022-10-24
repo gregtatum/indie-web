@@ -77,6 +77,10 @@ export function getOfflineDB(state: State) {
   return getOfflineDBConnection(state).db;
 }
 
+export function getFileMenu(state: State) {
+  return state.app.fileMenu;
+}
+
 function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,

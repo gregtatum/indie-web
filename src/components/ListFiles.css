@@ -56,14 +56,18 @@
   padding: 4px;
 }
 
+.listFilesFile {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+}
 
 a.listFilesFileLink, .listFilesFileEmpty {
   padding: 8px;
   display: flex;
-  border-bottom: 1px solid #ddd;
   text-decoration: none;
   color: #000;
   align-items: center;
+  flex: 1;
 }
 
 .listFilesFile a:hover {
@@ -132,4 +136,26 @@ a.listFilesFileLink, .listFilesFileEmpty {
 
 .listFilesExtension {
   opacity: 0.6;
+}
+
+
+.listFilesFileMenu {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+  font-size: inherit;
+  line-height: 0;
+}
+
+.listFilesFileMenu:hover {
+  background-color: #eee;
+}
+
+.listFilesFileMenuIcon {
+  display: inline-block;
+  background-image: url(svg/three-dots.svg);
+  width: 16px;
+  height: 16px;
+  margin-inline: 10px 18px;
 }
