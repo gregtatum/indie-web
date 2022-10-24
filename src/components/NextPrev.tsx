@@ -138,7 +138,6 @@ export function useNextPrevSwipe(
 
 export function NextPrevLinks() {
   const { nextSong, prevSong } = Redux.useSelector($.getNextPrevSong);
-  console.log(`!!! `, { nextSong, prevSong });
   const navigate = Router.useNavigate();
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {
