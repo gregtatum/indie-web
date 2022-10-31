@@ -3,6 +3,7 @@ import * as React from 'react';
 import { $, T } from 'src';
 import {
   canonicalizePath,
+  downloadBlobForUser,
   dropboxErrorMessage,
   getDirName,
   getGeneration,
@@ -514,5 +515,119 @@ export function createInitialFiles(): Thunk<Promise<void>> {
       );
     }
     dispatch(Plain.invalidatePath('/'));
+  };
+}
+
+export function downloadFileForUser(
+  file: T.FileMetadata,
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    dispatch(Plain.dismissFileMenu());
+    const messageGeneration = dispatch(
+      addMessage({
+        message: (
+          <>
+            Downloading <code>{file.name}</code>
+          </>
+        ),
+      }),
+    );
+
+    await $.getDropbox(getState())
+      .filesDownload({
+        path: file.path,
+      })
+      .then(
+        (response) => {
+          downloadBlobForUser(
+            file.name,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            (response.result as any).fileBlob as Blob,
+          );
+
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Downloaded <code>{file.name}</code>
+                </>
+              ),
+              generation: messageGeneration,
+              timeout: true,
+            }),
+          );
+        },
+        (error) => {
+          console.error(error);
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Failed to download <code>{file.name}</code>
+                </>
+              ),
+              generation: messageGeneration,
+              timeout: true,
+            }),
+          );
+        },
+      );
+  };
+}
+
+export function downloadFolderForUser(
+  file: T.FolderMetadata,
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    dispatch(Plain.dismissFileMenu());
+    const messageGeneration = dispatch(
+      addMessage({
+        message: (
+          <>
+            Zipping <code>{file.name}</code>
+          </>
+        ),
+      }),
+    );
+
+    await $.getDropbox(getState())
+      .filesDownloadZip({
+        path: file.path,
+      })
+      .then(
+        (response) => {
+          downloadBlobForUser(
+            file.name,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            (response.result as any).fileBlob as Blob,
+          );
+
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Downloaded <code>{file.name}</code>
+                </>
+              ),
+              generation: messageGeneration,
+              timeout: true,
+            }),
+          );
+        },
+        (error) => {
+          console.error(error);
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Failed to download <code>{file.name}</code>
+                </>
+              ),
+              generation: messageGeneration,
+              timeout: true,
+            }),
+          );
+        },
+      );
   };
 }

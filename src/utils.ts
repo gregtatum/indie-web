@@ -325,3 +325,16 @@ export function canonicalizePath(path: string): string {
 export function updatePathRoot(path: string, oldRoot: string, newRoot: string) {
   return newRoot + path.slice(oldRoot.length);
 }
+
+export function downloadBlobForUser(fileName: string, blob: Blob): void {
+  const a = document.createElement('a');
+  const url = window.URL.createObjectURL(blob);
+
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  window.URL.revokeObjectURL(url);
+  a.remove();
+}

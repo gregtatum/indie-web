@@ -17,7 +17,7 @@ const menuBorderHeight = 2;
 // Keeping this static makes the positioning below much more simple as there is no
 // measurement that needs to take place. Keep the value in sync with .menusFileButton
 const menuItemHeight = 41;
-const menuWidth = 150;
+const menuWidth = 175;
 const menuMargin = 10;
 
 function fileEscapeLogic(clickedFileMenu: T.ClickedFileMenu | null) {
@@ -122,9 +122,31 @@ function FileMenu() {
     <button type="button" className="menusFileButton" key="Delete">
       <span className="icon" data-icon="trash-fill" /> Delete
     </button>,
-    <button type="button" className="menusFileButton" key="Download">
-      <span className="icon" data-icon="download" /> Download
-    </button>,
+    file.type === 'file' ? (
+      <button
+        type="button"
+        className="menusFileButton"
+        key="Download"
+        onClick={() => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          dispatch(A.downloadFileForUser(file));
+        }}
+      >
+        <span className="icon" data-icon="download" /> Download
+      </button>
+    ) : (
+      <button
+        type="button"
+        className="menusFileButton"
+        key="Download"
+        onClick={() => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          dispatch(A.downloadFolderForUser(file));
+        }}
+      >
+        <span className="icon" data-icon="download" /> Download Zip
+      </button>
+    ),
   ];
 
   const { scrollTop } = document.documentElement;
