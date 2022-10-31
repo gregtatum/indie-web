@@ -1,0 +1,78 @@
+{
+  "status": 200,
+  "headers": {},
+  "result": {
+    "entries": [
+      {
+        ".tag": "folder",
+        "name": "Bent and Bruised",
+        "path_lower": "/bent and bruised",
+        "path_display": "/Bent and Bruised",
+        "id": "id:ywUpYqVN8XAAAAAAAAAAPA"
+      },
+      {
+        ".tag": "folder",
+        "name": "Mine",
+        "path_lower": "/mine",
+        "path_display": "/Mine",
+        "id": "id:ywUpYqVN8XAAAAAAAAABzg"
+      },
+      {
+        ".tag": "folder",
+        "name": "Jazz",
+        "path_lower": "/jazz",
+        "path_display": "/Jazz",
+        "id": "id:ywUpYqVN8XAAAAAAAAACAA"
+      },
+      {
+        ".tag": "folder",
+        "name": "Guitar Theory",
+        "path_lower": "/guitar theory",
+        "path_display": "/Guitar Theory",
+        "id": "id:ywUpYqVN8XAAAAAAAAACGw"
+      },
+      {
+        ".tag": "folder",
+        "name": "Gaming",
+        "path_lower": "/gaming",
+        "path_display": "/Gaming",
+        "id": "id:ywUpYqVN8XAAAAAAAAAATQ"
+      },
+      {
+        ".tag": "folder",
+        "name": "Other",
+        "path_lower": "/other",
+        "path_display": "/Other",
+        "id": "id:ywUpYqVN8XAAAAAAAAACTQ"
+      },
+      {
+        ".tag": "file",
+        "name": "Give It Up.chopro",
+        "path_lower": "/give it up.chopro",
+        "path_display": "/Give It Up.chopro",
+        "id": "id:ywUpYqVN8XAAAAAAAAACSw",
+        "client_modified": "2022-05-26T19:17:43Z",
+        "server_modified": "2022-05-26T19:17:43Z",
+        "rev": "015dfef0b4eb3610000000266f484e0",
+        "size": 39,
+        "is_downloadable": true,
+        "content_hash": "88174cf752b284a2561c2c532eebb357e98c8f4f15989dbb2933ec9eb2161580"
+      },
+      {
+        ".tag": "file",
+        "name": "Getting started.chopro",
+        "path_lower": "/getting started.chopro",
+        "path_display": "/Getting started.chopro",
+        "id": "id:ywUpYqVN8XAAAAAAAAACSg",
+        "client_modified": "2022-05-31T03:54:43Z",
+        "server_modified": "2022-05-31T03:54:43Z",
+        "rev": "015e046bba434b80000000266f484e0",
+        "size": 1051,
+        "is_downloadable": true,
+        "content_hash": "a1e122999b27ff63fed0e22f63c8e0fac290fac36f06fbd6647c4fae9334b7a4"
+      }
+    ],
+    "cursor": "AAHEmW0wJXXbNaYRqdsoNqaZ7ZQ6jpYGT5BDh9lUPSgFTX1EFXWpxEoASseYxk9AllWhGfPrt8DMYUwG1BsCue2Vg2zbNVR7pNJnBQFax2b9MpqcLRavaxGonPPNVHchVgAT7b_OtktVXf5RffX5UZNOrFLoM6BWWOVkWnTtb7Q3vg",
+    "has_more": false
+  }
+}
