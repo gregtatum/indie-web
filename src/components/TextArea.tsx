@@ -1,7 +1,7 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
 import { $, T, A } from 'src';
 import { throttle1 } from 'src/utils';
+import * as Hooks from 'src/hooks';
 
 import './TextArea.css';
 
@@ -9,8 +9,8 @@ export function TextArea(props: {
   path: string;
   textFile: T.DownloadedTextFile;
 }) {
-  const isDragging = Redux.useSelector($.getIsDraggingSplitter);
-  const dispatch = Redux.useDispatch();
+  const isDragging = Hooks.useSelector($.getIsDraggingSplitter);
+  const dispatch = Hooks.useDispatch();
   function onChange(newText: string) {
     dispatch(A.modifyActiveFile(newText));
   }

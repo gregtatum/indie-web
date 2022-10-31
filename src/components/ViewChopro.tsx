@@ -1,21 +1,20 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
-import { A, $ } from 'src';
+import { A, $, Hooks } from 'src';
 import { RenderedSong } from './RenderedSong';
 import { TextArea } from './TextArea';
 
 import './ViewChopro.css';
-import { useRetainScroll } from './hooks';
+import { useRetainScroll } from '../hooks';
 import { useNextPrevSwipe, NextPrevLinks } from './NextPrev';
 
 export function ViewChopro() {
   useRetainScroll();
-  const dispatch = Redux.useDispatch();
-  const path = Redux.useSelector($.getPath);
-  const textFile = Redux.useSelector($.getDownloadFileCache).get(path);
-  const error = Redux.useSelector($.getDownloadFileErrors).get(path);
-  const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
-  const hideEditor = Redux.useSelector($.getHideEditor);
+  const dispatch = Hooks.useDispatch();
+  const path = Hooks.useSelector($.getPath);
+  const textFile = Hooks.useSelector($.getDownloadFileCache).get(path);
+  const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
+  const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
+  const hideEditor = Hooks.useSelector($.getHideEditor);
   const swipeDiv = React.useRef(null);
   useNextPrevSwipe(swipeDiv);
 
@@ -82,8 +81,8 @@ interface SplitterProps {
 function Splitter(props: SplitterProps) {
   const { start, end, className, persistLocalStorage } = props;
   const container = React.useRef<HTMLDivElement>(null);
-  const isDragging = Redux.useSelector($.getIsDraggingSplitter);
-  const dispatch = Redux.useDispatch();
+  const isDragging = Hooks.useSelector($.getIsDraggingSplitter);
+  const dispatch = Hooks.useDispatch();
   const touchId = React.useRef<null | number>(null);
 
   let initialOffset = 0;

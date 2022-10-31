@@ -1,19 +1,18 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
-import { A, $ } from 'src';
+import { A, $, Hooks } from 'src';
 
 import './ViewImage.css';
 import { UnhandledCaseError } from 'src/utils';
-import { usePromiseSelector, useRetainScroll } from './hooks';
+import { usePromiseSelector, useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 
 export function ViewImage() {
   useRetainScroll();
-  const dispatch = Redux.useDispatch();
-  const path = Redux.useSelector($.getPath);
-  const blob = Redux.useSelector($.getDownloadBlobCache).get(path);
-  const error = Redux.useSelector($.getDownloadFileErrors).get(path);
-  const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
+  const dispatch = Hooks.useDispatch();
+  const path = Hooks.useSelector($.getPath);
+  const blob = Hooks.useSelector($.getDownloadBlobCache).get(path);
+  const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
+  const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
 
   React.useEffect(() => {
     if (songTitle) {

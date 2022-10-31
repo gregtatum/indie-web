@@ -1,6 +1,5 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
-import { A, $, T } from 'src';
+import { A, $, T, Hooks } from 'src';
 import { UnhandledCaseError } from 'src/utils';
 import { pathJoin } from '../utils';
 import './RenderedSong.css';
@@ -29,12 +28,12 @@ function getSpotifyLink(
 }
 
 export function RenderedSong() {
-  const path = Redux.useSelector($.getPath);
-  const displayPath = Redux.useSelector($.getActiveFileDisplayPath);
-  const fileKey = Redux.useSelector($.getActiveFileSongKey);
-  const hideEditor = Redux.useSelector($.getHideEditor);
-  const { directives, lines } = Redux.useSelector($.getActiveFileParsed);
-  const dispatch = Redux.useDispatch();
+  const path = Hooks.useSelector($.getPath);
+  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const fileKey = Hooks.useSelector($.getActiveFileSongKey);
+  const hideEditor = Hooks.useSelector($.getHideEditor);
+  const { directives, lines } = Hooks.useSelector($.getActiveFileParsed);
+  const dispatch = Hooks.useDispatch();
 
   const parts = displayPath.split('/');
   let fileName = parts[parts.length - 1].replace('.chopro', '');
@@ -165,10 +164,10 @@ function DropboxImage({
   src,
   ...props
 }: React.ImgHTMLAttributes<HTMLImageElement>) {
-  const dropbox = Redux.useSelector($.getDropbox);
+  const dropbox = Hooks.useSelector($.getDropbox);
   const [objectUrl, setObjectUrl] = React.useState<string>('');
   const generationRef = React.useRef(0);
-  const { getState } = Redux.useStore();
+  const { getState } = Hooks.useStore();
 
   React.useEffect(() => {
     return () => {

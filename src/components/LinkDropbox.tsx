@@ -1,7 +1,6 @@
 import * as React from 'react';
-import { A, T, $ } from 'src';
+import { A, T, $, Hooks } from 'src';
 import * as Router from 'react-router-dom';
-import * as Redux from 'react-redux';
 
 import './LinkDropbox.css';
 import {
@@ -12,7 +11,7 @@ import {
   dropboxErrorMessage,
 } from 'src/utils';
 import { Privacy } from './Page';
-import { getRedirectUri, useCodeVerifier } from './hooks/pcse';
+import { getRedirectUri, useCodeVerifier } from '../hooks/pcse';
 
 const dropboxClientId = getEnv('DROPBOX_CLIENT_ID');
 
@@ -20,10 +19,10 @@ type AuthState = 'no-auth' | 'await-auth' | 'auth-failed' | 'refreshing';
 
 export function LinkDropbox(props: { children: any }) {
   const isLogin = window.location.pathname === '/login';
-  const isDropboxInitiallyExpired = Redux.useSelector(
+  const isDropboxInitiallyExpired = Hooks.useSelector(
     $.getIsDropboxInitiallyExpired,
   );
-  const oauth = Redux.useSelector($.getDropboxOauth);
+  const oauth = Hooks.useSelector($.getDropboxOauth);
   const oauthRef = React.useRef<T.DropboxOauth | null>(null);
   oauthRef.current = oauth;
   let defaultAuthState: AuthState = 'no-auth';
@@ -35,7 +34,7 @@ export function LinkDropbox(props: { children: any }) {
   }
   const [authState, setAuthState] = React.useState<AuthState>(defaultAuthState);
   const [authError, setAuthError] = React.useState('');
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   const navigate = Router.useNavigate();
 
   React.useEffect(() => {
@@ -214,7 +213,7 @@ export function LinkDropbox(props: { children: any }) {
   }, [isLogin]);
 
   const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
-  const view = Redux.useSelector($.getView);
+  const view = Hooks.useSelector($.getView);
 
   if (isDropboxInitiallyExpired) {
     return (
@@ -304,7 +303,7 @@ export function LinkDropbox(props: { children: any }) {
 }
 
 export function UnlinkDropbox() {
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   return (
     <button
       className="button linkDropboxUnlink"

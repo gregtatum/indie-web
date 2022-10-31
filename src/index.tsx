@@ -13,6 +13,7 @@ import { openDB } from 'src/logic/offline-db';
 export * as A from 'src/store/actions';
 export * as $ from 'src/store/selectors';
 export * as T from 'src/@types';
+export * as Hooks from 'src/hooks';
 
 if (process.env.NODE_ENV !== 'test') {
   init();

@@ -13,9 +13,13 @@ type PromiseState<T> =
 export function useInfalliblePromise<T>(promise: Promise<T>): null | T {
   const [inner, setInner] = React.useState<T | null>(null);
   React.useEffect(() => {
-    promise.then((value) => {
-      setInner(value);
-    });
+    promise
+      .then((value) => {
+        setInner(value);
+      })
+      .catch((error) => {
+        console.error('An assumed infallible promise failed.', error);
+      });
   }, [promise]);
   return inner;
 }
@@ -67,6 +71,12 @@ export function useRetainScroll() {
   }, [window.location.href, navigationType]);
 }
 
-export function useStore() {
+export function useStore(): T.Store {
   return Redux.useStore() as T.Store;
 }
+
+export function useDispatch(): T.Dispatch {
+  return Redux.useDispatch();
+}
+
+export { useSelector } from 'react-redux';

@@ -1,6 +1,5 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
-import { $, T, A } from 'src';
+import { $, T, A, Hooks } from 'src';
 import { ensureExists } from 'src/utils';
 
 import './Menus.css';
@@ -22,7 +21,7 @@ const menuWidth = 150;
 const menuMargin = 10;
 
 function fileEscapeLogic(clickedFileMenu: T.ClickedFileMenu | null) {
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   const keyHandler = React.useRef<null | ((event: KeyboardEvent) => void)>(
     null,
   );
@@ -51,7 +50,7 @@ function clickOutLogic(
   clickedFileMenu: T.ClickedFileMenu | null,
   divRef: React.RefObject<HTMLDivElement>,
 ) {
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   const clickHandler = React.useRef<null | ((event: MouseEvent) => void)>(null);
   function removeKeyHandler() {
     if (clickHandler.current) {
@@ -79,9 +78,10 @@ function clickOutLogic(
   }, [clickedFileMenu]);
 }
 
-function File() {
-  const clickedFileMenu = Redux.useSelector($.getFileMenu);
+function FileMenu() {
+  const clickedFileMenu = Hooks.useSelector($.getFileMenu);
   const divRef = React.useRef<HTMLDivElement>(null);
+  const dispatch = Hooks.useDispatch();
 
   fileEscapeLogic(clickedFileMenu);
   clickOutLogic(clickedFileMenu, divRef);

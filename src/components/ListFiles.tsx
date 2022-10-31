@@ -1,9 +1,8 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
-import { A, T, $ } from 'src';
+import { A, T, $, Hooks } from 'src';
 import { ensureExists, getStringProp, imageExtensions } from 'src/utils';
-import { useRetainScroll, useStore } from './hooks';
+import { useRetainScroll, useStore } from '../hooks';
 
 Router.useNavigationType;
 
@@ -12,11 +11,11 @@ import { UnhandledCaseError } from '../utils';
 
 export function ListFiles() {
   useRetainScroll();
-  const path = Redux.useSelector($.getPath);
-  const activeFileDisplayPath = Redux.useSelector($.getActiveFileDisplayPath);
-  const dispatch = Redux.useDispatch();
-  const files = Redux.useSelector($.getListFilesCache).get(path);
-  const error = Redux.useSelector($.getListFilesErrors).get(path);
+  const path = Hooks.useSelector($.getPath);
+  const activeFileDisplayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const dispatch = Hooks.useDispatch();
+  const files = Hooks.useSelector($.getListFilesCache).get(path);
+  const error = Hooks.useSelector($.getListFilesErrors).get(path);
 
   React.useEffect(() => {
     if (path === '/') {
@@ -119,7 +118,7 @@ export function ListFiles() {
 
 function CreateChordProButton(props: { path: string }) {
   type Phase = 'not-editing' | 'editing' | 'submitting';
-  const dropbox = Redux.useSelector($.getDropbox);
+  const dropbox = Hooks.useSelector($.getDropbox);
   const { dispatch, getState } = useStore();
   const [phase, setPhase] = React.useState<Phase>('not-editing');
   const input = React.useRef<HTMLInputElement | null>(null);
@@ -312,7 +311,7 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
 }
 
 function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
   return (
     <button

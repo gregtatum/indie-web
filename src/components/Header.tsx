@@ -1,16 +1,15 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
-import { $, A } from 'src';
 import * as Router from 'react-router-dom';
+import { $, A, Hooks } from 'src';
 import { isAppSettingScrollTop, UnhandledCaseError } from 'src/utils';
 
 import './Header.css';
 
 export function Header() {
-  const view = Redux.useSelector($.getView);
-  const path = Redux.useSelector($.getActiveFileDisplayPath);
+  const view = Hooks.useSelector($.getView);
+  const path = Hooks.useSelector($.getActiveFileDisplayPath);
   const [shouldHideHeader, setShouldHideHeader] = React.useState(false);
-  const key = view + path;
+  const key = (view ?? '') + path;
 
   const headerStyle: React.CSSProperties = {};
   if (shouldHideHeader) {
@@ -143,7 +142,7 @@ function fullScreenEventHandler(event: KeyboardEvent) {
 }
 
 function RequestFullScreen() {
-  const canGoFullScreen = Redux.useSelector($.canGoFullScreen);
+  const canGoFullScreen = Hooks.useSelector($.canGoFullScreen);
   React.useEffect(() => {
     if (canGoFullScreen) {
       document.addEventListener('keyup', fullScreenEventHandler);
@@ -167,7 +166,7 @@ function RequestFullScreen() {
 }
 
 function SettingsButton() {
-  const view = Redux.useSelector($.getView);
+  const view = Hooks.useSelector($.getView);
   if (view === 'settings') {
     return null;
   }
@@ -179,11 +178,11 @@ function SettingsButton() {
 }
 
 function SaveFileButton() {
-  const text = Redux.useSelector($.getModifiedText);
-  const view = Redux.useSelector($.getView);
-  const dispatch = Redux.useDispatch();
-  const path = Redux.useSelector($.getPath);
-  const request = Redux.useSelector($.getDownloadFileCache).get(path);
+  const text = Hooks.useSelector($.getModifiedText);
+  const view = Hooks.useSelector($.getView);
+  const dispatch = Hooks.useDispatch();
+  const path = Hooks.useSelector($.getPath);
+  const request = Hooks.useSelector($.getDownloadFileCache).get(path);
 
   if (!text || view !== 'view-file' || !request) {
     return null;
@@ -202,7 +201,7 @@ function SaveFileButton() {
 }
 
 function Path({ path, title }: { path: string; title?: string }) {
-  const songTitle = Redux.useSelector($.getActiveFileSongTitleOrNull);
+  const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
 
   const breadcrumbs = [];
   let pathGrow = '';

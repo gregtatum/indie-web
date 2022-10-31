@@ -1,12 +1,11 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
-import { A, $ } from 'src';
+import { A, $, Hooks } from 'src';
 
 import './Messages.css';
 
 export function Messages() {
-  const dispatch = Redux.useDispatch();
-  const messages = Redux.useSelector($.getMessages);
+  const dispatch = Hooks.useDispatch();
+  const messages = Hooks.useSelector($.getMessages);
 
   React.useEffect(() => {
     function onKeydown(event: KeyboardEvent) {

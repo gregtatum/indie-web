@@ -1,7 +1,7 @@
 import * as React from 'react';
-import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { A, $ } from 'src';
+import * as Hooks from 'src/hooks';
 
 import { LinkDropbox } from './LinkDropbox';
 import { Header } from './Header';
@@ -19,7 +19,7 @@ import { Menus } from './Menus';
 function ListFilesRouter() {
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
     dispatch(A.viewListFiles(path));
   }, [path]);
@@ -29,7 +29,7 @@ function ListFilesRouter() {
 function ViewChoproRouter() {
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
     dispatch(A.viewFile(path));
   }, [path]);
@@ -39,7 +39,7 @@ function ViewChoproRouter() {
 function ViewPDFRouter() {
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
     dispatch(A.viewPDF(path));
   }, [path]);
@@ -49,7 +49,7 @@ function ViewPDFRouter() {
 function ViewImageRouter() {
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
     dispatch(A.viewImage(path));
   }, [path]);
@@ -57,7 +57,7 @@ function ViewImageRouter() {
 }
 
 function SettingsRouter() {
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
     dispatch(A.viewSettings());
   });
@@ -65,7 +65,7 @@ function SettingsRouter() {
 }
 
 function PrivacyRouter() {
-  const dispatch = Redux.useDispatch();
+  const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
     dispatch(A.viewPrivacy());
   });
@@ -105,9 +105,9 @@ export function App() {
 }
 
 function Views() {
-  const view = Redux.useSelector($.getView);
-  const path = Redux.useSelector($.getPath);
-  const key = view + path;
+  const view = Hooks.useSelector($.getView);
+  const path = Hooks.useSelector($.getPath);
+  const key = (view ?? '') + path;
   switch (view) {
     case null:
       return null;
