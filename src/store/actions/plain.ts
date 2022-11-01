@@ -107,3 +107,11 @@ export function viewFileMenu(clickedFileMenu: T.ClickedFileMenu) {
 export function dismissFileMenu() {
   return { type: 'dismiss-file-menu' as const };
 }
+
+export function startRenameFile(path: string) {
+  return { type: 'start-rename-file' as const, path };
+}
+
+export function stopRenameFile() {
+  return { type: 'stop-rename-file' as const };
+}

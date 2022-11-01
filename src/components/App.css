@@ -71,6 +71,17 @@ a {
   opacity: 0.6;
 }
 
+.button-primary {
+  border-color: #004eca;
+  background-color: #004eca;
+  color: #fff;
+}
+
+.button-primary:active,
+.button-primary:focus {
+  border-color: #fff;
+}
+
 code {
   padding: 0 4px;
   background-color: #eee;

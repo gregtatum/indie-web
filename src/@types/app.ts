@@ -157,3 +157,8 @@ export interface ClickedFileMenu {
   file: FileMetadata | FolderMetadata;
   element: HTMLElement;
 }
+
+export type RenameFileState =
+  | { phase: 'none'; path: null }
+  | { phase: 'editing'; path: string }
+  | { phase: 'sending'; path: string };

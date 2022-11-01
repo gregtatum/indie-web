@@ -1,11 +1,12 @@
 import * as idb from 'idb';
 import { A, T } from 'src';
 import type { files } from 'dropbox';
-import { getPathFolder } from '../utils';
+import { getPathFolder, updatePathRoot } from '../utils';
 
 function log(key: string, ...args: any[]) {
   const style = 'color: #FF006D; font-weight: bold';
   if (process.env.NODE_ENV !== 'test') {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     console.log(`[offline-db] %c"${key}"`, style, ...args);
   }
 }
@@ -136,6 +137,182 @@ export class OfflineDB {
       log('addTextFile', metadata.path, { metadata, text: { text } });
     } else {
       log('addTextFile', 'hash match');
+    }
+  }
+
+  /**
+   * Updates the metadata in the `files` table.
+   */
+  async #updateFileMetadata(oldPath: string, metadata: T.FileMetadata) {
+    const tx = this.#db.transaction('files', 'readwrite');
+    const store = tx.objectStore('files');
+    const oldFile = await store.get(oldPath);
+    if (oldFile) {
+      log('#updateFileMetadata', { oldFile, oldPath, metadata });
+      await store.delete(oldPath);
+      await store.put({
+        ...oldFile,
+        metadata,
+        storedAt: new Date(),
+      });
+    } else {
+      log('#updateFileMetadata - no metadata found to update for file', {
+        oldFile: oldFile,
+        oldPath,
+        metadata,
+      });
+    }
+  }
+
+  /**
+   * Updates a single file's metadata in a fileListing.
+   */
+  async #updateFileInFolderListings(oldPath: string, metadata: T.FileMetadata) {
+    const tx = this.#db.transaction('folderListings', 'readwrite');
+    const store = tx.objectStore('folderListings');
+    const oldFolderPath = getPathFolder(oldPath);
+    const folder = await store.get(oldFolderPath);
+    if (!folder) {
+      log('#updateFileInFolderListings - no folder found', {
+        oldFolder: folder,
+        oldPath,
+        oldFolderPath,
+        metadata,
+      });
+      return;
+    }
+
+    for (let i = 0; i < folder.files.length; i++) {
+      const file = folder.files[i];
+      if (file.path === oldPath) {
+        folder.files[i] = metadata;
+      }
+    }
+
+    await store.put(folder);
+
+    // Delete the folder entry.
+    log('#updateFileInFolderListings', {
+      folder,
+      oldFolderPath,
+      oldPath,
+      metadata,
+    });
+    // await store.delete(oldFolderPath);
+  }
+
+  /**
+   * Deletes a folder listing and any other listings referencing it.
+   */
+  async #deleteFolderListing(path: string) {
+    const tx = this.#db.transaction('folderListings', 'readwrite');
+    const folderListings = tx.objectStore('folderListings');
+    const folderPath = getPathFolder(path);
+    const folder = await folderListings.get(folderPath);
+    if (!folder) {
+      log('#deleteFolderListing - no folder found', path);
+      return;
+    }
+
+    // Remove the folder from the listing.
+    folder.files = folder.files.filter((file) => file.path !== path);
+    await folderListings.put(folder);
+
+    let cursor = await folderListings.openKeyCursor();
+    if (cursor === null) {
+      log('#deleteFolderListing - Failed to get folder listing cursor');
+      return;
+    }
+
+    // Delete any subfolders.
+    do {
+      if (cursor.key.startsWith(path + '/')) {
+        log('#deleteFolderListing - delete ', cursor.key);
+        await cursor.delete();
+      }
+    } while ((cursor = await cursor.continue()));
+  }
+
+  /**
+   * Updates a single folders's metadata in a fileListing.
+   */
+  async #updateFolderListing(oldPath: string, metadata: T.FolderMetadata) {
+    const tx = this.#db.transaction('folderListings', 'readwrite');
+    const folderListings = tx.objectStore('folderListings');
+
+    function updatePathRoot(path: string, oldRoot: string, newRoot: string) {
+      return newRoot + path.slice(oldRoot.length);
+    }
+
+    // Update the containing folder listing.
+    const containingFolder = await folderListings.get(getPathFolder(oldPath));
+    if (containingFolder) {
+      for (const file of containingFolder.files) {
+        if (file.path === oldPath) {
+          file.name = metadata.name;
+          file.path = metadata.path;
+        }
+      }
+      await folderListings.put(containingFolder);
+    }
+
+    let cursor = await folderListings.openCursor();
+    if (cursor === null) {
+      log('#moveFolderListing - Failed to get folder listing cursor');
+      return;
+    }
+
+    // Go through every folder.
+    do {
+      const { key, value } = cursor;
+      if (key.startsWith(oldPath + '/') || key === oldPath) {
+        // This is either the folder, or a subfolder. Update it.
+        value.path = updatePathRoot(key, oldPath, metadata.path);
+        for (const file of value.files) {
+          // Update any files in the listing.
+          file.path = updatePathRoot(file.path, oldPath, metadata.path);
+        }
+        // This requires a delete since the key changes.
+        await cursor.delete();
+        await folderListings.put(value);
+      }
+    } while ((cursor = await cursor.continue()));
+  }
+
+  /**
+   * Update the metadata for any file that has it's containing folder moved.
+   */
+  async #updateFolderFiles(oldPath: string, metadata: T.FolderMetadata) {
+    const tx = this.#db.transaction('files', 'readwrite');
+    const files = tx.objectStore('files');
+
+    let cursor = await files.openCursor();
+    if (cursor === null) {
+      return;
+    }
+
+    // Go through every file.
+    do {
+      const { key, value } = cursor;
+      if (key.startsWith(oldPath + '/') || key === oldPath) {
+        value.metadata.path = updatePathRoot(key, oldPath, metadata.path);
+        // This requires a delete since the key changes.
+        await cursor.delete();
+        await files.put(value);
+      }
+    } while ((cursor = await cursor.continue()));
+  }
+
+  async updateMetadata(
+    oldPath: string,
+    metadata: T.FileMetadata | T.FolderMetadata,
+  ) {
+    if (metadata.type === 'file') {
+      await this.#updateFileMetadata(oldPath, metadata);
+      await this.#updateFileInFolderListings(oldPath, metadata);
+    } else {
+      await this.#updateFolderFiles(oldPath, metadata);
+      await this.#updateFolderListing(oldPath, metadata);
     }
   }
 

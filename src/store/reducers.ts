@@ -1,6 +1,11 @@
 import * as T from 'src/@types';
 import { combineReducers } from 'redux';
-import { getStringProp, getNumberProp } from 'src/utils';
+import {
+  getStringProp,
+  getNumberProp,
+  getPathFolder,
+  updatePathRoot,
+} from 'src/utils';
 
 function getDropboxOauth(): T.DropboxOauth | null {
   const oauthString = window.localStorage.getItem('dropboxOauth');
@@ -78,6 +83,52 @@ function listFilesCache(
   action: T.Action,
 ): T.ListFilesCache {
   switch (action.type) {
+    case 'move-file-done': {
+      const { oldPath, metadata } = action;
+
+      if (metadata.type === 'folder') {
+        const newState: T.ListFilesCache = new Map();
+        for (const [path, files] of state) {
+          let key = path;
+          if (path === oldPath || path.startsWith(oldPath + '/')) {
+            key = updatePathRoot(path, oldPath, metadata.path);
+          }
+          newState.set(
+            key,
+            files.map((file) => {
+              if (file.path === oldPath) {
+                return metadata;
+              }
+              if (file.path.startsWith(oldPath + '/')) {
+                return {
+                  ...file,
+                  path: updatePathRoot(file.path, oldPath, metadata.path),
+                };
+              }
+              return file;
+            }),
+          );
+        }
+        return newState;
+      } else {
+        const newState: T.ListFilesCache = new Map(state);
+        const folder = getPathFolder(metadata.path);
+        const files = newState.get(folder);
+        if (files) {
+          for (let i = 0; i < files.length; i++) {
+            const otherMetadata = files[i];
+            if (otherMetadata.path === oldPath) {
+              const newFiles = files.slice();
+              newFiles[i] = metadata;
+              newState.set(folder, newFiles);
+              return newState;
+            }
+          }
+        }
+      }
+
+      return state;
+    }
     case 'list-files-received': {
       const { path, files } = action;
       const newState = new Map(state);
@@ -129,6 +180,39 @@ function downloadFileCache(
   action: T.Action,
 ): T.DownloadFileCache {
   switch (action.type) {
+    case 'move-file-done': {
+      const { oldPath, metadata } = action;
+      const file = state.get(oldPath);
+      if (file && metadata.type === 'file') {
+        // Update the metadata.
+        const newState = new Map(state);
+        newState.delete(oldPath);
+        newState.set(metadata.path, {
+          metadata,
+          text: file.text,
+        });
+        return newState;
+      }
+      if (metadata.type === 'folder') {
+        const newState: T.DownloadFileCache = new Map();
+        for (const [path, value] of state) {
+          if (path.startsWith(oldPath + '/') || path === oldPath) {
+            const newPath = updatePathRoot(path, oldPath, metadata.path);
+            newState.set(newPath, {
+              ...value,
+              metadata: {
+                ...value.metadata,
+                path: newPath,
+              },
+            });
+          } else {
+            newState.set(path, value);
+          }
+        }
+        return newState;
+      }
+      return state;
+    }
     case 'download-file-received': {
       const newState = new Map(state);
       const { path, file } = action;
@@ -154,6 +238,18 @@ function downloadBlobCache(
   action: T.Action,
 ): T.DownloadBlobCache {
   switch (action.type) {
+    case 'move-file-done': {
+      const { oldPath, metadata } = action;
+      const file = state.get(oldPath);
+      if (file && metadata.type === 'file') {
+        // Update the metadata.
+        state.set(metadata.path, {
+          metadata,
+          blob: file.blob,
+        });
+      }
+      return state;
+    }
     case 'download-blob-received': {
       const newState = new Map(state);
       const { path, blobFile } = action;
@@ -285,8 +381,26 @@ function fileMenu(
     case 'view-file-menu':
       return action.clickedFileMenu;
     case 'dismiss-file-menu':
+    case 'start-rename-file':
       return null;
       break;
+    default:
+      return state;
+  }
+}
+
+function renameFile(
+  state: T.RenameFileState = { phase: 'none', path: null },
+  action: T.Action,
+): T.RenameFileState {
+  switch (action.type) {
+    case 'start-rename-file':
+      return { phase: 'editing', path: action.path };
+    case 'move-file-requested':
+      return { phase: 'sending', path: action.path };
+    case 'stop-rename-file':
+    case 'move-file-done':
+      return { phase: 'none', path: null };
     default:
       return state;
   }
@@ -308,6 +422,7 @@ export const reducers = combineReducers({
   offlineDB,
   shouldHideHeader,
   fileMenu,
+  renameFile,
 });
 
 export type State = ReturnType<typeof reducers>;

@@ -274,3 +274,54 @@ export function getUrlForFile(path: string): string | null {
   }
   return null;
 }
+
+/**
+ * getPathFolder('/foo/bar/baz.html') === '/foo/bar'
+ */
+export function getPathFolder(path: string): string {
+  const parts = path.split('/');
+  parts.pop();
+  const folder = parts.join('/');
+  if (folder === '') {
+    return '/';
+  }
+  return folder;
+}
+
+/**
+ * getPathFileName('/foo/bar/baz.html') === 'baz.html'
+ */
+export function getPathFileName(path: string): string {
+  const parts = path.split('/');
+  return parts[parts.length - 1];
+}
+
+/**
+ * Dropbox doesn't support relative paths, but a user may input them.
+ * Canonicalize them so that Dropbox is happy.
+ */
+export function canonicalizePath(path: string): string {
+  const parts = path.split('/');
+  const finalParts = [];
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (i === 0 && part === '') {
+      // '/Songs/../Hey Jude' -> ["", "Songs", "..", "Hey Jude"]
+      //                          ^^ skip this one
+      continue;
+    }
+    if (part === '.') {
+      continue;
+    }
+    if (part === '..') {
+      finalParts.pop();
+      continue;
+    }
+    finalParts.push(part);
+  }
+  return '/' + finalParts.join('/');
+}
+
+export function updatePathRoot(path: string, oldRoot: string, newRoot: string) {
+  return newRoot + path.slice(oldRoot.length);
+}

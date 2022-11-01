@@ -228,8 +228,10 @@ function CreateChordProButton(props: { path: string }) {
 }
 
 function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
-  const { name, path } = props.dropboxFile;
-  const isFolder = props.dropboxFile.type === 'folder';
+  const renameFile = Hooks.useSelector($.getRenameFile);
+
+  const { name, path, type } = props.dropboxFile;
+  const isFolder = type === 'folder';
   const nameParts = name.split('.');
   const extension =
     nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
@@ -254,69 +256,141 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   } else if (isChordPro) {
     icon = '🎵';
   }
-  const fileMenu = <FileMenu dropboxFile={props.dropboxFile} />;
 
-  if (path) {
-    if (isFolder) {
-      return (
-        <>
-          <Router.Link className="listFilesFileLink" to={`/folder${path}`}>
-            <span className="listFilesIcon">{icon}</span>
-            <span className="listFileDisplayName">{displayName}</span>
-          </Router.Link>
-          {fileMenu}
-        </>
-      );
-    }
+  let link = null;
+  if (isFolder) {
+    link = `/folder${path}`;
+  }
 
-    if (isChordPro) {
-      return (
-        <>
-          <Router.Link className="listFilesFileLink" to={`/file${path}`}>
-            <span className="listFilesIcon">{icon}</span>
-            <span className="listFileDisplayName">{displayName}</span>
-          </Router.Link>
-          {fileMenu}
-        </>
-      );
-    }
+  if (isChordPro) {
+    link = `/file${path}`;
+  }
 
-    if (isPDF) {
-      return (
-        <>
-          <Router.Link className="listFilesFileLink" to={`/pdf${path}`}>
-            <span className="listFilesIcon">{icon}</span>
-            <span className="listFileDisplayName">{displayName}</span>
-          </Router.Link>
-          {fileMenu}
-        </>
-      );
-    }
+  if (isPDF) {
+    link = `/pdf${path}`;
+  }
 
-    if (isImage) {
-      return (
-        <>
-          <Router.Link className="listFilesFileLink" to={`/image${path}`}>
-            <span className="listFilesIcon">{icon}</span>
-            <span className="listFileDisplayName">{displayName}</span>
-          </Router.Link>
-          {fileMenu}
-        </>
-      );
-    }
+  if (isImage) {
+    link = `/image${path}`;
+  }
+
+  let fileDisplayName: React.ReactNode;
+  if (renameFile.path === path) {
+    link = null;
+    fileDisplayName = (
+      <RenameFile dropboxFile={props.dropboxFile} state={renameFile} />
+    );
+  } else {
+    fileDisplayName = (
+      <span className="listFileDisplayName">{displayName}</span>
+    );
+  }
+
+  if (link) {
+    return (
+      <>
+        <Router.Link className="listFilesFileLink" to={link}>
+          <span className="listFilesIcon">{icon}</span>
+          {fileDisplayName}
+        </Router.Link>
+        <FileMenu dropboxFile={props.dropboxFile} />
+      </>
+    );
   }
 
   return (
     <div className="listFilesFileEmpty">
       <span className="listFilesIcon">{icon}</span>
-      <span className="listFileDisplayName">{displayName}</span>
+      {fileDisplayName}
     </div>
+  );
+}
+
+function RenameFile(props: {
+  dropboxFile: T.FileMetadata | T.FolderMetadata;
+  state: T.RenameFileState;
+}) {
+  const dispatch = Hooks.useDispatch();
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const name = props.dropboxFile.name;
+  function input() {
+    return ensureExists(inputRef.current, 'Could not find input from ref.');
+  }
+  React.useEffect(() => {
+    let length = name.length;
+    const nameParts = name.split('.');
+    if (nameParts.length > 1) {
+      length = nameParts.slice(0, -1).join('.').length;
+    }
+
+    input().focus();
+    input().setSelectionRange(0, length);
+  }, []);
+
+  function rename() {
+    const { value } = input();
+    if (!value.trim()) {
+      // Only rename if there is a real value.
+      return;
+    }
+    const fromPath = props.dropboxFile.path;
+
+    const pathParts = fromPath.split('/');
+    pathParts.pop();
+    pathParts.push(value);
+    const toPath = pathParts.join('/');
+
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    dispatch(A.moveFile(fromPath, toPath));
+  }
+
+  function cancel() {
+    dispatch(A.stopRenameFile());
+  }
+
+  const disabled = props.state.phase === 'sending';
+
+  return (
+    <span className="listFileRename">
+      <input
+        className="listFileRenameInput"
+        type="text"
+        ref={inputRef}
+        disabled={disabled}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            cancel();
+          }
+          if (event.key === 'Enter') {
+            rename();
+          }
+        }}
+        defaultValue={name}
+      />
+      <button
+        type="button"
+        className="button button-primary"
+        onClick={rename}
+        disabled={disabled}
+      >
+        Rename
+      </button>
+      <button
+        type="button"
+        className="button"
+        onClick={cancel}
+        disabled={disabled}
+      >
+        Cancel
+      </button>
+    </span>
   );
 }
 
 function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
+
   return (
     <button
       type="button"

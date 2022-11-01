@@ -82,6 +82,13 @@ export function getFileMenu(state: State) {
   return state.fileMenu;
 }
 
+export function getRenameFile(state: State) {
+  return state.renameFile;
+}
+
+/**
+ * Returns the value of the selector and assert that it is non-null.
+ */
 function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,

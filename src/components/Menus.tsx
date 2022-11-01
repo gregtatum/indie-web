@@ -106,16 +106,23 @@ function FileMenu() {
   }
 
   const buttons = [
-    <button type="button" className="menusFileButton">
+    <button
+      type="button"
+      className="menusFileButton"
+      key="Rename"
+      onClick={() => {
+        dispatch(A.startRenameFile(file.path));
+      }}
+    >
       <span className="icon" data-icon="pencil-fill" /> Rename
     </button>,
-    <button type="button" className="menusFileButton">
+    <button type="button" className="menusFileButton" key="Move">
       <span className="icon" data-icon="box-arrow-in-right" /> Move
     </button>,
-    <button type="button" className="menusFileButton">
+    <button type="button" className="menusFileButton" key="Delete">
       <span className="icon" data-icon="trash-fill" /> Delete
     </button>,
-    <button type="button" className="menusFileButton">
+    <button type="button" className="menusFileButton" key="Download">
       <span className="icon" data-icon="download" /> Download
     </button>,
   ];

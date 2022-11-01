@@ -1,7 +1,13 @@
 import { Thunk } from 'src/@types';
 import * as React from 'react';
 import { $, T } from 'src';
-import { dropboxErrorMessage, getDirName, getGeneration } from 'src/utils';
+import {
+  canonicalizePath,
+  dropboxErrorMessage,
+  getDirName,
+  getGeneration,
+  getPathFileName,
+} from 'src/utils';
 import * as Plain from './plain';
 import { fixupFileMetadata, fixupMetadata } from 'src/logic/offline-db';
 
@@ -27,7 +33,7 @@ export type PlainActions =
 /**
  * These should only be used internally in thunks.
  */
-namespace PlainInternal {
+export namespace PlainInternal {
   export function addMessage(message: React.ReactNode, generation: number) {
     return { type: 'add-message' as const, message, generation };
   }
@@ -49,6 +55,17 @@ namespace PlainInternal {
 
   export function listFilesError(path: string, error: string) {
     return { type: 'list-files-error' as const, path, error };
+  }
+
+  export function moveFileRequested(path: string) {
+    return { type: 'move-file-requested' as const, path };
+  }
+
+  export function moveFileDone(
+    oldPath: string,
+    metadata: T.FileMetadata | T.FolderMetadata,
+  ) {
+    return { type: 'move-file-done' as const, oldPath, metadata };
   }
 
   export function downloadFileRequested(path: string) {
@@ -329,7 +346,74 @@ export function saveFile(path: string, text: string): Thunk<Promise<void>> {
         }),
       );
       console.error(error);
-      return Promise.reject(new Error('Unable to save the file with Dropbox.'));
+      throw new Error('Unable to save the file with Dropbox.');
+    }
+  };
+}
+
+export function moveFile(
+  fromPath: string,
+  toPath: string,
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    toPath = canonicalizePath(toPath);
+    const dropbox = $.getDropbox(getState());
+    const name = getPathFileName(toPath);
+
+    dispatch(PlainInternal.moveFileRequested(fromPath));
+    const messageGeneration = dispatch(
+      addMessage({
+        message: (
+          <>
+            Moving file <code>{name}</code>
+          </>
+        ),
+      }),
+    );
+
+    try {
+      const { result } = await dropbox.filesMoveV2({
+        from_path: fromPath,
+        to_path: toPath,
+      });
+
+      if (result.metadata['.tag'] === 'deleted') {
+        throw new Error('Unexpected deletion.');
+      }
+      const metadata = fixupMetadata(result.metadata);
+      dispatch(PlainInternal.moveFileDone(fromPath, metadata));
+
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Moved <code>{toPath}</code>
+            </>
+          ),
+          generation: messageGeneration,
+          timeout: true,
+        }),
+      );
+
+      // Save the updated file to the offline db.
+      const db = $.getOfflineDB(getState());
+
+      if (db) {
+        await db.updateMetadata(fromPath, metadata);
+      }
+    } catch (error) {
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Unable to move <code>{toPath}</code>
+            </>
+          ),
+          generation: messageGeneration,
+        }),
+      );
+      console.error(error);
+      throw new Error('Unable to save the file with Dropbox.');
     }
   };
 }

@@ -61,7 +61,8 @@
   border-bottom: 1px solid #ddd;
 }
 
-a.listFilesFileLink, .listFilesFileEmpty {
+a.listFilesFileLink,
+.listFilesFileEmpty {
   padding: 8px;
   display: flex;
   text-decoration: none;
@@ -158,4 +159,21 @@ a.listFilesFileLink, .listFilesFileEmpty {
   width: 16px;
   height: 16px;
   margin-inline: 10px 18px;
+}
+
+.listFileDisplayName {
+  flex: 1;
+  display: flex;
+}
+
+.listFileRename {
+  flex: 1;
+  display: flex;
+  gap: 5px;
+}
+
+.listFileRenameInput {
+  flex: 1;
+  font-size: 16px;
+  padding: 2px;
 }

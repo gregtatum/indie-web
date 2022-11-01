@@ -1,9 +1,13 @@
-import { A, T } from 'src';
+import { A, $, T } from 'src';
 import { type files } from 'dropbox';
 import { ensureExists, UnhandledCaseError } from '../utils';
 import type { FetchMockSandbox } from 'fetch-mock';
+import { createStore } from 'src/store/create-store';
+import * as Offline from 'src/logic/offline-db';
 
-export function createMetadata(name: string, path: string): T.FileMetadata {
+export function createFileMetadata(path: string): T.FileMetadata {
+  const parts = path.split('/');
+  const name = ensureExists(parts.pop(), 'Expected a file name');
   return {
     type: 'file',
     name,
@@ -15,6 +19,17 @@ export function createMetadata(name: string, path: string): T.FileMetadata {
     size: 3103,
     isDownloadable: true,
     hash: '0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617336',
+  };
+}
+
+export function createFolderMetadata(path: string): T.FolderMetadata {
+  const parts = path.split('/');
+  const name = ensureExists(parts.pop(), 'Expected a file name');
+  return {
+    type: 'folder',
+    name,
+    path,
+    id: 'id:AAAAAAAAAAAAAAAAAAAAAA',
   };
 }
 
@@ -108,4 +123,100 @@ export function getTestGeneration(name: string): number {
 
 export function resetTestGeneration() {
   generations = new Map();
+}
+
+type TestFolder = Record<string, null | any>;
+
+/**
+ * Transforms a list of file paths:
+ *   /Led Zeppelin/Stairway to Heaven.chopro
+ *   /Led Zeppelin/Immigrant Song.chopro
+ *   /Tutorial.txt
+ *
+ * Into a structured folder listing:
+ *  {
+ *    'Led Zeppelin': {
+ *      'Stairway to Heaven.chopro': null,
+ *      'Immigrant Song.chopro': null,
+ *    },
+ *    'Tutorial.txt': null,
+ *  }
+ */
+export function foldersFromPaths(paths: string[]): TestFolder {
+  const rootListing: TestFolder = {};
+  for (const path of paths) {
+    // ["Led Zeppelin", "Stairway to Heaven.chopro"]
+    const folders = path.split('/').filter((p) => p);
+    const fileName = ensureExists(folders.pop());
+    let nextListing = rootListing;
+    // Build out the folders
+    for (const folder of folders) {
+      let listing = nextListing[folder] as TestFolder | null;
+      if (!listing) {
+        listing = {} as TestFolder;
+        nextListing[folder] = listing;
+      }
+      nextListing = listing;
+    }
+    nextListing[fileName] = null;
+  }
+  return rootListing;
+}
+
+/**
+ * Creates an offline database pre-loaded with files.
+ */
+export async function setupDBWithFiles(paths: string[]) {
+  const store = createStore();
+  const { dispatch, getState } = store;
+  const db = await store.dispatch(Offline.openDB());
+  const folders = foldersFromPaths(paths);
+  await addTestFoldersToDB(db, folders);
+
+  /**
+   * Use the store machinery to fetch a file as the active file.
+   */
+  async function fetchTextFile(path: string): Promise<string | null> {
+    await dispatch(A.downloadFile(path));
+    dispatch(A.viewFile(path));
+    return $.getActiveFileTextOrNull(getState());
+  }
+
+  /**
+   * Use the store machinery to get the file listing.
+   */
+  async function fetchFileListing(path: string) {
+    await dispatch(A.listFiles(path));
+    return $.getListFilesCache(getState())
+      .get(path)
+      ?.map((listing) => listing.path);
+  }
+
+  return { dispatch, getState, fetchTextFile, fetchFileListing, db };
+}
+
+/**
+ * Builds out the offline database with file listings and files.
+ */
+async function addTestFoldersToDB(
+  db: T.OfflineDB,
+  folders: TestFolder,
+  prevPath = '',
+) {
+  const files = [];
+
+  for (const [name, children] of Object.entries<TestFolder | null>(folders)) {
+    const path = prevPath + '/' + name;
+
+    if (children) {
+      const metadata = createFolderMetadata(path);
+      files.push(metadata);
+      await addTestFoldersToDB(db, children, path);
+    } else {
+      const metadata = createFileMetadata(path);
+      files.push(metadata);
+      await db.addTextFile(metadata, `${name} file contents`);
+    }
+  }
+  await db.addFolderListing(prevPath || '/', files);
 }
