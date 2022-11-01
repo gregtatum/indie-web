@@ -2,8 +2,7 @@ import * as React from 'react';
 import { A, $, Hooks } from 'src';
 
 import './ViewImage.css';
-import { UnhandledCaseError } from 'src/utils';
-import { usePromiseSelector, useRetainScroll } from '../hooks';
+import { useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 
 export function ViewImage() {
@@ -54,28 +53,19 @@ export function ViewImage() {
 }
 
 function LoadImage() {
-  const image = usePromiseSelector($.getActiveImage);
+  const image = Hooks.useSelector($.getActiveImageOrNull);
   const swipeDiv = React.useRef(null);
   useNextPrevSwipe(swipeDiv);
 
-  switch (image.type) {
-    case 'fulfilled':
-      if (!image.value) {
-        return <div className="viewImageLoading">Error loading PDF.</div>;
-      }
-      return (
-        <div className="viewImage" data-fullscreen ref={swipeDiv}>
-          <NextPrevLinks />
-          <div className="viewImageWidth">
-            <img src={image.value} />
-          </div>
+  if (image) {
+    return (
+      <div className="viewImage" data-fullscreen ref={swipeDiv}>
+        <NextPrevLinks />
+        <div className="viewImageWidth">
+          <img src={image} />
         </div>
-      );
-    case 'pending':
-      return <div className="viewImageLoading">Loading PDF.</div>;
-    case 'rejected':
-      return <div className="viewImageLoading">Error loading PDF.</div>;
-    default:
-      throw new UnhandledCaseError(image, 'promise');
+      </div>
+    );
   }
+  return <div className="status">Loading image.</div>;
 }
