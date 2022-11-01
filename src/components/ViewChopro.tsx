@@ -32,6 +32,7 @@ export function ViewChopro() {
 
   React.useEffect(() => {
     if (textFile === undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       dispatch(A.downloadFile(path));
     }
   }, [textFile]);
@@ -105,7 +106,7 @@ function Splitter(props: SplitterProps) {
   const splitterPadding = 6;
 
   if (persistLocalStorage) {
-    window.localStorage.setItem(persistLocalStorage, '' + offsetX);
+    window.localStorage.setItem(persistLocalStorage, String(offsetX));
   }
 
   if (className.includes(' ')) {
@@ -216,7 +217,7 @@ function Splitter(props: SplitterProps) {
   const endStyle = { width: `calc(50% + ${offsetX}px)` };
   const middleStyle = {
     left: `calc(50% - ${splitterWidth / 2 + splitterPadding + offsetX}px)`,
-    width: splitterWidth + 'px',
+    width: String(splitterWidth) + 'px',
     padding: `0 ${splitterPadding}px`,
   };
 

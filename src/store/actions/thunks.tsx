@@ -75,7 +75,7 @@ namespace PlainInternal {
   }
 }
 
-export function listFiles(path = ''): Thunk {
+export function listFiles(path = ''): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     let dropboxPath = path;
     if (path === '/') {
@@ -120,7 +120,7 @@ export function listFiles(path = ''): Thunk {
       });
       dispatch(PlainInternal.listFilesReceived(path, files));
       if (db) {
-        db.addFolderListing(path, files);
+        await db.addFolderListing(path, files);
       }
     } catch (response) {
       dispatch(
@@ -130,7 +130,7 @@ export function listFiles(path = ''): Thunk {
   };
 }
 
-export function downloadFile(path: string): Thunk {
+export function downloadFile(path: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     dispatch(PlainInternal.downloadFileRequested(path));
 
@@ -142,7 +142,9 @@ export function downloadFile(path: string): Thunk {
       const listFilesCache = $.getListFilesCache(getState());
       const folder = getDirName(path);
       if (!listFilesCache.get(folder)) {
-        dispatch(listFiles(folder));
+        dispatch(listFiles(folder)).catch((error) => {
+          console.error('Failed to list files after downloading file', error);
+        });
       }
     };
 
@@ -164,6 +166,7 @@ export function downloadFile(path: string): Thunk {
     try {
       const { result } = await $.getDropbox(getState()).filesDownload({ path });
       // The file blob was left off of this type.
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const fileBlob: Blob = (result as any).fileBlob;
       const metadata = fixupFileMetadata(result);
       if (offlineFile?.metadata.hash === metadata.hash) {
@@ -185,7 +188,12 @@ export function downloadFile(path: string): Thunk {
       }
 
       if (db) {
-        db.addTextFile(metadata, text);
+        db.addTextFile(metadata, text).catch((error) => {
+          console.error(
+            'Unable to add a text file to the offline db after downloading file',
+            error,
+          );
+        });
       }
 
       handleFile({
@@ -196,6 +204,7 @@ export function downloadFile(path: string): Thunk {
       });
     } catch (response) {
       let error;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if ((response as any)?.error?.error?.path['.tag'] === 'not_found') {
         error = 'The file does not exist. ' + path;
       } else {
@@ -206,7 +215,7 @@ export function downloadFile(path: string): Thunk {
   };
 }
 
-export function downloadBlob(path: string): Thunk {
+export function downloadBlob(path: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     dispatch(PlainInternal.downloadBlobRequested(path));
 
@@ -218,7 +227,9 @@ export function downloadBlob(path: string): Thunk {
       const cache = $.getListFilesCache(getState());
       const folder = getDirName(path);
       if (!cache.get(folder)) {
-        dispatch(listFiles(folder));
+        dispatch(listFiles(folder)).catch((error) => {
+          console.error('Failed to list files after downloading a blob', error);
+        });
       }
     };
 
@@ -237,7 +248,8 @@ export function downloadBlob(path: string): Thunk {
     try {
       const response = await $.getDropbox(getState()).filesDownload({ path });
       const file = response.result;
-      const blob = (file as any).fileBlob;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const blob: Blob = (file as any).fileBlob;
       const metadata = fixupFileMetadata(file);
       const value: T.StoredBlobFile = {
         metadata,
@@ -249,7 +261,7 @@ export function downloadBlob(path: string): Thunk {
       handleBlob(value);
 
       if (db) {
-        db.addBlobFile(metadata, blob);
+        await db.addBlobFile(metadata, blob);
       }
     } catch (error) {
       dispatch(
@@ -259,7 +271,7 @@ export function downloadBlob(path: string): Thunk {
   };
 }
 
-export function saveFile(path: string, text: string): Thunk {
+export function saveFile(path: string, text: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const dropbox = $.getDropbox(getState());
 
@@ -305,7 +317,6 @@ export function saveFile(path: string, text: string): Thunk {
       if (db) {
         await db.addTextFile(fixupFileMetadata(result), text);
       }
-      return result;
     } catch (error) {
       dispatch(
         addMessage({

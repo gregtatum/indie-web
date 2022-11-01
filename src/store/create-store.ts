@@ -1,3 +1,13 @@
+/**
+ * This file is coercing things into the shape of the store, so be permissive about
+ * `any` types here.
+ */
+
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import {
   legacy_createStore as reduxCreateStore,
   applyMiddleware,

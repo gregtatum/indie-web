@@ -14,4 +14,4 @@ async function runTest() {
   console.log('Response from test:', response);
 }
 
-runTest();
+runTest().catch((error) => console.error('Failed to run test', error));

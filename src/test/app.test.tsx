@@ -9,6 +9,7 @@ describe('app', () => {
   it('can render', async () => {
     const store = createStore();
     const { container } = render(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       <Provider store={store as any}>
         <App />
       </Provider>,
@@ -29,6 +30,7 @@ describe('app', () => {
     ]);
 
     render(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       <Provider store={store as any}>
         <App />
       </Provider>,

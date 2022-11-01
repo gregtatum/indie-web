@@ -8,6 +8,7 @@ const path = require('path');
  *   mockedAccessPoint?: string;
  * }} event
  */
+// eslint-disable-next-line @typescript-eslint/require-await
 exports.handler = async (event) => {
   try {
     const root = event.mockedAccessPoint ?? '/tmp';
@@ -21,6 +22,7 @@ exports.handler = async (event) => {
   } catch (error) {
     return {
       statusCode: 500,
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       body: 'Failed to read file: ' + error,
     };
   }

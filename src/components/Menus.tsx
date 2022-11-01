@@ -7,7 +7,7 @@ import './Menus.css';
 export function Menus() {
   return (
     <div className="menus">
-      <File />
+      <FileMenu />
     </div>
   );
 }

@@ -4,6 +4,7 @@
  */
 export class UnhandledCaseError extends Error {
   constructor(value: never, typeName: string) {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     super(`There was an unhandled case for "${typeName}": ${value}`);
     this.name = 'UnhandledCaseError';
   }
@@ -37,11 +38,14 @@ export function getEnv(key: string): string {
  */
 export function maybeMockGoogleAnalytics() {
   if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (window as any).ga = (event: any, ...payload: any[]) => {
       const style = 'color: #FF6D00; font-weight: bold';
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-argument
       console.log(`[analytics] %c"${event}"`, style, ...payload);
     };
   } else if (process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (window as any).ga = () => {};
   }
 }
@@ -60,8 +64,10 @@ export function maybeGetProperty(value: any, property: string): string | null {
   if (
     value &&
     typeof value === 'object' &&
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     typeof value[property] === 'string'
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
     return value[property];
   }
   return null;
@@ -105,6 +111,7 @@ export function getProp(object: unknown, ...keys: string[]): unknown {
     if (!object || typeof object !== 'object') {
       return null;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     object = (object as any)[key];
   }
   return object;
@@ -181,9 +188,11 @@ export function pathJoin(...segments: string[]) {
  * Convert an arbitrary Dropbox or network error into a nice message.
  */
 export function dropboxErrorMessage(error: any): string {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if (error?.status >= 500 && error?.status < 600) {
     return 'Dropbox seems to be down at the moment. See https://status.dropbox.com/';
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const name = error?.name;
   if (typeof name === 'string') {
     if (name === 'TypeError') {

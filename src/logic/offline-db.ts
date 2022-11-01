@@ -1,6 +1,7 @@
 import * as idb from 'idb';
 import { A, T } from 'src';
 import type { files } from 'dropbox';
+import { getPathFolder } from '../utils';
 
 function log(key: string, ...args: any[]) {
   const style = 'color: #FF006D; font-weight: bold';
@@ -148,8 +149,8 @@ export class OfflineDB {
     }
   }
 
-  async close() {
-    this.#db.close();
+  close(): void {
+    return this.#db.close();
   }
 }
 

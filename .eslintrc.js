@@ -1,12 +1,7 @@
 // eslint-disable-next-line no-undef
 module.exports = {
-  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2020,
-    sourceType: 'module',
-    ecmaFeatures: {
-      jsx: true,
-    },
   },
   settings: {
     react: {
@@ -19,38 +14,9 @@ module.exports = {
     },
   },
   plugins: ['import', 'prettier'],
-  extends: [
-    'eslint:recommended',
-    'plugin:react/recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:import/typescript',
-    'prettier',
-  ],
+  extends: ['eslint:recommended', 'prettier'],
   rules: {
     'prettier/prettier': 'error',
-
-    // Typescript
-    '@typescript-eslint/no-inferrable-types': 'off',
-    // Inferring trivial types is fine.
-    '@typescript-eslint/explicit-module-boundary-types': 'off',
-    // This can be helpful.
-    '@typescript-eslint/no-explicit-any': 'off',
-    // There are lots of legitimate uses of require.
-    '@typescript-eslint/no-var-requires': 'off',
-    // I don't care about the Function type restriction.
-    '@typescript-eslint/ban-types': [
-      'error',
-      {
-        types: { Function: false },
-      },
-    ],
-    // Providing empty functions is useful for noops.
-    '@typescript-eslint/no-empty-function': 'off',
-    '@typescript-eslint/no-namespace': 'off',
-
-    // Only use the TypeScript variant.
-    'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 
     // Plugin rules:
     'import/no-duplicates': 'error',
@@ -110,4 +76,69 @@ module.exports = {
     'prefer-spread': 'error',
   },
   ignorePatterns: ['data', 'build', 'dist', 'node_modules'],
+  overrides: [
+    {
+      files: ['*.ts', '*.tsx'],
+
+      parser: '@typescript-eslint/parser',
+      parserOptions: {
+        project: ['./tsconfig.json'],
+        ecmaVersion: 2020,
+        sourceType: 'module',
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+
+      extends: [
+        'plugin:react/recommended',
+        'plugin:import/typescript',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:@typescript-eslint/recommended-requiring-type-checking',
+      ],
+
+      rules: {
+        // Typescript
+        '@typescript-eslint/no-inferrable-types': 'off',
+        // Inferring trivial types is fine.
+        '@typescript-eslint/explicit-module-boundary-types': 'off',
+        // This can be helpful.
+        '@typescript-eslint/no-explicit-any': 'off',
+        // There are lots of legitimate uses of require.
+        '@typescript-eslint/no-var-requires': 'off',
+        // This breaks destructuring.
+        '@typescript-eslint/unbound-method': 'off',
+        // I don't care about the Function type restriction.
+        '@typescript-eslint/ban-types': [
+          'error',
+          {
+            types: { Function: false },
+          },
+        ],
+        // Providing empty functions is useful for noops.
+        '@typescript-eslint/no-empty-function': 'off',
+        '@typescript-eslint/no-namespace': 'off',
+
+        // Only use the TypeScript variant.
+        'no-unused-vars': 'off',
+        '@typescript-eslint/no-unused-vars': [
+          'error',
+          { argsIgnorePattern: '^_' },
+        ],
+      },
+    },
+    {
+      files: ['*.js'],
+      env: {
+        node: true,
+        es2022: true,
+      },
+    },
+    {
+      files: ['src/test/**/*.js'],
+      env: {
+        jest: true,
+      },
+    },
+  ],
 };

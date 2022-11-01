@@ -122,10 +122,16 @@ function goFullScreen() {
     return;
   }
   if (element.requestFullscreen) {
-    element.requestFullscreen();
+    element.requestFullscreen().catch((error) => {
+      console.error('Failed to go fullscreen', error);
+    });
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if ((element as any).webkitRequestFullscreen) {
-    (element as any).webkitRequestFullscreen();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    (element as any).webkitRequestFullscreen().catch((error: any) => {
+      console.error('Failed to go fullscreen', error);
+    });
   }
 }
 
@@ -192,7 +198,9 @@ function SaveFileButton() {
     <button
       className="button headerSaveFile"
       onClick={() => {
-        dispatch(A.saveFile(path, text));
+        dispatch(A.saveFile(path, text)).catch((error) => {
+          console.error('Failed to save file', error);
+        });
       }}
     >
       Save

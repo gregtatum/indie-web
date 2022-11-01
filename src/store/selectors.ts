@@ -11,6 +11,7 @@ import { parseChordPro } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 
 type State = T.State;
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
 
 if (process.env.NODE_ENV !== 'test') {
@@ -98,19 +99,22 @@ export const getDropboxOrNull = createSelector(
     // Initiate dropbox.
     const dropbox = new Dropbox({ accessToken });
     // Intercept all calls to dropbox and log them.
-    const fakeDropbox: any = {};
+    const fakeDropbox: Record<string, any> = {};
 
     for (const key in dropbox) {
       fakeDropbox[key] = (...args: any[]) => {
         // First log the request.
         const style = 'color: #006DFF; font-weight: bold';
         if (process.env.NODE_ENV !== 'test') {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           console.log(`[dropbox] calling %c"${key}"`, style, ...args);
         }
 
         // Monitor the response, and pass on the promise result.
         return new Promise((resolve, reject) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
           const result = (dropbox as any)[key](...args);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
           result.then(
             (response: any) => {
               if (process.env.NODE_ENV !== 'test') {
@@ -128,7 +132,8 @@ export const getDropboxOrNull = createSelector(
         });
       };
     }
-    return fakeDropbox;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return fakeDropbox as any;
   },
 );
 
@@ -213,7 +218,7 @@ export const getActivePDF = dangerousSelector(
 
 export const getActiveImageOrNull = createSelector(
   getActiveBlobOrNull,
-  async (blob) => {
+  (blob) => {
     if (!blob) {
       return null;
     }

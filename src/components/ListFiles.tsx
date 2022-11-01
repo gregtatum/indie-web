@@ -31,6 +31,7 @@ export function ListFiles() {
 
   React.useEffect(() => {
     if (!files) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       dispatch(A.listFiles(path));
     }
   }, [files]);
@@ -38,6 +39,7 @@ export function ListFiles() {
   // Create the initial files if needed.
   React.useEffect(() => {
     if (activeFileDisplayPath === '/' && files && files.length === 0) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       dispatch(A.createInitialFiles());
     }
   }, [activeFileDisplayPath, files]);
@@ -166,6 +168,7 @@ function CreateChordProButton(props: { path: string }) {
       .then(
         (response) => {
           // The directory listing is now stale, fetch it again.
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           dispatch(A.listFiles(props.path));
           if ($.getHideEditor(getState())) {
             dispatch(A.hideEditor(false));
@@ -175,6 +178,7 @@ function CreateChordProButton(props: { path: string }) {
         (error) => {
           let err =
             getStringProp(error, 'message') ?? 'There was a Dropbox API error';
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           if (error?.status === 409) {
             err = 'That file already exists, please choose a different name.';
           }

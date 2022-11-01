@@ -16,7 +16,9 @@ export * as T from 'src/@types';
 export * as Hooks from 'src/hooks';
 
 if (process.env.NODE_ENV !== 'test') {
-  init();
+  init().catch((error) => {
+    console.error('Error during initialization', error);
+  });
 }
 
 export async function init(): Promise<void> {
@@ -48,6 +50,7 @@ export async function init(): Promise<void> {
 
 export function createRootApp(store: T.Store): JSX.Element {
   return (
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     <Provider store={store as any}>
       <App key="app" />
     </Provider>
@@ -74,6 +77,7 @@ function initServiceWorker() {
   ) {
     return;
   }
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register(

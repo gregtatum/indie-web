@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 // @ts-expect-error - Not sure why this is breaking.
 import fetchMock from 'fetch-mock-jest';
 import { Headers, Request, Response } from 'node-fetch';

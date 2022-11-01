@@ -26,6 +26,7 @@ export function ViewImage() {
 
   React.useEffect(() => {
     if (!blob) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       dispatch(A.downloadBlob(path));
     }
   }, [blob]);

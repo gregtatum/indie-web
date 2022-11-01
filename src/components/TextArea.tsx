@@ -48,6 +48,7 @@ export function TextArea(props: {
         defaultValue={props.textFile.text}
         onChange={(event) => throttledOnChange(event.target.value)}
         style={style}
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onKeyDown={async (event) => {
           const { metaKey, ctrlKey, code, target } = event;
           if ((metaKey || ctrlKey) && code === 'KeyS') {

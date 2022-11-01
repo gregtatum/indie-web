@@ -68,14 +68,14 @@ export function createFileMetadataReference(
     name: ensureExists(parts.pop()),
     path_lower: path.toLowerCase(),
     path_display: path,
-    id: 'id:' + getTestGeneration('id'),
+    id: 'id:' + String(getTestGeneration('id')),
     client_modified: '2022-01-01T00:00:00Z',
     server_modified: '2022-05-01T00:00:00Z',
     rev: '0123456789abcdef0123456789abcde',
     size: 3103,
     content_hash:
       '0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f136361733' +
-      getTestGeneration('content_hash'),
+      String(getTestGeneration('content_hash')),
   };
 }
 
@@ -88,7 +88,7 @@ export function createFolderMetadataReference(
     name: ensureExists(parts.pop()),
     path_lower: path.toLowerCase(),
     path_display: path,
-    id: 'id:' + getTestGeneration('id'),
+    id: 'id:' + String(getTestGeneration('id')),
   };
 }
 
@@ -99,8 +99,8 @@ export function mockDropboxAccessToken(store: T.Store) {
   store.dispatch(A.setDropboxAccessToken(accessToken, expiresIn, refreshToken));
 }
 
-let generations = new Map();
-export function getTestGeneration(name: string) {
+let generations = new Map<string, number>();
+export function getTestGeneration(name: string): number {
   const generation = (generations.get(name) ?? 0) + 1;
   generations.set(name, generation);
   return generation;

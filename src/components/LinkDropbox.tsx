@@ -58,6 +58,7 @@ export function LinkDropbox(props: { children: any }) {
       console.log('Refresh token is out of date, fetching a new one.');
       setAuthState('refreshing');
       fetch(
+        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         'https://www.dropbox.com/oauth2/token' +
           '?' +
           new URLSearchParams({
@@ -152,6 +153,7 @@ export function LinkDropbox(props: { children: any }) {
     //     -d client_id=<APP_KEY>
 
     fetch(
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       'https://www.dropbox.com/oauth2/token' +
         '?' +
         new URLSearchParams({
@@ -299,6 +301,7 @@ export function LinkDropbox(props: { children: any }) {
         throw new UnhandledCaseError(authState, 'AuthState');
     }
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return props.children;
 }
 

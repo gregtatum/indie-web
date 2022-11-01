@@ -157,6 +157,7 @@ export function RenderedSong() {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const imageCache: Record<string, string> = Object.create(null);
 
 function DropboxImage({
@@ -211,17 +212,20 @@ function DropboxImage({
       dropbox
         .filesDownload({ path: src })
         .then(async ({ result }) => {
-          const { fileBlob } = result as any;
-          handleBlob(fileBlob);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          const blob: Blob = (result as any).fileBlob;
+          handleBlob(blob);
           if (db) {
             const metadata = fixupFileMetadata(result);
-            db.addBlobFile(metadata, fileBlob);
+            await db.addBlobFile(metadata, blob);
           }
         })
         .catch((error) => {
           console.error('<DropboxImage /> error:', error);
         });
-    })();
+    })().catch((error) => {
+      console.error('DropboxImage had async error', error);
+    });
   }, [dropbox, src]);
 
   return <img {...props} src={objectUrl} />;
@@ -230,13 +234,13 @@ function DropboxImage({
 function getLineTypeKey(line: T.LineType, index: number): string {
   switch (line.type) {
     case 'section':
-      return 'section' + index + line.text;
+      return 'section' + String(index) + line.text;
     case 'space':
-      return 'space' + index;
+      return 'space' + String(index);
     case 'link':
-      return 'link' + index + line.href;
+      return 'link' + String(index) + line.href;
     case 'line': {
-      let key = 'line' + index;
+      let key = 'line' + String(index);
       for (const span of line.spans) {
         switch (span.type) {
           case 'text':
@@ -252,10 +256,10 @@ function getLineTypeKey(line: T.LineType, index: number): string {
       return key;
     }
     case 'image': {
-      return 'image:' + index + line.src;
+      return 'image:' + String(index) + line.src;
     }
     case 'comment': {
-      return 'comment:' + index + line.text;
+      return 'comment:' + String(index) + line.text;
     }
     default:
       throw new UnhandledCaseError(line, 'LineType');

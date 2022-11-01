@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* global require, console */
 const webpack = require('webpack');
 const WebpackDevServer = require('webpack-dev-server');
 const config = require('../webpack.config');
