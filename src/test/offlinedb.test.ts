@@ -7,7 +7,6 @@ import {
   setupDBWithFiles,
   createFolderMetadata,
 } from './fixtures';
-import { $, A } from 'src';
 import { PlainInternal } from 'src/store/actions';
 
 describe('offline db', () => {

@@ -631,3 +631,70 @@ export function downloadFolderForUser(
       );
   };
 }
+
+export function deleteFile(
+  file: T.FileMetadata | T.FolderMetadata,
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    dispatch(Plain.dismissFileMenu());
+    if (
+      !confirm(
+        file.type === 'file'
+          ? `Are you sure you want to delete ${file.name}?`
+          : `Are you sure you want to delete the folder ${file.name} and all of its contents?`,
+      )
+    ) {
+      return;
+    }
+    const messageGeneration = dispatch(
+      addMessage({
+        message: (
+          <>
+            Deleting <code>{file.name}</code>
+          </>
+        ),
+      }),
+    );
+
+    // Save the updated file to the offline db.
+
+    await $.getDropbox(getState())
+      .filesDeleteV2({
+        path: file.path,
+      })
+      .then(
+        async () => {
+          const db = $.getOfflineDB(getState());
+          if (db) {
+            await db.deleteFile(file);
+          }
+
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Deleted <code>{file.name}</code>
+                </>
+              ),
+              generation: messageGeneration,
+              timeout: true,
+            }),
+          );
+        },
+        (error) => {
+          console.error(error);
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Failed to delete <code>{file.name}</code>
+                </>
+              ),
+              generation: messageGeneration,
+              timeout: true,
+            }),
+          );
+        },
+      );
+  };
+}

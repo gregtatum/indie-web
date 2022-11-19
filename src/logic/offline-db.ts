@@ -162,6 +162,7 @@ export class OfflineDB {
         metadata,
       });
     }
+    await tx.done;
   }
 
   /**
@@ -198,7 +199,37 @@ export class OfflineDB {
       oldPath,
       metadata,
     });
-    // await store.delete(oldFolderPath);
+    await tx.done;
+  }
+
+  /**
+   * Deletes a folder listing and any other listings referencing it.
+   */
+  async #deleteFileFromFiles(path: string) {
+    const tx = this.#db.transaction('files', 'readwrite');
+    const files = tx.objectStore('files');
+    await files.delete(path);
+    await tx.done;
+  }
+
+  /**
+   * Deletes a folder listing and any other listings referencing it.
+   */
+  async #deleteFileFromFolderListing(path: string) {
+    const tx = this.#db.transaction('folderListings', 'readwrite');
+    const folderListings = tx.objectStore('folderListings');
+    const folderPath = getPathFolder(path);
+    const folder = await folderListings.get(folderPath);
+    if (!folder) {
+      log('#deleteFileFromFolderListing - no folder found', path);
+      return;
+    }
+
+    // Remove the file from the listing.
+    folder.files = folder.files.filter((file) => file.path !== path);
+    await folderListings.put(folder);
+
+    await tx.done;
   }
 
   /**
@@ -207,16 +238,20 @@ export class OfflineDB {
   async #deleteFolderListing(path: string) {
     const tx = this.#db.transaction('folderListings', 'readwrite');
     const folderListings = tx.objectStore('folderListings');
-    const folderPath = getPathFolder(path);
-    const folder = await folderListings.get(folderPath);
-    if (!folder) {
+    const containingFolder = await folderListings.get(getPathFolder(path));
+    if (!containingFolder) {
       log('#deleteFolderListing - no folder found', path);
       return;
     }
 
     // Remove the folder from the listing.
-    folder.files = folder.files.filter((file) => file.path !== path);
-    await folderListings.put(folder);
+    containingFolder.files = containingFolder.files.filter(
+      (file) => file.path !== path,
+    );
+    await folderListings.put(containingFolder);
+
+    // Actually delete this listing.
+    await folderListings.delete(path);
 
     let cursor = await folderListings.openKeyCursor();
     if (cursor === null) {
@@ -231,6 +266,16 @@ export class OfflineDB {
         await cursor.delete();
       }
     } while ((cursor = await cursor.continue()));
+    await tx.done;
+  }
+
+  async deleteFile(metadata: T.FileMetadata | T.FolderMetadata) {
+    if (metadata.type === 'file') {
+      await this.#deleteFileFromFiles(metadata.path);
+      await this.#deleteFileFromFolderListing(metadata.path);
+    } else {
+      await this.#deleteFolderListing(metadata.path);
+    }
   }
 
   /**
@@ -259,6 +304,7 @@ export class OfflineDB {
     let cursor = await folderListings.openCursor();
     if (cursor === null) {
       log('#moveFolderListing - Failed to get folder listing cursor');
+      await tx.done;
       return;
     }
 
@@ -277,6 +323,7 @@ export class OfflineDB {
         await folderListings.put(value);
       }
     } while ((cursor = await cursor.continue()));
+    await tx.done;
   }
 
   /**
@@ -288,6 +335,7 @@ export class OfflineDB {
 
     let cursor = await files.openCursor();
     if (cursor === null) {
+      await tx.done;
       return;
     }
 
@@ -301,6 +349,7 @@ export class OfflineDB {
         await files.put(value);
       }
     } while ((cursor = await cursor.continue()));
+    await tx.done;
   }
 
   async updateMetadata(

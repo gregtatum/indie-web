@@ -326,6 +326,10 @@ export function updatePathRoot(path: string, oldRoot: string, newRoot: string) {
   return newRoot + path.slice(oldRoot.length);
 }
 
+/**
+ * Downloads a file blob for a user by creating and clicking a `<a>` tag on the user's
+ * behalf.
+ */
 export function downloadBlobForUser(fileName: string, blob: Blob): void {
   const a = document.createElement('a');
   const url = window.URL.createObjectURL(blob);

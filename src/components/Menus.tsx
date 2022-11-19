@@ -119,8 +119,17 @@ function FileMenu() {
     <button type="button" className="menusFileButton" key="Move">
       <span className="icon" data-icon="box-arrow-in-right" /> Move
     </button>,
-    <button type="button" className="menusFileButton" key="Delete">
-      <span className="icon" data-icon="trash-fill" /> Delete
+    <button
+      type="button"
+      className="menusFileButton"
+      key="Delete"
+      onClick={() => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        dispatch(A.deleteFile(file));
+      }}
+    >
+      <span className="icon" data-icon="trash-fill" /> Delete{' '}
+      {file.type === 'file' ? 'File' : 'Folder'}
     </button>,
     file.type === 'file' ? (
       <button
