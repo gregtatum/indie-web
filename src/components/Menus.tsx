@@ -116,9 +116,10 @@ function FileMenu() {
     >
       <span className="icon" data-icon="pencil-fill" /> Rename
     </button>,
-    <button type="button" className="menusFileButton" key="Move">
-      <span className="icon" data-icon="box-arrow-in-right" /> Move
-    </button>,
+    // TODO
+    // <button type="button" className="menusFileButton" key="Move">
+    //   <span className="icon" data-icon="box-arrow-in-right" /> Move
+    // </button>,
     <button
       type="button"
       className="menusFileButton"

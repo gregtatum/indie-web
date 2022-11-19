@@ -299,10 +299,13 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   }
 
   return (
-    <div className="listFilesFileEmpty">
-      <span className="listFilesIcon">{icon}</span>
-      {fileDisplayName}
-    </div>
+    <>
+      <div className="listFilesFileEmpty">
+        <span className="listFilesIcon">{icon}</span>
+        {fileDisplayName}
+      </div>
+      <FileMenu dropboxFile={props.dropboxFile} />
+    </>
   );
 }
 
