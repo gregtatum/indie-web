@@ -203,7 +203,7 @@ export class OfflineDB {
   }
 
   /**
-   * Deletes a folder listing and any other listings referencing it.
+   * Deletes a single file.
    */
   async #deleteFileFromFiles(path: string) {
     const tx = this.#db.transaction('files', 'readwrite');
@@ -213,7 +213,7 @@ export class OfflineDB {
   }
 
   /**
-   * Deletes a folder listing and any other listings referencing it.
+   * Updates the folder listing to remove a file.
    */
   async #deleteFileFromFolderListing(path: string) {
     const tx = this.#db.transaction('folderListings', 'readwrite');
@@ -269,12 +269,33 @@ export class OfflineDB {
     await tx.done;
   }
 
+  async #deleteFilesInFolder(folderPath: string) {
+    const tx = this.#db.transaction('files', 'readwrite');
+    const files = tx.objectStore('files');
+
+    let cursor = await files.openCursor();
+    if (cursor === null) {
+      await tx.done;
+      return;
+    }
+
+    // Go through every file.
+    do {
+      const { key } = cursor;
+      if (key === folderPath || key.startsWith(folderPath + '/')) {
+        await cursor.delete();
+      }
+    } while ((cursor = await cursor.continue()));
+    await tx.done;
+  }
+
   async deleteFile(metadata: T.FileMetadata | T.FolderMetadata) {
     if (metadata.type === 'file') {
       await this.#deleteFileFromFiles(metadata.path);
       await this.#deleteFileFromFolderListing(metadata.path);
     } else {
       await this.#deleteFolderListing(metadata.path);
+      await this.#deleteFilesInFolder(metadata.path);
     }
   }
 

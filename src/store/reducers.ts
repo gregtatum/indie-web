@@ -110,24 +110,50 @@ function listFilesCache(
           );
         }
         return newState;
-      } else {
-        const newState: T.ListFilesCache = new Map(state);
-        const folder = getPathFolder(metadata.path);
-        const files = newState.get(folder);
-        if (files) {
-          for (let i = 0; i < files.length; i++) {
-            const otherMetadata = files[i];
-            if (otherMetadata.path === oldPath) {
-              const newFiles = files.slice();
-              newFiles[i] = metadata;
-              newState.set(folder, newFiles);
-              return newState;
-            }
+      }
+
+      // This is a file.
+      const newState: T.ListFilesCache = new Map(state);
+      const folder = getPathFolder(metadata.path);
+      const files = newState.get(folder);
+      if (files) {
+        for (let i = 0; i < files.length; i++) {
+          const otherMetadata = files[i];
+          if (otherMetadata.path === oldPath) {
+            const newFiles = files.slice();
+            newFiles[i] = metadata;
+            newState.set(folder, newFiles);
+            return newState;
           }
         }
       }
 
       return state;
+    }
+    case 'delete-file-done': {
+      const { metadata } = action;
+      const newState: T.ListFilesCache = new Map(state);
+
+      const containingFolder = getPathFolder(metadata.path);
+      const listing = state.get(containingFolder);
+      if (listing) {
+        // Filter out this folder or file.
+        newState.set(
+          containingFolder,
+          listing.filter((file) => file.path !== metadata.path),
+        );
+      }
+
+      if (metadata.type === 'folder') {
+        newState.delete(metadata.path);
+        for (const [path] of state) {
+          if (path.startsWith(metadata.path + '/')) {
+            newState.delete(path);
+          }
+        }
+      }
+
+      return newState;
     }
     case 'list-files-received': {
       const { path, files } = action;
@@ -212,6 +238,22 @@ function downloadFileCache(
         return newState;
       }
       return state;
+    }
+    case 'delete-file-done': {
+      const newState = new Map(state);
+      const { metadata } = action;
+
+      newState.delete(metadata.path);
+
+      if (metadata.type === 'folder') {
+        for (const [path] of state) {
+          if (path.startsWith(metadata.path + '/')) {
+            newState.delete(path);
+          }
+        }
+      }
+
+      return newState;
     }
     case 'download-file-received': {
       const newState = new Map(state);

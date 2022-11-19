@@ -69,6 +69,10 @@ export namespace PlainInternal {
     return { type: 'move-file-done' as const, oldPath, metadata };
   }
 
+  export function deleteFileDone(metadata: T.FileMetadata | T.FolderMetadata) {
+    return { type: 'delete-file-done' as const, metadata };
+  }
+
   export function downloadFileRequested(path: string) {
     return { type: 'download-file-requested' as const, path };
   }
@@ -668,6 +672,7 @@ export function deleteFile(
           if (db) {
             await db.deleteFile(file);
           }
+          dispatch(PlainInternal.deleteFileDone(file));
 
           dispatch(
             addMessage({

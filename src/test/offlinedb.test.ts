@@ -280,6 +280,138 @@ describe('offline db', () => {
 
     db.close();
   });
+
+  it('can delete a file in a subfolder', async () => {
+    const { fetchTextFile, fetchFileListing, dispatch, db } =
+      await setupDBWithFiles([
+        '/band/song 1.chopro',
+        '/band/song 2.chopro',
+        '/band/song 3.chopro',
+        '/band/song 4.chopro',
+      ]);
+
+    // The file should exist.
+    expect(await db.getFile('/band/song 3.chopro')).toBeTruthy();
+    expect(await fetchTextFile('/band/song 3.chopro')).toEqual(
+      'song 3.chopro file contents',
+    );
+    expect(await fetchFileListing('/band')).toEqual([
+      '/band/song 1.chopro',
+      '/band/song 2.chopro',
+      '/band/song 3.chopro',
+      '/band/song 4.chopro',
+    ]);
+
+    const metadata = createFileMetadata('/band/song 3.chopro');
+    // Now move it by updating the metadata.
+    await db.deleteFile(metadata);
+
+    // Check that the file listing in the offline db is up to date.
+    const folderListings = await db.getFolderListing('/band');
+    expect(folderListings?.files).toEqual([
+      createFileMetadata('/band/song 1.chopro'),
+      createFileMetadata('/band/song 2.chopro'),
+      createFileMetadata('/band/song 4.chopro'),
+    ]);
+
+    // The database should be updated.
+    expect(await db.getFile('/band/song 3.chopro')).toBe(undefined);
+
+    // Signal to the store that moving the file is done so the internal cache there
+    // can be updated as well.
+    dispatch(PlainInternal.deleteFileDone(metadata));
+
+    // The store should be up to date as well.
+    expect(await fetchTextFile('/band/song 3.chopro')).toEqual(null);
+
+    expect(await fetchFileListing('/band')).toEqual([
+      '/band/song 1.chopro',
+      '/band/song 2.chopro',
+      '/band/song 4.chopro',
+    ]);
+
+    db.close();
+  });
+
+  it('can delete a folder', async () => {
+    const { fetchTextFile, fetchFileListing, dispatch, db } =
+      await setupDBWithFiles([
+        '/band/song 1.chopro',
+        '/band/song 2.chopro',
+        '/band/song 3.chopro',
+        '/band/to-practice/practice 1.chopro',
+        '/band/to-practice/practice 2.chopro',
+      ]);
+
+    // The files should exist before the delete.
+    {
+      expect(await db.getFile('/band/song 3.chopro')).toBeTruthy();
+      expect(
+        await db.getFile('/band/to-practice/practice 2.chopro'),
+      ).toBeTruthy();
+      expect(await fetchTextFile('/band/song 3.chopro')).toBeTruthy();
+      expect(
+        await fetchTextFile('/band/to-practice/practice 2.chopro'),
+      ).toBeTruthy();
+
+      expect(await fetchFileListing('/band')).toEqual([
+        '/band/song 1.chopro',
+        '/band/song 2.chopro',
+        '/band/song 3.chopro',
+        '/band/to-practice',
+      ]);
+    }
+
+    // Now delete the folder.
+    const metadata = createFolderMetadata('/band/to-practice');
+    await db.deleteFile(metadata);
+
+    expect(await db.getFolderListing('/band/to-practice')).toEqual(undefined);
+
+    // Check the listings at '/'
+    {
+      const folderListings = await db.getFolderListing('/');
+      expect(folderListings?.files).toEqual([createFolderMetadata('/band')]);
+    }
+
+    // Check the listings at '/band'
+    {
+      const folderListings = await db.getFolderListing('/band');
+      expect(folderListings?.files).toEqual([
+        createFileMetadata('/band/song 1.chopro'),
+        createFileMetadata('/band/song 2.chopro'),
+        createFileMetadata('/band/song 3.chopro'),
+      ]);
+      expect(folderListings?.path).toEqual('/band');
+    }
+
+    // The database file's should be updated.
+    expect(await db.getFile('/band/song 3.chopro')).toBeTruthy();
+    expect(await db.getFile('/band/to-practice/practice 2.chopro')).toBe(
+      undefined,
+    );
+
+    // Signal to the store that deleting the file is done so the internal cache there
+    // can be updated as well.
+    dispatch(PlainInternal.deleteFileDone(metadata));
+
+    // The store should be up to date as well.
+    {
+      expect(await fetchTextFile('/band/song 3.chopro')).toBeTruthy();
+      expect(await fetchTextFile('/band/to-practice/practice 2.chopro')).toBe(
+        null,
+      );
+
+      expect(await fetchFileListing('/band')).toEqual([
+        '/band/song 1.chopro',
+        '/band/song 2.chopro',
+        '/band/song 3.chopro',
+      ]);
+      expect(await fetchFileListing('/band/to-practice')).toEqual(undefined);
+    }
+
+    db.close();
+  });
 });
 
 describe('database test setup', () => {
