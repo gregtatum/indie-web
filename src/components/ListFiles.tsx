@@ -7,7 +7,7 @@ import { useRetainScroll, useStore } from '../hooks';
 Router.useNavigationType;
 
 import './ListFiles.css';
-import { UnhandledCaseError } from '../utils';
+import { UnhandledCaseError, isChordProFile } from '../utils';
 
 export function ListFiles() {
   useRetainScroll();
@@ -246,7 +246,7 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
       </>
     );
   }
-  const isChordPro = !isFolder && extension === 'chopro';
+  const isChordPro = !isFolder && isChordProFile(extension);
   const isPDF = !isFolder && extension === 'pdf';
   const isImage = !isFolder && imageExtensions.has(extension);
 

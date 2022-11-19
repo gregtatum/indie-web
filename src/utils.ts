@@ -266,7 +266,7 @@ export function getUrlForFile(path: string): string | null {
   if (extension === 'pdf') {
     return '/pdf' + path;
   }
-  if (extension === 'chopro' || extension === 'chordpro') {
+  if (isChordProFile(extension)) {
     return '/file' + path;
   }
   if (extension && imageExtensions.has(extension)) {
@@ -341,4 +341,16 @@ export function downloadBlobForUser(fileName: string, blob: Blob): void {
   a.click();
   window.URL.revokeObjectURL(url);
   a.remove();
+}
+
+export function isChordProFile(extension: string | undefined) {
+  // Known extensions: https://www.chordpro.org/chordpro/chordpro-file-format-specification/
+  return (
+    extension === '.chopro' ||
+    extension === '.chordpro' ||
+    extension === '.cho' ||
+    extension === '.crd' ||
+    extension === '.chord' ||
+    extension === '.pro'
+  );
 }
