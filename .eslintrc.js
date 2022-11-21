@@ -1,7 +1,7 @@
 // eslint-disable-next-line no-undef
 module.exports = {
   parserOptions: {
-    ecmaVersion: 2020,
+    ecmaVersion: 'latest',
   },
   settings: {
     react: {
