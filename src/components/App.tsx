@@ -15,6 +15,7 @@ import './App.css';
 import { UnhandledCaseError } from 'src/utils';
 import { Settings, Privacy } from './Page';
 import { Menus } from './Menus';
+import { useFilesIndex } from 'src/logic/files-index';
 
 function ListFilesRouter() {
   const params = Router.useParams();
@@ -73,6 +74,7 @@ function PrivacyRouter() {
 }
 
 export function App() {
+  useFilesIndex();
   return (
     <Router.BrowserRouter>
       <Router.Routes>

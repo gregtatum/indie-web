@@ -47,7 +47,7 @@ export type LineType =
   | { type: 'line'; spans: TextOrChord[]; content: LineContent };
 
 export interface ParsedChordPro {
-  directives: { [directive: string]: string };
+  directives: Directives;
   lines: LineType[];
 }
 
@@ -162,3 +162,27 @@ export type RenameFileState =
   | { phase: 'none'; path: null }
   | { phase: 'editing'; path: string }
   | { phase: 'sending'; path: string };
+
+export interface KnownDirectives {
+  key: string;
+  artist: string;
+}
+
+/**
+ * The directives in chordpro files are stored in the file index.
+ */
+export type Directives = Partial<KnownDirectives> & {
+  [key: string]: string;
+};
+
+export interface IndexedFile {
+  metadata: FileMetadata;
+  lastRevRead: string | null;
+  directives: Directives;
+}
+
+export interface IndexJSON {
+  version: 1;
+  // The files should be sorted by FileMetadata["id"].
+  files: IndexedFile[];
+}

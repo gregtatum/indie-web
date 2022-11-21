@@ -259,7 +259,7 @@ export function getUrlForFile(path: string): string | null {
   if (extension === 'pdf') {
     return '/pdf' + path;
   }
-  if (isChordProFile(extension)) {
+  if (isChordProExtension(extension)) {
     return '/file' + path;
   }
   if (extension && imageExtensions.has(extension)) {
@@ -336,14 +336,61 @@ export function downloadBlobForUser(fileName: string, blob: Blob): void {
   a.remove();
 }
 
-export function isChordProFile(extension: string | undefined) {
+export function isChordProFilePath(path: string) {
+  const parts = path.split('.');
+  const extension = parts[parts.length - 1].toLocaleLowerCase();
+  return isChordProExtension(extension);
+}
+
+export function isChordProExtension(extension: string | undefined) {
   // Known extensions: https://www.chordpro.org/chordpro/chordpro-file-format-specification/
   return (
-    extension === '.chopro' ||
-    extension === '.chordpro' ||
-    extension === '.cho' ||
-    extension === '.crd' ||
-    extension === '.chord' ||
-    extension === '.pro'
+    extension === 'chopro' ||
+    extension === 'chordpro' ||
+    extension === 'cho' ||
+    extension === 'crd' ||
+    extension === 'chord' ||
+    extension === 'pro'
   );
+}
+
+export function isPathNotFoundError(error: any): boolean {
+  return (
+    error?.error?.error?.['.tag'] === 'path' &&
+    error?.error?.error?.path?.['.tag'] === 'not_found'
+  );
+}
+
+/**
+ * A type aware version of Object.entries.
+ */
+export function typedObjectEntries<
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  T extends Object,
+  K extends keyof T,
+>(obj: T): [K, T[K]][] {
+  return Object.entries(obj as any) as any;
+}
+
+/**
+ * Convert some value into a record to bypass some of TS's constraints
+ * on interface access.
+ */
+export function asRecord<
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  T extends Object,
+>(obj: T): Record<string, unknown> {
+  return obj as any;
+}
+
+/**
+ * Convert some value into a record to bypass some of TS's constraints
+ * on interface access, but retain the typ
+ */
+export function asTypedRecord<
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  T extends Object,
+  K extends keyof T,
+>(obj: T): Record<K, T[K]> {
+  return obj as any;
 }

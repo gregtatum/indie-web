@@ -9,7 +9,7 @@ import {
   type Middleware,
 } from 'redux';
 import thunk from 'redux-thunk';
-import { reducers } from 'src/store/reducers';
+import { mainReducer } from 'src/store/reducers';
 import { Store, Action, State } from 'src/@types';
 import { T } from 'src';
 
@@ -41,7 +41,10 @@ export function createStore(): Store {
   if (process.env.NODE_ENV !== 'test') {
     middlewares.push(logger as any);
   }
-  const store = reduxCreateStore(reducers, applyMiddleware(...middlewares));
+  const store = reduxCreateStore(
+    mainReducer as any,
+    applyMiddleware(...middlewares),
+  );
 
   return store as any;
 }

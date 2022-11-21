@@ -127,7 +127,7 @@ export const getDropboxOrNull = createSelector(
             },
             (error: any) => {
               if (process.env.NODE_ENV !== 'test') {
-                console.log(`[dropbox] error %c"${key}"`, style, error);
+                console.log(`[dropbox] error %c"${key}"`, style, args, error);
               }
               reject(error);
             },
@@ -154,20 +154,26 @@ export const getDropbox = dangerousSelector(
   "Dropbox wasn't available",
 );
 
-export const getActiveFileTextOrNull = createSelector(
+export const getActiveFileOrNull = createSelector(
   getDownloadFileCache,
   getPath,
+  (downloadFileCache, path): T.DownloadedTextFile | null => {
+    return downloadFileCache.get(path) ?? null;
+  },
+);
+
+export const getActiveFileTextOrNull = createSelector(
+  getActiveFileOrNull,
   getModifiedText,
-  (downloadFileCache, path, modifiedText): string | null => {
+  (activeFile, modifiedText): string | null => {
     if (modifiedText) {
       return modifiedText;
     }
-    const downloadedFile = downloadFileCache.get(path);
-    if (!downloadedFile) {
+    if (!activeFile) {
       return null;
     }
 
-    return downloadedFile.text;
+    return activeFile.text;
   },
 );
 

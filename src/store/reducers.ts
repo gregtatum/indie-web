@@ -6,6 +6,7 @@ import {
   getPathFolder,
   updatePathRoot,
 } from 'src/utils';
+import { FilesIndex } from 'src/logic/files-index';
 
 function getDropboxOauth(): T.DropboxOauth | null {
   const oauthString = window.localStorage.getItem('dropboxOauth');
@@ -448,6 +449,18 @@ function renameFile(
   }
 }
 
+function filesIndex(
+  state: FilesIndex | null = null,
+  action: T.Action,
+): FilesIndex | null {
+  switch (action.type) {
+    case 'files-index-received':
+      return action.filesIndex;
+    default:
+      return state;
+  }
+}
+
 export const reducers = combineReducers({
   dropboxOauth,
   listFilesCache,
@@ -465,6 +478,25 @@ export const reducers = combineReducers({
   shouldHideHeader,
   fileMenu,
   renameFile,
+  filesIndex,
 });
 
+function wrapReducer<S>(
+  reducer: T.Reducer<S>,
+  fn: (state: S, action: T.Action) => S,
+): T.Reducer<S> {
+  return (state, action) => {
+    const nextState = reducer(state, action);
+    return fn(nextState, action);
+  };
+}
+
 export type State = ReturnType<typeof reducers>;
+
+export const mainReducer: T.Reducer<State> = wrapReducer(
+  reducers,
+  (state, action) => {
+    state.filesIndex?.reducer(state, action);
+    return state;
+  },
+);

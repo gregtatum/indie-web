@@ -5,12 +5,15 @@ import {
   canonicalizePath,
   downloadBlobForUser,
   dropboxErrorMessage,
+  ensureExists,
   getDirName,
   getGeneration,
   getPathFileName,
+  isPathNotFoundError,
 } from 'src/utils';
 import * as Plain from './plain';
 import { fixupFileMetadata, fixupMetadata } from 'src/logic/offline-db';
+import { FilesIndex, tryUpgradeIndexJSON } from 'src/logic/files-index';
 
 /**
  * This file contains all of the thunk actions, that contain extra logic,
@@ -94,6 +97,10 @@ export namespace PlainInternal {
     blobFile: T.StoredBlobFile,
   ) {
     return { type: 'download-blob-received' as const, path, blobFile };
+  }
+
+  export function fileIndexReceived(filesIndex: FilesIndex) {
+    return { type: 'files-index-received' as const, filesIndex };
   }
 }
 
@@ -225,8 +232,8 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
       });
     } catch (response) {
       let error;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if ((response as any)?.error?.error?.path['.tag'] === 'not_found') {
+
+      if (isPathNotFoundError((response as any)?.error)) {
         error = 'The file does not exist. ' + path;
       } else {
         error = dropboxErrorMessage(response);
@@ -697,5 +704,102 @@ export function deleteFile(
           );
         },
       );
+  };
+}
+
+export function loadFilesIndex(
+  isSecondAttempt = false,
+): Thunk<Promise<FilesIndex | null>> {
+  return async (dispatch, getState) => {
+    function dispatchError(error: unknown, message: React.ReactNode) {
+      console.error(error);
+      dispatch(
+        addMessage({
+          message,
+          timeout: true,
+        }),
+      );
+    }
+
+    async function attemptRecreateFile(
+      message: string,
+    ): Promise<FilesIndex | null> {
+      if (!isSecondAttempt && confirm(message)) {
+        try {
+          await dropbox.filesDeleteV2({ path: FilesIndex.path });
+        } catch (error) {
+          dispatchError(
+            error,
+            <>
+              Failed to delete <code>{FilesIndex.path}</code>
+            </>,
+          );
+        }
+        const filesIndex = await dispatch(loadFilesIndex(true));
+        return filesIndex;
+      }
+      return null;
+    }
+
+    const dropbox = $.getDropbox(getState());
+    let fileBlob: Blob;
+    try {
+      const { result } = await dropbox.filesDownload({ path: FilesIndex.path });
+      // The file blob was left off of this type.
+      fileBlob = (result as any).fileBlob;
+    } catch (error: any) {
+      if (isPathNotFoundError(error)) {
+        const filesIndex = new FilesIndex(dropbox, getState());
+        dispatch(PlainInternal.fileIndexReceived(filesIndex));
+        return filesIndex;
+      }
+      // This is not a path not found error, so dispatch an error.
+      dispatchError(
+        error,
+        <>
+          Failed to load the files index <code>{FilesIndex.path}</code>
+        </>,
+      );
+      return null;
+    }
+
+    let text: string;
+    try {
+      text = await fileBlob.text();
+    } catch (error) {
+      console.error(error);
+      return attemptRecreateFile(
+        `Browser Chord's file index "${FilesIndex.path}" could not be read, would you like to ` +
+          `delete and try recreating it?`,
+      );
+    }
+
+    let json: any;
+    try {
+      json = JSON.parse(text);
+    } catch (error) {
+      console.error(error);
+      return attemptRecreateFile(
+        `Browser Chord's file index "${FilesIndex.path}" appears corrupted, would you like to ` +
+          `delete and try recreating it?`,
+      );
+    }
+
+    const indexJSON = tryUpgradeIndexJSON(json);
+    if (indexJSON === null) {
+      return attemptRecreateFile(
+        `Browser Chord's file index "${FilesIndex.path}" appeared malformed, would you like to ` +
+          `delete and try recreating it?`,
+      );
+    }
+    const filesIndex = new FilesIndex(
+      dropbox,
+      getState(),
+      // For some reason type narrowing `T.IndexJSON | null` to `T.IndexJSON` is
+      // not working here.
+      ensureExists(indexJSON),
+    );
+    dispatch(PlainInternal.fileIndexReceived(filesIndex));
+    return filesIndex;
   };
 }
