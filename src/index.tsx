@@ -50,7 +50,6 @@ export async function init(): Promise<void> {
 
 export function createRootApp(store: T.Store): JSX.Element {
   return (
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     <Provider store={store as any}>
       <App key="app" />
     </Provider>

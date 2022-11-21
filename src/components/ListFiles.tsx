@@ -178,7 +178,6 @@ function CreateChordProButton(props: { path: string }) {
         (error) => {
           let err =
             getStringProp(error, 'message') ?? 'There was a Dropbox API error';
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           if (error?.status === 409) {
             err = 'That file already exists, please choose a different name.';
           }

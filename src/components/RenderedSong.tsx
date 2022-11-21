@@ -157,7 +157,6 @@ export function RenderedSong() {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const imageCache: Record<string, string> = Object.create(null);
 
 function DropboxImage({
@@ -212,7 +211,6 @@ function DropboxImage({
       dropbox
         .filesDownload({ path: src })
         .then(async ({ result }) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           const blob: Blob = (result as any).fileBlob;
           handleBlob(blob);
           if (db) {

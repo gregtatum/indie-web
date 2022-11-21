@@ -118,6 +118,12 @@ module.exports = {
         // Providing empty functions is useful for noops.
         '@typescript-eslint/no-empty-function': 'off',
         '@typescript-eslint/no-namespace': 'off',
+        // Too many false positives with no-unsafe-*.
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-argument': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
 
         // Only use the TypeScript variant.
         'no-unused-vars': 'off',

@@ -301,7 +301,6 @@ export function LinkDropbox(props: { children: any }) {
         throw new UnhandledCaseError(authState, 'AuthState');
     }
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return props.children;
 }
 

@@ -188,7 +188,6 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
     try {
       const { result } = await $.getDropbox(getState()).filesDownload({ path });
       // The file blob was left off of this type.
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const fileBlob: Blob = (result as any).fileBlob;
       const metadata = fixupFileMetadata(result);
       if (offlineFile?.metadata.hash === metadata.hash) {
@@ -270,7 +269,6 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
     try {
       const response = await $.getDropbox(getState()).filesDownload({ path });
       const file = response.result;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const blob: Blob = (file as any).fileBlob;
       const metadata = fixupFileMetadata(file);
       const value: T.StoredBlobFile = {
@@ -545,7 +543,6 @@ export function downloadFileForUser(
         (response) => {
           downloadBlobForUser(
             file.name,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             (response.result as any).fileBlob as Blob,
           );
 
@@ -602,7 +599,6 @@ export function downloadFolderForUser(
         (response) => {
           downloadBlobForUser(
             file.name,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             (response.result as any).fileBlob as Blob,
           );
 

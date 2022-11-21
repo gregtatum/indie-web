@@ -6,7 +6,6 @@ import { getPathFolder, updatePathRoot } from '../utils';
 function log(key: string, ...args: any[]) {
   const style = 'color: #FF006D; font-weight: bold';
   if (process.env.NODE_ENV !== 'test') {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     console.log(`[offline-db] %c"${key}"`, style, ...args);
   }
 }

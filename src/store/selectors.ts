@@ -11,7 +11,6 @@ import { parseChordPro } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 
 type State = T.State;
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
 
 if (process.env.NODE_ENV !== 'test') {
@@ -113,15 +112,12 @@ export const getDropboxOrNull = createSelector(
         // First log the request.
         const style = 'color: #006DFF; font-weight: bold';
         if (process.env.NODE_ENV !== 'test') {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           console.log(`[dropbox] calling %c"${key}"`, style, ...args);
         }
 
         // Monitor the response, and pass on the promise result.
         return new Promise((resolve, reject) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
           const result = (dropbox as any)[key](...args);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
           result.then(
             (response: any) => {
               if (process.env.NODE_ENV !== 'test') {
@@ -139,7 +135,6 @@ export const getDropboxOrNull = createSelector(
         });
       };
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return fakeDropbox as any;
   },
 );

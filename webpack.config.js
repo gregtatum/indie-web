@@ -1,5 +1,4 @@
 // @ts-check
-/* global require, module, __dirname, process */
 const { DefinePlugin } = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
@@ -56,6 +55,11 @@ const config = {
 if (process.env.NODE_ENV === 'development') {
   require('dotenv').config({ path: './.env.local' });
   config.mode = 'development';
+}
+
+if (!config.plugins) {
+  // Satisfy TypeScript.
+  throw new Error('No plugins');
 }
 
 if (process.env.NODE_ENV === 'production') {

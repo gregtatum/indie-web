@@ -126,9 +126,7 @@ function goFullScreen() {
       console.error('Failed to go fullscreen', error);
     });
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if ((element as any).webkitRequestFullscreen) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     (element as any).webkitRequestFullscreen().catch((error: any) => {
       console.error('Failed to go fullscreen', error);
     });
