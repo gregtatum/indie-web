@@ -15,6 +15,15 @@ import { FilesIndex } from 'src/logic/files-index';
 import { stripIndent } from 'common-tags';
 import type { FetchMockSandbox } from 'fetch-mock';
 
+const coldplayChordProText = stripIndent`
+  {title: Clocks}
+  {artist: Coldplay}
+  {key: Ebmaj}
+
+  [D]Lights go out and I ca[Am]n't be saved
+  tides that I tried to sw[Em]im against
+`;
+
 beforeEach(() => {
   jest.useFakeTimers();
 });
@@ -25,23 +34,41 @@ afterEach(() => {
   (window.fetch as FetchMockSandbox).restore();
 });
 
-describe('app', () => {
-  it('can list files', async () => {
+describe('App', () => {
+  function setup() {
     const store = createStore();
     mockDropboxAccessToken(store);
-    mockDropboxListFolder([
+    const listFiles = mockDropboxListFolder([
       { type: 'folder', path: '/My Cool Band' },
       { type: 'file', path: '/Clocks - Coldplay.chordpro' },
       { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
     ]);
     mockDropboxFilesDownload([]);
-
     render(
       <Provider store={store as any}>
         <App />
       </Provider>,
     );
 
+    /**
+     * A test utility to ge the file metadata from the current state.
+     */
+    function getFileMetadata(path: string): T.FileMetadata {
+      const file = ensureExists(
+        listFiles.find((file) => file.path === path),
+        'Failed to find the file.',
+      );
+      if (file.type !== 'file') {
+        throw new Error('Found a folder not a file.');
+      }
+      return file;
+    }
+
+    return { store, getFileMetadata };
+  }
+
+  it('can list files', async () => {
+    setup();
     await waitFor(() => screen.getByText(/Coldplay/));
     await waitFor(() => screen.getByText(/Mellow Yellow/));
 
@@ -172,25 +199,13 @@ describe('app', () => {
   });
 
   it('creates a files index', async () => {
-    const store = createStore();
-    mockDropboxAccessToken(store);
-    mockDropboxListFolder([
-      { type: 'folder', path: '/My Cool Band' },
-      { type: 'file', path: '/Clocks - Coldplay.chordpro' },
-      { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
-    ]);
-    mockDropboxFilesDownload([]);
+    const { store } = setup();
+
     const uploads = spyOnDropboxFilesUpload();
-
-    render(
-      <Provider store={store as any}>
-        <App />
-      </Provider>,
-    );
-
     const filesIndex = await waitFor(() =>
       ensureExists($.getFilesIndex(store.getState())),
     );
+
     expect(filesIndex).toMatchInlineSnapshot(`
       FilesIndex {
         "data": Object {
@@ -279,21 +294,8 @@ describe('app', () => {
     `);
   });
 
-  it('will index directives', async () => {
-    const store = createStore();
-    mockDropboxAccessToken(store);
-    mockDropboxListFolder([
-      { type: 'folder', path: '/My Cool Band' },
-      { type: 'file', path: '/Clocks - Coldplay.chordpro' },
-      { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
-    ]);
-    mockDropboxFilesDownload([]);
-
-    render(
-      <Provider store={store as any}>
-        <App />
-      </Provider>,
-    );
+  it('will index directives when viewing a file', async () => {
+    const { store, getFileMetadata } = setup();
 
     const filesIndex = await waitFor(() =>
       ensureExists($.getFilesIndex(store.getState())),
@@ -304,22 +306,12 @@ describe('app', () => {
     // The file has not been viewed yet.
     expect(
       filesIndex.getFileByPath('/Clocks - Coldplay.chordpro')?.directives,
-    ).toMatchInlineSnapshot(`Object {}`);
+    ).toEqual({});
 
     mockDropboxFilesDownload([
       {
-        metadata: getFileMetadata(
-          store.getState(),
-          '/Clocks - Coldplay.chordpro',
-        ),
-        text: stripIndent`
-          {title: Clocks}
-          {artist: Coldplay}
-          {key: Ebmaj}
-
-          [D]Lights go out and I ca[Am]n't be saved
-          tides that I tried to sw[Em]im against
-        `,
+        metadata: getFileMetadata('/Clocks - Coldplay.chordpro'),
+        text: coldplayChordProText,
       },
     ]);
 
@@ -334,19 +326,32 @@ describe('app', () => {
       title: 'Clocks',
     });
   });
-});
 
-/**
- * A test utility to ge the file metadata from the current state.
- */
-function getFileMetadata(state: T.State, path: string): T.FileMetadata {
-  const fileListing = ensureExists($.getListFilesCache(state).get('/'));
-  const file = ensureExists(
-    fileListing.find((file) => file.path === path),
-    'Failed to find the file.',
-  );
-  if (file.type !== 'file') {
-    throw new Error('Found a folder not a file.');
-  }
-  return file;
-}
+  it('will index directives when viewing already viewing a file', async () => {
+    const { store, getFileMetadata } = setup();
+    mockDropboxFilesDownload([
+      {
+        metadata: getFileMetadata('/Clocks - Coldplay.chordpro'),
+        text: coldplayChordProText,
+      },
+    ]);
+
+    const coldplay = await waitFor(() => screen.getByText(/Coldplay/));
+
+    coldplay.click();
+    await waitFor(() => screen.getByText(/Lights go out and/));
+
+    const filesIndex = await waitFor(() =>
+      ensureExists($.getFilesIndex(store.getState())),
+    );
+
+    // The file index should already be up to date.
+    expect(
+      filesIndex.getFileByPath('/Clocks - Coldplay.chordpro')?.directives,
+    ).toEqual({
+      artist: 'Coldplay',
+      key: 'Ebmaj',
+      title: 'Clocks',
+    });
+  });
+});

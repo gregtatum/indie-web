@@ -41,12 +41,16 @@ type MockedListFolderItem = {
   path: string;
 };
 
-export function mockDropboxListFolder(items: MockedListFolderItem[]) {
+export function mockDropboxListFolder(
+  items: MockedListFolderItem[],
+): Array<T.FileMetadata | T.FolderMetadata> {
+  const fileList = createFileList(items);
   (window.fetch as FetchMockSandbox)
     .catch(404)
     .mock('https://api.dropboxapi.com/2/files/list_folder', () => {
-      return createListFolderResponse(items);
+      return createListFolderResponse(fileList);
     });
+  return fileList.map((file) => Offline.fixupMetadata(file));
 }
 
 interface MockedFilesDownload {
@@ -101,18 +105,12 @@ export function spyOnDropboxFilesUpload(): UploadSpy[] {
   return results;
 }
 
-export function createListFolderResponse(
+export function createFileList(
   items: MockedListFolderItem[],
-): Response {
+): Array<files.FileMetadataReference | files.FolderMetadataReference> {
   const entries: Array<
     files.FileMetadataReference | files.FolderMetadataReference
   > = [];
-  const response = {
-    entries,
-    cursor: 'FAKE_CURSOR',
-    has_more: false,
-  };
-
   for (const { type, path } of items) {
     switch (type) {
       case 'file':
@@ -125,6 +123,17 @@ export function createListFolderResponse(
         throw new UnhandledCaseError(type, 'file | folder');
     }
   }
+  return entries;
+}
+
+export function createListFolderResponse(
+  entries: Array<files.FileMetadataReference | files.FolderMetadataReference>,
+): Response {
+  const response = {
+    entries,
+    cursor: 'FAKE_CURSOR',
+    has_more: false,
+  };
 
   return new Response(JSON.stringify(response), { status: 200 });
 }

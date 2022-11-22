@@ -16,6 +16,5 @@ describe('LinkDropbox', () => {
     await waitFor(() => screen.getByText(/Browser Chords/));
 
     expect(container.firstChild).toMatchSnapshot();
-    console.log(`!!! window.localStorage`, window.localStorage);
   });
 });
