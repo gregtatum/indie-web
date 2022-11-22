@@ -85,6 +85,10 @@ export function getRenameFile(state: State) {
   return state.renameFile;
 }
 
+export function getFilesIndex(state: State) {
+  return state.filesIndex;
+}
+
 /**
  * Returns the value of the selector and assert that it is non-null.
  */

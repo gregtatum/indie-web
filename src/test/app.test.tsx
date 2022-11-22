@@ -7,7 +7,11 @@ import {
   mockDropboxAccessToken,
   mockDropboxFilesDownload,
   mockDropboxListFolder,
+  spyOnDropboxFilesUpload,
 } from './fixtures';
+import { $ } from 'src';
+import { ensureExists } from 'src/utils';
+import { FilesIndex } from 'src/logic/files-index';
 
 describe('app', () => {
   it('can render', async () => {
@@ -165,6 +169,115 @@ describe('app', () => {
           </button>
         </div>
       </div>
+    `);
+  });
+
+  it('creates a files index', async () => {
+    jest.useFakeTimers();
+    const store = createStore();
+    mockDropboxAccessToken(store);
+    mockDropboxListFolder([
+      { type: 'folder', path: '/My Cool Band' },
+      { type: 'file', path: '/Clocks - Coldplay.chordpro' },
+      { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
+    ]);
+    mockDropboxFilesDownload([]);
+    const uploads = spyOnDropboxFilesUpload();
+
+    render(
+      <Provider store={store as any}>
+        <App />
+      </Provider>,
+    );
+
+    const filesIndex = await waitFor(() =>
+      ensureExists($.getFilesIndex(store.getState())),
+    );
+    expect(filesIndex).toMatchInlineSnapshot(`
+      FilesIndex {
+        "data": Object {
+          "files": Array [
+            Object {
+              "directives": Object {},
+              "lastRevRead": null,
+              "metadata": Object {
+                "clientModified": "2022-01-01T00:00:00Z",
+                "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617331",
+                "id": "id:2",
+                "isDownloadable": false,
+                "name": "Clocks - Coldplay.chordpro",
+                "path": "/Clocks - Coldplay.chordpro",
+                "rev": "0123456789abcdef0123456789abcde",
+                "serverModified": "2022-05-01T00:00:00Z",
+                "size": 3103,
+                "type": "file",
+              },
+            },
+            Object {
+              "directives": Object {},
+              "lastRevRead": null,
+              "metadata": Object {
+                "clientModified": "2022-01-01T00:00:00Z",
+                "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617332",
+                "id": "id:3",
+                "isDownloadable": false,
+                "name": "Mellow Yellow - Donovan.chordpro",
+                "path": "/Mellow Yellow - Donovan.chordpro",
+                "rev": "0123456789abcdef0123456789abcde",
+                "serverModified": "2022-05-01T00:00:00Z",
+                "size": 3103,
+                "type": "file",
+              },
+            },
+          ],
+          "version": 1,
+        },
+      }
+    `);
+
+    jest.advanceTimersByTime(FilesIndex.timeout * 2);
+
+    await waitFor(() => expect(uploads).toHaveLength(1));
+    const [{ path, body }] = uploads;
+    expect(path).toEqual('/.index.json');
+    expect(JSON.parse(body)).toMatchInlineSnapshot(`
+      Object {
+        "files": Array [
+          Object {
+            "directives": Object {},
+            "lastRevRead": null,
+            "metadata": Object {
+              "clientModified": "2022-01-01T00:00:00Z",
+              "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617331",
+              "id": "id:2",
+              "isDownloadable": false,
+              "name": "Clocks - Coldplay.chordpro",
+              "path": "/Clocks - Coldplay.chordpro",
+              "rev": "0123456789abcdef0123456789abcde",
+              "serverModified": "2022-05-01T00:00:00Z",
+              "size": 3103,
+              "type": "file",
+            },
+          },
+          Object {
+            "directives": Object {},
+            "lastRevRead": null,
+            "metadata": Object {
+              "clientModified": "2022-01-01T00:00:00Z",
+              "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617332",
+              "id": "id:3",
+              "isDownloadable": false,
+              "name": "Mellow Yellow - Donovan.chordpro",
+              "path": "/Mellow Yellow - Donovan.chordpro",
+              "rev": "0123456789abcdef0123456789abcde",
+              "serverModified": "2022-05-01T00:00:00Z",
+              "size": 3103,
+              "type": "file",
+            },
+          },
+        ],
+        "version": 1,
+      }
     `);
   });
 });

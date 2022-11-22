@@ -10,8 +10,8 @@ export function setDropboxAccessToken(
   expiresIn: number,
   refreshToken: string,
 ) {
-  const expires =
-    Date.now() + expiresIn * 1000 - 5 * 60 * 1000; /* subtract five minutes */
+  // Convert the expires into milliseconds, and end it at 90% of the time.
+  const expires = Date.now() + expiresIn * 1000 * 0.9;
 
   const oauth: T.DropboxOauth = {
     accessToken,

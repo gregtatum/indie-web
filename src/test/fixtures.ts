@@ -80,6 +80,24 @@ export function mockDropboxFilesDownload(files: MockedFilesDownload[]) {
   );
 }
 
+interface UploadSpy {
+  path: string;
+  body: string;
+}
+
+export function spyOnDropboxFilesUpload(): UploadSpy[] {
+  const results: UploadSpy[] = [];
+  (window.fetch as FetchMockSandbox).post(
+    'https://content.dropboxapi.com/2/files/upload',
+    (url, opts) => {
+      const { path } = JSON.parse((opts.headers as any)['Dropbox-API-Arg']);
+      results.push({ path, body: String(opts.body) });
+      return 200;
+    },
+  );
+  return results;
+}
+
 export function createListFolderResponse(
   items: MockedListFolderItem[],
 ): Response {
@@ -143,7 +161,7 @@ export function createFolderMetadataReference(
 
 export function mockDropboxAccessToken(store: T.Store) {
   const accessToken = 'faketoken';
-  const expiresIn = Infinity;
+  const expiresIn = 14399;
   const refreshToken = 'refreshToken';
   store.dispatch(A.setDropboxAccessToken(accessToken, expiresIn, refreshToken));
 }
