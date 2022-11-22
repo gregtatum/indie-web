@@ -13,21 +13,19 @@ import { $, T } from 'src';
 import { ensureExists } from 'src/utils';
 import { FilesIndex } from 'src/logic/files-index';
 import { stripIndent } from 'common-tags';
+import type { FetchMockSandbox } from 'fetch-mock';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  // Clears dropbox refresh token timeouts.
+  jest.clearAllTimers();
+  (window.fetch as FetchMockSandbox).restore();
+});
 
 describe('app', () => {
-  it('can render', async () => {
-    const store = createStore();
-    const { container } = render(
-      <Provider store={store as any}>
-        <App />
-      </Provider>,
-    );
-
-    await waitFor(() => screen.getByText(/Browser Chords/));
-
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
   it('can list files', async () => {
     const store = createStore();
     mockDropboxAccessToken(store);
@@ -174,7 +172,6 @@ describe('app', () => {
   });
 
   it('creates a files index', async () => {
-    jest.useFakeTimers();
     const store = createStore();
     mockDropboxAccessToken(store);
     mockDropboxListFolder([

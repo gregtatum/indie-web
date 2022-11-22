@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`app can render 1`] = `
+exports[`LinkDropbox can render 1`] = `
 <div
   class="linkDropboxHome"
 >
