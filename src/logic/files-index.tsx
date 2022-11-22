@@ -207,9 +207,13 @@ export function tryUpgradeIndexJSON(json: any): T.IndexJSON | null {
  */
 export function useFilesIndex(): void {
   const dispatch = Hooks.useDispatch();
+  const dropbox = Hooks.useSelector($.getDropboxOrNull);
   React.useEffect(() => {
-    dispatch(A.loadFilesIndex()).catch((error) => console.error(error));
-  }, []);
+    if (dropbox) {
+      // Only load the files index when Dropbox is actually authorized.
+      dispatch(A.loadFilesIndex()).catch((error) => console.error(error));
+    }
+  }, [dropbox]);
 }
 
 function determineLastReadRev(

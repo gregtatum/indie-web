@@ -3,7 +3,11 @@ import { App } from 'src/components/App';
 import { render, screen, waitFor } from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
-import { mockDropboxAccessToken, mockDropboxListFolder } from './fixtures';
+import {
+  mockDropboxAccessToken,
+  mockDropboxFilesDownload,
+  mockDropboxListFolder,
+} from './fixtures';
 
 describe('app', () => {
   it('can render', async () => {
@@ -27,6 +31,7 @@ describe('app', () => {
       { type: 'file', path: '/Clocks - Coldplay.chordpro' },
       { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
     ]);
+    mockDropboxFilesDownload([]);
 
     render(
       <Provider store={store as any}>
@@ -87,13 +92,14 @@ describe('app', () => {
           <div
             class="listFilesFile"
           >
-            <div
-              class="listFilesFileEmpty"
+            <a
+              class="listFilesFileLink"
+              href="/file/Clocks - Coldplay.chordpro"
             >
               <span
                 class="listFilesIcon"
               >
-                📄
+                🎵
               </span>
               <span
                 class="listFileDisplayName"
@@ -106,18 +112,28 @@ describe('app', () => {
                   chordpro
                 </span>
               </span>
-            </div>
+            </a>
+            <button
+              aria-label="File Menu"
+              class="listFilesFileMenu"
+              type="button"
+            >
+              <span
+                class="listFilesFileMenuIcon"
+              />
+            </button>
           </div>
           <div
             class="listFilesFile"
           >
-            <div
-              class="listFilesFileEmpty"
+            <a
+              class="listFilesFileLink"
+              href="/file/Mellow Yellow - Donovan.chordpro"
             >
               <span
                 class="listFilesIcon"
               >
-                📄
+                🎵
               </span>
               <span
                 class="listFileDisplayName"
@@ -130,7 +146,16 @@ describe('app', () => {
                   chordpro
                 </span>
               </span>
-            </div>
+            </a>
+            <button
+              aria-label="File Menu"
+              class="listFilesFileMenu"
+              type="button"
+            >
+              <span
+                class="listFilesFileMenuIcon"
+              />
+            </button>
           </div>
           <button
             class="button listFilesCreate"

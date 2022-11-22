@@ -46,6 +46,40 @@ export function mockDropboxListFolder(items: MockedListFolderItem[]) {
     });
 }
 
+interface MockedFilesDownload {
+  metadata: T.FileMetadata;
+  path: string;
+  text: string;
+}
+
+export function mockDropboxFilesDownload(files: MockedFilesDownload[]) {
+  (window.fetch as FetchMockSandbox).post(
+    'https://content.dropboxapi.com/2/files/download',
+    (url, opts: any) => {
+      const argsString = opts?.headers?.['Dropbox-API-Arg'];
+      ensureExists(argsString, 'Expected dropbox arguments to be present.');
+      const { path } = JSON.parse(argsString);
+      const file = files.find((file) => file.path === path);
+      if (!file) {
+        return {
+          status: 409,
+          body: {
+            error_summary: 'path/not_found/.',
+            error: { '.tag': 'path', path: { '.tag': 'not_found' } },
+          },
+        };
+      }
+      return {
+        status: 200,
+        headers: {
+          'Dropbox-Api-Result': JSON.stringify(file.metadata),
+        },
+        body: file.text,
+      };
+    },
+  );
+}
+
 export function createListFolderResponse(
   items: MockedListFolderItem[],
 ): Response {
