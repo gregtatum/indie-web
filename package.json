@@ -12,6 +12,7 @@
     "bundle-size": "./bin/bundle-size.sh",
     "ts": "tsc --noEmit",
     "test": "env NODE_ENV=test jest",
+    "test-coverage": "env NODE_ENV=test jest --coverage && echo 'View coverage report at: ./coverage/lcov-report/'",
     "test-all": "run-s lint ts test"
   },
   "alias": {
