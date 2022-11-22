@@ -119,6 +119,10 @@ export class FilesIndex {
     this.scheduleSave();
   }
 
+  getFileByPath(path: string): T.IndexedFile | undefined {
+    return this.data.files.find((file) => file.metadata.path === path);
+  }
+
   scheduleSave() {
     if (this.#saveTimeout) {
       clearTimeout(this.#saveTimeout);

@@ -5,14 +5,14 @@ import type { FetchMockSandbox } from 'fetch-mock';
 import { createStore } from 'src/store/create-store';
 import * as Offline from 'src/logic/offline-db';
 
-export function createFileMetadata(path: string): T.FileMetadata {
+export function createFileMetadata(path: string, id?: string): T.FileMetadata {
   const parts = path.split('/');
   const name = ensureExists(parts.pop(), 'Expected a file name');
   return {
     type: 'file',
     name,
     path,
-    id: 'id:AAAAAAAAAAAAAAAAAAAAAA',
+    id: id ?? getPathToId('createFileMetadata', path),
     clientModified: '2022-05-08T15:20:46Z',
     serverModified: '2022-05-15T13:31:17Z',
     rev: '0123456789abcdef0123456789abcde',
@@ -22,14 +22,17 @@ export function createFileMetadata(path: string): T.FileMetadata {
   };
 }
 
-export function createFolderMetadata(path: string): T.FolderMetadata {
+export function createFolderMetadata(
+  path: string,
+  id?: string,
+): T.FolderMetadata {
   const parts = path.split('/');
   const name = ensureExists(parts.pop(), 'Expected a file name');
   return {
     type: 'folder',
     name,
     path,
-    id: 'id:AAAAAAAAAAAAAAAAAAAAAA',
+    id: id ?? getPathToId('createFolderMetadata', path),
   };
 }
 
@@ -48,19 +51,18 @@ export function mockDropboxListFolder(items: MockedListFolderItem[]) {
 
 interface MockedFilesDownload {
   metadata: T.FileMetadata;
-  path: string;
   text: string;
 }
 
-export function mockDropboxFilesDownload(files: MockedFilesDownload[]) {
+export function mockDropboxFilesDownload(mocks: MockedFilesDownload[]) {
   (window.fetch as FetchMockSandbox).post(
     'https://content.dropboxapi.com/2/files/download',
     (url, opts: any) => {
       const argsString = opts?.headers?.['Dropbox-API-Arg'];
       ensureExists(argsString, 'Expected dropbox arguments to be present.');
       const { path } = JSON.parse(argsString);
-      const file = files.find((file) => file.path === path);
-      if (!file) {
+      const mock = mocks.find((mock) => mock.metadata.path === path);
+      if (!mock) {
         return {
           status: 409,
           body: {
@@ -72,11 +74,12 @@ export function mockDropboxFilesDownload(files: MockedFilesDownload[]) {
       return {
         status: 200,
         headers: {
-          'Dropbox-Api-Result': JSON.stringify(file.metadata),
+          'Dropbox-Api-Result': JSON.stringify(mock.metadata),
         },
-        body: file.text,
+        body: mock.text,
       };
     },
+    { overwriteRoutes: true },
   );
 }
 
@@ -135,14 +138,14 @@ export function createFileMetadataReference(
     name: ensureExists(parts.pop()),
     path_lower: path.toLowerCase(),
     path_display: path,
-    id: 'id:' + String(getTestGeneration('id')),
+    id: getPathToId('createFileMetadataReference', path),
     client_modified: '2022-01-01T00:00:00Z',
     server_modified: '2022-05-01T00:00:00Z',
     rev: '0123456789abcdef0123456789abcde',
     size: 3103,
     content_hash:
       '0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f136361733' +
-      String(getTestGeneration('content_hash')),
+      String(getTestGeneration('createFileMetadataReference.content_hash')),
   };
 }
 
@@ -155,7 +158,7 @@ export function createFolderMetadataReference(
     name: ensureExists(parts.pop()),
     path_lower: path.toLowerCase(),
     path_display: path,
-    id: 'id:' + String(getTestGeneration('id')),
+    id: getPathToId('createFolderMetadataReference', path),
   };
 }
 
@@ -173,8 +176,29 @@ export function getTestGeneration(name: string): number {
   return generation;
 }
 
+// This gets reset between test runs:
+let pathToId = new Map<string, string>();
+
+/**
+ * Attempt to keep IDs stable for tests.
+ */
+function getPathToId(key: string, path: string): string {
+  const keyedPath = key + ' - ' + path;
+  let id = pathToId.get(keyedPath);
+  if (!id) {
+    id =
+      'id:' +
+      key.toUpperCase() +
+      String(getTestGeneration('createFileMetadataReference.id'));
+
+    pathToId.set(keyedPath, id);
+  }
+  return id;
+}
+
 export function resetTestGeneration() {
   generations = new Map();
+  pathToId = new Map();
 }
 
 type TestFolder = Record<string, null | any>;

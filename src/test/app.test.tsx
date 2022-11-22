@@ -9,9 +9,10 @@ import {
   mockDropboxListFolder,
   spyOnDropboxFilesUpload,
 } from './fixtures';
-import { $ } from 'src';
+import { $, T } from 'src';
 import { ensureExists } from 'src/utils';
 import { FilesIndex } from 'src/logic/files-index';
+import { stripIndent } from 'common-tags';
 
 describe('app', () => {
   it('can render', async () => {
@@ -203,7 +204,7 @@ describe('app', () => {
               "metadata": Object {
                 "clientModified": "2022-01-01T00:00:00Z",
                 "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617331",
-                "id": "id:2",
+                "id": "id:CREATEFILEMETADATAREFERENCE2",
                 "isDownloadable": false,
                 "name": "Clocks - Coldplay.chordpro",
                 "path": "/Clocks - Coldplay.chordpro",
@@ -219,7 +220,7 @@ describe('app', () => {
               "metadata": Object {
                 "clientModified": "2022-01-01T00:00:00Z",
                 "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617332",
-                "id": "id:3",
+                "id": "id:CREATEFILEMETADATAREFERENCE3",
                 "isDownloadable": false,
                 "name": "Mellow Yellow - Donovan.chordpro",
                 "path": "/Mellow Yellow - Donovan.chordpro",
@@ -249,7 +250,7 @@ describe('app', () => {
             "metadata": Object {
               "clientModified": "2022-01-01T00:00:00Z",
               "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617331",
-              "id": "id:2",
+              "id": "id:CREATEFILEMETADATAREFERENCE2",
               "isDownloadable": false,
               "name": "Clocks - Coldplay.chordpro",
               "path": "/Clocks - Coldplay.chordpro",
@@ -265,7 +266,7 @@ describe('app', () => {
             "metadata": Object {
               "clientModified": "2022-01-01T00:00:00Z",
               "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617332",
-              "id": "id:3",
+              "id": "id:CREATEFILEMETADATAREFERENCE3",
               "isDownloadable": false,
               "name": "Mellow Yellow - Donovan.chordpro",
               "path": "/Mellow Yellow - Donovan.chordpro",
@@ -280,4 +281,75 @@ describe('app', () => {
       }
     `);
   });
+
+  it('will index directives', async () => {
+    const store = createStore();
+    mockDropboxAccessToken(store);
+    mockDropboxListFolder([
+      { type: 'folder', path: '/My Cool Band' },
+      { type: 'file', path: '/Clocks - Coldplay.chordpro' },
+      { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
+    ]);
+    mockDropboxFilesDownload([]);
+
+    render(
+      <Provider store={store as any}>
+        <App />
+      </Provider>,
+    );
+
+    const filesIndex = await waitFor(() =>
+      ensureExists($.getFilesIndex(store.getState())),
+    );
+
+    const coldplay = await waitFor(() => screen.getByText(/Coldplay/));
+
+    // The file has not been viewed yet.
+    expect(
+      filesIndex.getFileByPath('/Clocks - Coldplay.chordpro')?.directives,
+    ).toMatchInlineSnapshot(`Object {}`);
+
+    mockDropboxFilesDownload([
+      {
+        metadata: getFileMetadata(
+          store.getState(),
+          '/Clocks - Coldplay.chordpro',
+        ),
+        text: stripIndent`
+          {title: Clocks}
+          {artist: Coldplay}
+          {key: Ebmaj}
+
+          [D]Lights go out and I ca[Am]n't be saved
+          tides that I tried to sw[Em]im against
+        `,
+      },
+    ]);
+
+    coldplay.click();
+    await waitFor(() => screen.getByText(/Lights go out and/));
+
+    expect(
+      filesIndex.getFileByPath('/Clocks - Coldplay.chordpro')?.directives,
+    ).toEqual({
+      artist: 'Coldplay',
+      key: 'Ebmaj',
+      title: 'Clocks',
+    });
+  });
 });
+
+/**
+ * A test utility to ge the file metadata from the current state.
+ */
+function getFileMetadata(state: T.State, path: string): T.FileMetadata {
+  const fileListing = ensureExists($.getListFilesCache(state).get('/'));
+  const file = ensureExists(
+    fileListing.find((file) => file.path === path),
+    'Failed to find the file.',
+  );
+  if (file.type !== 'file') {
+    throw new Error('Found a folder not a file.');
+  }
+  return file;
+}

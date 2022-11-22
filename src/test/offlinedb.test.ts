@@ -208,7 +208,7 @@ describe('offline db', () => {
     {
       const folderListings = await db.getFolderListing('/');
       expect(folderListings?.files).toEqual([
-        createFolderMetadata('/band (moved)'),
+        createFolderMetadata('/band (moved)', 'id:CREATEFOLDERMETADATA1'),
       ]);
     }
 
@@ -216,10 +216,22 @@ describe('offline db', () => {
     {
       const folderListings = await db.getFolderListing('/band (moved)');
       expect(folderListings?.files).toEqual([
-        createFileMetadata('/band (moved)/song 1.chopro'),
-        createFileMetadata('/band (moved)/song 2.chopro'),
-        createFileMetadata('/band (moved)/song 3.chopro'),
-        createFolderMetadata('/band (moved)/to-practice'),
+        createFileMetadata(
+          '/band (moved)/song 1.chopro',
+          'id:CREATEFILEMETADATA2',
+        ),
+        createFileMetadata(
+          '/band (moved)/song 2.chopro',
+          'id:CREATEFILEMETADATA3',
+        ),
+        createFileMetadata(
+          '/band (moved)/song 3.chopro',
+          'id:CREATEFILEMETADATA4',
+        ),
+        createFolderMetadata(
+          '/band (moved)/to-practice',
+          'id:CREATEFOLDERMETADATA5',
+        ),
       ]);
       expect(folderListings?.path).toEqual('/band (moved)');
     }
@@ -230,8 +242,14 @@ describe('offline db', () => {
         '/band (moved)/to-practice',
       );
       expect(folderListings?.files).toEqual([
-        createFileMetadata('/band (moved)/to-practice/practice 1.chopro'),
-        createFileMetadata('/band (moved)/to-practice/practice 2.chopro'),
+        createFileMetadata(
+          '/band (moved)/to-practice/practice 1.chopro',
+          'id:CREATEFILEMETADATA6',
+        ),
+        createFileMetadata(
+          '/band (moved)/to-practice/practice 2.chopro',
+          'id:CREATEFILEMETADATA7',
+        ),
       ]);
     }
 
