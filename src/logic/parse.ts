@@ -362,8 +362,10 @@ export function parseChordPro(text: string): T.ParsedChordPro {
   const directives: { [directive: string]: string } = {};
   const lines: T.LineType[] = [];
 
-  for (const line of text.split('\n')) {
-    const metaResult = matchMeta.exec(line);
+  const lineTexts = text.split('\n');
+  for (let lineIndex = 0; lineIndex < lineTexts.length; lineIndex++) {
+    const lineText = lineTexts[lineIndex];
+    const metaResult = matchMeta.exec(lineText);
     if (metaResult) {
       const [, keyCased, value] = metaResult;
       const key = keyCased.toLowerCase();
@@ -372,7 +374,7 @@ export function parseChordPro(text: string): T.ParsedChordPro {
         case 'image': {
           const { src } = parseAttributes(value);
           if (src) {
-            lines.push({ type: 'image', src });
+            lines.push({ type: 'image', src, lineIndex });
           }
           break;
         }
@@ -381,6 +383,7 @@ export function parseChordPro(text: string): T.ParsedChordPro {
             type: 'comment',
             text: value,
             italic: key === 'comment_italic' || key === 'ci',
+            lineIndex,
           });
           break;
         default:
@@ -388,26 +391,26 @@ export function parseChordPro(text: string): T.ParsedChordPro {
       }
       continue;
     }
-    const linkResult = matchLink.exec(line);
+    const linkResult = matchLink.exec(lineText);
     if (linkResult) {
-      lines.push({ type: 'link', href: line.trim() });
+      lines.push({ type: 'link', href: lineText.trim(), lineIndex });
       continue;
     }
 
-    const sectionResult = matchSection.exec(line);
+    const sectionResult = matchSection.exec(lineText);
     if (sectionResult) {
       const lastLine = lines[lines.length - 1];
       if (lastLine?.type === 'space') {
         lines.pop();
       }
-      lines.push({ type: 'section', text: line });
+      lines.push({ type: 'section', text: lineText, lineIndex });
       continue;
     }
 
-    if (!line.trim()) {
+    if (!lineText.trim()) {
       const lastLine = lines[lines.length - 1];
       if (lastLine?.type !== 'section') {
-        lines.push({ type: 'space' });
+        lines.push({ type: 'space', lineIndex });
       }
       continue;
     }
@@ -416,8 +419,8 @@ export function parseChordPro(text: string): T.ParsedChordPro {
     let text = '';
     let chordText = '';
     let inChord = false;
-    for (let i = 0; i < line.length; i++) {
-      const letter = line[i];
+    for (let i = 0; i < lineText.length; i++) {
+      const letter = lineText[i];
       if (letter === '[') {
         if (inChord) {
           // Already in a chord, abandon in.
@@ -473,6 +476,7 @@ export function parseChordPro(text: string): T.ParsedChordPro {
           type: 'line',
           spans,
           content,
+          lineIndex,
         });
       }
     }

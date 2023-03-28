@@ -39,12 +39,17 @@ export type TextOrChord =
   | { type: 'chord'; chord: Chord };
 
 export type LineType =
-  | { type: 'section'; text: string }
-  | { type: 'comment'; text: string; italic: boolean }
-  | { type: 'image'; src: string }
-  | { type: 'space' }
-  | { type: 'link'; href: string }
-  | { type: 'line'; spans: TextOrChord[]; content: LineContent };
+  | { type: 'section'; lineIndex: number; text: string }
+  | { type: 'comment'; lineIndex: number; text: string; italic: boolean }
+  | { type: 'image'; lineIndex: number; src: string }
+  | { type: 'space'; lineIndex: number }
+  | { type: 'link'; lineIndex: number; href: string }
+  | {
+      type: 'line';
+      lineIndex: number;
+      spans: TextOrChord[];
+      content: LineContent;
+    };
 
 export interface ParsedChordPro {
   directives: Directives;

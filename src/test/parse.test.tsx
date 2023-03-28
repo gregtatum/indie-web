@@ -215,6 +215,7 @@ describe('parseChordPro', () => {
     expect(result.lines[0]).toMatchInlineSnapshot(`
       Object {
         "content": "mixed",
+        "lineIndex": 0,
         "spans": Array [
           Object {
             "text": "This is",
@@ -246,6 +247,7 @@ describe('parseChordPro', () => {
     expect(result.lines[0]).toMatchInlineSnapshot(`
       Object {
         "content": "text",
+        "lineIndex": 0,
         "spans": Array [
           Object {
             "text": "This] is[A a simple song",
@@ -264,6 +266,7 @@ describe('parseChordPro', () => {
     expect(result.lines[0]).toMatchInlineSnapshot(`
       Object {
         "content": "mixed",
+        "lineIndex": 0,
         "spans": Array [
           Object {
             "text": "This is",
@@ -305,11 +308,13 @@ describe('parseChordPro', () => {
         },
         "lines": Array [
           Object {
+            "lineIndex": 4,
             "text": "Verse 1:",
             "type": "section",
           },
           Object {
             "content": "text",
+            "lineIndex": 5,
             "spans": Array [
               Object {
                 "text": "This is a simple song",
@@ -355,11 +360,13 @@ describe('parseChordPro', () => {
         "lines": Array [
           Object {
             "italic": false,
+            "lineIndex": 0,
             "text": "This is a comment",
             "type": "comment",
           },
           Object {
             "content": "text",
+            "lineIndex": 1,
             "spans": Array [
               Object {
                 "text": "Bare line",
@@ -370,21 +377,25 @@ describe('parseChordPro', () => {
           },
           Object {
             "italic": false,
+            "lineIndex": 2,
             "text": "Another comment",
             "type": "comment",
           },
           Object {
             "italic": true,
+            "lineIndex": 3,
             "text": "Another one",
             "type": "comment",
           },
           Object {
             "italic": true,
+            "lineIndex": 4,
             "text": "Italic one",
             "type": "comment",
           },
           Object {
             "italic": false,
+            "lineIndex": 5,
             "text": "Directives are case insensitive",
             "type": "comment",
           },
