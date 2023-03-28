@@ -1,7 +1,12 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, T, $, Hooks } from 'src';
-import { ensureExists, getStringProp, imageExtensions } from 'src/utils';
+import {
+  debounce,
+  ensureExists,
+  getStringProp,
+  imageExtensions,
+} from 'src/utils';
 import { useRetainScroll, useStore } from '../hooks';
 
 Router.useNavigationType;
@@ -14,8 +19,9 @@ export function ListFiles() {
   const path = Hooks.useSelector($.getPath);
   const activeFileDisplayPath = Hooks.useSelector($.getActiveFileDisplayPath);
   const dispatch = Hooks.useDispatch();
-  const files = Hooks.useSelector($.getListFilesCache).get(path);
+  const files = Hooks.useSelector($.getSearchFilteredFiles);
   const error = Hooks.useSelector($.getListFilesErrors).get(path);
+  const parsedSearch = Hooks.useSelector($.getParsedSearch);
 
   React.useEffect(() => {
     if (path === '/') {
@@ -38,13 +44,16 @@ export function ListFiles() {
 
   // Create the initial files if needed.
   React.useEffect(() => {
-    if (activeFileDisplayPath === '/' && files && files.length === 0) {
+    if (
+      activeFileDisplayPath === '/' &&
+      files &&
+      files.length === 0 &&
+      !parsedSearch
+    ) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       dispatch(A.createInitialFiles());
     }
   }, [activeFileDisplayPath, files]);
-
-  const [filter, setFilter] = React.useState<string>('');
 
   if (!files) {
     if (error) {
@@ -82,35 +91,21 @@ export function ListFiles() {
     );
   }
 
-  // Remove any dot files.
-  const visibleFiles = files.filter((entry) => entry.name[0] !== '.');
-
   return (
     <>
       <div className="listFiles" data-testid="list-files">
         <div className="listFilesFilter">
           {parent}
-          <input
-            className="listFilesFilterInput"
-            type="text"
-            placeholder="Filter files"
-            onChange={(event) => {
-              setFilter(event.target.value.toLowerCase());
-            }}
-          />
+          <Search />
         </div>
         <div className="listFilesList">
-          {visibleFiles
-            .filter((file) =>
-              filter ? file.name.toLowerCase().includes(filter) : true,
-            )
-            .map((file) => {
-              return (
-                <div key={file.id} className="listFilesFile">
-                  <File dropboxFile={file} />
-                </div>
-              );
-            })}
+          {files.map((file) => {
+            return (
+              <div key={file.id} className="listFilesFile">
+                <File dropboxFile={file} />
+              </div>
+            );
+          })}
           <CreateChordProButton path={path} />
         </div>
       </div>
@@ -410,5 +405,27 @@ function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
     >
       <span className="listFilesFileMenuIcon" />
     </button>
+  );
+}
+
+function Search() {
+  const dispatch = Hooks.useDispatch();
+  const searchString = Hooks.useSelector($.getSearchString);
+  const wait = 100;
+
+  const onChange = React.useMemo(() => {
+    return debounce((event: React.ChangeEvent<HTMLInputElement>) => {
+      dispatch(A.setSearchString(event.target.value.toLowerCase()));
+    }, wait);
+  }, []);
+
+  return (
+    <input
+      className="listFilesFilterInput"
+      type="text"
+      defaultValue={searchString}
+      placeholder="Search"
+      onChange={onChange}
+    />
   );
 }

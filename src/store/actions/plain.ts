@@ -115,3 +115,7 @@ export function startRenameFile(path: string) {
 export function stopRenameFile() {
   return { type: 'stop-rename-file' as const };
 }
+
+export function setSearchString(search: string) {
+  return { type: 'set-search-string' as const, search };
+}

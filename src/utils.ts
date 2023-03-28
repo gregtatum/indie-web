@@ -394,3 +394,24 @@ export function asTypedRecord<
 >(obj: T): Record<K, T[K]> {
   return obj as any;
 }
+
+export function assertType<T>(value: T): T {
+  return value;
+}
+
+export function debounce<F extends (...args: any) => void>(
+  callback: F,
+  wait: number,
+): F {
+  let timeout: ReturnType<typeof setTimeout>;
+
+  const result: any = (...args: any[]): void => {
+    clearTimeout(timeout);
+
+    timeout = setTimeout(() => {
+      callback(...args);
+    }, wait);
+  };
+
+  return result;
+}

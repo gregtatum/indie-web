@@ -9,6 +9,7 @@ import {
 } from 'src/utils';
 import { parseChordPro } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
+import { parseSearchString } from 'src/logic/search';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -87,6 +88,10 @@ export function getRenameFile(state: State) {
 
 export function getFilesIndex(state: State) {
   return state.filesIndex;
+}
+
+export function getSearchString(state: State) {
+  return state.searchString;
 }
 
 /**
@@ -395,5 +400,102 @@ export const getNextPrevSong = createSelector(
     }
 
     return results;
+  },
+);
+
+export const getParsedSearch = createSelector(
+  getSearchString,
+  parseSearchString,
+);
+
+export const getSearchFilteredFiles = createSelector(
+  getParsedSearch,
+  getListFilesCache,
+  getPath,
+  getFilesIndex,
+  (
+    parsedSearch,
+    listFilesCache,
+    path,
+    filesIndex,
+  ): (T.FileMetadata | T.FolderMetadata)[] | null => {
+    const listFiles = listFilesCache.get(path)?.filter(
+      // Remove any dot files.
+      (entry) => entry.name[0] !== '.',
+    );
+
+    if (!listFiles) {
+      return null;
+    }
+
+    if (!parsedSearch) {
+      return listFiles;
+    }
+
+    if (!filesIndex) {
+      return null;
+    }
+
+    const { query, inFolder, path: searchPath, directives } = parsedSearch;
+
+    // Do a full filesIndex search.
+    let results = filesIndex.data.files;
+
+    if (searchPath) {
+      results = results.filter((fileIndex) =>
+        fileIndex.metadata.path.toLowerCase().includes(searchPath),
+      );
+    }
+
+    if (inFolder) {
+      results = results.filter((fileIndex) =>
+        fileIndex.metadata.path.toLowerCase().startsWith(inFolder),
+      );
+    }
+
+    if (query.length > 0) {
+      results = results.filter((fileIndex) => {
+        for (const queryTerm of query) {
+          // Match the path
+          if (fileIndex.metadata.path.toLowerCase().includes(queryTerm)) {
+            continue;
+          }
+
+          // Search through all of the directives
+          for (const value of Object.values(fileIndex.directives)) {
+            if (value.toLowerCase().includes(queryTerm)) {
+              continue;
+            }
+          }
+
+          // No match was found.
+          return false;
+        }
+
+        // All query terms matched.
+        return true;
+      });
+    }
+
+    if (directives && Object.values(directives).length > 0) {
+      results = results.filter((fileIndex) => {
+        for (const [keyTerm, valueTerm] of Object.entries(directives)) {
+          const fileValue = fileIndex.directives[keyTerm]?.toLowerCase();
+          if (valueTerm === fileValue || (!valueTerm && !fileValue)) {
+            continue;
+          }
+          return false;
+        }
+
+        // All directive terms match.
+        return true;
+      });
+    }
+
+    return results
+      .map((fileIndex) => fileIndex.metadata)
+      .sort((a, b) => {
+        return a.path.localeCompare(b.path);
+      });
   },
 );

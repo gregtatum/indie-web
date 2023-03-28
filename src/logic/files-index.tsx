@@ -26,7 +26,8 @@ export class FilesIndex {
   #dropbox: Dropbox;
   #saveTimeout: ReturnType<typeof setTimeout> | null = null;
   #saveGeneration = 0;
-  #pendingSave: Promise<void> | null = null;
+  #pendingSaves: Record<T.FileMetadata['id'], T.IndexedFile> = {};
+  #pendingSaveRequest: Promise<void> | null = null;
 
   constructor(dropbox: Dropbox, state: T.State, data?: T.IndexJSON) {
     this.#dropbox = dropbox;
@@ -51,6 +52,9 @@ export class FilesIndex {
     directives?: T.Directives | undefined,
   ) {
     if (metadata.type === 'folder') {
+      return;
+    }
+    if (metadata.path === FilesIndex.path) {
       return;
     }
     const file = this.data.files.find(
@@ -84,6 +88,7 @@ export class FilesIndex {
           // since there are no directives.
           file.lastRevRead = determineLastReadRev(metadata, file.lastRevRead);
         }
+        this.#pendingSaves[file.metadata.id] = file;
         this.scheduleSave();
       }
 
@@ -104,11 +109,14 @@ export class FilesIndex {
       newFiles.push(ensureExists(file));
     }
 
-    newFiles.push({
+    const newFile: T.IndexedFile = {
       metadata,
       lastRevRead: determineLastReadRev(metadata, null),
       directives: directives ?? {},
-    });
+    };
+    newFiles.push(newFile);
+
+    this.#pendingSaves[metadata.id] = newFile;
 
     // Add the remaining files.
     for (; i < this.data.files.length; i++) {
@@ -130,16 +138,16 @@ export class FilesIndex {
     const generation = ++this.#saveGeneration;
     // Limit the updates by saving every 3 seconds.
     this.#saveTimeout = setTimeout(() => {
-      if (this.#pendingSave) {
+      if (this.#pendingSaveRequest) {
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.#pendingSave.catch().then(() => {
+        this.#pendingSaveRequest.catch().then(() => {
           // Check the generation so that only the latest save is sent.
           if (this.#saveGeneration === generation) {
-            this.#pendingSave = this.#saveImpl();
+            this.#pendingSaveRequest = this.#saveImpl();
           }
         });
       }
-      this.#pendingSave = this.#saveImpl();
+      this.#pendingSaveRequest = this.#saveImpl();
     }, FilesIndex.timeout);
   }
 
@@ -151,7 +159,7 @@ export class FilesIndex {
         '.tag': 'overwrite',
       },
     });
-    this.#pendingSave = null;
+    this.#pendingSaveRequest = null;
   }
 
   reducer(state: T.State, action: T.Action) {

@@ -461,6 +461,15 @@ function filesIndex(
   }
 }
 
+function searchString(state = '', action: T.Action) {
+  switch (action.type) {
+    case 'set-search-string':
+      return action.search;
+    default:
+      return state;
+  }
+}
+
 export const reducers = combineReducers({
   dropboxOauth,
   listFilesCache,
@@ -479,6 +488,7 @@ export const reducers = combineReducers({
   fileMenu,
   renameFile,
   filesIndex,
+  searchString,
 });
 
 function wrapReducer<S>(

@@ -84,8 +84,9 @@ describe('App', () => {
         >
           <input
             class="listFilesFilterInput"
-            placeholder="Filter files"
+            placeholder="Search"
             type="text"
+            value=""
           />
         </div>
         <div
