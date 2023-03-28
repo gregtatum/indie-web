@@ -28,12 +28,16 @@ function getSpotifyLink(
 }
 
 export function RenderedSong() {
+  const renderedSongRef = React.useRef(null);
   const path = Hooks.useSelector($.getPath);
   const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
   const fileKey = Hooks.useSelector($.getActiveFileSongKey);
   const hideEditor = Hooks.useSelector($.getHideEditor);
   const { directives, lines } = Hooks.useSelector($.getActiveFileParsed);
   const dispatch = Hooks.useDispatch();
+  Hooks.useFileDrop(renderedSongRef, (fileList) => {
+    console.log(`!!! fileList`, fileList);
+  });
 
   const parts = displayPath.split('/');
   let fileName = parts[parts.length - 1].replace('.chopro', '');
@@ -43,7 +47,12 @@ export function RenderedSong() {
   const folderPath = parts.slice(0, parts.length - 1).join('/');
 
   return (
-    <div className="renderedSong" key={path} data-fullscreen>
+    <div
+      className="renderedSong"
+      key={path}
+      data-fullscreen
+      ref={renderedSongRef}
+    >
       {hideEditor ? <NextPrevLinks /> : null}
       <div className="renderedSongStickyHeader">
         {fileKey ? (

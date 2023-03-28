@@ -5,6 +5,16 @@ import { Selector } from 'src/@types';
 import { setScrollTop } from 'src/utils';
 import { T } from 'src';
 
+export function useStore(): T.Store {
+  return Redux.useStore() as T.Store;
+}
+
+export function useDispatch(): T.Dispatch {
+  return Redux.useDispatch();
+}
+
+export { useSelector } from 'react-redux';
+
 type PromiseState<T> =
   | { type: 'pending' }
   | { type: 'fulfilled'; value: T }
@@ -71,12 +81,68 @@ export function useRetainScroll() {
   }, [window.location.href, navigationType]);
 }
 
-export function useStore(): T.Store {
-  return Redux.useStore() as T.Store;
-}
+export function useFileDrop(
+  targetRef: React.RefObject<HTMLElement | null>,
+  onDropCallback: (files: FileList) => void,
+) {
+  const [dragging, setDraggingState] = React.useState(false);
 
-export function useDispatch(): T.Dispatch {
-  return Redux.useDispatch();
-}
+  function setDragging(value: boolean) {
+    setDraggingState(value);
+    if (value) {
+      targetRef.current?.classList.add('dragging');
+    } else {
+      targetRef.current?.classList.remove('dragging');
+    }
+  }
 
-export { useSelector } from 'react-redux';
+  React.useEffect(() => {
+    const handleDragEnter = (event: DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragging(true);
+    };
+
+    const handleDragLeave = (event: DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragging(false);
+    };
+
+    const handleDragOver = (event: DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragging(true);
+    };
+
+    const handleDrop = (event: DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDragging(false);
+
+      const files = event.dataTransfer?.files;
+      if (files) {
+        onDropCallback(files);
+      }
+    };
+
+    const element = targetRef.current;
+    if (!element) {
+      return () => {};
+    }
+
+    element.addEventListener('dragenter', handleDragEnter);
+    element.addEventListener('dragover', handleDragOver);
+    element.addEventListener('dragleave', handleDragLeave);
+    element.addEventListener('drop', handleDrop);
+
+    return () => {
+      element.removeEventListener('dragenter', handleDragEnter);
+      element.removeEventListener('dragover', handleDragOver);
+      element.removeEventListener('dragleave', handleDragLeave);
+      element.removeEventListener('drop', handleDrop);
+    };
+  }, [targetRef, onDropCallback]);
+
+  return dragging;
+}
