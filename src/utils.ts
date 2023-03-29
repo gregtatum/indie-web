@@ -290,6 +290,13 @@ export function getPathFileName(path: string): string {
 }
 
 /**
+ * Get the file name component of a path, with no extension.
+ */
+export function getPathFileNameNoExt(path: string) {
+  const fileName = getPathFileName(path);
+  return fileName.replace(/\.\w+$/, '');
+}
+/**
  * Dropbox doesn't support relative paths, but a user may input them.
  * Canonicalize them so that Dropbox is happy.
  */
@@ -414,4 +421,26 @@ export function debounce<F extends (...args: any) => void>(
   };
 
   return result;
+}
+
+/**
+ * Inserts text at a line index in a source text.
+ */
+export function insertTextAtLine(
+  source: string,
+  lineIndex: number,
+  insert: string,
+) {
+  let count = 0;
+  let startIndex = 0;
+  for (startIndex = 0; startIndex < source.length; startIndex++) {
+    if (source[startIndex] === '\n') {
+      count++;
+    }
+    if (count === lineIndex) {
+      break;
+    }
+  }
+
+  return source.slice(0, startIndex) + '\n' + insert + source.slice(startIndex);
 }

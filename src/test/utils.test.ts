@@ -1,6 +1,7 @@
 import {
   canonicalizePath,
   getPathFileName,
+  getPathFileNameNoExt,
   getPathFolder,
   pathJoin,
 } from 'src/utils';
@@ -41,5 +42,11 @@ describe('paths', () => {
   it('gets path file names', () => {
     expect(getPathFolder('/Songs/Hey Jude.chopro')).toEqual('/Songs');
     expect(getPathFolder('/Hey Jude.chopro')).toEqual('/');
+  });
+
+  it('gets path file names with no extension', () => {
+    expect(getPathFileNameNoExt('/Songs/Hey Jude.chopro')).toEqual('Hey Jude');
+    expect(getPathFileNameNoExt('/Hey Jude.chopro')).toEqual('Hey Jude');
+    expect(getPathFileNameNoExt('/Hey Jude.zip')).toEqual('Hey Jude');
   });
 });
