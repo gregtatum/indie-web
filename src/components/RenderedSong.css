@@ -21,6 +21,7 @@
   inset: 10px;
   border: 5px dashed #0070ff;
   border-radius: 30px;
+  pointer-events: none;
 }
 
 @media (max-width: 500px) {

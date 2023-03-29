@@ -35,8 +35,26 @@ export function RenderedSong() {
   const hideEditor = Hooks.useSelector($.getHideEditor);
   const { directives, lines } = Hooks.useSelector($.getActiveFileParsed);
   const dispatch = Hooks.useDispatch();
-  Hooks.useFileDrop(renderedSongRef, (fileList) => {
-    console.log(`!!! fileList`, fileList);
+
+  Hooks.useFileDrop(renderedSongRef, (fileList, target) => {
+    const closest = target.closest('[data-line-index]') as HTMLElement;
+    const lineIndex = Number(closest.dataset?.lineIndex ?? 0);
+    for (const file of fileList) {
+      const [type, _subtype] = file.type.split('/');
+      switch (type) {
+        case 'audio':
+          console.log(`!!! add audio file`, file, lineIndex);
+          break;
+        case 'video':
+          console.log(`!!! add video file`, file, lineIndex);
+          break;
+        case 'image':
+          console.log(`!!! add image file`, file, lineIndex);
+          break;
+        default:
+          console.log(`!!! Unknown type`, file);
+      }
+    }
   });
 
   const parts = displayPath.split('/');
@@ -84,13 +102,14 @@ export function RenderedSong() {
           {directives.subtitle ? <h2>{directives.subtitle}</h2> : null}
         </div>
       </div>
-      {lines.map((line, lineIndex) => {
-        const lineKey = getLineTypeKey(line, lineIndex);
+      {lines.map((line) => {
+        const lineKey = getLineTypeKey(line);
         switch (line.type) {
           case 'line': {
             return (
               <div
                 className={`renderedSongLine renderedSongLine-${line.content}`}
+                data-line-index={line.lineIndex}
                 key={lineKey}
               >
                 {line.spans.map((span, spanIndex) => {
@@ -238,16 +257,17 @@ function DropboxImage({
   return <img {...props} src={objectUrl} />;
 }
 
-function getLineTypeKey(line: T.LineType, index: number): string {
+function getLineTypeKey(line: T.LineType): string {
+  const index = String(line.lineIndex);
   switch (line.type) {
     case 'section':
-      return 'section' + String(index) + line.text;
+      return 'section' + index + line.text;
     case 'space':
-      return 'space' + String(index);
+      return 'space' + index;
     case 'link':
-      return 'link' + String(index) + line.href;
+      return 'link' + index + line.href;
     case 'line': {
-      let key = 'line' + String(index);
+      let key = 'line' + index;
       for (const span of line.spans) {
         switch (span.type) {
           case 'text':
@@ -263,10 +283,10 @@ function getLineTypeKey(line: T.LineType, index: number): string {
       return key;
     }
     case 'image': {
-      return 'image:' + String(index) + line.src;
+      return 'image:' + index + line.src;
     }
     case 'comment': {
-      return 'comment:' + String(index) + line.text;
+      return 'comment:' + index + line.text;
     }
     default:
       throw new UnhandledCaseError(line, 'LineType');
