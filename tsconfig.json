@@ -9,7 +9,7 @@
     "noEmit": true,
     "allowJs": true,
     "checkJs": true,
-    "lib": ["esnext", "dom"],
+    "lib": ["esnext", "dom", "dom.iterable"],
     // paths lets you declare how TypeScript should resolve an import in
     // your require/imports.
     "paths": {

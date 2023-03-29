@@ -194,6 +194,7 @@ function DropboxImage({
 }: React.ImgHTMLAttributes<HTMLImageElement>) {
   const dropbox = Hooks.useSelector($.getDropbox);
   const [objectUrl, setObjectUrl] = React.useState<string>('');
+  const [is404, setIs404] = React.useState<boolean>(false);
   const generationRef = React.useRef(0);
   const { getState } = Hooks.useStore();
 
@@ -248,11 +249,22 @@ function DropboxImage({
         })
         .catch((error) => {
           console.error('<DropboxImage /> error:', error);
+          setIs404(true);
         });
     })().catch((error) => {
       console.error('DropboxImage had async error', error);
     });
   }, [dropbox, src]);
+
+  if (is404) {
+    return (
+      <img
+        {...props}
+        className="missing-image"
+        alt={'Missing Image: ' + (src ?? '')}
+      ></img>
+    );
+  }
 
   return <img {...props} src={objectUrl} />;
 }

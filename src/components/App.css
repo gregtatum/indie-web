@@ -82,6 +82,13 @@ a {
   border-color: #fff;
 }
 
+.missing-image {
+  background: #fdd;
+  display: inline-block;
+  padding: 7px;
+  border-radius: 5px;
+}
+
 code {
   padding: 0 4px;
   background-color: #eee;
