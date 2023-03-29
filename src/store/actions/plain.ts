@@ -38,8 +38,8 @@ export function changeActiveFile(path: string) {
   return { type: 'change-active-file' as const, path };
 }
 
-export function modifyActiveFile(modifiedText: string) {
-  return { type: 'modify-active-file' as const, modifiedText };
+export function modifyActiveFile(modifiedText: string, forceRefresh = true) {
+  return { type: 'modify-active-file' as const, modifiedText, forceRefresh };
 }
 
 export function viewListFiles(path: string) {

@@ -182,13 +182,13 @@ function SettingsButton() {
 }
 
 function SaveFileButton() {
-  const text = Hooks.useSelector($.getModifiedText);
+  const text = Hooks.useSelector($.getActiveFileTextOrNull);
   const view = Hooks.useSelector($.getView);
   const dispatch = Hooks.useDispatch();
   const path = Hooks.useSelector($.getPath);
   const request = Hooks.useSelector($.getDownloadFileCache).get(path);
 
-  if (!text || view !== 'view-file' || !request) {
+  if (text === null || view !== 'view-file' || !request) {
     return null;
   }
 

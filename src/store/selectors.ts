@@ -175,11 +175,11 @@ export const getActiveFileTextOrNull = createSelector(
   getActiveFileOrNull,
   getModifiedText,
   (activeFile, modifiedText): string | null => {
-    if (modifiedText) {
-      return modifiedText;
-    }
     if (!activeFile) {
       return null;
+    }
+    if (modifiedText.text !== '') {
+      return modifiedText.text;
     }
 
     return activeFile.text;

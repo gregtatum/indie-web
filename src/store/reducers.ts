@@ -320,12 +320,25 @@ function path(state = '/', action: T.Action): string {
   }
 }
 
-function modifiedText(state = '', action: T.Action): string {
+function modifiedText(
+  state = { text: '', generation: 0 },
+  action: T.Action,
+): { text: string; generation: number } {
   switch (action.type) {
     case 'modify-active-file':
-      return action.modifiedText;
+      return {
+        text: action.modifiedText,
+        // The textarea needs a signal that the text has been modified by something
+        // external, so that it can update the textarea.value.
+        generation: action.forceRefresh
+          ? state.generation + 1
+          : state.generation,
+      };
     case 'download-file-received':
-      return '';
+      return {
+        text: '',
+        generation: 0,
+      };
     default:
       return state;
   }

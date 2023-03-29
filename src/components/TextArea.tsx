@@ -10,6 +10,10 @@ export function TextArea(props: {
   textFile: T.DownloadedTextFile;
 }) {
   const isDragging = Hooks.useSelector($.getIsDraggingSplitter);
+  const modifiedText = Hooks.useSelector($.getModifiedText);
+  const textGeneration = React.useRef(0);
+  const textAreaRef = React.useRef<null | HTMLTextAreaElement>(null);
+
   const dispatch = Hooks.useDispatch();
   function onChange(newText: string) {
     dispatch(A.modifyActiveFile(newText));
@@ -28,6 +32,18 @@ export function TextArea(props: {
       }
     };
   }, []);
+
+  // If the text gets modified by the Redux store, then the textarea value will need to
+  // be updated. If the textarea is modified by the user, then do not update the textarea.
+  // This update is signaled by the generation value in the modified text.
+  React.useEffect(() => {
+    if (
+      textGeneration.current !== modifiedText.generation &&
+      textAreaRef.current
+    ) {
+      textAreaRef.current.value = modifiedText.text;
+    }
+  }, [modifiedText]);
 
   const style: React.CSSProperties = {};
   if (isDragging) {
@@ -48,6 +64,7 @@ export function TextArea(props: {
         defaultValue={props.textFile.text}
         onChange={(event) => throttledOnChange(event.target.value)}
         style={style}
+        ref={textAreaRef}
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onKeyDown={async (event) => {
           const { metaKey, ctrlKey, code, target } = event;
