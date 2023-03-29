@@ -83,7 +83,7 @@ export function useRetainScroll() {
 
 export function useFileDrop(
   targetRef: React.RefObject<HTMLElement | null>,
-  onDropCallback: (files: FileList, element: HTMLElement) => void,
+  onDropCallback: (files: FileList, element: HTMLElement) => any,
 ) {
   const [dragging, setDraggingState] = React.useState(false);
 

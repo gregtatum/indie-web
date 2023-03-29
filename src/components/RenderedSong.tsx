@@ -1,6 +1,10 @@
 import * as React from 'react';
 import { A, $, T, Hooks } from 'src';
-import { UnhandledCaseError } from 'src/utils';
+import {
+  getPathFileNameNoExt,
+  getPathFolder,
+  UnhandledCaseError,
+} from 'src/utils';
 import { pathJoin } from '../utils';
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
@@ -28,41 +32,17 @@ function getSpotifyLink(
 }
 
 export function RenderedSong() {
+  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const folderPath = getPathFolder(displayPath);
+  const fileNameNoExt = getPathFileNameNoExt(displayPath);
+
   const renderedSongRef = React.useRef(null);
   const path = Hooks.useSelector($.getPath);
-  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
   const fileKey = Hooks.useSelector($.getActiveFileSongKey);
   const hideEditor = Hooks.useSelector($.getHideEditor);
   const { directives, lines } = Hooks.useSelector($.getActiveFileParsed);
   const dispatch = Hooks.useDispatch();
-
-  Hooks.useFileDrop(renderedSongRef, (fileList, target) => {
-    const closest = target.closest('[data-line-index]') as HTMLElement;
-    const lineIndex = Number(closest.dataset?.lineIndex ?? 0);
-    for (const file of fileList) {
-      const [type, _subtype] = file.type.split('/');
-      switch (type) {
-        case 'audio':
-          console.log(`!!! add audio file`, file, lineIndex);
-          break;
-        case 'video':
-          console.log(`!!! add video file`, file, lineIndex);
-          break;
-        case 'image':
-          console.log(`!!! add image file`, file, lineIndex);
-          break;
-        default:
-          console.log(`!!! Unknown type`, file);
-      }
-    }
-  });
-
-  const parts = displayPath.split('/');
-  let fileName = parts[parts.length - 1].replace('.chopro', '');
-  if (fileName.endsWith('.chopro')) {
-    fileName = fileName.slice(0, fileName.length - '.chopro'.length);
-  }
-  const folderPath = parts.slice(0, parts.length - 1).join('/');
+  uploadFileHook(renderedSongRef, path, folderPath);
 
   return (
     <div
@@ -89,9 +69,9 @@ export function RenderedSong() {
       <div className="renderedSongHeader">
         <div className="renderedSongHeaderTitle">
           <h1>
-            {directives.title ?? fileName}{' '}
+            {directives.title ?? fileNameNoExt}{' '}
             <a
-              href={getSpotifyLink(directives, fileName)}
+              href={getSpotifyLink(directives, fileNameNoExt)}
               className="button renderedSongHeaderSpotify"
               target="_blank"
               rel="noreferrer"
@@ -150,7 +130,13 @@ export function RenderedSong() {
             return (
               <DropboxImage
                 className="renderedSongImage"
-                src={pathJoin(folderPath, line.src)}
+                src={
+                  line.src[0] === '/'
+                    ? // This is an absolute path.
+                      line.src
+                    : // This is a relative path.
+                      pathJoin(folderPath, line.src)
+                }
                 key={lineKey}
               />
             );
@@ -303,4 +289,53 @@ function getLineTypeKey(line: T.LineType): string {
     default:
       throw new UnhandledCaseError(line, 'LineType');
   }
+}
+
+/**
+ * Handle what happens when a user drops a file in the rendered song.
+ */
+function uploadFileHook(
+  renderedSongRef: React.RefObject<null | HTMLElement>,
+  path: string,
+  folderPath: string,
+) {
+  const dispatch = Hooks.useDispatch();
+
+  Hooks.useFileDrop(renderedSongRef, async (fileList, target) => {
+    const closest = target.closest('[data-line-index]') as HTMLElement;
+    const lineIndex = Number(closest?.dataset.lineIndex ?? 0);
+    for (const file of fileList) {
+      const [type, _subtype] = file.type.split('/');
+      switch (type) {
+        case 'audio':
+          console.log(`!!! add audio file`, file, lineIndex);
+          break;
+        case 'video':
+          console.log(`!!! add video file`, file, lineIndex);
+          break;
+        case 'image': {
+          const savedFilePath = await dispatch(
+            A.saveAssetFile(folderPath, file.name, file),
+          );
+          if (savedFilePath) {
+            dispatch(
+              A.insertTextAtLineInActiveFile(
+                lineIndex,
+                `{image: src="${savedFilePath}"}`,
+              ),
+            );
+          }
+          break;
+        }
+        default: {
+          console.error(`Unknown file type`, file);
+          dispatch(
+            A.addMessage({
+              message: `"${file.name}" has a mime type of "${file.type}" and is not supported by Browser Chords.`,
+            }),
+          );
+        }
+      }
+    }
+  });
 }

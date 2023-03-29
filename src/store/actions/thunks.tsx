@@ -9,6 +9,7 @@ import {
   getDirName,
   getGeneration,
   getPathFileName,
+  insertTextAtLine,
   isPathNotFoundError,
 } from 'src/utils';
 import * as Plain from './plain';
@@ -801,5 +802,90 @@ export function loadFilesIndex(
     );
     dispatch(PlainInternal.fileIndexReceived(filesIndex));
     return filesIndex;
+  };
+}
+
+/**
+ * @param folder The folder containing the file, it will be placed in folder/assets
+ * @param fileName The folder containing the thing.
+ * @param folder The folder containing the thing.
+ */
+export function saveAssetFile(
+  folder: string,
+  fileName: string,
+  contents: Blob,
+): Thunk<Promise<string | null>> {
+  return async (dispatch, getState) => {
+    const dropbox = $.getDropbox(getState());
+    const path = `${folder}/assets/${fileName}`;
+
+    const messageGeneration = dispatch(
+      addMessage({
+        message: (
+          <>
+            Saving <code>{path}</code>
+          </>
+        ),
+      }),
+    );
+    try {
+      const { result } = await dropbox.filesUpload({
+        path,
+        contents,
+        mode: {
+          '.tag': 'add',
+        },
+      });
+      const metadata = fixupFileMetadata(result);
+
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Saved <code>{path}</code>
+            </>
+          ),
+          generation: messageGeneration,
+          timeout: true,
+        }),
+      );
+
+      // The path will be different if there is a conflict.
+      return metadata.path;
+    } catch (error) {
+      console.error(error);
+    }
+
+    dispatch(
+      addMessage({
+        message: (
+          <>
+            Unable to save <code>{path}</code>
+          </>
+        ),
+        generation: messageGeneration,
+      }),
+    );
+
+    return null;
+  };
+}
+
+/**
+ * Inserts a line of text into the active text file.
+ */
+export function insertTextAtLineInActiveFile(
+  lineIndex: number,
+  insert: string,
+): Thunk<void> {
+  return (dispatch, getState) => {
+    const oldText = $.getActiveFileText(getState());
+    const newText = insertTextAtLine(oldText, lineIndex, insert);
+    console.log(`!!! insertTextAtLineInActiveFile`, {
+      oldText,
+      newText,
+      lineIndex,
+    });
+    dispatch(Plain.modifyActiveFile(newText, true));
   };
 }
