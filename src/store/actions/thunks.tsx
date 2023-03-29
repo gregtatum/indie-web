@@ -298,7 +298,7 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
   };
 }
 
-export function saveFile(path: string, text: string): Thunk<Promise<void>> {
+export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const dropbox = $.getDropbox(getState());
 

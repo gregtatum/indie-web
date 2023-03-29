@@ -196,7 +196,7 @@ function SaveFileButton() {
     <button
       className="button headerSaveFile"
       onClick={() => {
-        dispatch(A.saveFile(path, text)).catch((error) => {
+        dispatch(A.saveTextFile(path, text)).catch((error) => {
           console.error('Failed to save file', error);
         });
       }}

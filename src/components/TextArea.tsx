@@ -54,7 +54,7 @@ export function TextArea(props: {
           if ((metaKey || ctrlKey) && code === 'KeyS') {
             event.preventDefault();
             const text = (target as HTMLTextAreaElement).value;
-            await dispatch(A.saveFile(props.path, text));
+            await dispatch(A.saveTextFile(props.path, text));
             if (text === (target as HTMLTextAreaElement).value) {
               // Invalidate the modified state.
             }
