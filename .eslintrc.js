@@ -124,6 +124,8 @@ module.exports = {
         '@typescript-eslint/no-unsafe-call': 'off',
         '@typescript-eslint/no-unsafe-argument': 'off',
         '@typescript-eslint/no-unsafe-return': 'off',
+        // There were false positives.
+        '@typescript-eslint/restrict-template-expressions': 'off',
 
         // Only use the TypeScript variant.
         'no-unused-vars': 'off',
