@@ -371,10 +371,12 @@ export function parseChordPro(text: string): T.ParsedChordPro {
       const key = keyCased.toLowerCase();
       const directive = normalizeDirectives.get(key) || key;
       switch (directive) {
-        case 'image': {
-          const { src } = parseAttributes(value);
+        case 'image':
+        case 'audio':
+        case 'video': {
+          const { src, mimetype } = parseAttributes(value);
           if (src) {
-            lines.push({ type: 'image', src, lineIndex });
+            lines.push({ type: directive, src, lineIndex, mimetype });
           }
           break;
         }

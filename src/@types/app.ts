@@ -1,5 +1,6 @@
 import type * as idb from 'idb';
 import { OfflineDB } from 'src/logic/offline-db';
+import * as Dropbox from 'dropbox';
 
 // prettier-ignore
 export type Note =
@@ -42,6 +43,8 @@ export type LineType =
   | { type: 'section'; lineIndex: number; text: string }
   | { type: 'comment'; lineIndex: number; text: string; italic: boolean }
   | { type: 'image'; lineIndex: number; src: string }
+  | { type: 'audio'; lineIndex: number; src: string }
+  | { type: 'video'; lineIndex: number; src: string; mimetype: string }
   | { type: 'space'; lineIndex: number }
   | { type: 'link'; lineIndex: number; href: string }
   | {
@@ -191,3 +194,25 @@ export interface IndexJSON {
   // The files should be sorted by FileMetadata["id"].
   files: IndexedFile[];
 }
+
+/**
+ * dropbox.filesDownload does not know about fileBlob on the type. Use this to coerce
+ * the type.
+ */
+export type FilesDownloadResponse = Dropbox.DropboxResponse<BlobFileMetadata>;
+
+/**
+ * The built-in types don't realize that FileMetadata can contain blobs. This type
+ * exists to coerce the types and avoid an `any` transformation.
+ */
+export type BlobFileMetadata = {
+  fileBlob: Blob;
+} & Dropbox.files.FileMetadata;
+
+/**
+ * The built-in types don't realize that FileMetadata can contain blobs. This type
+ * exists to coerce the types and avoid an `any` transformation.
+ */
+export type BlobZipFileMetadata = {
+  fileBlob: Blob;
+} & Dropbox.files.DownloadZipResult;

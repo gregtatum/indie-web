@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { A, $, T, Hooks } from 'src';
 import {
+  ensureExists,
   getPathFileNameNoExt,
   getPathFolder,
   UnhandledCaseError,
@@ -140,6 +141,22 @@ export function RenderedSong() {
                 key={lineKey}
               />
             );
+          case 'audio':
+          case 'video':
+            return (
+              <DropboxMedia
+                className="renderedSongMedia"
+                line={line}
+                path={
+                  line.src[0] === '/'
+                    ? // This is an absolute path.
+                      line.src
+                    : // This is a relative path.
+                      pathJoin(folderPath, line.src)
+                }
+                key={lineKey}
+              />
+            );
           case 'link':
             return (
               <a
@@ -226,7 +243,7 @@ function DropboxImage({
       dropbox
         .filesDownload({ path: src })
         .then(async ({ result }) => {
-          const blob: Blob = (result as any).fileBlob;
+          const blob: Blob = (result as T.BlobFileMetadata).fileBlob;
           handleBlob(blob);
           if (db) {
             const metadata = fixupFileMetadata(result);
@@ -253,6 +270,116 @@ function DropboxImage({
   }
 
   return <img {...props} src={objectUrl} />;
+}
+
+type DropboxMediaProps = {
+  path: string;
+  line:
+    | { type: 'audio'; lineIndex: number; src: string }
+    | { type: 'video'; lineIndex: number; src: string; mimetype: string };
+};
+
+function DropboxMedia({
+  // eslint-disable-next-line react/prop-types
+  path,
+  line,
+  ...props
+}: React.AudioHTMLAttributes<HTMLAudioElement> & DropboxMediaProps) {
+  type AudioRef = React.MutableRefObject<HTMLAudioElement | null>;
+  type VideoRef = React.MutableRefObject<HTMLVideoElement | null>;
+  const mediaRef: AudioRef | VideoRef = React.useRef(null);
+  const dropbox = Hooks.useSelector($.getDropbox);
+  const [is404, setIs404] = React.useState<boolean>(false);
+  const [objectUrl, setObjectUrl] = React.useState<string>(
+    getEmptyMediaUrl(line.type),
+  );
+  const objectUrlRef = React.useRef(objectUrl);
+
+  // Set the object url to a ref so it can be used in event handlers.
+  React.useEffect(() => {
+    objectUrlRef.current = objectUrl;
+  }, [objectUrl]);
+
+  const [isPlayRequested, setIsPlayRequested] = React.useState(false);
+
+  // When play is requested, download the file from Dropbox and play it.
+  React.useEffect(() => {
+    if (!path || !isPlayRequested) {
+      return () => {};
+    }
+    let url: string;
+
+    // Download the file from Dropbox.
+    void (async () => {
+      try {
+        const response = (await dropbox.filesDownload({
+          path,
+        })) as T.FilesDownloadResponse;
+        if (!mediaRef.current) {
+          return;
+        }
+
+        // The file has been downloaded, use it in this component.
+        url = URL.createObjectURL(response.result.fileBlob);
+        mediaRef.current.src = url;
+        setObjectUrl(url);
+        requestAnimationFrame(() => {
+          mediaRef.current?.play().catch(() => {});
+        });
+      } catch (error) {
+        console.error('<DropboxMedia /> error:', error);
+        setIs404(true);
+      }
+    })();
+
+    // Clean-up the generated object URL.
+    return () => {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [dropbox, path, isPlayRequested]);
+
+  function handlePlay(
+    event: React.SyntheticEvent<HTMLAudioElement | HTMLVideoElement>,
+  ) {
+    if (
+      mediaRef.current &&
+      objectUrlRef.current === getEmptyMediaUrl(line.type)
+    ) {
+      event.preventDefault();
+      mediaRef.current.pause();
+      setIsPlayRequested(true);
+    }
+  }
+
+  if (is404) {
+    return (
+      <div className="renderedSongMediaMissing">Missing media file: {path}</div>
+    );
+  }
+
+  if (line.type === 'video') {
+    return (
+      <video
+        ref={mediaRef as VideoRef}
+        controls
+        {...props}
+        onPlay={handlePlay}
+        src="/blank.mp4"
+      ></video>
+    );
+  }
+
+  return (
+    <audio
+      ref={mediaRef as AudioRef}
+      controls
+      {...props}
+      src={objectUrl}
+      onPlaying={handlePlay}
+    />
+  );
 }
 
 function getLineTypeKey(line: T.LineType): string {
@@ -283,6 +410,12 @@ function getLineTypeKey(line: T.LineType): string {
     case 'image': {
       return 'image:' + index + line.src;
     }
+    case 'audio': {
+      return 'audio:' + index + line.src;
+    }
+    case 'video': {
+      return 'video:' + index + line.src;
+    }
     case 'comment': {
       return 'comment:' + index + line.text;
     }
@@ -306,36 +439,62 @@ function uploadFileHook(
     const lineIndex = Number(closest?.dataset.lineIndex ?? 0);
     for (const file of fileList) {
       const [type, _subtype] = file.type.split('/');
+      let makeTag;
       switch (type) {
         case 'audio':
-          console.log(`!!! add audio file`, file, lineIndex);
+          makeTag = (src: string) => `{audio: src="${src}"}`;
           break;
         case 'video':
-          console.log(`!!! add video file`, file, lineIndex);
+          makeTag = (src: string) =>
+            `{video: src="${src}" mimetype="${file.type}"}`;
           break;
         case 'image': {
-          const savedFilePath = await dispatch(
-            A.saveAssetFile(folderPath, file.name, file),
-          );
-          if (savedFilePath) {
-            dispatch(
-              A.insertTextAtLineInActiveFile(
-                lineIndex,
-                `{image: src="${savedFilePath}"}`,
-              ),
-            );
-          }
+          makeTag = (src: string) => `{image: src="${src}"}`;
           break;
         }
-        default: {
-          console.error(`Unknown file type`, file);
-          dispatch(
-            A.addMessage({
-              message: `"${file.name}" has a mime type of "${file.type}" and is not supported by Browser Chords.`,
-            }),
-          );
-        }
+        default:
+        // Do nothing.
       }
+
+      if (!makeTag) {
+        // This is an unhandled file type.
+        console.error(`Unknown file type`, file);
+        dispatch(
+          A.addMessage({
+            message: `"${file.name}" has a mime type of "${file.type}" and is not supported by Browser Chords.`,
+          }),
+        );
+        return;
+      }
+
+      const savedFilePath = await dispatch(
+        A.saveAssetFile(folderPath, file.name, file),
+      );
+
+      if (!savedFilePath) {
+        // The A.saveAssetFile() handles the `addMessage`.
+        return;
+      }
+
+      dispatch(
+        A.insertTextAtLineInActiveFile(lineIndex, makeTag(savedFilePath)),
+      );
     }
   });
+}
+
+let _emptyAudio: string;
+function getEmptyMediaUrl(type: 'video' | 'audio') {
+  if (type === 'video') {
+    return '/blank.mp4';
+  }
+
+  if (!_emptyAudio) {
+    // Lazily initialize the audio.
+    _emptyAudio =
+      'data:audio/x-wav;base64,UklGRooWAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YWYW' +
+      'A'.repeat(7000);
+  }
+
+  return _emptyAudio;
 }

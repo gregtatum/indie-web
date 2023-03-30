@@ -43,6 +43,7 @@ module.exports = {
     // overriding recommended rules
     'no-constant-condition': ['error', { checkLoops: false }],
     'no-console': ['error', { allow: ['log', 'warn', 'error'] }],
+    'no-void': 'off', // Useful for promise checks.
 
     // possible errors
     'array-callback-return': 'error',
@@ -68,7 +69,6 @@ module.exports = {
     'no-useless-rename': 'error',
     'no-useless-return': 'error',
     'no-var': 'error',
-    'no-void': 'error',
     'no-with': 'error',
     'prefer-const': 'error',
     'prefer-promise-reject-errors': 'error',

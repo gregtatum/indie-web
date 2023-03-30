@@ -196,7 +196,7 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
     try {
       const { result } = await $.getDropbox(getState()).filesDownload({ path });
       // The file blob was left off of this type.
-      const fileBlob: Blob = (result as any).fileBlob;
+      const fileBlob: Blob = (result as T.BlobFileMetadata).fileBlob;
       const metadata = fixupFileMetadata(result);
       if (offlineFile?.metadata.hash === metadata.hash) {
         // The files are the same.
@@ -277,7 +277,7 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
     try {
       const response = await $.getDropbox(getState()).filesDownload({ path });
       const file = response.result;
-      const blob: Blob = (file as any).fileBlob;
+      const blob: Blob = (file as T.BlobFileMetadata).fileBlob;
       const metadata = fixupFileMetadata(file);
       const value: T.StoredBlobFile = {
         metadata,
@@ -551,7 +551,7 @@ export function downloadFileForUser(
         (response) => {
           downloadBlobForUser(
             file.name,
-            (response.result as any).fileBlob as Blob,
+            (response.result as T.BlobFileMetadata).fileBlob,
           );
 
           dispatch(
@@ -607,7 +607,7 @@ export function downloadFolderForUser(
         (response) => {
           downloadBlobForUser(
             file.name,
-            (response.result as any).fileBlob as Blob,
+            (response.result as T.BlobZipFileMetadata).fileBlob,
           );
 
           dispatch(
@@ -747,7 +747,7 @@ export function loadFilesIndex(
     try {
       const { result } = await dropbox.filesDownload({ path: FilesIndex.path });
       // The file blob was left off of this type.
-      fileBlob = (result as any).fileBlob;
+      fileBlob = (result as T.BlobFileMetadata).fileBlob;
     } catch (error: any) {
       if (isPathNotFoundError(error)) {
         const filesIndex = new FilesIndex(dropbox, getState());
