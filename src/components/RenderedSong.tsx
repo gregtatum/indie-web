@@ -288,6 +288,7 @@ function DropboxMedia({
   type AudioRef = React.MutableRefObject<HTMLAudioElement | null>;
   type VideoRef = React.MutableRefObject<HTMLVideoElement | null>;
   const mediaRef: AudioRef | VideoRef = React.useRef(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const dropbox = Hooks.useSelector($.getDropbox);
   const [is404, setIs404] = React.useState<boolean>(false);
   const [objectUrl, setObjectUrl] = React.useState<string>(
@@ -340,6 +341,66 @@ function DropboxMedia({
     };
   }, [dropbox, path, isPlayRequested]);
 
+  // Draw a wave form.
+  React.useEffect(() => {
+    if (line.type !== 'audio') {
+      return;
+    }
+    if (!mediaRef.current || !canvasRef.current) {
+      return;
+    }
+    if (objectUrl === getEmptyMediaUrl(line.type)) {
+      return;
+    }
+    const audio = mediaRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return;
+    }
+    // The metadata must be loaded in order to draw the wave form.
+    audio.addEventListener('loadedmetadata', () => {
+      const audioContext = new AudioContext();
+
+      const width = canvas.width;
+      const height = canvas.height;
+
+      const sampleSize = 1000;
+      const bufferLength =
+        (audioContext.sampleRate * audio.duration) / sampleSize;
+      const dataArray = new Float32Array(bufferLength);
+
+      const source = audioContext.createMediaElementSource(audio);
+      const analyzer = audioContext.createAnalyser();
+
+      source.connect(analyzer);
+
+      analyzer.fftSize = 2048;
+
+      analyzer.getFloatTimeDomainData(dataArray);
+
+      context.fillStyle = 'rgb(255, 255, 255)';
+      context.fillRect(0, 0, width, height);
+      context.lineWidth = 2;
+      context.strokeStyle = 'rgb(0, 0, 0)';
+      context.beginPath();
+      console.log(`!!! dataArray`, dataArray);
+      const sliceWidth = width / bufferLength;
+      let x = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const v = Math.abs(dataArray[i]);
+        const y = (v * height) / 2;
+        if (i === 0) {
+          context.moveTo(x, y);
+        } else {
+          context.lineTo(x, y);
+        }
+        x += sliceWidth;
+      }
+      context.stroke();
+    });
+  }, [line, objectUrl]);
+
   function handlePlay(
     event: React.SyntheticEvent<HTMLAudioElement | HTMLVideoElement>,
   ) {
@@ -372,13 +433,16 @@ function DropboxMedia({
   }
 
   return (
-    <audio
-      ref={mediaRef as AudioRef}
-      controls
-      {...props}
-      src={objectUrl}
-      onPlaying={handlePlay}
-    />
+    <>
+      <canvas style={{ width: '100%', height: '40px' }} ref={canvasRef} />
+      <audio
+        ref={mediaRef as AudioRef}
+        controls
+        {...props}
+        src={objectUrl}
+        onPlaying={handlePlay}
+      />
+    </>
   );
 }
 
