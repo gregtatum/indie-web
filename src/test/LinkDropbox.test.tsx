@@ -15,6 +15,9 @@ describe('LinkDropbox', () => {
 
     await waitFor(() => screen.getByText(/Browser Chords/));
 
+    const button = screen.getByText(/Connect Dropbox/);
+    await waitFor(() => expect(button.getAttribute('href')).toBeTruthy());
+
     expect(container.firstChild).toMatchSnapshot();
   });
 });

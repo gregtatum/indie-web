@@ -1,6 +1,6 @@
 import { createStore } from 'src/store/create-store';
 import { App } from 'src/components/App';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
 import {
@@ -316,7 +316,9 @@ describe('App', () => {
       },
     ]);
 
-    coldplay.click();
+    act(() => {
+      coldplay.click();
+    });
     await waitFor(() => screen.getByText(/Lights go out and/));
 
     expect(
