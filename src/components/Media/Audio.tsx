@@ -1,90 +1,38 @@
 import * as React from 'react';
-import { $, T, Hooks } from 'src';
+import { Hooks } from 'src';
 import { ensureExists } from 'src/utils';
 
 type Props = {
-  path: string;
+  folderPath: string;
   line: { type: 'audio'; lineIndex: number; src: string; mimetype: string };
 };
 
 export function MediaAudio({
-  path,
+  folderPath,
   line,
   ...props
 }: React.AudioHTMLAttributes<HTMLAudioElement> & Props) {
-  type AudioRef = React.MutableRefObject<HTMLAudioElement | null>;
-  type VideoRef = React.MutableRefObject<HTMLVideoElement | null>;
-  const mediaRef: AudioRef | VideoRef = React.useRef(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const dropbox = Hooks.useSelector($.getDropbox);
-  const [is404, setIs404] = React.useState<boolean>(false);
-  const [objectUrl, setObjectUrl] = React.useState<string>(getEmptyMediaUrl());
-  const objectUrlRef = React.useRef(objectUrl);
-  const isEmpty = getEmptyMediaUrl() === objectUrl;
-
-  // Set the object url to a ref so it can be used in event handlers.
-  React.useEffect(() => {
-    objectUrlRef.current = objectUrl;
-  }, [objectUrl]);
-
-  const [isPlayRequested, setIsPlayRequested] = React.useState(false);
-
-  // When play is requested, download the file from Dropbox and play it.
-  React.useEffect(() => {
-    if (!path || !isPlayRequested) {
-      return () => {};
-    }
-    let url: string;
-
-    // Download the file from Dropbox.
-    void (async () => {
-      try {
-        const response = (await dropbox.filesDownload({
-          path,
-        })) as T.FilesDownloadResponse;
-        if (!mediaRef.current) {
-          return;
-        }
-
-        // The file has been downloaded, use it in this component.
-        let blob = response.result.fileBlob;
-        if (blob.type === 'application/octet-stream') {
-          // The mimetype was not properly sent.
-          blob = blob.slice(0, blob.size, line.mimetype);
-        }
-
-        url = URL.createObjectURL(blob);
-        mediaRef.current.src = url;
-        setObjectUrl(url);
-        requestAnimationFrame(() => {
-          mediaRef.current?.play().catch(() => {});
-        });
-      } catch (error) {
-        console.error('<DropboxMedia /> error:', error);
-        setIs404(true);
-      }
-    })();
-
-    // Clean-up the generated object URL.
-    return () => {
-      if (url) {
-        URL.revokeObjectURL(url);
-      }
-    };
-  }, [dropbox, path, isPlayRequested]);
+  const { play, is404, isLoaded, path, src } = Hooks.useMedia(
+    folderPath,
+    line,
+    audioRef,
+    getEmptyMediaUrl,
+  );
 
   // Draw a wave form.
   React.useEffect(() => {
     if (line.type !== 'audio') {
       return;
     }
-    if (!mediaRef.current || !canvasRef.current) {
+    if (!audioRef.current || !canvasRef.current) {
       return;
     }
-    if (objectUrl === getEmptyMediaUrl()) {
+    if (!isLoaded) {
       return;
     }
-    const audio = mediaRef.current;
+    const audio = audioRef.current;
     const canvas = canvasRef.current;
     performance.mark('Chords: start effect');
 
@@ -106,7 +54,7 @@ export function MediaAudio({
       ctx.fillRect(0, 0, width, height);
 
       performance.mark('Chords: Fetch array buffer');
-      const buffer = await fetch(objectUrl).then((r) => r.arrayBuffer());
+      const buffer = await fetch(src).then((r) => r.arrayBuffer());
       performance.mark('Chords: Decode audio data');
       const audioBuffer = await audioContext.decodeAudioData(buffer);
       const { waveform, waveformBlurred, maxWaveHeight } = getWaveform(
@@ -130,17 +78,7 @@ export function MediaAudio({
         ctx.fillRect(x, y, 1, ctx.canvas.height);
       }
     });
-  }, [line, objectUrl]);
-
-  function handlePlay(
-    event: React.SyntheticEvent<HTMLAudioElement | HTMLVideoElement>,
-  ) {
-    if (mediaRef.current && objectUrlRef.current === getEmptyMediaUrl()) {
-      event.preventDefault();
-      mediaRef.current.pause();
-      setIsPlayRequested(true);
-    }
-  }
+  }, [line, isLoaded]);
 
   if (is404) {
     return <div className="mediaMissing">Missing audio file: {path}</div>;
@@ -148,19 +86,19 @@ export function MediaAudio({
 
   return (
     <>
-      {isEmpty ? null : (
+      {isLoaded ? (
         <canvas style={{ width: '100%', height: '100px' }} ref={canvasRef} />
-      )}
+      ) : null}
       <audio
         className="mediaAudio"
-        ref={mediaRef as AudioRef}
+        ref={audioRef}
         controls
         {...props}
-        src={objectUrl}
+        src={src}
         onError={(event) => {
           console.error((event.target as HTMLAudioElement).error);
         }}
-        onPlaying={handlePlay}
+        onPlaying={play}
       />
     </>
   );

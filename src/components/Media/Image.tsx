@@ -1,14 +1,23 @@
 import * as React from 'react';
 import { $, T, Hooks } from 'src';
 import { fixupFileMetadata } from 'src/logic/offline-db';
+import { pathJoin } from 'src/utils';
 
 const imageCache: Record<string, string> = Object.create(null);
 
-export function MediaImage({
-  // eslint-disable-next-line react/prop-types
-  src,
-  ...props
-}: React.ImgHTMLAttributes<HTMLImageElement>) {
+interface Props {
+  folderPath: string;
+  line: { src: string };
+}
+
+export function MediaImage({ folderPath, line }: Props) {
+  const src =
+    line.src[0] === '/'
+      ? // This is an absolute path.
+        line.src
+      : // This is a relative path.
+        pathJoin(folderPath, line.src);
+
   const dropbox = Hooks.useSelector($.getDropbox);
   const [objectUrl, setObjectUrl] = React.useState<string>('');
   const [is404, setIs404] = React.useState<boolean>(false);
@@ -76,12 +85,11 @@ export function MediaImage({
   if (is404) {
     return (
       <img
-        {...props}
         className="missing-image"
         alt={'Missing Image: ' + (src ?? '')}
       ></img>
     );
   }
 
-  return <img className="mediaImage" {...props} src={objectUrl} />;
+  return <img className="mediaImage" src={objectUrl} />;
 }

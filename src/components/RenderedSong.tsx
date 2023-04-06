@@ -5,7 +5,6 @@ import {
   getPathFolder,
   UnhandledCaseError,
 } from 'src/utils';
-import { pathJoin } from '../utils';
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
@@ -128,45 +127,15 @@ export function RenderedSong() {
             return <div className="renderedSongSpace" key={lineKey} />;
           case 'image':
             return (
-              <MediaImage
-                className="renderedSongImage"
-                src={
-                  line.src[0] === '/'
-                    ? // This is an absolute path.
-                      line.src
-                    : // This is a relative path.
-                      pathJoin(folderPath, line.src)
-                }
-                key={lineKey}
-              />
+              <MediaImage line={line} folderPath={folderPath} key={lineKey} />
             );
           case 'audio':
             return (
-              <MediaAudio
-                line={line}
-                path={
-                  line.src[0] === '/'
-                    ? // This is an absolute path.
-                      line.src
-                    : // This is a relative path.
-                      pathJoin(folderPath, line.src)
-                }
-                key={lineKey}
-              />
+              <MediaAudio line={line} folderPath={folderPath} key={lineKey} />
             );
           case 'video':
             return (
-              <MediaVideo
-                line={line}
-                path={
-                  line.src[0] === '/'
-                    ? // This is an absolute path.
-                      line.src
-                    : // This is a relative path.
-                      pathJoin(folderPath, line.src)
-                }
-                key={lineKey}
-              />
+              <MediaVideo line={line} folderPath={folderPath} key={lineKey} />
             );
           case 'link':
             return (
