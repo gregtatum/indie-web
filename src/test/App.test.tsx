@@ -209,12 +209,12 @@ describe('App', () => {
 
     expect(filesIndex).toMatchInlineSnapshot(`
       FilesIndex {
-        "data": Object {
-          "files": Array [
-            Object {
-              "directives": Object {},
+        "data": {
+          "files": [
+            {
+              "directives": {},
               "lastRevRead": null,
-              "metadata": Object {
+              "metadata": {
                 "clientModified": "2022-01-01T00:00:00Z",
                 "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617331",
                 "id": "id:CREATEFILEMETADATAREFERENCE2",
@@ -227,10 +227,10 @@ describe('App', () => {
                 "type": "file",
               },
             },
-            Object {
-              "directives": Object {},
+            {
+              "directives": {},
               "lastRevRead": null,
-              "metadata": Object {
+              "metadata": {
                 "clientModified": "2022-01-01T00:00:00Z",
                 "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617332",
                 "id": "id:CREATEFILEMETADATAREFERENCE3",
@@ -255,12 +255,12 @@ describe('App', () => {
     const [{ path, body }] = uploads;
     expect(path).toEqual('/.index.json');
     expect(JSON.parse(body)).toMatchInlineSnapshot(`
-      Object {
-        "files": Array [
-          Object {
-            "directives": Object {},
+      {
+        "files": [
+          {
+            "directives": {},
             "lastRevRead": null,
-            "metadata": Object {
+            "metadata": {
               "clientModified": "2022-01-01T00:00:00Z",
               "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617331",
               "id": "id:CREATEFILEMETADATAREFERENCE2",
@@ -273,10 +273,10 @@ describe('App', () => {
               "type": "file",
             },
           },
-          Object {
-            "directives": Object {},
+          {
+            "directives": {},
             "lastRevRead": null,
-            "metadata": Object {
+            "metadata": {
               "clientModified": "2022-01-01T00:00:00Z",
               "hash": "0cae1bd6b2d4686a6389c6f0f7f41d42c4ab406a6f6c2af4dc084f1363617332",
               "id": "id:CREATEFILEMETADATAREFERENCE3",

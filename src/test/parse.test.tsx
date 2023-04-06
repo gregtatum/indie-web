@@ -213,16 +213,16 @@ describe('parseChordPro', () => {
       This is[A] a simple song
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
-      Object {
+      {
         "content": "mixed",
         "lineIndex": 0,
-        "spans": Array [
-          Object {
+        "spans": [
+          {
             "text": "This is",
             "type": "text",
           },
-          Object {
-            "chord": Object {
+          {
+            "chord": {
               "baseNote": "A",
               "chordText": "A",
               "text": "A",
@@ -230,7 +230,7 @@ describe('parseChordPro', () => {
             },
             "type": "chord",
           },
-          Object {
+          {
             "text": " a simple song",
             "type": "text",
           },
@@ -245,11 +245,11 @@ describe('parseChordPro', () => {
       This] is[A a simple song
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
-      Object {
+      {
         "content": "text",
         "lineIndex": 0,
-        "spans": Array [
-          Object {
+        "spans": [
+          {
             "text": "This] is[A a simple song",
             "type": "text",
           },
@@ -264,22 +264,22 @@ describe('parseChordPro', () => {
       This is[] a simple song
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
-      Object {
+      {
         "content": "mixed",
         "lineIndex": 0,
-        "spans": Array [
-          Object {
+        "spans": [
+          {
             "text": "This is",
             "type": "text",
           },
-          Object {
-            "chord": Object {
+          {
+            "chord": {
               "extras": "",
               "text": "",
             },
             "type": "chord",
           },
-          Object {
+          {
             "text": " a simple song",
             "type": "text",
           },
@@ -300,23 +300,23 @@ describe('parseChordPro', () => {
         This is a simple song
       `),
     ).toMatchInlineSnapshot(`
-      Object {
-        "directives": Object {
+      {
+        "directives": {
           "key": "Dm",
           "subtitle": "Greg Tatum",
           "title": "My Song",
         },
-        "lines": Array [
-          Object {
+        "lines": [
+          {
             "lineIndex": 4,
             "text": "Verse 1:",
             "type": "section",
           },
-          Object {
+          {
             "content": "text",
             "lineIndex": 5,
-            "spans": Array [
-              Object {
+            "spans": [
+              {
                 "text": "This is a simple song",
                 "type": "text",
               },
@@ -355,45 +355,45 @@ describe('parseChordPro', () => {
         {COMMENT: Directives are case insensitive}
       `),
     ).toMatchInlineSnapshot(`
-      Object {
-        "directives": Object {},
-        "lines": Array [
-          Object {
+      {
+        "directives": {},
+        "lines": [
+          {
             "italic": false,
             "lineIndex": 0,
             "text": "This is a comment",
             "type": "comment",
           },
-          Object {
+          {
             "content": "text",
             "lineIndex": 1,
-            "spans": Array [
-              Object {
+            "spans": [
+              {
                 "text": "Bare line",
                 "type": "text",
               },
             ],
             "type": "line",
           },
-          Object {
+          {
             "italic": false,
             "lineIndex": 2,
             "text": "Another comment",
             "type": "comment",
           },
-          Object {
+          {
             "italic": true,
             "lineIndex": 3,
             "text": "Another one",
             "type": "comment",
           },
-          Object {
+          {
             "italic": true,
             "lineIndex": 4,
             "text": "Italic one",
             "type": "comment",
           },
-          Object {
+          {
             "italic": false,
             "lineIndex": 5,
             "text": "Directives are case insensitive",
