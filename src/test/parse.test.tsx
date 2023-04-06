@@ -403,4 +403,60 @@ describe('parseChordPro', () => {
       }
     `);
   });
+
+  fit('can parse media', () => {
+    expect(
+      parseChordPro(stripIndent`
+        {img: src="/path/to/file.jpg"}
+        {image: src="/path/to/file.png"}
+        {audio: src="/path/to/audio.mp3"}
+        {audio: src="/path/to/audio.wav" mimetype="audio/wav"}
+        {video: src="/path/to/video.mp4" mimetype="video/mov"}
+        {video: src="/path/to/video.mp4"}
+        {image: unknown}
+        {video: unknown}
+        {audio: unknown}
+      `),
+    ).toMatchInlineSnapshot(`
+      {
+        "directives": {},
+        "lines": [
+          {
+            "lineIndex": 0,
+            "src": "/path/to/file.jpg",
+            "type": "image",
+          },
+          {
+            "lineIndex": 1,
+            "src": "/path/to/file.png",
+            "type": "image",
+          },
+          {
+            "lineIndex": 2,
+            "mimetype": "audio/mp3",
+            "src": "/path/to/audio.mp3",
+            "type": "audio",
+          },
+          {
+            "lineIndex": 3,
+            "mimetype": "audio/wav",
+            "src": "/path/to/audio.wav",
+            "type": "audio",
+          },
+          {
+            "lineIndex": 4,
+            "mimetype": "video/mov",
+            "src": "/path/to/video.mp4",
+            "type": "video",
+          },
+          {
+            "lineIndex": 5,
+            "mimetype": "",
+            "src": "/path/to/video.mp4",
+            "type": "video",
+          },
+        ],
+      }
+    `);
+  });
 });

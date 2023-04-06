@@ -43,7 +43,7 @@ export type LineType =
   | { type: 'section'; lineIndex: number; text: string }
   | { type: 'comment'; lineIndex: number; text: string; italic: boolean }
   | { type: 'image'; lineIndex: number; src: string }
-  | { type: 'audio'; lineIndex: number; src: string }
+  | { type: 'audio'; lineIndex: number; src: string; mimetype: string }
   | { type: 'video'; lineIndex: number; src: string; mimetype: string }
   | { type: 'space'; lineIndex: number }
   | { type: 'link'; lineIndex: number; href: string }

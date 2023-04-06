@@ -114,7 +114,7 @@ export function RenderedSong() {
                       </span>
                     </span>
                   );
-                  return <div />;
+                  return <div key={`-${spanIndex}`} />;
                 })}
               </div>
             );
@@ -275,7 +275,7 @@ function DropboxImage({
 type DropboxMediaProps = {
   path: string;
   line:
-    | { type: 'audio'; lineIndex: number; src: string }
+    | { type: 'audio'; lineIndex: number; src: string; mimetype: string }
     | { type: 'video'; lineIndex: number; src: string; mimetype: string };
 };
 
@@ -321,7 +321,13 @@ function DropboxMedia({
         }
 
         // The file has been downloaded, use it in this component.
-        url = URL.createObjectURL(response.result.fileBlob);
+        let blob = response.result.fileBlob;
+        if (blob.type === 'application/octet-stream') {
+          // The mimetype was not properly sent.
+          blob = blob.slice(0, blob.size, line.mimetype);
+        }
+
+        url = URL.createObjectURL(blob);
         mediaRef.current.src = url;
         setObjectUrl(url);
         requestAnimationFrame(() => {
@@ -343,6 +349,10 @@ function DropboxMedia({
 
   // Draw a wave form.
   React.useEffect(() => {
+    if (Math.random() < 10) {
+      // Temporarily disable since this is not working.
+      return;
+    }
     if (line.type !== 'audio') {
       return;
     }
@@ -358,6 +368,7 @@ function DropboxMedia({
     if (!context) {
       return;
     }
+
     // The metadata must be loaded in order to draw the wave form.
     audio.addEventListener('loadedmetadata', () => {
       const audioContext = new AudioContext();
@@ -374,6 +385,7 @@ function DropboxMedia({
       const analyzer = audioContext.createAnalyser();
 
       source.connect(analyzer);
+      source.connect(audioContext.destination);
 
       analyzer.fftSize = 2048;
 
@@ -424,6 +436,9 @@ function DropboxMedia({
     return (
       <video
         ref={mediaRef as VideoRef}
+        onError={(event) => {
+          console.error((event.target as HTMLVideoElement).error);
+        }}
         controls
         {...props}
         onPlay={handlePlay}
@@ -431,6 +446,7 @@ function DropboxMedia({
       ></video>
     );
   }
+  console.log(line);
 
   return (
     <>
@@ -440,6 +456,9 @@ function DropboxMedia({
         controls
         {...props}
         src={objectUrl}
+        onError={(event) => {
+          console.error((event.target as HTMLAudioElement).error);
+        }}
         onPlaying={handlePlay}
       />
     </>
@@ -506,7 +525,8 @@ function uploadFileHook(
       let makeTag;
       switch (type) {
         case 'audio':
-          makeTag = (src: string) => `{audio: src="${src}"}`;
+          makeTag = (src: string) =>
+            `{audio: src="${src}" mimetype="${file.type}"}`;
           break;
         case 'video':
           makeTag = (src: string) =>
