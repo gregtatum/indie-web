@@ -1,0 +1,24 @@
+.mediaAudio {
+  width: 100%;
+  border-radius: 15px;
+}
+
+.mediaVideo {
+  width: 100%;
+  background: #666;
+  border: 1px solid #333;
+  box-sizing: border-box;
+  border-radius: 5px;
+}
+
+.mediaMissing {
+  background: #333;
+  color: #fff;
+  padding: 12px;
+  border-radius: 15px;
+  margin: 3px 0;
+}
+
+.mediaImage {
+  max-width: 100%;
+}

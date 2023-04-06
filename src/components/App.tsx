@@ -11,11 +11,12 @@ import { ViewPDF } from './ViewPDF';
 import { ViewImage } from './ViewImage';
 
 import { Messages } from './Messages';
-import './App.css';
 import { UnhandledCaseError } from 'src/utils';
 import { Settings, Privacy } from './Page';
 import { Menus } from './Menus';
 import { useFilesIndex } from 'src/logic/files-index';
+
+import './App.css';
 
 function ListFilesRouter() {
   const params = Router.useParams();

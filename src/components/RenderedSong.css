@@ -74,33 +74,6 @@
   height: 1.5em;
 }
 
-.renderedSongImage {
-  max-width: 100%;
-}
-
-.renderedSongMedia {
-  width: 100%;
-}
-
-audio.renderedSongMedia {
-  border-radius: 15px;
-}
-
-video.renderedSongMedia {
-  background: #666;
-  border: 1px solid #333;
-  box-sizing: border-box;
-  border-radius: 5px;
-}
-
-.renderedSongMediaMissing {
-  background: #333;
-  color: #fff;
-  padding: 12px;
-  border-radius: 15px;
-  margin: 3px 0;
-}
-
 .renderedSongComment {
   font-weight: bold;
   color: #666;
