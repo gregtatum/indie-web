@@ -8,6 +8,7 @@
   /* Grep for media queries if changing */
   --page-max-width: 900px;
   --page-padding: 50px;
+  --icon-size: 16px;
 }
 
 @keyframes fadein {
@@ -53,6 +54,17 @@ a {
   text-decoration: none;
   line-height: 1.2;
   font-family: sans-serif;
+}
+
+button.icon {
+  background-color: transparent;
+}
+
+button.icon,
+button.icon-mask {
+  border: none;
+  padding: 0;
+  margin: 0;
 }
 
 .button:active {
@@ -155,22 +167,40 @@ code {
 
 .icon {
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  background-size: var(--icon-size) var(--icon-size);
+}
+
+.icon-mask {
+  display: inline-block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  background-color: currentColor;
+  mask-size: var(--icon-size);
+  color: inherit;
 }
 
 [data-icon="pencil-fill"] {
-  background: url("svg/pencil-fill.svg");
+  background-image: url("svg/pencil-fill.svg");
 }
 
 [data-icon="box-arrow-in-right"] {
-  background: url("svg/box-arrow-in-right.svg");
+  background-image: url("svg/box-arrow-in-right.svg");
 }
 
 [data-icon="trash-fill"] {
-  background: url("svg/trash-fill.svg");
+  background-image: url("svg/trash-fill.svg");
 }
 
 [data-icon="download"] {
-  background: url("svg/download.svg");
+  background-image: url("svg/download.svg");
+}
+
+[data-icon-mask="play"] {
+  mask-image: url("svg/play.svg");
+}
+
+[data-icon-mask="pause"] {
+  mask-image: url("svg/pause.svg");
 }

@@ -2,7 +2,12 @@ import * as React from 'react';
 import * as Redux from 'react-redux';
 import * as Router from 'react-router-dom';
 import { Selector } from 'src/@types';
-import { pathJoin, setScrollTop } from 'src/utils';
+import {
+  ensureExists,
+  getPathFileNameNoExt,
+  pathJoin,
+  setScrollTop,
+} from 'src/utils';
 import { T, $ } from 'src';
 
 export function useStore(): T.Store {
@@ -232,4 +237,186 @@ export function useMedia(
   const isLoaded = src !== getEmptyMediaUrl();
 
   return { is404, src, isLoaded, path, play };
+}
+
+export function useAudio(
+  folderPath: string,
+  line: { type: 'audio'; lineIndex: number; src: string; mimetype: string },
+) {
+  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
+  const dropbox = Redux.useSelector($.getDropbox);
+  const [is404, setIs404] = React.useState<boolean>(false);
+  const [duration, setDuration] = React.useState<string>('0:00');
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [isLoadRequested, setIsLoadRequested] = React.useState(false);
+  const isPlayingRef = React.useRef(false);
+
+  // Let event handlers use the isPlaying value.
+  React.useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
+  // Compute these once.
+  const { path, name } = React.useMemo(() => {
+    const path =
+      line.src[0] === '/'
+        ? // This is an absolute path.
+          line.src
+        : // This is a relative path.
+          pathJoin(folderPath, line.src);
+
+    const name = getPathFileNameNoExt(line.src)
+      .trim()
+      // If the track starts with a number, strip it off.
+      .replace(/^\d+/, '');
+
+    return { path, name };
+  }, []);
+
+  function togglePlay(event: React.SyntheticEvent) {
+    const newIsPlayRequested = !isPlayingRef.current;
+    setIsPlaying(newIsPlayRequested);
+    event.preventDefault();
+    if (audio) {
+      if (newIsPlayRequested) {
+        audio.play().catch(console.error.bind(console));
+      } else {
+        audio.pause();
+      }
+    }
+  }
+
+  // Determine if a load is requested on the first play.
+  React.useEffect(() => {
+    if (isPlaying && !isLoadRequested) {
+      setIsLoadRequested(true);
+    }
+  }, [isPlaying]);
+
+  // When play is requested, download the file from Dropbox and play it.
+  React.useEffect(() => {
+    if (!path || !isLoadRequested) {
+      return () => {};
+    }
+    let url: string;
+
+    // Download the file from Dropbox.
+    void (async () => {
+      try {
+        const response = (await dropbox.filesDownload({
+          path,
+        })) as T.FilesDownloadResponse;
+
+        // The file has been downloaded, use it in this component.
+        let blob = response.result.fileBlob;
+        if (blob.type === 'application/octet-stream') {
+          // The mimetype was not properly sent.
+          blob = blob.slice(0, blob.size, line.mimetype);
+        }
+
+        url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        setAudio(audio);
+        console.log(audio);
+
+        audio.addEventListener('loadedmetadata', () => {
+          const min = Math.floor(audio.duration / 60);
+          const sec = Math.floor(audio.duration % 60);
+          setDuration(`${min}:${sec}`);
+        });
+
+        requestAnimationFrame(() => {
+          if (isPlayingRef.current) {
+            audio?.play().catch(() => {});
+          }
+        });
+      } catch (error) {
+        console.error('Media load error:', error);
+        setIs404(true);
+      }
+    })();
+
+    // Clean-up the generated object URL.
+    return () => {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [isLoadRequested]);
+
+  return {
+    is404,
+    audio,
+    path,
+    togglePlay,
+    isPlaying,
+    duration,
+    name,
+    isLoadRequested,
+  };
+}
+
+export function useListener<
+  E extends HTMLElement,
+  Handler extends E['addEventListener'],
+  Type extends Parameters<Handler>[0],
+  Listener extends Parameters<Handler>[1],
+  Options extends Parameters<Handler>[2],
+>(
+  element: E | null,
+  type: Type | Type[],
+  callback: Listener,
+  invalidations?: any[],
+  options?: Options,
+) {
+  const types: Type[] = Array.isArray(type) ? type : [type];
+  React.useEffect(() => {
+    if (!element) {
+      return () => {};
+    }
+    for (const type of types) {
+      element.addEventListener(type, callback, options);
+    }
+
+    return () => {
+      for (const type of types) {
+        element.removeEventListener(type, callback, options);
+      }
+    };
+  }, [element, ...(invalidations || [])]);
+}
+
+export function useBoundingClientRect(
+  element: React.RefObject<HTMLElement | null>,
+) {
+  const [rect, setRect] = React.useState<null | DOMRect>(null);
+
+  React.useEffect(() => {
+    if (element.current) {
+      setRect(element.current.getBoundingClientRect());
+    }
+  }, [element]);
+
+  useListener(element.current, 'resize', (event) => {
+    if (event.target) {
+      setRect((event.target as HTMLElement).getBoundingClientRect());
+    }
+  });
+
+  return rect;
+}
+
+export function useContext2D(
+  canvasRef: React.RefObject<HTMLCanvasElement>,
+): null | CanvasRenderingContext2D {
+  const [ctx, setContext] = React.useState<null | CanvasRenderingContext2D>(
+    null,
+  );
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      setContext(ensureExists(canvas.getContext('2d')));
+    }
+  }, [canvasRef]);
+  return ctx;
 }

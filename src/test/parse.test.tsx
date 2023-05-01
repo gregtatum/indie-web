@@ -404,7 +404,7 @@ describe('parseChordPro', () => {
     `);
   });
 
-  fit('can parse media', () => {
+  it('can parse media', () => {
     expect(
       parseChordPro(stripIndent`
         {img: src="/path/to/file.jpg"}

@@ -2,118 +2,58 @@ import * as React from 'react';
 import { Hooks } from 'src';
 import { ensureExists } from 'src/utils';
 
-type Props = {
+type AudioProps = {
   folderPath: string;
   line: { type: 'audio'; lineIndex: number; src: string; mimetype: string };
 };
 
-export function MediaAudio({
-  folderPath,
-  line,
-  ...props
-}: React.AudioHTMLAttributes<HTMLAudioElement> & Props) {
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
-  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const { play, is404, isLoaded, path, src } = Hooks.useMedia(
-    folderPath,
-    line,
-    audioRef,
-    getEmptyMediaUrl,
-  );
-
-  // Draw a wave form.
-  React.useEffect(() => {
-    if (line.type !== 'audio') {
-      return;
-    }
-    if (!audioRef.current || !canvasRef.current) {
-      return;
-    }
-    if (!isLoaded) {
-      return;
-    }
-    const audio = audioRef.current;
-    const canvas = canvasRef.current;
-    performance.mark('Chords: start effect');
-
-    // The metadata must be loaded in order to draw the wave form.
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    audio.addEventListener('loadedmetadata', async () => {
-      performance.mark('Chords: loadedmetadata');
-      const audioContext = new AudioContext();
-
-      let { width, height } = canvas.getBoundingClientRect();
-      width *= devicePixelRatio;
-      height *= devicePixelRatio;
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = ensureExists(canvas.getContext('2d'));
-      // Provie a filled in color.
-      ctx.fillStyle = '#ccc';
-      ctx.fillRect(0, 0, width, height);
-
-      performance.mark('Chords: Fetch array buffer');
-      const buffer = await fetch(src).then((r) => r.arrayBuffer());
-      performance.mark('Chords: Decode audio data');
-      const audioBuffer = await audioContext.decodeAudioData(buffer);
-      const { waveform, waveformBlurred, maxWaveHeight } = getWaveform(
-        audioBuffer,
-        width,
-      );
-
-      // Clear out the color.
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, width, height);
-
-      ctx.fillStyle = '#aaa';
-      for (let x = 0; x < waveform.length; x++) {
-        const y = (1 - waveform[x] / maxWaveHeight) * ctx.canvas.height;
-        ctx.fillRect(x, y, 1, ctx.canvas.height);
-      }
-
-      ctx.fillStyle = '#ce1ebb55';
-      for (let x = 0; x < waveformBlurred.length; x++) {
-        const y = (1 - waveformBlurred[x] / maxWaveHeight) * ctx.canvas.height;
-        ctx.fillRect(x, y, 1, ctx.canvas.height);
-      }
-    });
-  }, [line, isLoaded]);
+export function MediaAudio(props: AudioProps) {
+  const { folderPath, line } = props;
+  const {
+    togglePlay,
+    is404,
+    audio,
+    path,
+    isPlaying,
+    duration,
+    name,
+    isLoadRequested,
+  } = Hooks.useAudio(folderPath, line);
+  const canvasRef = React.useRef<null | HTMLCanvasElement>(null);
+  const wrapperRef = React.useRef<null | HTMLDivElement>(null);
 
   if (is404) {
     return <div className="mediaMissing">Missing audio file: {path}</div>;
   }
 
   return (
-    <>
-      {isLoaded ? (
-        <canvas style={{ width: '100%', height: '100px' }} ref={canvasRef} />
-      ) : null}
-      <audio
-        className="mediaAudio"
-        ref={audioRef}
-        controls
-        {...props}
-        src={src}
-        onError={(event) => {
-          console.error((event.target as HTMLAudioElement).error);
-        }}
-        onPlaying={play}
-      />
-    </>
+    <div className="mediaAudio" data-load-requested={isLoadRequested}>
+      <div className="mediaAudioWave" ref={wrapperRef}>
+        <AudioWaveform audio={audio} canvasRef={canvasRef} />
+        <Scrubbers
+          audio={audio}
+          canvasRef={canvasRef}
+          wrapperRef={wrapperRef}
+        />
+      </div>
+      <div className="mediaAudioControls">
+        <button
+          className="mediaAudioControlsPlay"
+          type="button"
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+          onClick={togglePlay}
+        >
+          <span
+            data-icon-mask={isPlaying ? 'pause' : 'play'}
+            className="icon-mask"
+          ></span>
+        </button>
+        <div className="mediaAudioControlsSpacer"></div>
+        <div className="mediaAudioControlsName">{name}</div>
+        <div className="mediaAudioControlsDuration">{duration}</div>
+      </div>
+    </div>
   );
-}
-
-let _emptyAudio: string;
-function getEmptyMediaUrl() {
-  if (!_emptyAudio) {
-    // Lazily initialize the audio.
-    _emptyAudio =
-      'data:audio/x-wav;base64,UklGRooWAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YWYW' +
-      'A'.repeat(7000);
-  }
-
-  return _emptyAudio;
 }
 
 function getWaveform(audioBuffer: AudioBuffer, size: number) {
@@ -189,4 +129,154 @@ function createGaussianKernel(n: number): number[] {
 
   const sum = kernel.reduce((a, b) => a + b, 0);
   return kernel.map((x) => x / sum);
+}
+
+interface WaveformProps {
+  audio: HTMLAudioElement | null;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+}
+
+function AudioWaveform(props: WaveformProps) {
+  const { audio, canvasRef } = props;
+  const ctx = Hooks.useContext2D(canvasRef);
+  const activeColor = '#ce1ebb55';
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    let { width, height } = canvas.getBoundingClientRect();
+    width *= devicePixelRatio;
+    height *= devicePixelRatio;
+    canvas.width = width;
+    canvas.height = height;
+  }, [canvasRef]);
+
+  // Draw a wave form.
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !ctx) {
+      return;
+    }
+
+    const { width, height } = canvas;
+    if (!audio) {
+      ctx.fillStyle = activeColor;
+      for (let x = 0; x < width; x++) {
+        const wavePosition = Math.PI * (x / width) * 10;
+        const y = (Math.cos(wavePosition) * 0.5 + 0.5) * height;
+        ctx.fillRect(x, y, 1, height - y);
+      }
+      return;
+    }
+    performance.mark('Chords: start effect');
+
+    // The metadata must be loaded in order to draw the wave form.
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    audio.addEventListener('loadedmetadata', async () => {
+      performance.mark('Chords: loadedmetadata');
+      const audioContext = new AudioContext();
+
+      performance.mark('Chords: Fetch array buffer');
+      // audio.src should be a blob URL.
+      const buffer = await fetch(audio.src).then((r) => r.arrayBuffer());
+      performance.mark('Chords: Decode audio data');
+      const audioBuffer = await audioContext.decodeAudioData(buffer);
+      const { waveform, waveformBlurred, maxWaveHeight } = getWaveform(
+        audioBuffer,
+        width,
+      );
+
+      // Clear out the color.
+      ctx.clearRect(0, 0, width, height);
+
+      ctx.fillStyle = '#aaa';
+      for (let x = 0; x < waveform.length; x++) {
+        const y = (1 - waveform[x] / maxWaveHeight) * height;
+        ctx.fillRect(x, y, 1, height);
+      }
+
+      ctx.fillStyle = '#ce1ebb55';
+      for (let x = 0; x < waveformBlurred.length; x++) {
+        const y = (1 - waveformBlurred[x] / maxWaveHeight) * height;
+        ctx.fillRect(x, y, 1, height);
+      }
+    });
+  }, [canvasRef, ctx, audio]);
+
+  return <canvas style={{ width: '100%', height: '100px' }} ref={canvasRef} />;
+}
+
+interface ScrubbersProps {
+  audio: HTMLAudioElement | null;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  wrapperRef: React.RefObject<HTMLDivElement>;
+}
+
+function Scrubbers(props: ScrubbersProps) {
+  const { audio, wrapperRef } = props;
+  const playPositionRef = React.useRef<HTMLDivElement | null>(null);
+  const hoverPositionRef = React.useRef<HTMLDivElement | null>(null);
+  const horizontalLineRef = React.useRef<HTMLDivElement | null>(null);
+  const hoverRatio = React.useRef<number>(0);
+
+  Hooks.useListener(wrapperRef.current, ['mouseout'], () => {
+    const hoverEl = hoverPositionRef.current;
+    if (!hoverEl) {
+      return;
+    }
+    hoverEl.style.left = '-10px';
+  });
+
+  Hooks.useListener(wrapperRef.current, 'mousemove', (event) => {
+    const wrapperEl = wrapperRef.current;
+    const hoverEl = hoverPositionRef.current;
+    if (!wrapperEl || !hoverEl) {
+      return;
+    }
+    const { clientX } = event as MouseEvent;
+    const { width, left } = wrapperEl.getBoundingClientRect();
+    const songRatio = (clientX - left) / width;
+    hoverRatio.current = songRatio;
+    hoverEl.style.left = (songRatio * 100).toFixed(2) + '%';
+  });
+
+  Hooks.useListener(
+    wrapperRef.current,
+    ['mousedown', 'touchstart'],
+    () => {
+      if (!audio) {
+        return;
+      }
+      audio.currentTime = audio.duration * hoverRatio.current;
+    },
+    [audio],
+  );
+
+  Hooks.useListener(audio, 'timeupdate', (event) => {
+    if (!horizontalLineRef.current || !playPositionRef.current) {
+      return;
+    }
+    const { duration, currentTime } = event.target as HTMLAudioElement;
+    const width = `${((currentTime / duration) * 100).toFixed(2)}%`;
+    horizontalLineRef.current.style.width = width;
+    playPositionRef.current.style.left = width;
+  });
+
+  return (
+    <>
+      <div
+        className="mediaAudioScrubberPlayPosition"
+        ref={playPositionRef}
+      ></div>
+      <div
+        className="mediaAudioScrubberHoverPosition"
+        ref={hoverPositionRef}
+      ></div>
+      <div className="mediaAudioScrubberHorizontalLine">
+        <div ref={horizontalLineRef}></div>
+      </div>
+    </>
+  );
 }

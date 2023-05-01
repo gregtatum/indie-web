@@ -1,6 +1,7 @@
 .mediaAudio {
   width: 100%;
   border-radius: 15px;
+  margin: 10px 0;
 }
 
 .mediaVideo {
@@ -21,4 +22,92 @@
 
 .mediaImage {
   max-width: 100%;
+}
+
+.mediaAudioControls {
+  display: flex;
+  justify-content: end;
+  gap: 10px;
+  background: #000a;
+  padding: 5px 10px;
+  border-radius: 13px;
+  color: #fff;
+  align-items: center;
+  transition: border-radius 200ms;
+}
+
+.mediaAudioControlsPlay:hover {
+  color: #fff;
+}
+
+.mediaAudioControlsPlay {
+  cursor: pointer;
+  flex-shrink: 0;
+  --icon-size: 20px;
+  background: none;
+  border: none;
+  padding: 10px 15px;
+  line-height: 0;
+  color: #ddd;
+  margin: -5px -10px;
+}
+
+.mediaAudioControlsDuration {
+  flex-shrink: 0;
+}
+
+.mediaAudioControlsSpacer {
+  flex: 1;
+}
+
+.mediaAudio {
+  --wave-height: 100px;
+  --scrubber-height: 3px;
+}
+
+.mediaAudioWave {
+  position: relative;
+  overflow: hidden;
+  transition: height 200ms;
+  height: calc(var(--wave-height) + var(--scrubber-height));
+  line-height: 0;
+}
+
+.mediaAudio[data-load-requested=false] .mediaAudioWave {
+  height: 0;
+}
+
+.mediaAudio[data-load-requested=true] .mediaAudioControls {
+  border-radius: 0 0 13px 13px;
+}
+
+.mediaAudioScrubberHoverPosition,
+.mediaAudioScrubberPlayPosition {
+  top: 0;
+  position: absolute;
+  width: 2px;
+  height: 100%;
+  left: 33%;
+  margin-left: -1px;
+}
+
+.mediaAudioScrubberHoverPosition {
+  background-color: #000;
+}
+
+.mediaAudioScrubberPlayPosition {
+  background-color: #fff;
+  box-shadow: 0 0 3px #ce1ebb55, 0 0 3px #ce1ebb55;
+}
+
+.mediaAudioScrubberHorizontalLine {
+  position: relative;
+  height: var(--scrubber-height);
+  background: #000;
+}
+
+.mediaAudioScrubberHorizontalLine div {
+  height: 100%;
+  background: #ff37e9;
+  width: 0;
 }
