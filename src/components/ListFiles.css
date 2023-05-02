@@ -155,7 +155,8 @@ a.listFilesFileLink,
 
 .listFilesFileMenuIcon {
   display: inline-block;
-  background-image: url(svg/three-dots.svg);
+  /* webpackIgnore: true */
+  background-image: url(/svg/three-dots.svg);
   width: 16px;
   height: 16px;
   margin-inline: 10px 18px;

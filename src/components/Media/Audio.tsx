@@ -270,13 +270,13 @@ function Scrubbers(props: ScrubbersProps) {
         className="mediaAudioScrubberPlayPosition"
         ref={playPositionRef}
       ></div>
+      <div className="mediaAudioScrubberHorizontalLine">
+        <div ref={horizontalLineRef}></div>
+      </div>
       <div
         className="mediaAudioScrubberHoverPosition"
         ref={hoverPositionRef}
       ></div>
-      <div className="mediaAudioScrubberHorizontalLine">
-        <div ref={horizontalLineRef}></div>
-      </div>
     </>
   );
 }

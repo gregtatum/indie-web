@@ -182,25 +182,31 @@ code {
 }
 
 [data-icon="pencil-fill"] {
-  background-image: url("svg/pencil-fill.svg");
+  /* webpackIgnore: true */
+  background-image: url("/svg/pencil-fill.svg");
 }
 
 [data-icon="box-arrow-in-right"] {
-  background-image: url("svg/box-arrow-in-right.svg");
+  /* webpackIgnore: true */
+  background-image: url("/svg/box-arrow-in-right.svg");
 }
 
 [data-icon="trash-fill"] {
-  background-image: url("svg/trash-fill.svg");
+  /* webpackIgnore: true */
+  background-image: url("/svg/trash-fill.svg");
 }
 
 [data-icon="download"] {
-  background-image: url("svg/download.svg");
+  /* webpackIgnore: true */
+  background-image: url("/svg/download.svg");
 }
 
 [data-icon-mask="play"] {
-  mask-image: url("svg/play.svg");
+  /* webpackIgnore: true */
+  mask-image: url("/svg/play.svg");
 }
 
 [data-icon-mask="pause"] {
-  mask-image: url("svg/pause.svg");
+  /* webpackIgnore: true */
+  mask-image: url("/svg/pause.svg");
 }
