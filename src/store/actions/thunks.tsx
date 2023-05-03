@@ -31,7 +31,7 @@ export type PlainActions =
   // See PlainActions in src/@types/index.ts for details on this next line.
   T.Values<{
     [FnName in keyof typeof PlainInternal]: ReturnType<
-      typeof PlainInternal[FnName]
+      (typeof PlainInternal)[FnName]
     >;
   }>;
 
@@ -881,11 +881,6 @@ export function insertTextAtLineInActiveFile(
   return (dispatch, getState) => {
     const oldText = $.getActiveFileText(getState());
     const newText = insertTextAtLine(oldText, lineIndex, insert);
-    console.log(`!!! insertTextAtLineInActiveFile`, {
-      oldText,
-      newText,
-      lineIndex,
-    });
     dispatch(Plain.modifyActiveFile(newText, true));
   };
 }
