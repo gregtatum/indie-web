@@ -6,6 +6,10 @@ type AudioProps = {
   line: { type: 'audio'; lineIndex: number; src: string; mimetype: string };
 };
 
+let _playerId = 0;
+let _activePlayerId = -1;
+let _makePreviousPlayerInactive: Function | void;
+
 export function MediaAudio(props: AudioProps) {
   const { folderPath, line } = props;
   const {
@@ -20,6 +24,29 @@ export function MediaAudio(props: AudioProps) {
   } = Hooks.useAudio(folderPath, line);
   const canvasRef = React.useRef<null | HTMLCanvasElement>(null);
   const wrapperRef = React.useRef<null | HTMLDivElement>(null);
+  const playerId = React.useMemo(() => _playerId++, []);
+  const [isActivePlayer, setIsActivePlayer] = React.useState(false);
+
+  // Only allow one audio player to be active at a time.
+  React.useEffect(() => {
+    if (!isPlaying || !audio) {
+      return () => {};
+    }
+    setIsActivePlayer(true);
+    _activePlayerId = playerId;
+    if (_makePreviousPlayerInactive && _activePlayerId !== playerId) {
+      _makePreviousPlayerInactive();
+    }
+    _makePreviousPlayerInactive = () => {
+      audio.pause();
+      setIsActivePlayer(false);
+    };
+    return () => {
+      if (_activePlayerId === playerId) {
+        _makePreviousPlayerInactive = undefined;
+      }
+    };
+  }, [isPlaying, audio]);
 
   // Stop the audio when the component is unloaded.
   React.useEffect(() => {
@@ -32,8 +59,12 @@ export function MediaAudio(props: AudioProps) {
     return <div className="mediaMissing">Missing audio file: {path}</div>;
   }
 
+  let className = 'mediaAudio';
+  if (isActivePlayer) {
+    className += ' active';
+  }
   return (
-    <div className="mediaAudio" data-load-requested={isLoadRequested}>
+    <div className={className} data-load-requested={isLoadRequested}>
       <div className="mediaAudioWave" ref={wrapperRef}>
         <AudioWaveform audio={audio} canvasRef={canvasRef} />
         <Scrubbers

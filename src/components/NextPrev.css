@@ -37,7 +37,9 @@
 
 @media (min-width: 1200px) {
   .nextPrev {
-    width: calc(50% - (var(--page-max-width) / 2) - var(--page-padding));
+    width: calc(
+      (50% - (var(--page-max-width) / 2) - var(--page-padding)) / 2
+    );
   }
 }
 
