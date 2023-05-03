@@ -250,6 +250,7 @@ export function useAudio(
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [isLoadRequested, setIsLoadRequested] = React.useState(false);
   const isPlayingRef = React.useRef(false);
+  const audioRef = propToRef(audio);
 
   // Let event handlers use the isPlaying value.
   React.useEffect(() => {
@@ -277,12 +278,25 @@ export function useAudio(
     const newIsPlayRequested = !isPlayingRef.current;
     setIsPlaying(newIsPlayRequested);
     event.preventDefault();
-    if (audio) {
-      if (newIsPlayRequested) {
-        audio.play().catch(console.error.bind(console));
-      } else {
-        audio.pause();
-      }
+
+    // Create the audio element if it's not available.
+    let audio = audioRef.current;
+    if (!audio) {
+      audio = new Audio();
+      setAudio(audio);
+      console.log('useAudio created an audio element', audio);
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+      });
+    }
+
+    if (newIsPlayRequested) {
+      // We need to immediately play the audio even if there is no `src`, or else
+      // the audio file will not play in Safari. The `play` method must be called
+      // within an event handler.
+      audio.play().catch(console.error.bind(console));
+    } else {
+      audio.pause();
     }
   }
 
@@ -295,7 +309,7 @@ export function useAudio(
 
   // When play is requested, download the file from Dropbox and play it.
   React.useEffect(() => {
-    if (!path || !isLoadRequested) {
+    if (!path || !isLoadRequested || !audio) {
       return () => {};
     }
     let url: string;
@@ -315,21 +329,16 @@ export function useAudio(
         }
 
         url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        setAudio(audio);
-        console.log(audio);
-
+        audio.src = url;
         audio.addEventListener('loadedmetadata', () => {
           const min = Math.floor(audio.duration / 60);
           const sec = Math.floor(audio.duration % 60);
           setDuration(`${min}:${sec}`);
         });
 
-        requestAnimationFrame(() => {
-          if (isPlayingRef.current) {
-            audio?.play().catch(() => {});
-          }
-        });
+        if (isPlayingRef.current) {
+          audio.play().catch((error) => console.error(error));
+        }
       } catch (error) {
         console.error('Media load error:', error);
         setIs404(true);
@@ -363,14 +372,19 @@ export function useListener<
   Listener extends Parameters<Handler>[1],
   Options extends Parameters<Handler>[2],
 >(
-  element: E | null,
+  elementOrRef: E | React.RefObject<E> | null,
   type: Type | Type[],
+  deps: any[],
   callback: Listener,
-  invalidations?: any[],
   options?: Options,
 ) {
   const types: Type[] = Array.isArray(type) ? type : [type];
   React.useEffect(() => {
+    if (!elementOrRef) {
+      return () => {};
+    }
+    const element =
+      'current' in elementOrRef ? elementOrRef.current : elementOrRef;
     if (!element) {
       return () => {};
     }
@@ -383,7 +397,7 @@ export function useListener<
         element.removeEventListener(type, callback, options);
       }
     };
-  }, [element, ...(invalidations || [])]);
+  }, [elementOrRef, ...deps]);
 }
 
 export function useBoundingClientRect(
@@ -397,7 +411,7 @@ export function useBoundingClientRect(
     }
   }, [element]);
 
-  useListener(element.current, 'resize', (event) => {
+  useListener(element.current, 'resize', [], (event) => {
     if (event.target) {
       setRect((event.target as HTMLElement).getBoundingClientRect());
     }
@@ -419,4 +433,12 @@ export function useContext2D(
     }
   }, [canvasRef]);
   return ctx;
+}
+
+export function propToRef<T>(value: T | null): React.RefObject<T | null> {
+  const ref = React.useRef<T | null>(null);
+  React.useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref;
 }

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Hooks } from 'src';
-import { ensureExists } from 'src/utils';
 
 type AudioProps = {
   folderPath: string;
@@ -21,6 +20,13 @@ export function MediaAudio(props: AudioProps) {
   } = Hooks.useAudio(folderPath, line);
   const canvasRef = React.useRef<null | HTMLCanvasElement>(null);
   const wrapperRef = React.useRef<null | HTMLDivElement>(null);
+
+  // Stop the audio when the component is unloaded.
+  React.useEffect(() => {
+    return () => {
+      audio?.pause();
+    };
+  }, [audio]);
 
   if (is404) {
     return <div className="mediaMissing">Missing audio file: {path}</div>;
@@ -216,45 +222,129 @@ interface ScrubbersProps {
 
 function Scrubbers(props: ScrubbersProps) {
   const { audio, wrapperRef } = props;
+  const audioRef = Hooks.propToRef(audio);
   const playPositionRef = React.useRef<HTMLDivElement | null>(null);
   const hoverPositionRef = React.useRef<HTMLDivElement | null>(null);
   const horizontalLineRef = React.useRef<HTMLDivElement | null>(null);
-  const hoverRatio = React.useRef<number>(0);
+  const touchIdRef = React.useRef<number | null>(null);
+  const isMouseDownRef = React.useRef(false);
 
-  Hooks.useListener(wrapperRef.current, ['mouseout'], () => {
+  function hideHover() {
     const hoverEl = hoverPositionRef.current;
     if (!hoverEl) {
       return;
     }
     hoverEl.style.left = '-10px';
-  });
+  }
 
-  Hooks.useListener(wrapperRef.current, 'mousemove', (event) => {
+  function toSongRatio(clientX: number): number {
     const wrapperEl = wrapperRef.current;
+    if (!wrapperEl) {
+      return 0;
+    }
+    const { width, left } = wrapperRef.current.getBoundingClientRect();
+    const ratio = (clientX - left) / width;
+    if (ratio > 1) {
+      return 1;
+    }
+    if (ratio < 0) {
+      return 0;
+    }
+    if (Number.isNaN(ratio)) {
+      console.error(
+        new Error(
+          `A NaN song ratio was computed: (${clientX} - ${left}) / ${width}`,
+        ),
+      );
+      return 0;
+    }
+    return ratio;
+  }
+
+  function moveHover(clientX: number) {
     const hoverEl = hoverPositionRef.current;
-    if (!wrapperEl || !hoverEl) {
+    if (!hoverEl) {
       return;
     }
+    hoverEl.style.left = (toSongRatio(clientX) * 100).toFixed(2) + '%';
+  }
+
+  function adjustAudioTime(clientX: number) {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+    audio.currentTime = audio.duration * toSongRatio(clientX);
+  }
+
+  const invalidate = [audio];
+
+  Hooks.useListener(wrapperRef, 'mousedown', invalidate, (event) => {
+    adjustAudioTime((event as MouseEvent).clientX);
+    isMouseDownRef.current = true;
+  });
+
+  Hooks.useListener(wrapperRef, 'mouseout', invalidate, () => {
+    hideHover();
+    isMouseDownRef.current = false;
+  });
+
+  Hooks.useListener(wrapperRef, 'mousemove', invalidate, (event) => {
     const { clientX } = event as MouseEvent;
-    const { width, left } = wrapperEl.getBoundingClientRect();
-    const songRatio = (clientX - left) / width;
-    hoverRatio.current = songRatio;
-    hoverEl.style.left = (songRatio * 100).toFixed(2) + '%';
+    moveHover(clientX);
+    if (isMouseDownRef.current) {
+      event.preventDefault();
+      adjustAudioTime(clientX);
+    }
+  });
+
+  Hooks.useListener(wrapperRef, 'mouseup', invalidate, (event) => {
+    const { clientX } = event as MouseEvent;
+    if (isMouseDownRef.current) {
+      adjustAudioTime(clientX);
+      isMouseDownRef.current = false;
+    }
+  });
+
+  Hooks.useListener(wrapperRef, 'touchstart', invalidate, (event) => {
+    const { touches } = event as TouchEvent;
+    if (touches.length > 1) {
+      return;
+    }
+    const [touch] = (event as TouchEvent).touches;
+    touchIdRef.current = touch.identifier;
+    moveHover(touch.clientX);
+    adjustAudioTime(touch.clientX);
+  });
+
+  Hooks.useListener(wrapperRef, 'touchend', invalidate, (event) => {
+    for (const touch of (event as TouchEvent).changedTouches) {
+      if (touch.identifier === touchIdRef.current) {
+        touchIdRef.current = null;
+        hideHover();
+        adjustAudioTime(touch.clientX);
+      }
+    }
   });
 
   Hooks.useListener(
-    wrapperRef.current,
-    ['mousedown', 'touchstart'],
-    () => {
-      if (!audio) {
-        return;
+    wrapperRef,
+    'touchmove',
+    invalidate,
+    (event) => {
+      for (const touch of (event as TouchEvent).touches) {
+        if (touch.identifier === touchIdRef.current) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          moveHover(touch.clientX);
+          adjustAudioTime(touch.clientX);
+        }
       }
-      audio.currentTime = audio.duration * hoverRatio.current;
     },
-    [audio],
+    true, // capture
   );
 
-  Hooks.useListener(audio, 'timeupdate', (event) => {
+  Hooks.useListener(audio, 'timeupdate', invalidate, (event) => {
     if (!horizontalLineRef.current || !playPositionRef.current) {
       return;
     }

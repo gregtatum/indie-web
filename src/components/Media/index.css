@@ -71,6 +71,7 @@
   transition: height 200ms;
   height: calc(var(--wave-height) + var(--scrubber-height));
   line-height: 0;
+  user-select: none;
 }
 
 .mediaAudio[data-load-requested=false] .mediaAudioWave {
@@ -88,6 +89,8 @@
   width: 2px;
   height: 100%;
   margin-left: -1px;
+  left: -10px;
+  pointer-events: none;
 }
 
 .mediaAudioScrubberHoverPosition {
