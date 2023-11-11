@@ -188,7 +188,7 @@ export class FilesIndex {
         const { path, file } = action;
         let directives: T.Directives | undefined;
         if (isChordProFilePath(path)) {
-          directives = $.getActiveFileParsed(state).directives;
+          directives = $.getActiveFileParsedTransformed(state).directives;
         }
         this.synchronizeFile(file.metadata, directives);
         break;

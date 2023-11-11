@@ -44,6 +44,7 @@ module.exports = {
     'no-constant-condition': ['error', { checkLoops: false }],
     'no-console': ['error', { allow: ['log', 'warn', 'error'] }],
     'no-void': 'off', // Useful for promise checks.
+    'no-inner-declarations': 'off', // Whyyy.
 
     // possible errors
     'array-callback-return': 'error',

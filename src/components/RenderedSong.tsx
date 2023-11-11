@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { A, $, T, Hooks } from 'src';
 import {
+  ensureExists,
   getPathFileNameNoExt,
   getPathFolder,
   UnhandledCaseError,
@@ -8,6 +9,7 @@ import {
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
+import { SongKey } from 'src/logic/parse';
 
 function getSpotifyLink(
   { title, subtitle }: Record<string, string>,
@@ -37,9 +39,10 @@ export function RenderedSong() {
 
   const renderedSongRef = React.useRef(null);
   const path = Hooks.useSelector($.getPath);
-  const fileKey = Hooks.useSelector($.getActiveFileSongKey);
   const hideEditor = Hooks.useSelector($.getHideEditor);
-  const { directives, lines } = Hooks.useSelector($.getActiveFileParsed);
+  const { directives, lines } = Hooks.useSelector(
+    $.getActiveFileParsedTransformed,
+  );
   const dispatch = Hooks.useDispatch();
   uploadFileHook(renderedSongRef, path, folderPath);
 
@@ -52,12 +55,12 @@ export function RenderedSong() {
     >
       {hideEditor ? <NextPrevLinks /> : null}
       <div className="renderedSongStickyHeader">
-        {fileKey ? (
-          <div className="renderedSongStickyHeaderRow">Key: {fileKey}</div>
-        ) : null}
+        <div className="renderedSongStickyHeaderRow">
+          <RenderedSongKey />
+        </div>
         {hideEditor ? (
           <button
-            className="renderedSongEdit"
+            className="button"
             type="button"
             onClick={() => dispatch(A.hideEditor(false))}
           >
@@ -166,6 +169,98 @@ export function RenderedSong() {
       <div className="renderedSongEndPadding" />
     </div>
   );
+}
+
+function RenderedSongKey() {
+  const songKeyRef = React.useRef<HTMLButtonElement | null>(null);
+  const path = Hooks.useSelector($.getPath);
+  const songKey = Hooks.useSelector($.getActiveFileSongKey);
+  const songKeyRaw = Hooks.useSelector($.getActiveFileSongKeyRaw);
+  const songKeySettings = Hooks.useSelector($.getActiveSongKeySettings);
+  const dispatch = Hooks.useDispatch();
+
+  if (!songKey) {
+    if (!songKeyRaw) {
+      return null;
+    }
+    return <div className="renderedSongStickyHeaderRow">Key: {songKeyRaw}</div>;
+  }
+
+  const songKeyType = songKeySettings?.type;
+  switch (songKeyType) {
+    case 'capo':
+      return <div className="renderedSongStickyHeaderRow">Capo</div>;
+    case 'transpose': {
+      function onChange(event: any) {
+        dispatch(
+          A.transposeKey(
+            path,
+            ensureExists(
+              SongKey.fromRaw(event.target.value),
+              'Could not parse song key',
+            ),
+          ),
+        );
+      }
+
+      // Remove the enharmonic keys.
+      let adjustedKey = songKey.key;
+      switch (songKey.key) {
+        case 'Db':
+          adjustedKey = 'C#';
+          break;
+        case 'Gb':
+          adjustedKey = 'F#';
+          break;
+        case 'B':
+          adjustedKey = 'Cb';
+          break;
+        default:
+        // Do nothing.
+      }
+
+      return (
+        <div className="renderedSongStickyHeaderRow">
+          Transpose:{' '}
+          <select onChange={onChange} value={adjustedKey}>
+            <option>C</option>
+            <option>Db</option>
+            <option>D</option>
+            <option>Eb</option>
+            <option>E</option>
+            <option>F</option>
+            <option>Gb</option>
+            <option>G</option>
+            <option>Ab</option>
+            <option>A</option>
+            <option>Bb</option>
+            <option>B</option>
+          </select>
+        </div>
+      );
+    }
+    case undefined:
+      return (
+        <div className="renderedSongStickyHeaderRow">
+          <button
+            type="button"
+            className="renderedSongKey"
+            ref={songKeyRef}
+            onClick={() =>
+              dispatch(
+                A.viewSongKeyMenu({
+                  element: ensureExists(songKeyRef.current),
+                }),
+              )
+            }
+          >
+            Key: {songKey.display}
+          </button>
+        </div>
+      );
+    default:
+      throw new UnhandledCaseError(songKeyType, 'Unhandled song key setting');
+  }
 }
 
 function getLineTypeKey(line: T.LineType): string {

@@ -1,4 +1,5 @@
 import { T } from 'src';
+import { SongKey } from 'src/logic/parse';
 
 export function removeDropboxAccessToken(): { type: 'remove-dropbox-oauth' } {
   localStorage.clear();
@@ -104,8 +105,16 @@ export function viewFileMenu(clickedFileMenu: T.ClickedFileMenu) {
   return { type: 'view-file-menu' as const, clickedFileMenu };
 }
 
+export function viewSongKeyMenu(clickedSongKeyMenu: T.ClickedSongKeyMenu) {
+  return { type: 'view-song-key-menu' as const, clickedSongKeyMenu };
+}
+
 export function dismissFileMenu() {
   return { type: 'dismiss-file-menu' as const };
+}
+
+export function dismissSongKeyMenu() {
+  return { type: 'dismiss-song-key-menu' as const };
 }
 
 export function startRenameFile(path: string) {
@@ -118,4 +127,16 @@ export function stopRenameFile() {
 
 export function setSearchString(search: string) {
   return { type: 'set-search-string' as const, search };
+}
+
+export function transposeKey(path: string, songKey: SongKey) {
+  return { type: 'transpose-key' as const, path, songKey };
+}
+
+export function applyCapo(path: string, capo: number) {
+  return { type: 'apply-capo' as const, path, capo };
+}
+
+export function removeKeySettings(path: string) {
+  return { type: 'remove-key-settings' as const, path };
 }

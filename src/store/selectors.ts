@@ -7,7 +7,7 @@ import {
   getUrlForFile,
   UnhandledCaseError,
 } from 'src/utils';
-import { parseChordPro } from 'src/logic/parse';
+import { parseChordPro, SongKey, transposeParsedSong } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 import { parseSearchString } from 'src/logic/search';
 
@@ -82,6 +82,10 @@ export function getFileMenu(state: State) {
   return state.fileMenu;
 }
 
+export function getSongKeyMenu(state: State) {
+  return state.songKeyMenu;
+}
+
 export function getRenameFile(state: State) {
   return state.renameFile;
 }
@@ -92,6 +96,10 @@ export function getFilesIndex(state: State) {
 
 export function getSearchString(state: State) {
   return state.searchString;
+}
+
+export function getSongKeySettings(state: State) {
+  return state.songKeySettings;
 }
 
 /**
@@ -201,11 +209,6 @@ export const getActiveFileParsedOrNull = createSelector(
   },
 );
 
-export const getActiveFileParsed = dangerousSelector(
-  getActiveFileParsedOrNull,
-  'Active file was not downloaded while parsing file.',
-);
-
 export const getActiveBlobOrNull = createSelector(
   getDownloadBlobCache,
   getPath,
@@ -248,18 +251,11 @@ export const getActiveImage = dangerousSelector(
   'Active file was not downloaded while processing file.',
 );
 
-export const getActiveFileSongKey = createSelector(
-  getActiveFileParsed,
-  ({ directives }): string | null => {
-    if (typeof directives.key === 'string') {
-      if (directives.key.match(/^[A-G]#?b?m?$/)) {
-        //                      ^           $
-        //                       [A-G]
-        //                            #?
-        //                              b?
-        //                                m?
-        return directives.key;
-      }
+export const getActiveFileSongKeyRaw = createSelector(
+  getActiveFileParsedOrNull,
+  (activeFile): string | null => {
+    if (typeof activeFile?.directives.key === 'string') {
+      return activeFile?.directives.key;
     }
     return null;
   },
@@ -313,6 +309,51 @@ export const getActiveFileDisplayPath = createSelector(
 
     return path;
   },
+);
+
+export const getActiveSongKeySettings = createSelector(
+  getActiveFileOrNull,
+  getSongKeySettings,
+  (activeFile, settings): T.SongKeySettings | null => {
+    if (!activeFile) {
+      return null;
+    }
+    return settings.get(activeFile.metadata.path) ?? null;
+  },
+);
+
+export const getActiveFileSongKey = createSelector(
+  getActiveFileSongKeyRaw,
+  getActiveSongKeySettings,
+  (text, settings): SongKey | null => {
+    if (settings?.type === 'transpose') {
+      return settings.songKey;
+    }
+
+    return SongKey.fromRaw(text);
+  },
+);
+
+export const getActiveFileParsedTransformedOrNull = createSelector(
+  getActiveFileParsedOrNull,
+  getActiveFileSongKey,
+  (parsed, songKey) => {
+    if (!parsed) {
+      return null;
+    }
+    if (!songKey) {
+      return parsed;
+    }
+    if (parsed.directives.key?.trim() === songKey.display) {
+      return parsed;
+    }
+    return transposeParsedSong(parsed, songKey);
+  },
+);
+
+export const getActiveFileParsedTransformed = dangerousSelector(
+  getActiveFileParsedTransformedOrNull,
+  'Active file was not downloaded while parsing file.',
 );
 
 export function canGoFullScreen(state: State) {

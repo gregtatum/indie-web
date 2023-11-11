@@ -1,6 +1,7 @@
 import type * as idb from 'idb';
 import { OfflineDB } from 'src/logic/offline-db';
 import * as Dropbox from 'dropbox';
+import { SongKey } from 'src/logic/parse';
 
 // prettier-ignore
 export type Note =
@@ -166,6 +167,10 @@ export interface ClickedFileMenu {
   element: HTMLElement;
 }
 
+export interface ClickedSongKeyMenu {
+  element: HTMLElement;
+}
+
 export type RenameFileState =
   | { phase: 'none'; path: null }
   | { phase: 'editing'; path: string }
@@ -216,3 +221,27 @@ export type BlobFileMetadata = {
 export type BlobZipFileMetadata = {
   fileBlob: Blob;
 } & Dropbox.files.DownloadZipResult;
+
+export type SongKeyLetters =
+  | 'A'
+  | 'A#'
+  | 'Bb'
+  | 'B'
+  | 'C'
+  | 'C#'
+  | 'Db'
+  | 'D'
+  | 'D#'
+  | 'Eb'
+  | 'E'
+  | 'F'
+  | 'F#'
+  | 'Gb'
+  | 'G'
+  | 'G#'
+  | 'Ab'
+  | 'Cb';
+
+export type SongKeySettings =
+  | { type: 'capo'; capo: number }
+  | { type: 'transpose'; songKey: SongKey };

@@ -519,3 +519,185 @@ function isAsciiAlphaNumeric(ch: string): boolean {
     (code > 96 && code < 123)
   );
 }
+
+export class SongKey {
+  display: string;
+  key: T.SongKeyLetters;
+  minor: boolean;
+
+  /**
+   * Do not construct this directly, use "fromRaw".
+   */
+  constructor(display: string, key: T.SongKeyLetters, minor: boolean) {
+    this.display = display;
+    this.key = key;
+    this.minor = minor;
+  }
+
+  static fromRaw(text: string | null | undefined): SongKey | null {
+    if (!text) {
+      return null;
+    }
+    text = text.trim();
+
+    let key = text;
+    let minor = false;
+    if (text[text.length - 1] === 'm') {
+      minor = true;
+      key = text.slice(0, text.length - 1);
+    }
+    switch (key) {
+      case 'A':
+      case 'A#':
+      case 'Bb':
+      case 'B':
+      case 'C':
+      case 'C#':
+      case 'Db':
+      case 'D':
+      case 'D#':
+      case 'Eb':
+      case 'E':
+      case 'F':
+      case 'F#':
+      case 'Gb':
+      case 'G':
+      case 'G#':
+      case 'Ab':
+        return new SongKey(text, key, minor);
+      default:
+        return null;
+    }
+  }
+}
+
+export function transposeParsedSong(
+  song: T.ParsedChordPro,
+  songKey: SongKey,
+): T.ParsedChordPro {
+  const originalKey = SongKey.fromRaw(song.directives.key);
+  if (!originalKey) {
+    return song;
+  }
+
+  const halfSteps = getHalfSteps(originalKey.key, songKey.key);
+  if (halfSteps === 0) {
+    return song;
+  }
+
+  const scaleToChord = sharpKeys.has(songKey.key)
+    ? scaleToChordSharp
+    : scaleToChordFlat;
+
+  const lines = song.lines.map((line): T.LineType => {
+    if (line.type !== 'line') {
+      return line;
+    }
+    const spans = line.spans.map((span): T.TextOrChord => {
+      if (span.type === 'text') {
+        return span;
+      }
+
+      const { baseNote, chordText } = span.chord;
+      if (!baseNote || !chordText) {
+        return span;
+      }
+
+      const newChordText =
+        transpose(
+          scaleToChord,
+          // TODO - Sort out the type issues here.
+          baseNote as any,
+          halfSteps,
+        ) + chordText.slice(baseNote.length);
+
+      const chord = { ...span.chord, chordText: newChordText };
+      return {
+        ...span,
+        chord,
+      };
+    });
+    return {
+      ...line,
+      spans,
+    };
+  });
+  return { ...song, lines };
+}
+
+const halfStepScale: Record<T.SongKeyLetters, number> = {
+  A: 0,
+  'A#': 1,
+  Bb: 1,
+  B: 2,
+  Cb: 2,
+  C: 3,
+  'C#': 4,
+  Db: 4,
+  D: 5,
+  'D#': 6,
+  Eb: 6,
+  E: 7,
+  F: 8,
+  'F#': 9,
+  Gb: 9,
+  G: 10,
+  'G#': 11,
+  Ab: 11,
+};
+
+const sharpKeys = new Set<T.SongKeyLetters>(['G', 'D', 'A', 'E', 'B', 'F#']);
+const _flatKeys = new Set<T.SongKeyLetters>([
+  'C',
+  'F',
+  'Bb',
+  'Eb',
+  'Ab',
+  'Db',
+  'Gb',
+]);
+
+const scaleToChordSharp: Record<number, T.SongKeyLetters> = {
+  0: 'A',
+  1: 'A#',
+  2: 'B',
+  3: 'C',
+  4: 'C#',
+  5: 'D',
+  6: 'D#',
+  7: 'E',
+  8: 'F',
+  9: 'F#',
+  10: 'G',
+  11: 'G#',
+};
+
+const scaleToChordFlat: Record<number, T.SongKeyLetters> = {
+  0: 'A',
+  1: 'Bb',
+  2: 'B',
+  3: 'C',
+  4: 'Db',
+  5: 'D',
+  6: 'Eb',
+  7: 'E',
+  8: 'F',
+  9: 'Gb',
+  10: 'G',
+  11: 'Ab',
+};
+
+function getHalfSteps(
+  base: T.SongKeyLetters,
+  target: T.SongKeyLetters,
+): number {
+  return (12 + halfStepScale[target] - halfStepScale[base]) % 12;
+}
+
+function transpose(
+  scaleToChord: Record<number, T.SongKeyLetters>,
+  note: T.SongKeyLetters,
+  halfSteps: number,
+) {
+  return scaleToChord[(halfStepScale[note] + halfSteps) % 12];
+}
