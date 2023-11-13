@@ -49,6 +49,7 @@ export function RenderedSong() {
   return (
     <div
       className="renderedSong"
+      data-testid="renderedSong"
       key={path}
       data-fullscreen
       ref={renderedSongRef}
@@ -91,6 +92,7 @@ export function RenderedSong() {
             return (
               <div
                 className={`renderedSongLine renderedSongLine-${line.content}`}
+                data-testid="renderedSongLine"
                 data-line-index={line.lineIndex}
                 key={lineKey}
               >
@@ -221,8 +223,8 @@ function RenderedSongKey() {
 
       return (
         <div className="renderedSongStickyHeaderRow">
-          Transpose:{' '}
-          <select onChange={onChange} value={adjustedKey}>
+          <label htmlFor="select-transpose">Transpose: </label>
+          <select id="select-transpose" onChange={onChange} value={adjustedKey}>
             <option>C</option>
             <option>Db</option>
             <option>D</option>

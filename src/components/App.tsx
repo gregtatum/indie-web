@@ -78,6 +78,14 @@ export function App() {
   useFilesIndex();
   return (
     <Router.BrowserRouter>
+      <AppRoutes />
+    </Router.BrowserRouter>
+  );
+}
+
+export function AppRoutes() {
+  return (
+    <>
       <Router.Routes>
         <Router.Route path="/" element={<ListFilesRouter />} />
         <Router.Route path="settings" element={<SettingsRouter />} />
@@ -103,7 +111,7 @@ export function App() {
       </LinkDropbox>
       <Messages />
       <Menus />
-    </Router.BrowserRouter>
+    </>
   );
 }
 

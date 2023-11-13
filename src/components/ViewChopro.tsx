@@ -40,14 +40,14 @@ export function ViewChopro() {
   if (textFile === undefined) {
     if (error) {
       return (
-        <div className="status" ref={swipeDiv}>
+        <div className="status" ref={swipeDiv} data-testid="viewChopro">
           <NextPrevLinks />
           {error}
         </div>
       );
     }
     return (
-      <div className="status" ref={swipeDiv}>
+      <div className="status" ref={swipeDiv} data-testid="viewChopro">
         <NextPrevLinks />
         Downloading…
       </div>
@@ -56,7 +56,12 @@ export function ViewChopro() {
 
   if (hideEditor) {
     return (
-      <div className="viewChoproSolo" ref={swipeDiv} key={path}>
+      <div
+        className="viewChoproSolo"
+        ref={swipeDiv}
+        key={path}
+        data-testid="viewChopro"
+      >
         <RenderedSong />
       </div>
     );
@@ -64,6 +69,7 @@ export function ViewChopro() {
 
   return (
     <Splitter
+      data-testid="viewChopro"
       className="viewChoproSplit"
       start={<TextArea path={path} textFile={textFile} />}
       end={<RenderedSong />}
