@@ -8,7 +8,7 @@ import {
   mockDropboxFilesDownload,
   mockDropboxListFolder,
   spyOnDropboxFilesUpload,
-} from './fixtures';
+} from './utils/fixtures';
 import { $, T } from 'src';
 import { ensureExists } from 'src/utils';
 import { FilesIndex } from 'src/logic/files-index';

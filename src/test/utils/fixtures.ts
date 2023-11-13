@@ -1,6 +1,6 @@
 import { A, $, T } from 'src';
 import { type files } from 'dropbox';
-import { ensureExists, UnhandledCaseError } from '../utils';
+import { ensureExists, UnhandledCaseError } from '../../utils';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { createStore } from 'src/store/create-store';
 import * as Offline from 'src/logic/offline-db';

@@ -44,10 +44,10 @@
       "src/test"
     ],
     "setupFiles": [
-      "./src/test/setupFiles.ts"
+      "./src/test/utils/setupFiles.ts"
     ],
     "setupFilesAfterEnv": [
-      "./src/test/setupAfterEnv.ts"
+      "./src/test/utils/setupAfterEnv.ts"
     ],
     "verbose": true
   },
