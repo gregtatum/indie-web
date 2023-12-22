@@ -128,6 +128,8 @@ module.exports = {
         // There were false positives.
         '@typescript-eslint/restrict-template-expressions': 'off',
 
+        '@typescript-eslint/ban-ts-comment': 'off', // Whyyy.
+
         // Only use the TypeScript variant.
         'no-unused-vars': 'off',
         '@typescript-eslint/no-unused-vars': [

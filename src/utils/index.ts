@@ -1,14 +1,4 @@
-/**
- * Allow exhaustive checking of case statements, by throwing an UnhandledCaseError
- * in the default branch.
- */
-export class UnhandledCaseError extends Error {
-  constructor(value: never, typeName: string) {
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-    super(`There was an unhandled case for "${typeName}": ${value}`);
-    this.name = 'UnhandledCaseError';
-  }
-}
+export * from './worker';
 
 /**
  * Ensure some T exists when the type systems knows it can be null or undefined.
