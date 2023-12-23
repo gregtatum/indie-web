@@ -10,6 +10,7 @@ import {
 import { parseChordPro, SongKey, transposeParsedSong } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 import { parseSearchString } from 'src/logic/search';
+import { marked } from 'marked';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -207,6 +208,32 @@ export const getActiveFileParsedOrNull = createSelector(
     }
     return parseChordPro(text);
   },
+);
+
+export const getActiveFileMarkdownOrNull = createSelector(
+  getActiveFileTextOrNull,
+  (text) => {
+    if (!text) {
+      return null;
+    }
+    marked.use({
+      async: false,
+      pedantic: false,
+      // Github Flavored Markdown
+      gfm: true,
+    });
+    const htmlText = marked.parse(text);
+    if (typeof htmlText !== 'string') {
+      throw new Error('Expected a string.');
+    }
+    const domParser = new DOMParser();
+    return domParser.parseFromString(htmlText, 'text/html');
+  },
+);
+
+export const getActiveFileMarkdown = dangerousSelector(
+  getActiveFileMarkdownOrNull,
+  'Active file was not downloaded for markdown.',
 );
 
 export const getActiveBlobOrNull = createSelector(
@@ -429,7 +456,6 @@ export const getNextPrevSong = createSelector(
     // Now determine the previous and next songs from the available songs.
 
     if (index === null) {
-      console.error('File not found in folder listing.');
       return results;
     }
 

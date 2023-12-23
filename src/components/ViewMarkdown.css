@@ -4,12 +4,51 @@
   animation: fadein 200ms;
 }
 
-.viewMarkdownWidth {
-  padding: 10px;
+.viewMarkdownContainer {
+  padding: 32px;
   max-width: 1000px;
-  white-space: break-spaces;
+  line-height: 1.5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin: 32px;
+  font-size: 16px;
 }
 
-.viewMarkdownWidth img {
+.viewMarkdownContainer p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.viewMarkdownContainer h1,
+.viewMarkdownContainer h2 {
+  border-bottom: 1px solid #ddd;
+}
+
+.viewMarkdownContainer h1 {
+  padding-bottom: .3em;
+  font-size: 2em;
+}
+
+.viewMarkdownContainer h2 {
+  padding-bottom: .3em;
+  font-size: 1.5em;
+}
+
+.viewMarkdownContainer h3 {
+  font-size: 1.25em;
+}
+
+.viewMarkdownContainer img {
   max-width: 100%;
+}
+
+.viewMarkdownContainer > *:first-child {
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .viewMarkdownContainer {
+    margin: 0;
+  }
+
 }

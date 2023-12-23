@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { A, $, Hooks } from 'src';
+import { marked } from 'marked';
 
 import './ViewMarkdown.css';
 import { useRetainScroll } from '../hooks';
@@ -54,17 +55,26 @@ export function ViewMarkdown() {
 }
 
 function Markdown() {
-  const text = Hooks.useSelector($.getActiveFileText);
+  const markdownDocument = Hooks.useSelector($.getActiveFileMarkdown);
   const swipeDiv = React.useRef(null);
+  const markdownContainerRef = React.useRef<HTMLDivElement | null>(null);
   useNextPrevSwipe(swipeDiv);
 
-  if (text) {
-    return (
-      <div className="viewMarkdown" data-fullscreen ref={swipeDiv}>
-        <NextPrevLinks />
-        <div className="viewMarkdownWidth">{text}</div>
-      </div>
-    );
-  }
-  return <div className="status">Loading image.</div>;
+  React.useEffect(() => {
+    const container = markdownContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    for (const node of markdownDocument.body.childNodes) {
+      container.append(node);
+    }
+  }, [markdownDocument]);
+
+  return (
+    <div className="viewMarkdown" data-fullscreen ref={swipeDiv}>
+      <NextPrevLinks />
+      <div className="viewMarkdownContainer" ref={markdownContainerRef}></div>
+    </div>
+  );
 }
