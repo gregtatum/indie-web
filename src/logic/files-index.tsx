@@ -222,6 +222,7 @@ export function useFilesIndex(): void {
   const dropbox = Hooks.useSelector($.getDropboxOrNull);
   React.useEffect(() => {
     if (dropbox) {
+      // TODO - This can still respond with a 401 not authorized.
       // Only load the files index when Dropbox is actually authorized.
       dispatch(A.loadFilesIndex()).catch((error) => console.error(error));
     }
