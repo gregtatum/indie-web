@@ -210,6 +210,8 @@ export function resetTestGeneration() {
   pathToId = new Map();
 }
 
+// This type is more documentation than type safe.
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 type TestFolder = Record<string, null | any>;
 
 /**

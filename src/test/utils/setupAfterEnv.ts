@@ -8,6 +8,8 @@ import { IDBFactory } from 'fake-indexeddb';
 
 require('dotenv').config({ path: join(__dirname, '../../.env.test') });
 
+globalThis.structuredClone = structuredClone;
+
 const originalEnv = process.env;
 
 beforeEach(function () {

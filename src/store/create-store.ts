@@ -8,7 +8,7 @@ import {
   applyMiddleware,
   type Middleware,
 } from 'redux';
-import thunk from 'redux-thunk';
+import { thunk } from 'redux-thunk';
 import { mainReducer } from 'src/store/reducers';
 import { Store, Action, State } from 'src/@types';
 import { T } from 'src';

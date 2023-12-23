@@ -65,7 +65,7 @@ export function LinkDropbox(props: { children: any }) {
             grant_type: 'refresh_token',
             client_id: dropboxClientId,
             refresh_token: oauth.refreshToken,
-          }),
+          }).toString(),
         { method: 'POST' },
       )
         .then(async (response) => {
@@ -163,7 +163,7 @@ export function LinkDropbox(props: { children: any }) {
           code_verifier:
             window.localStorage.getItem('dropboxCodeVerifier') ?? '',
           client_id: dropboxClientId,
-        }),
+        }).toString(),
       { method: 'POST' },
     )
       .then(async (response) => {

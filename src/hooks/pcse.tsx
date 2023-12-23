@@ -116,7 +116,7 @@ function getDropboxAuthorizeUrl(codeChallenge: string) {
         code_challenge: codeChallenge,
         redirect_uri: getRedirectUri(),
         token_access_type: 'offline',
-      });
+      }).toString();
   }
   return _authorizeUrl;
 }

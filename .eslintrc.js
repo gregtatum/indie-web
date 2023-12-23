@@ -116,6 +116,9 @@ module.exports = {
             types: { Function: false },
           },
         ],
+        // This has false positives where Router.NavigationType === "POP" wasn't
+        // being allowed.
+        '@typescript-eslint/no-unsafe-enum-comparison': 'off',
         // Providing empty functions is useful for noops.
         '@typescript-eslint/no-empty-function': 'off',
         '@typescript-eslint/no-namespace': 'off',

@@ -282,7 +282,7 @@ function getLineTypeKey(line: T.LineType): string {
             key += span.text;
             break;
           case 'chord':
-            key += span.chord;
+            key += span.chord.text;
             break;
           default:
             throw new UnhandledCaseError(span, 'TextOrChord');
