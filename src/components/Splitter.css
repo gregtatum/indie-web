@@ -1,11 +1,11 @@
-.viewChoproSolo,
-.viewChoproSplit {
+.splitterSolo,
+.splitterSplit {
   /* Below the menu */
   z-index: 0;
   position: relative;
 }
 
-.viewChoproSplit {
+.splitterSplit {
   height: 100%;
   width: 100%;
   position: relative;
@@ -13,42 +13,42 @@
   animation: fadein 200ms;
 }
 
-.viewChoproSplit > * {
+.splitterSplit > * {
   position: absolute;
   top: 0;
   height: 100%;
 }
 
-.viewChoproSplitMiddle {
+.splitterSplitMiddle {
   cursor: grab;
   z-index: 1;
   display: flex;
 }
 
-.viewChoproSplitMiddle.dragging {
+.splitterSplitMiddle.dragging {
   cursor: grabbing;
 }
 
-.viewChoproSplitMiddleVisible {
+.splitterSplitMiddleVisible {
   height: 100%;
   background: #bbb;
   flex: 1;
 }
 
-.viewChoproSplitMiddle:hover {
+.splitterSplitMiddle:hover {
   background: linear-gradient(90deg, transparent 0%, #fff 50%, transparent 100%);
 }
 
-.viewChoproSplitMiddle:hover .viewChoproSplitMiddleVisible {
+.splitterSplitMiddle:hover .splitterSplitMiddleVisible {
   background: #aaa;
 }
 
-.viewChoproSplitStart {
+.splitterSplitStart {
   width: calc(50% - 0px);
   left: 0;
 }
 
-.viewChoproSplitEnd {
+.splitterSplitEnd {
   right: 0;
   overflow: auto;
 }

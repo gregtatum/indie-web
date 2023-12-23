@@ -226,8 +226,7 @@ export const getActiveFileMarkdownOrNull = createSelector(
     if (typeof htmlText !== 'string') {
       throw new Error('Expected a string.');
     }
-    const domParser = new DOMParser();
-    return domParser.parseFromString(htmlText, 'text/html');
+    return htmlText;
   },
 );
 

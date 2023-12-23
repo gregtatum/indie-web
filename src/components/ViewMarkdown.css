@@ -1,54 +1,84 @@
-.viewMarkdown {
+.splitterSolo .viewMarkdown {
   justify-content: center;
   display: flex;
   animation: fadein 200ms;
+}
+
+.splitterSolo .viewMarkdownContainer {
+  border: 1px solid #ddd;
+  margin: 32px;
+}
+
+.viewMarkdownStickyHeader {
+  margin-left: 15px;
+  text-align: right;
+  position: sticky;
+  top: var(--header-padding);
+  height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  z-index: 1;
 }
 
 .viewMarkdownContainer {
   padding: 32px;
   max-width: 1000px;
   line-height: 1.5;
-  border: 1px solid #ddd;
   border-radius: 6px;
-  margin: 32px;
   font-size: 16px;
 }
 
-.viewMarkdownContainer p {
+.viewMarkdownDiv p {
   margin-top: 0;
   margin-bottom: 16px;
 }
 
-.viewMarkdownContainer h1,
-.viewMarkdownContainer h2 {
+.viewMarkdownDiv h1,
+.viewMarkdownDiv h2 {
+  margin-top: 0;
   border-bottom: 1px solid #ddd;
 }
 
-.viewMarkdownContainer h1 {
+.viewMarkdownDiv h1 {
   padding-bottom: .3em;
   font-size: 2em;
 }
 
-.viewMarkdownContainer h2 {
+.viewMarkdownDiv h2 {
   padding-bottom: .3em;
   font-size: 1.5em;
 }
 
-.viewMarkdownContainer h3 {
+.viewMarkdownDiv h3 {
   font-size: 1.25em;
 }
 
-.viewMarkdownContainer img {
+.viewMarkdownDiv img {
   max-width: 100%;
 }
 
-.viewMarkdownContainer > *:first-child {
+.viewMarkdownDiv table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+.viewMarkdownDiv > *:first-child {
   margin-top: 0;
+}
+
+.viewMarkdownDiv table th,
+.viewMarkdownDiv table td {
+  padding: 6px 13px;
+  border: 1px solid #ddd;
 }
 
 @media (max-width: 600px) {
   .viewMarkdownContainer {
     margin: 0;
   }
-
 }

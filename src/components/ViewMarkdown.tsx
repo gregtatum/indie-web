@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { A, $, Hooks } from 'src';
-import { marked } from 'marked';
 
 import './ViewMarkdown.css';
 import { useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
+import { Splitter } from './Splitter';
+import { TextArea } from './TextArea';
 
 export function ViewMarkdown() {
   useRetainScroll();
@@ -13,6 +14,7 @@ export function ViewMarkdown() {
   const textFile = Hooks.useSelector($.getDownloadFileCache).get(path);
   const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
   const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
+  const hideEditor = Hooks.useSelector($.getHideEditor);
 
   React.useEffect(() => {
     if (songTitle) {
@@ -51,30 +53,75 @@ export function ViewMarkdown() {
     );
   }
 
-  return <Markdown />;
+  if (hideEditor) {
+    return (
+      <div
+        className="splitterSolo"
+        ref={swipeDiv}
+        key={path}
+        data-fullscreen
+        data-testid="viewMarkdown"
+      >
+        <RenderedMarkdown view="solo" />
+      </div>
+    );
+  }
+
+  return (
+    <Splitter
+      data-testid="viewMarkdown"
+      className="splitterSplit"
+      start={<TextArea path={path} textFile={textFile} />}
+      end={<RenderedMarkdown view="split" />}
+      persistLocalStorage="viewMarkdownSplitterOffset"
+    />
+  );
 }
 
-function Markdown() {
-  const markdownDocument = Hooks.useSelector($.getActiveFileMarkdown);
+interface RenderedMarkdownProps {
+  view: string;
+}
+
+function RenderedMarkdown({ view }: RenderedMarkdownProps) {
+  const hideEditor = Hooks.useSelector($.getHideEditor);
+  const htmlText = Hooks.useSelector($.getActiveFileMarkdown);
   const swipeDiv = React.useRef(null);
-  const markdownContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const markdownDiv = React.useRef<HTMLDivElement | null>(null);
+  const dispatch = Hooks.useDispatch();
   useNextPrevSwipe(swipeDiv);
 
   React.useEffect(() => {
-    const container = markdownContainerRef.current;
-    if (!container) {
+    const div = markdownDiv.current;
+    if (!div) {
       return;
     }
-
-    for (const node of markdownDocument.body.childNodes) {
-      container.append(node);
+    const domParser = new DOMParser();
+    const doc = domParser.parseFromString(htmlText, 'text/html');
+    for (const node of [...div.childNodes]) {
+      node.remove();
     }
-  }, [markdownDocument]);
+    for (const node of doc.body.childNodes) {
+      div.append(node);
+    }
+  }, [htmlText, view]);
 
   return (
-    <div className="viewMarkdown" data-fullscreen ref={swipeDiv}>
-      <NextPrevLinks />
-      <div className="viewMarkdownContainer" ref={markdownContainerRef}></div>
+    <div className="viewMarkdown" ref={swipeDiv}>
+      {hideEditor ? <NextPrevLinks /> : null}
+      <div className="viewMarkdownContainer">
+        <div className="viewMarkdownStickyHeader">
+          {hideEditor ? (
+            <button
+              className="button"
+              type="button"
+              onClick={() => dispatch(A.hideEditor(false))}
+            >
+              Edit
+            </button>
+          ) : null}
+        </div>
+        <div className="viewMarkdownDiv" ref={markdownDiv} />
+      </div>
     </div>
   );
 }
