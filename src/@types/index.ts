@@ -13,7 +13,7 @@ export type Values<T> = T[keyof T];
 
 type PlainActions = Values<{
   [FnName in keyof typeof PlainActions]: ReturnType<
-    typeof PlainActions[FnName]
+    (typeof PlainActions)[FnName]
   >;
 }>;
 
