@@ -67,7 +67,7 @@ describe('<ViewChopro>', () => {
 
     expect(screen.getByTestId('viewChopro')).toMatchInlineSnapshot(`
       <div
-        class="viewChoproSolo"
+        class="splitterSolo viewChoproSolo"
         data-testid="viewChopro"
       >
         <div
