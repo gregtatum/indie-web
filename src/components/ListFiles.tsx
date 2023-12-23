@@ -243,6 +243,7 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   const isChordPro = !isFolder && isChordProExtension(extension);
   const isPDF = !isFolder && extension === 'pdf';
   const isImage = !isFolder && imageExtensions.has(extension);
+  const isMarkdown = !isFolder && extension === 'md';
 
   let icon = '📄';
   if (isFolder) {
@@ -266,6 +267,11 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
 
   if (isImage) {
     link = `/image${path}`;
+  }
+
+  if (isMarkdown) {
+    link = `/md${path}`;
+    icon = '📕';
   }
 
   let fileDisplayName: React.ReactNode;

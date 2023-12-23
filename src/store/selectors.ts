@@ -365,6 +365,7 @@ export function canGoFullScreen(state: State) {
       return document.fullscreenEnabled && getHideEditor(state);
     case 'view-pdf':
     case 'view-image':
+    case 'view-markdown':
       return document.fullscreenEnabled;
     case 'list-files':
     case 'settings':

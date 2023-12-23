@@ -1,0 +1,15 @@
+.viewMarkdown {
+  justify-content: center;
+  display: flex;
+  animation: fadein 200ms;
+}
+
+.viewMarkdownWidth {
+  padding: 10px;
+  max-width: 1000px;
+  white-space: break-spaces;
+}
+
+.viewMarkdownWidth img {
+  max-width: 100%;
+}

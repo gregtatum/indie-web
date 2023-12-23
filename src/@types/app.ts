@@ -64,6 +64,7 @@ export type View =
   | 'view-file'
   | 'view-pdf'
   | 'view-image'
+  | 'view-markdown'
   | 'list-files'
   | 'settings'
   | 'privacy';

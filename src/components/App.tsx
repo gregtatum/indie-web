@@ -9,6 +9,7 @@ import { ListFiles } from './ListFiles';
 import { ViewChopro } from './ViewChopro';
 import { ViewPDF } from './ViewPDF';
 import { ViewImage } from './ViewImage';
+import { ViewMarkdown } from './ViewMarkdown';
 
 import { Messages } from './Messages';
 import { UnhandledCaseError } from 'src/utils';
@@ -58,6 +59,16 @@ function ViewImageRouter() {
   return null;
 }
 
+function ViewMarkdownRouter() {
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const dispatch = Hooks.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewMarkdown(path));
+  }, [path]);
+  return null;
+}
+
 function SettingsRouter() {
   const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
@@ -102,6 +113,9 @@ export function AppRoutes() {
         <Router.Route path="image" element={<ViewImageRouter />}>
           <Router.Route path="*" element={<ViewImageRouter />} />
         </Router.Route>
+        <Router.Route path="md" element={<ViewMarkdownRouter />}>
+          <Router.Route path="*" element={<ViewMarkdownRouter />} />
+        </Router.Route>
       </Router.Routes>
       <LinkDropbox>
         <div className="appView">
@@ -130,6 +144,8 @@ function Views() {
       return <ViewPDF key={key} />;
     case 'view-image':
       return <ViewImage key={key} />;
+    case 'view-markdown':
+      return <ViewMarkdown key={key} />;
     case 'settings':
       return <Settings key={key} />;
     case 'privacy':

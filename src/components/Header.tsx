@@ -92,6 +92,7 @@ export function Header() {
     case 'view-file':
     case 'view-pdf':
     case 'view-image':
+    case 'view-markdown':
       title = <Path key={key} path={path} />;
       break;
     case 'list-files':
