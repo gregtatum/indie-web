@@ -5,6 +5,7 @@ import { createStore } from './store/create-store';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
 import { maybeMockGoogleAnalytics } from 'src/utils';
+import { createRoot } from 'react-dom/client';
 
 import * as A from 'src/store/actions';
 import * as $ from 'src/store/selectors';
@@ -66,7 +67,8 @@ function mountReact(store: T.Store): void {
     );
   }
   body.appendChild(mountElement);
-  ReactDOM.render(createRootApp(store), mountElement);
+  const root = createRoot(mountElement);
+  root.render(createRootApp(store));
 }
 
 function initServiceWorker() {
