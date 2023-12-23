@@ -7,6 +7,7 @@
 .splitterSolo .viewMarkdownContainer {
   border: 1px solid #ddd;
   margin: 32px;
+  flex: 1;
 }
 
 .viewMarkdownStickyHeader {
