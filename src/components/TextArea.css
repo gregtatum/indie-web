@@ -1,5 +1,6 @@
-.textArea {
-  width: 100%;;
+.textArea,
+.textAreaMount {
+  width: 100%;
   height: 100%;
 }
 
@@ -26,6 +27,8 @@
   border-radius: 8px;
   font-size: 0px;
   box-shadow: -1px 1px 3px #0003;
+  /* Place this over the text area. */
+  z-index: 1;
 }
 
 .textAreaDismiss::after,
@@ -42,4 +45,14 @@
 
 .textAreaDismiss::before {
   transform: rotate(-45deg);
+}
+
+.cm-wrap, .cm-editor { height: 100% }
+.cm-scroller { overflow: auto }
+.cm-content {
+  padding: 20px 0 !important;
+  font-size: 14px;
+}
+.cm-line {
+  padding: 0 20px !important;
 }

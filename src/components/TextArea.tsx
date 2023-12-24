@@ -3,26 +3,103 @@ import { $, T, A } from 'src';
 import { throttle1 } from 'src/utils';
 import * as Hooks from 'src/hooks';
 
+import {
+  drawSelection,
+  dropCursor,
+  rectangularSelection,
+  crosshairCursor,
+  highlightActiveLine,
+  keymap,
+  Command,
+  ViewUpdate,
+} from '@codemirror/view';
+import {
+  syntaxHighlighting,
+  defaultHighlightStyle,
+} from '@codemirror/language';
+import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
+
+import { EditorView } from 'codemirror';
+
 import './TextArea.css';
+import { EditorState } from '@codemirror/state';
 
 export function TextArea(props: {
   path: string;
   textFile: T.DownloadedTextFile;
+  language: any;
 }) {
   const isDragging = Hooks.useSelector($.getIsDraggingSplitter);
   const modifiedText = Hooks.useSelector($.getModifiedText);
   const textGeneration = React.useRef(0);
-  const textAreaRef = React.useRef<null | HTMLTextAreaElement>(null);
+  const codeMirrorRef = React.useRef<null | HTMLDivElement>(null);
+  const [editor, setEditor] = React.useState<null | EditorView>(null);
 
   const dispatch = Hooks.useDispatch();
   function onChange(newText: string) {
-    dispatch(A.modifyActiveFile(newText));
+    dispatch(A.modifyActiveFile(newText, false));
   }
   const flush = React.useRef<(() => void) | null>(null);
   const throttledOnChange = React.useMemo(
     () => throttle1(onChange, flush, 500),
     [],
   );
+
+  const saveFile: Command = (view: EditorView) => {
+    const text = view.state.doc.toString();
+    dispatch(A.saveTextFile(props.path, text)).catch(() => {
+      // The error is handled in the action.
+    });
+    // Return true so that no other event handlers fire.
+    return true;
+  };
+
+  React.useEffect(() => {
+    if (!codeMirrorRef.current) {
+      throw new Error('Expected a current code mirror ref.');
+    }
+    const state = EditorState.create({
+      doc: modifiedText.text || props.textFile.text,
+      extensions: [
+        history(),
+        keymap.of([
+          ...defaultKeymap,
+          ...searchKeymap,
+          ...historyKeymap,
+          {
+            key: 'Mod-s',
+            run: saveFile,
+            preventDefault: true,
+            stopPropagation: true,
+          },
+        ]),
+
+        drawSelection(),
+        dropCursor(),
+        EditorState.allowMultipleSelections.of(true),
+        syntaxHighlighting(defaultHighlightStyle, {
+          fallback: true,
+        }),
+        rectangularSelection(),
+        crosshairCursor(),
+        highlightActiveLine(),
+        highlightSelectionMatches(),
+        props.language(),
+        EditorView.updateListener.of((viewUpdate: ViewUpdate) => {
+          if (viewUpdate.docChanged) {
+            throttledOnChange(viewUpdate.state.doc.toString());
+          }
+        }),
+      ],
+    });
+    const editor = new EditorView({
+      parent: codeMirrorRef.current,
+      state: state,
+    });
+
+    setEditor(editor);
+  }, []);
 
   React.useEffect(() => {
     return () => {
@@ -39,13 +116,13 @@ export function TextArea(props: {
   React.useEffect(() => {
     if (
       textGeneration.current !== modifiedText.generation &&
-      textAreaRef.current &&
+      editor &&
       modifiedText.text
     ) {
       textGeneration.current = modifiedText.generation;
-      textAreaRef.current.value = modifiedText.text;
+      editor.setState(EditorState.create({ doc: modifiedText.text }));
     }
-  }, [modifiedText]);
+  }, [modifiedText, editor]);
 
   const style: React.CSSProperties = {};
   if (isDragging) {
@@ -60,26 +137,7 @@ export function TextArea(props: {
         aria-label="Hide Editor"
         onClick={() => dispatch(A.hideEditor(true))}
       ></button>
-      <textarea
-        spellCheck="false"
-        className="textAreaTextArea"
-        defaultValue={props.textFile.text}
-        onChange={(event) => throttledOnChange(event.target.value)}
-        style={style}
-        ref={textAreaRef}
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
-        onKeyDown={async (event) => {
-          const { metaKey, ctrlKey, code, target } = event;
-          if ((metaKey || ctrlKey) && code === 'KeyS') {
-            event.preventDefault();
-            const text = (target as HTMLTextAreaElement).value;
-            await dispatch(A.saveTextFile(props.path, text));
-            if (text === (target as HTMLTextAreaElement).value) {
-              // Invalidate the modified state.
-            }
-          }
-        }}
-      ></textarea>
+      <div className="textAreaMount" ref={codeMirrorRef} />
     </div>
   );
 }

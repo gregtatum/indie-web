@@ -388,10 +388,10 @@ export function canGoFullScreen(state: State) {
     case null:
       return false;
     case 'view-file':
+    case 'view-markdown':
       return document.fullscreenEnabled && getHideEditor(state);
     case 'view-pdf':
     case 'view-image':
-    case 'view-markdown':
       return document.fullscreenEnabled;
     case 'list-files':
     case 'settings':

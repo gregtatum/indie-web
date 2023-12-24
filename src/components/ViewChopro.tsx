@@ -2,10 +2,11 @@ import * as React from 'react';
 import { A, $, Hooks } from 'src';
 import { RenderedSong } from './RenderedSong';
 import { TextArea } from './TextArea';
-
 import { useRetainScroll } from '../hooks';
 import { useNextPrevSwipe, NextPrevLinks } from './NextPrev';
 import { Splitter } from './Splitter';
+// @ts-expect-error This is untyped.
+import { ChordPro } from 'codemirror-lang-chordpro';
 
 export function ViewChopro() {
   useRetainScroll();
@@ -71,7 +72,7 @@ export function ViewChopro() {
     <Splitter
       data-testid="viewChopro"
       className="splitterSplit"
-      start={<TextArea path={path} textFile={textFile} />}
+      start={<TextArea path={path} textFile={textFile} language={ChordPro} />}
       end={<RenderedSong />}
       persistLocalStorage="viewChoproSplitterOffset"
     />

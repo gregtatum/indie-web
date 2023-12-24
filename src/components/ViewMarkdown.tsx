@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { A, $, Hooks } from 'src';
-
+import { markdown } from '@codemirror/lang-markdown';
 import './ViewMarkdown.css';
 import { useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
@@ -71,7 +71,7 @@ export function ViewMarkdown() {
     <Splitter
       data-testid="viewMarkdown"
       className="splitterSplit"
-      start={<TextArea path={path} textFile={textFile} />}
+      start={<TextArea path={path} textFile={textFile} language={markdown} />}
       end={<RenderedMarkdown view="split" />}
       persistLocalStorage="viewMarkdownSplitterOffset"
     />

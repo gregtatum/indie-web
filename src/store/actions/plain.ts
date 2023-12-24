@@ -39,7 +39,7 @@ export function changeActiveFile(path: string) {
   return { type: 'change-active-file' as const, path };
 }
 
-export function modifyActiveFile(modifiedText: string, forceRefresh = true) {
+export function modifyActiveFile(modifiedText: string, forceRefresh: boolean) {
   return { type: 'modify-active-file' as const, modifiedText, forceRefresh };
 }
 
