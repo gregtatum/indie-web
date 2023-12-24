@@ -191,6 +191,13 @@ a.renderedSongHeaderSpotify {
   border-color: #138e3f;
 }
 
+@media print {
+  a.renderedSongHeaderSpotify {
+     display: none;
+  }
+}
+
+
 @media (min-width: 900px) {
   .viewChoproSolo .renderedSong {
     min-width: 800px;
@@ -211,5 +218,11 @@ a.renderedSongHeaderSpotify {
     padding-left: var(--padding);
     padding-right: var(--padding);
     max-width: 100%;
+  }
+}
+
+@media print {
+  .renderedSongStickyHeader {
+     display: none;
   }
 }

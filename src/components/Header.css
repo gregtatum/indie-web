@@ -93,3 +93,9 @@
     display: block;
   }
 }
+
+@media print {
+  .header {
+     display: none;
+  }
+}

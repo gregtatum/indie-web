@@ -39,8 +39,10 @@ export function TextArea(props: {
   React.useEffect(() => {
     if (
       textGeneration.current !== modifiedText.generation &&
-      textAreaRef.current
+      textAreaRef.current &&
+      modifiedText.text
     ) {
+      textGeneration.current = modifiedText.generation;
       textAreaRef.current.value = modifiedText.text;
     }
   }, [modifiedText]);
