@@ -1,11 +1,13 @@
 import * as React from 'react';
-import { A, $, Hooks } from 'src';
+import { A, $, Hooks, T } from 'src';
 import { markdown } from '@codemirror/lang-markdown';
 import './ViewMarkdown.css';
 import { useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
+import { downloadImage } from 'src/logic/download-image';
+import { getPathFolder } from 'src/utils';
 
 export function ViewMarkdown() {
   useRetainScroll();
@@ -83,10 +85,14 @@ interface RenderedMarkdownProps {
 }
 
 function RenderedMarkdown({ view }: RenderedMarkdownProps) {
+  const dropbox = Hooks.useSelector($.getDropbox);
   const hideEditor = Hooks.useSelector($.getHideEditor);
   const htmlText = Hooks.useSelector($.getActiveFileMarkdown);
   const swipeDiv = React.useRef(null);
   const markdownDiv = React.useRef<HTMLDivElement | null>(null);
+  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const db = Hooks.useSelector($.getOfflineDB);
+
   const dispatch = Hooks.useDispatch();
   useNextPrevSwipe(swipeDiv);
 
@@ -97,13 +103,43 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
     }
     const domParser = new DOMParser();
     const doc = domParser.parseFromString(htmlText, 'text/html');
+
+    // Download any images that are in the Markdown.
+    const folderPath = getPathFolder(displayPath);
+    for (const img of doc.querySelectorAll('img')) {
+      let { src } = img;
+      // Take off the file name to get the file path.
+      const rootURL =
+        window.location.toString().split('/').slice(0, -1).join('/') + '/';
+      src = src.replace(rootURL, '');
+      console.log(`!!! src`, src);
+      try {
+        new URL(src);
+        // The URL parsed, it's an absolute URL.
+        continue;
+      } catch {}
+      img.removeAttribute('src');
+
+      downloadImage(dropbox, db, folderPath, src)
+        .then((objectURL) => {
+          console.log(`!!! `, img.src, objectURL);
+          img.src = objectURL;
+        })
+        .catch(() => {
+          // downloadImage uses console.error.
+        });
+    }
+
+    // Remove the old nodes.
     for (const node of [...div.childNodes]) {
       node.remove();
     }
+
+    // Add the elements to the page.
     for (const node of doc.body.childNodes) {
       div.append(node);
     }
-  }, [htmlText, view]);
+  }, [htmlText, view, displayPath, dropbox]);
 
   return (
     <div className="viewMarkdown" ref={swipeDiv}>

@@ -40,7 +40,8 @@ a {
   color: #004eca;
 }
 
-.button {
+.button,
+.ͼ2 .cm-button {
   margin: 0;
   padding: 0.2em 0.5em;
   display: inline-block;
@@ -67,19 +68,23 @@ button.icon-mask {
   margin: 0;
 }
 
-.button:active {
+.button:active,
+.ͼ2 .cm-button:active {
   outline: 2px solid #0040ff;
 }
 
-.button:focus {
+.button:focus,
+.ͼ2 .cm-button:focus {
   outline: 2px solid #0040ffaa;
 }
 
-.button:hover {
+.button:hover,
+.ͼ2 .cm-button:hover {
   opacity: 1;
 }
 
-.button:disabled {
+.button:disabled,
+.ͼ2 .cm-button:disabled {
   opacity: 0.6;
 }
 
