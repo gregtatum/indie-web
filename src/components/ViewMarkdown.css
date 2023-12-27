@@ -4,6 +4,10 @@
   animation: fadein 200ms;
 }
 
+.viewMarkdown {
+  min-height: 100%;
+}
+
 .splitterSolo .viewMarkdownContainer {
   border: 1px solid #ddd;
   margin: 32px;
@@ -66,6 +70,7 @@
   overflow: auto;
   border-spacing: 0;
   border-collapse: collapse;
+  margin-bottom: 1em;
 }
 
 .viewMarkdownDiv > *:first-child {
@@ -79,7 +84,21 @@
 }
 
 @media (max-width: 600px) {
-  .viewMarkdownContainer {
+  .viewMarkdownContainer,
+  .splitterSolo .viewMarkdownContainer {
     margin: 0;
   }
+}
+
+/* The close button. */
+.ͼ1 .cm-panel.cm-search [name="close"] {
+  font-size: 21px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.dragging {
+  outline: 2px solid #00f;
+  border-radius: 4px;
+  background: #00f1;
 }

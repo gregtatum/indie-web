@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { $, T, A } from 'src';
-import { throttle1 } from 'src/utils';
+import { ensureExists, throttle1 } from 'src/utils';
 import * as Hooks from 'src/hooks';
 
 import {
@@ -23,7 +23,7 @@ import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { EditorView } from 'codemirror';
 
 import './TextArea.css';
-import { EditorState } from '@codemirror/state';
+import { EditorState, EditorStateConfig } from '@codemirror/state';
 
 export function TextArea(props: {
   path: string;
@@ -34,6 +34,7 @@ export function TextArea(props: {
   const modifiedText = Hooks.useSelector($.getModifiedText);
   const textGeneration = React.useRef(0);
   const codeMirrorRef = React.useRef<null | HTMLDivElement>(null);
+  const editorStateConfig = React.useRef<null | EditorStateConfig>(null);
   const [editor, setEditor] = React.useState<null | EditorView>(null);
 
   const dispatch = Hooks.useDispatch();
@@ -59,7 +60,7 @@ export function TextArea(props: {
     if (!codeMirrorRef.current) {
       throw new Error('Expected a current code mirror ref.');
     }
-    const state = EditorState.create({
+    editorStateConfig.current = {
       doc: modifiedText.text || props.textFile.text,
       extensions: [
         history(),
@@ -92,7 +93,9 @@ export function TextArea(props: {
           }
         }),
       ],
-    });
+    };
+
+    const state = EditorState.create(editorStateConfig.current);
     const editor = new EditorView({
       parent: codeMirrorRef.current,
       state: state,
@@ -120,7 +123,12 @@ export function TextArea(props: {
       modifiedText.text
     ) {
       textGeneration.current = modifiedText.generation;
-      editor.setState(EditorState.create({ doc: modifiedText.text }));
+      editor.setState(
+        EditorState.create({
+          ...ensureExists(editorStateConfig.current),
+          doc: modifiedText.text,
+        }),
+      );
     }
   }, [modifiedText, editor]);
 

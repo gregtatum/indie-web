@@ -835,6 +835,7 @@ export function saveAssetFile(
         mode: {
           '.tag': 'add',
         },
+        autorename: true,
       });
       const metadata = fixupFileMetadata(result);
 

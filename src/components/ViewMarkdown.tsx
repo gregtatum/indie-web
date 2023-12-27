@@ -6,6 +6,8 @@ import { useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
+import { downloadImage } from 'src/logic/download-image';
+import { getPathFolder } from 'src/utils';
 
 export function ViewMarkdown() {
   useRetainScroll();
@@ -33,20 +35,20 @@ export function ViewMarkdown() {
     }
   }, [textFile]);
 
-  const swipeDiv = React.useRef(null);
-  useNextPrevSwipe(swipeDiv);
+  const containerRef = React.useRef(null);
+  useNextPrevSwipe(containerRef);
 
   if (textFile === undefined) {
     if (error) {
       return (
-        <div className="status" ref={swipeDiv} data-testid="viewChopro">
+        <div className="status" ref={containerRef} data-testid="viewChopro">
           <NextPrevLinks />
           {error}
         </div>
       );
     }
     return (
-      <div className="status" ref={swipeDiv} data-testid="viewChopro">
+      <div className="status" ref={containerRef} data-testid="viewChopro">
         <NextPrevLinks />
         Downloading…
       </div>
@@ -57,7 +59,7 @@ export function ViewMarkdown() {
     return (
       <div
         className="splitterSolo"
-        ref={swipeDiv}
+        ref={containerRef}
         key={path}
         data-fullscreen
         data-testid="viewMarkdown"
@@ -83,12 +85,17 @@ interface RenderedMarkdownProps {
 }
 
 function RenderedMarkdown({ view }: RenderedMarkdownProps) {
+  const dropbox = Hooks.useSelector($.getDropbox);
   const hideEditor = Hooks.useSelector($.getHideEditor);
   const htmlText = Hooks.useSelector($.getActiveFileMarkdown);
-  const swipeDiv = React.useRef(null);
+  const containerRef = React.useRef(null);
   const markdownDiv = React.useRef<HTMLDivElement | null>(null);
+  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const db = Hooks.useSelector($.getOfflineDB);
   const dispatch = Hooks.useDispatch();
-  useNextPrevSwipe(swipeDiv);
+
+  useNextPrevSwipe(containerRef);
+  uploadFileHook(containerRef, displayPath);
 
   React.useEffect(() => {
     const div = markdownDiv.current;
@@ -97,16 +104,57 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
     }
     const domParser = new DOMParser();
     const doc = domParser.parseFromString(htmlText, 'text/html');
+
+    // Download any images that are in the Markdown.
+    const folderPath = getPathFolder(displayPath);
+    for (const img of doc.querySelectorAll('img')) {
+      // The src is the resolved URL, so will include the host name. This needs to be
+      // transformed into a valid Dropbox path.
+      let { src } = img;
+
+      // Take off the file name to get the file path.
+      const rootURL =
+        window.location.toString().split('/').slice(0, -1).join('/') + '/';
+
+      // Replace the root url for relative links, and the origin for absolute links.
+      src = src.replace(rootURL, '').replace(window.location.origin, '');
+
+      try {
+        new URL(src);
+        // The URL parsed, it's an external URL.
+        continue;
+      } catch {
+        // Do nothing.
+      }
+
+      // Remove components like %20.
+      src = decodeURI(src);
+
+      // The img src will need to be replaced with the downloaded file.
+      img.removeAttribute('src');
+
+      downloadImage(dropbox, db, folderPath, src)
+        .then((objectURL) => {
+          img.src = objectURL;
+        })
+        .catch(() => {
+          // downloadImage uses console.error.
+        });
+    }
+
+    // Remove the old nodes.
     for (const node of [...div.childNodes]) {
       node.remove();
     }
+
+    // Add the elements to the page.
     for (const node of doc.body.childNodes) {
       div.append(node);
     }
-  }, [htmlText, view]);
+  }, [htmlText, view, displayPath, dropbox]);
 
   return (
-    <div className="viewMarkdown" ref={swipeDiv}>
+    <div className="viewMarkdown" ref={containerRef}>
       {hideEditor ? <NextPrevLinks /> : null}
       <div className="viewMarkdownContainer">
         <div className="viewMarkdownStickyHeader">
@@ -124,4 +172,87 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
       </div>
     </div>
   );
+}
+
+/**
+ * Handle what happens when a user drops a file in the rendered song.
+ */
+function uploadFileHook(
+  markdownRef: React.RefObject<null | HTMLElement>,
+  displayPath: string,
+) {
+  const { dispatch, getState } = Hooks.useStore();
+  Hooks.useFileDrop(markdownRef, async (fileList, target) => {
+    // As far as I can tell, there is no way to use `marked` to map from the rendered HTML
+    // back to the source text. To work around this, try to find a line index to insert
+    // the attachment into the markdown.
+    const lines = $.getActiveFileText(getState()).split('\n');
+    let searchNode: HTMLElement | null = target;
+    let lineIndex = -1;
+    while (searchNode) {
+      const searchTerm = searchNode?.innerText.trim();
+      lineIndex = lines.findIndex((line) => line.includes(searchTerm));
+      if (lineIndex !== -1) {
+        break;
+      }
+      searchNode = target.nextElementSibling as HTMLElement;
+    }
+    if (lineIndex === -1) {
+      lineIndex = lines.length;
+    } else {
+      // Place it after this line.
+      lineIndex++;
+    }
+
+    for (const file of fileList) {
+      const [type, _subtype] = file.type.split('/');
+      let makeTag;
+      switch (type) {
+        case 'audio':
+          makeTag = (src: string) =>
+            `\n<audio controls>\n` +
+            `  <source src="${src}" type="${file.type}">\n` +
+            `</audio>`;
+          break;
+        case 'video':
+          makeTag = (src: string) =>
+            `\n<video controls>\n` +
+            `  <source src="${src}" type="${file.type}">\n` +
+            `</video>\n`;
+
+          break;
+        case 'image': {
+          makeTag = (src: string) => /* html */ `\n<img src="${src}" />\n`;
+          break;
+        }
+        default:
+        // Do nothing.
+      }
+
+      if (!makeTag) {
+        // This is an unhandled file type.
+        console.error(`Unknown file type`, file);
+        dispatch(
+          A.addMessage({
+            message: `"${file.name}" has a mime type of "${file.type}" and is not supported by Browser Chords.`,
+          }),
+        );
+        return;
+      }
+
+      const folderPath = getPathFolder(displayPath);
+      const savedFilePath = await dispatch(
+        A.saveAssetFile(folderPath, file.name, file),
+      );
+
+      if (!savedFilePath) {
+        // The A.saveAssetFile() handles the `addMessage`.
+        return;
+      }
+
+      dispatch(
+        A.insertTextAtLineInActiveFile(lineIndex, makeTag(savedFilePath)),
+      );
+    }
+  });
 }

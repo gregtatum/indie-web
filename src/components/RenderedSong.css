@@ -12,18 +12,6 @@
   font-family: 'Roboto Mono', monospace;
 }
 
-.renderedSong.dragging {
-  opacity: 0.8;
-}
-.renderedSong.dragging::after {
-  content: "";
-  position: absolute;
-  inset: 10px;
-  border: 5px dashed #0070ff;
-  border-radius: 30px;
-  pointer-events: none;
-}
-
 @media (max-width: 500px) {
   .renderedSong {
     padding: 10px;
