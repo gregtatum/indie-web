@@ -6,6 +6,12 @@ const WorkboxPlugin = require('workbox-webpack-plugin');
 
 const path = require('path');
 
+if (process.env.SITE === 'floppydisk') {
+  require('dotenv').config({ path: './.env.floppydisk' });
+} else {
+  require('dotenv').config({ path: './.env.browserchords' });
+}
+
 /**
  * @type {import("webpack").Configuration}
  */
@@ -42,7 +48,7 @@ const config = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: 'Browser Chords',
+      title: process.env.SITE_NAME,
       template: 'src/index.html',
       minify: false,
     }),
@@ -53,7 +59,6 @@ const config = {
 };
 
 if (process.env.NODE_ENV === 'development') {
-  require('dotenv').config({ path: './.env.local' });
   config.mode = 'development';
 }
 
@@ -63,7 +68,6 @@ if (!config.plugins) {
 }
 
 if (process.env.NODE_ENV === 'production') {
-  require('dotenv').config({ path: './.env' });
   config.mode = 'production';
 
   config.plugins.push(

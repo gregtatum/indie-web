@@ -7,7 +7,7 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
 import { downloadImage } from 'src/logic/download-image';
-import { getPathFolder } from 'src/utils';
+import { getEnv, getPathFolder } from 'src/utils';
 import { EditorView } from 'codemirror';
 
 export function ViewMarkdown() {
@@ -248,7 +248,9 @@ function uploadFileHook(
         console.error(`Unknown file type`, file);
         dispatch(
           A.addMessage({
-            message: `"${file.name}" has a mime type of "${file.type}" and is not supported by Browser Chords.`,
+            message: `"${file.name}" has a mime type of "${
+              file.type
+            }" and is not supported by ${getEnv('SITE_NAME')}.`,
           }),
         );
         return;

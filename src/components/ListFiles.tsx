@@ -4,6 +4,7 @@ import { A, T, $, Hooks } from 'src';
 import {
   debounce,
   ensureExists,
+  getEnv,
   getStringProp,
   imageExtensions,
 } from 'src/utils';
@@ -25,7 +26,7 @@ export function ListFiles() {
 
   React.useEffect(() => {
     if (path === '/') {
-      document.title = 'Browser Chords';
+      document.title = getEnv('SITE_NAME');
     } else {
       if (path.startsWith('/')) {
         document.title = (activeFileDisplayPath || path).slice(1);

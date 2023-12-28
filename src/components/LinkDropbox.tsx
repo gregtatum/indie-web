@@ -242,8 +242,16 @@ export function LinkDropbox(props: { children: any }) {
             <div className="linkDropboxBegin">
               <div className="linkDropbox">
                 <div className="linkDropboxDescription">
-                  <h1 className="linkDropboxH1">🎵 Browser Chords</h1>
-                  <h2 className="linkDropboxH2">A Greg Tatum Web App</h2>
+                  <h1 className="linkDropboxH1">
+                    {getEnv('SITE_ICON')} {getEnv('SITE_NAME')}
+                  </h1>
+                  <h2 className="linkDropboxH2">
+                    An{' '}
+                    <a href="https://en.wikipedia.org/wiki/IndieWeb">
+                      Indie Web
+                    </a>{' '}
+                    project by Greg Tatum
+                  </h2>
                   <p>
                     Manage tabs, chords, and sheet music in Dropbox. Access and
                     edit them directly in the browser, from anywhere.

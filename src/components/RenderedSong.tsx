@@ -2,6 +2,7 @@ import * as React from 'react';
 import { A, $, T, Hooks } from 'src';
 import {
   ensureExists,
+  getEnv,
   getPathFileNameNoExt,
   getPathFolder,
   UnhandledCaseError,
@@ -345,7 +346,9 @@ function uploadFileHook(
         console.error(`Unknown file type`, file);
         dispatch(
           A.addMessage({
-            message: `"${file.name}" has a mime type of "${file.type}" and is not supported by Browser Chords.`,
+            message: `"${file.name}" has a mime type of "${
+              file.type
+            }" and is not supported by ${getEnv('SITE_NAME')}.`,
           }),
         );
         return;

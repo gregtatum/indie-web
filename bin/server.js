@@ -2,7 +2,7 @@
 const webpack = require('webpack');
 const WebpackDevServer = require('webpack-dev-server');
 const config = require('../webpack.config');
-const port = 1234;
+const port = process.env.SITE === 'floppydisk' ? 2345 : 1234;
 const host = 'localhost';
 
 const serverConfig = {

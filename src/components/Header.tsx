@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $, A, Hooks } from 'src';
-import { isAppSettingScrollTop, UnhandledCaseError } from 'src/utils';
+import { getEnv, isAppSettingScrollTop, UnhandledCaseError } from 'src/utils';
 
 import './Header.css';
 
@@ -76,8 +76,8 @@ export function Header() {
 
   let title = (
     <div className="headerTitle" key={key}>
-      <span>🎵</span>
-      <span className="headerTitleTitle">Browser Chords</span>
+      <span>{getEnv('SITE_ICON')}</span>
+      <span className="headerTitleTitle">{getEnv('SITE_NAME')}</span>
     </div>
   );
   switch (view) {
@@ -237,7 +237,7 @@ function Path({ path, title }: { path: string; title?: string }) {
   return (
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
-        <span>🎵</span>
+        <span>{getEnv('SITE_ICON')}</span>
         {breadcrumbs}
         <span>»</span>
         {songTitle ?? fileName ? (
