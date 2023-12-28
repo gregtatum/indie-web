@@ -217,14 +217,14 @@ export function tryUpgradeIndexJSON(json: any): T.IndexJSON | null {
  */
 export function useFilesIndex(): void {
   const dispatch = Hooks.useDispatch();
-  const dropbox = Hooks.useSelector($.getDropboxOrNull);
+  const fileSystem = Hooks.useSelector($.getCurrentFSOrNull);
   React.useEffect(() => {
-    if (dropbox) {
+    if (fileSystem) {
       // TODO - This can still respond with a 401 not authorized.
       // Only load the files index when Dropbox is actually authorized.
       dispatch(A.loadFilesIndex()).catch((error) => console.error(error));
     }
-  }, [dropbox]);
+  }, [fileSystem]);
 }
 
 function determineLastReadRev(

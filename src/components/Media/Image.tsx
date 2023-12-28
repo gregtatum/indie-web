@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function MediaImage({ folderPath, line: { src } }: Props) {
-  const dropbox = Hooks.useSelector($.getDropbox);
+  const fileSystem = Hooks.useSelector($.getCurrentFS);
   const [objectUrl, setObjectUrl] = React.useState<string>('');
   const [is404, setIs404] = React.useState<boolean>(false);
   const generationRef = React.useRef(0);
@@ -24,14 +24,14 @@ export function MediaImage({ folderPath, line: { src } }: Props) {
     if (!src) {
       return;
     }
-    downloadImage(dropbox, db, folderPath, src)
+    downloadImage(fileSystem, db, folderPath, src)
       .then((objectURL) => {
         setObjectUrl(objectURL);
       })
       .catch(() => {
         setIs404(true);
       });
-  }, [dropbox, src]);
+  }, [fileSystem, src]);
 
   if (is404) {
     return (

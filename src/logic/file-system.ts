@@ -1,6 +1,6 @@
 import { Dropbox } from 'dropbox';
 import { T } from 'src';
-import { fixupFileMetadata } from './offline-db';
+import { fixupFileMetadata, fixupMetadata } from './offline-db';
 
 type SaveMode = 'overwrite' | 'add' | 'update';
 
@@ -13,6 +13,17 @@ export abstract class FileSystem {
 
   abstract loadBlob(path: string): Promise<BlobFile>;
   abstract loadText(path: string): Promise<TextFile>;
+  abstract listFiles(
+    path: string,
+  ): Promise<Array<T.FileMetadata | T.FolderMetadata>>;
+  abstract move(
+    fromPath: string,
+    toPath: string,
+  ): Promise<T.FileMetadata | T.FolderMetadata>;
+
+  abstract compressFolder(path: string): Promise<Blob>;
+
+  abstract delete(path: string): Promise<void>;
 }
 
 export interface BlobFile {
@@ -73,6 +84,10 @@ export class DropboxError extends FileSystemError {
       this.error?.error?.error?.path?.['.tag'] === 'not_found'
     );
   }
+
+  static wrap(error: any) {
+    return Promise.reject(new DropboxError(error));
+  }
 }
 
 export class DropboxFS extends FileSystem {
@@ -100,7 +115,7 @@ export class DropboxFS extends FileSystem {
 
       .then(
         (response) => fixupFileMetadata(response.result),
-        (error) => Promise.reject(new DropboxError(error)),
+        DropboxError.wrap,
       );
   }
 
@@ -114,7 +129,7 @@ export class DropboxFS extends FileSystem {
           metadata: fixupFileMetadata(response.result),
           blob: (response as T.FilesDownloadResponse).result.fileBlob,
         }),
-        (error) => Promise.reject(new DropboxError(error)),
+        DropboxError.wrap,
       );
   }
 
@@ -123,5 +138,70 @@ export class DropboxFS extends FileSystem {
       metadata,
       text: await blob.text(),
     }));
+  }
+
+  listFiles(path: string): Promise<Array<T.FileMetadata | T.FolderMetadata>> {
+    return this.#dropbox
+      .filesListFolder({
+        path,
+      })
+      .then((response) => {
+        const files: Array<T.FileMetadata | T.FolderMetadata> = [];
+
+        for (const entry of response.result.entries) {
+          if (entry['.tag'] === 'file' || entry['.tag'] === 'folder') {
+            files.push(fixupMetadata(entry));
+          }
+        }
+
+        files.sort((a, b) => {
+          // Sort folders first
+          if (a.type === 'file' && b.type === 'folder') {
+            return 1;
+          }
+          if (b.type === 'file' && a.type === 'folder') {
+            return -1;
+          }
+          // Sort by file name second.
+          return a.name.localeCompare(b.name);
+        });
+
+        return files;
+      }, DropboxError.wrap);
+  }
+
+  move(
+    fromPath: string,
+    toPath: string,
+  ): Promise<T.FileMetadata | T.FolderMetadata> {
+    return this.#dropbox
+      .filesMoveV2({
+        from_path: fromPath,
+        to_path: toPath,
+      })
+      .then(({ result }) => {
+        if (result.metadata['.tag'] === 'deleted') {
+          // Satisfy the types.
+          throw new Error('Unexpected deletion.');
+        }
+        return fixupMetadata(result.metadata);
+      }, DropboxError.wrap);
+  }
+
+  compressFolder(path: string): Promise<Blob> {
+    return this.#dropbox
+
+      .filesDownloadZip({ path })
+
+      .then(
+        ({ result }) => (result as T.BlobZipFileMetadata).fileBlob,
+        DropboxError.wrap,
+      );
+  }
+
+  delete(path: string): Promise<void> {
+    return this.#dropbox
+      .filesDeleteV2({ path })
+      .then(() => {}, DropboxError.wrap);
   }
 }

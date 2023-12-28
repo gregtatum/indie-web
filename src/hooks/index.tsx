@@ -164,7 +164,6 @@ export function useMedia(
   mediaRef: AudioRef | VideoRef,
   getEmptyMediaUrl: () => string,
 ) {
-  const dropbox = Redux.useSelector($.getDropbox);
   const fileSystem = Redux.useSelector($.getCurrentFS);
   const [is404, setIs404] = React.useState<boolean>(false);
   const [src, setSrc] = React.useState<string>(getEmptyMediaUrl());
@@ -221,7 +220,7 @@ export function useMedia(
         URL.revokeObjectURL(url);
       }
     };
-  }, [dropbox, path, isPlayRequested]);
+  }, [fileSystem, path, isPlayRequested]);
 
   function play(
     event: React.SyntheticEvent<HTMLAudioElement | HTMLVideoElement>,

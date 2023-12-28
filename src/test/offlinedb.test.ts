@@ -14,7 +14,9 @@ describe('offline db', () => {
   beforeEach(() => {
     const consoleError = console.error.bind(console);
     jest.spyOn(console, 'error').mockImplementation((message) => {
-      if (String(message) !== "Error: Dropbox wasn't available") {
+      if (
+        String(message) !== 'Error: The current FileSystem is not available.'
+      ) {
         consoleError(message);
       }
     });

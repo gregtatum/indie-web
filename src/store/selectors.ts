@@ -168,11 +168,6 @@ export const getIsDropboxInitiallyExpired = createSelector(
   },
 );
 
-export const getDropbox = dangerousSelector(
-  getDropboxOrNull,
-  "Dropbox wasn't available",
-);
-
 export const getCurrentFSOrNull = createSelector(getDropboxOrNull, (dropbox) =>
   dropbox ? new DropboxFS(dropbox) : null,
 );

@@ -1,5 +1,4 @@
 import { T } from 'src';
-import { fixupFileMetadata } from 'src/logic/offline-db';
 import { pathJoin } from 'src/utils';
 import { FileSystem } from 'src/logic/file-system';
 

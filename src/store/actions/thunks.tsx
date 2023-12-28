@@ -12,7 +12,6 @@ import {
   insertTextAtLine,
 } from 'src/utils';
 import * as Plain from './plain';
-import { fixupFileMetadata, fixupMetadata } from 'src/logic/offline-db';
 import { FilesIndex, tryUpgradeIndexJSON } from 'src/logic/files-index';
 import { FileSystemError } from 'src/logic/file-system';
 
@@ -128,26 +127,7 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
     }
 
     try {
-      const response = await $.getDropbox(getState()).filesListFolder({
-        path: dropboxPath,
-      });
-      const files: Array<T.FileMetadata | T.FolderMetadata> = [];
-      for (const entry of response.result.entries) {
-        if (entry['.tag'] === 'file' || entry['.tag'] === 'folder') {
-          files.push(fixupMetadata(entry));
-        }
-      }
-      files.sort((a, b) => {
-        // Sort folders first
-        if (a.type === 'file' && b.type === 'folder') {
-          return 1;
-        }
-        if (b.type === 'file' && a.type === 'folder') {
-          return -1;
-        }
-        // Sort by file name second.
-        return a.name.localeCompare(b.name);
-      });
+      const files = await $.getCurrentFS(getState()).listFiles(dropboxPath);
       dispatch(PlainInternal.listFilesReceived(path, files));
       if (db) {
         await db.addFolderListing(path, files);
@@ -344,7 +324,7 @@ export function moveFile(
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     toPath = canonicalizePath(toPath);
-    const dropbox = $.getDropbox(getState());
+    const fileSystem = $.getCurrentFS(getState());
     const name = getPathFileName(toPath);
 
     dispatch(PlainInternal.moveFileRequested(fromPath));
@@ -359,15 +339,8 @@ export function moveFile(
     );
 
     try {
-      const { result } = await dropbox.filesMoveV2({
-        from_path: fromPath,
-        to_path: toPath,
-      });
+      const metadata = await fileSystem.move(fromPath, toPath);
 
-      if (result.metadata['.tag'] === 'deleted') {
-        throw new Error('Unexpected deletion.');
-      }
-      const metadata = fixupMetadata(result.metadata);
       dispatch(PlainInternal.moveFileDone(fromPath, metadata));
 
       dispatch(
@@ -566,16 +539,11 @@ export function downloadFolderForUser(
       }),
     );
 
-    await $.getDropbox(getState())
-      .filesDownloadZip({
-        path: file.path,
-      })
+    await $.getCurrentFS(getState())
+      .compressFolder(file.path)
       .then(
-        (response) => {
-          downloadBlobForUser(
-            file.name,
-            (response.result as T.BlobZipFileMetadata).fileBlob,
-          );
+        (blob) => {
+          downloadBlobForUser(file.name, blob);
 
           dispatch(
             addMessage({
@@ -631,12 +599,8 @@ export function deleteFile(
       }),
     );
 
-    // Save the updated file to the offline db.
-
-    await $.getDropbox(getState())
-      .filesDeleteV2({
-        path: file.path,
-      })
+    await $.getCurrentFS(getState())
+      .delete(file.path)
       .then(
         async () => {
           const db = $.getOfflineDB(getState());
@@ -689,12 +653,14 @@ export function loadFilesIndex(
       );
     }
 
+    const fileSystem = $.getCurrentFS(getState());
+
     async function attemptRecreateFile(
       message: string,
     ): Promise<FilesIndex | null> {
       if (!isSecondAttempt && confirm(message)) {
         try {
-          await dropbox.filesDeleteV2({ path: FilesIndex.path });
+          await fileSystem.delete(FilesIndex.path);
         } catch (error) {
           dispatchError(
             error,
@@ -709,8 +675,6 @@ export function loadFilesIndex(
       return null;
     }
 
-    const dropbox = $.getDropbox(getState());
-    const fileSystem = $.getCurrentFS(getState());
     let text: string;
     try {
       const response = await fileSystem.loadText(FilesIndex.path);

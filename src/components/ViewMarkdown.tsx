@@ -93,7 +93,7 @@ interface RenderedMarkdownProps {
 }
 
 function RenderedMarkdown({ view }: RenderedMarkdownProps) {
-  const dropbox = Hooks.useSelector($.getDropbox);
+  const fileSystem = Hooks.useSelector($.getCurrentFS);
   const hideEditor = Hooks.useSelector($.getHideEditor);
   const htmlText = Hooks.useSelector($.getActiveFileMarkdown);
   const containerRef = React.useRef(null);
@@ -141,7 +141,7 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
       // The img src will need to be replaced with the downloaded file.
       img.removeAttribute('src');
 
-      downloadImage(dropbox, db, folderPath, src)
+      downloadImage(fileSystem, db, folderPath, src)
         .then((objectURL) => {
           img.src = objectURL;
         })
@@ -165,7 +165,7 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
       }
       div.append(node);
     }
-  }, [htmlText, view, displayPath, dropbox]);
+  }, [htmlText, view, displayPath, fileSystem]);
 
   return (
     <div className="viewMarkdown" ref={containerRef}>
