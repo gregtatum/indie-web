@@ -418,4 +418,42 @@ describe('App', () => {
 
     screen.getByText('{title: Beat It}');
   });
+
+  it('can create markdown files', async () => {
+    const text = `# Ideas\n`;
+    const path = '/Ideas.md';
+
+    setup({
+      filesDownload: [
+        {
+          metadata: createFileMetadata(path),
+          text,
+        },
+      ],
+    });
+    const fileUpload = spyOnDropboxFilesUpload();
+
+    await waitFor(() => screen.getByText(/Coldplay/));
+
+    let button = screen.getByText('Create Markdown File');
+    act(() => {
+      button.click();
+    });
+
+    const input = ensureExists(
+      document.activeElement,
+      'There is in active element',
+    );
+    expect(input.tagName).toEqual('INPUT');
+
+    button = screen.getByText('Create');
+
+    act(() => {
+      (input as HTMLInputElement).value = 'Ideas.md';
+      button.click();
+    });
+    await waitFor(() => expect(fileUpload).toEqual([{ body: text, path }]));
+
+    screen.getAllByText('Ideas');
+  });
 });
