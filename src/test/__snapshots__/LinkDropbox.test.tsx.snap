@@ -16,12 +16,22 @@ exports[`LinkDropbox can render 1`] = `
         <h1
           class="linkDropboxH1"
         >
-          🎵 Browser Chords
+          🎵
+           
+          Browser Chords
         </h1>
         <h2
           class="linkDropboxH2"
         >
-          A Greg Tatum Web App
+          An
+           
+          <a
+            href="https://en.wikipedia.org/wiki/IndieWeb"
+          >
+            Indie Web
+          </a>
+           
+          project by Greg Tatum
         </h2>
         <p>
           Manage tabs, chords, and sheet music in Dropbox. Access and edit them directly in the browser, from anywhere.

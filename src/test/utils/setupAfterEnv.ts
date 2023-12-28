@@ -1,12 +1,9 @@
 // @ts-expect-error - Not sure why this is breaking.
 import fetchMock from 'fetch-mock-jest';
 import { Headers, Request, Response } from 'node-fetch';
-import { join } from 'path';
 import { resetTestGeneration } from './fixtures';
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
-
-require('dotenv').config({ path: join(__dirname, '../../.env.test') });
 
 globalThis.structuredClone = structuredClone;
 

@@ -29,7 +29,10 @@ export function ensureExists<T>(
 }
 
 export function getEnv(key: string): string {
-  return ensureExists(process.env[key], `Could not find "${key}" in .env file`);
+  if (!process.env[key]) {
+    console.error(process.env);
+  }
+  return ensureExists(process.env[key], `Could not find "${key}" in env file`);
 }
 
 /**
