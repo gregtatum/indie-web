@@ -11,7 +11,7 @@ import { parseChordPro, SongKey, transposeParsedSong } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 import { parseSearchString } from 'src/logic/search';
 import { marked } from 'marked';
-import { DropboxFS } from 'src/logic/file-system';
+import { DropboxFS } from 'src/logic/file-system/dropbox-fs';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
