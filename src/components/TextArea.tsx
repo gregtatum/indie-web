@@ -29,6 +29,7 @@ export function TextArea(props: {
   path: string;
   textFile: T.DownloadedTextFile;
   language: any;
+  editorExtensions?: EditorStateConfig['extensions'];
 }) {
   const isDragging = Hooks.useSelector($.getIsDraggingSplitter);
   const modifiedText = Hooks.useSelector($.getModifiedText);
@@ -92,6 +93,8 @@ export function TextArea(props: {
             throttledOnChange(viewUpdate.state.doc.toString());
           }
         }),
+        // Extensions doesn't have an iterable property, so coerce to any.
+        ...((props.editorExtensions as any) ?? []),
       ],
     };
 

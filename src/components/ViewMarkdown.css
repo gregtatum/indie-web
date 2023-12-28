@@ -5,12 +5,14 @@
 }
 
 .viewMarkdown {
+  overflow: hidden;
   min-height: 100%;
 }
 
 .splitterSolo .viewMarkdownContainer {
   border: 1px solid #ddd;
-  margin: 32px;
+  margin: var(--markdown-padding);
+  width: calc(100vw - 4 * var(--markdown-padding));
   flex: 1;
 }
 
@@ -27,11 +29,17 @@
 }
 
 .viewMarkdownContainer {
-  padding: 32px;
+  --markdown-padding: 32px;
+  padding: var(--markdown-padding);
   max-width: 1000px;
   line-height: 1.5;
   border-radius: 6px;
   font-size: 16px;
+}
+
+.viewMarkdownTable {
+  width: 100%;
+  overflow-x: scroll;
 }
 
 .viewMarkdownDiv p {
@@ -87,6 +95,7 @@
   .viewMarkdownContainer,
   .splitterSolo .viewMarkdownContainer {
     margin: 0;
+    width: calc(100vw - 1 * var(--markdown-padding));
   }
 }
 

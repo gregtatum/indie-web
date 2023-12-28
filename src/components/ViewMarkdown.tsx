@@ -8,6 +8,7 @@ import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
 import { downloadImage } from 'src/logic/download-image';
 import { getPathFolder } from 'src/utils';
+import { EditorView } from 'codemirror';
 
 export function ViewMarkdown() {
   useRetainScroll();
@@ -73,7 +74,14 @@ export function ViewMarkdown() {
     <Splitter
       data-testid="viewMarkdown"
       className="splitterSplit"
-      start={<TextArea path={path} textFile={textFile} language={markdown} />}
+      start={
+        <TextArea
+          path={path}
+          textFile={textFile}
+          language={markdown}
+          editorExtensions={[EditorView.lineWrapping]}
+        />
+      }
       end={<RenderedMarkdown view="split" />}
       persistLocalStorage="viewMarkdownSplitterOffset"
     />
@@ -148,7 +156,13 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
     }
 
     // Add the elements to the page.
-    for (const node of doc.body.childNodes) {
+    for (let node of doc.body.childNodes) {
+      if ((node as any).tagName === 'TABLE') {
+        const div = document.createElement('div');
+        div.className = 'viewMarkdownTable';
+        div.appendChild(node);
+        node = div;
+      }
       div.append(node);
     }
   }, [htmlText, view, displayPath, dropbox]);
