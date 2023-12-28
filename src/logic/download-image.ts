@@ -1,7 +1,7 @@
 import { T } from 'src';
-import { Dropbox } from 'dropbox';
 import { fixupFileMetadata } from 'src/logic/offline-db';
 import { pathJoin } from 'src/utils';
+import { FileSystem } from 'src/logic/file-system';
 
 export const imageCache: Record<string, string> = Object.create(null);
 
@@ -9,7 +9,7 @@ export const imageCache: Record<string, string> = Object.create(null);
  * Downloads an image from Dropbox and returns the objectURL.
  */
 export async function downloadImage(
-  dropbox: Dropbox,
+  fileSystem: FileSystem,
   db: T.OfflineDB | null,
   folderPath: string,
   unresolvedSrc: string,
@@ -39,10 +39,8 @@ export async function downloadImage(
       }
     }
 
-    const { result } = await dropbox.filesDownload({ path: src });
-    const blob: Blob = (result as T.BlobFileMetadata).fileBlob;
+    const { blob, metadata } = await fileSystem.loadBlob(src);
     if (db) {
-      const metadata = fixupFileMetadata(result);
       await db.addBlobFile(metadata, blob);
     }
     const objectURL = (imageCache[src] = URL.createObjectURL(blob));

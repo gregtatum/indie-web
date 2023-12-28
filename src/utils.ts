@@ -365,13 +365,6 @@ export function isChordProExtension(extension: string | undefined) {
   );
 }
 
-export function isPathNotFoundError(error: any): boolean {
-  return (
-    error?.error?.error?.['.tag'] === 'path' &&
-    error?.error?.error?.path?.['.tag'] === 'not_found'
-  );
-}
-
 /**
  * A type aware version of Object.entries.
  */

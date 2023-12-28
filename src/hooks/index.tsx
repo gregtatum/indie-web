@@ -9,6 +9,7 @@ import {
   setScrollTop,
 } from 'src/utils';
 import { T, $ } from 'src';
+import { FileSystemError } from 'src/logic/file-system';
 
 export function useStore(): T.Store {
   return Redux.useStore() as T.Store;
@@ -164,6 +165,7 @@ export function useMedia(
   getEmptyMediaUrl: () => string,
 ) {
   const dropbox = Redux.useSelector($.getDropbox);
+  const fileSystem = Redux.useSelector($.getCurrentFS);
   const [is404, setIs404] = React.useState<boolean>(false);
   const [src, setSrc] = React.useState<string>(getEmptyMediaUrl());
   const srcRef = React.useRef(src);
@@ -190,15 +192,12 @@ export function useMedia(
     // Download the file from Dropbox.
     void (async () => {
       try {
-        const response = (await dropbox.filesDownload({
-          path,
-        })) as T.FilesDownloadResponse;
+        let { blob } = await fileSystem.loadBlob(path);
         if (!mediaRef.current) {
           return;
         }
 
         // The file has been downloaded, use it in this component.
-        let blob = response.result.fileBlob;
         if (blob.type === 'application/octet-stream') {
           // The mimetype was not properly sent.
           blob = blob.slice(0, blob.size, line.mimetype);
@@ -244,7 +243,7 @@ export function useAudio(
   line: { type: 'audio'; lineIndex: number; src: string; mimetype: string },
 ) {
   const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
-  const dropbox = Redux.useSelector($.getDropbox);
+  const fileSystem = Redux.useSelector($.getCurrentFS);
   const [is404, setIs404] = React.useState<boolean>(false);
   const [duration, setDuration] = React.useState<string>('0:00');
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -317,12 +316,8 @@ export function useAudio(
     // Download the file from Dropbox.
     void (async () => {
       try {
-        const response = (await dropbox.filesDownload({
-          path,
-        })) as T.FilesDownloadResponse;
+        let { blob } = await fileSystem.loadBlob(path);
 
-        // The file has been downloaded, use it in this component.
-        let blob = response.result.fileBlob;
         if (blob.type === 'application/octet-stream') {
           // The mimetype was not properly sent.
           blob = blob.slice(0, blob.size, line.mimetype);
@@ -340,7 +335,10 @@ export function useAudio(
           audio.play().catch((error) => console.error(error));
         }
       } catch (error) {
-        console.error('Media load error:', error);
+        console.error(
+          'Media load error:',
+          (error as FileSystemError).toString(),
+        );
         setIs404(true);
       }
     })();

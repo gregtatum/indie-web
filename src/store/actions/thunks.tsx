@@ -10,7 +10,6 @@ import {
   getGeneration,
   getPathFileName,
   insertTextAtLine,
-  isPathNotFoundError,
 } from 'src/utils';
 import * as Plain from './plain';
 import { fixupFileMetadata, fixupMetadata } from 'src/logic/offline-db';
@@ -195,25 +194,11 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
 
     // Kick off the request, even if an offline version was found.
     try {
-      const { result } = await $.getDropbox(getState()).filesDownload({ path });
+      const { text, metadata } =
+        await $.getCurrentFS(getState()).loadText(path);
       // The file blob was left off of this type.
-      const fileBlob: Blob = (result as T.BlobFileMetadata).fileBlob;
-      const metadata = fixupFileMetadata(result);
       if (offlineFile?.metadata.hash === metadata.hash) {
         // The files are the same.
-        return;
-      }
-
-      let text;
-      try {
-        text = await fileBlob.text();
-      } catch (error) {
-        dispatch(
-          PlainInternal.downloadFileError(
-            path,
-            'Failed to get the text from the downloaded file.',
-          ),
-        );
         return;
       }
 
@@ -232,15 +217,13 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
         type: 'text',
         text,
       });
-    } catch (response) {
-      let error;
-
-      if (isPathNotFoundError((response as any)?.error)) {
-        error = 'The file does not exist. ' + path;
-      } else {
-        error = dropboxErrorMessage(response);
-      }
-      dispatch(PlainInternal.downloadFileError(path, error));
+    } catch (error) {
+      dispatch(
+        PlainInternal.downloadFileError(
+          path,
+          (error as FileSystemError).toString(),
+        ),
+      );
     }
   };
 }
@@ -276,10 +259,8 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
     }
 
     try {
-      const response = await $.getDropbox(getState()).filesDownload({ path });
-      const file = response.result;
-      const blob: Blob = (file as T.BlobFileMetadata).fileBlob;
-      const metadata = fixupFileMetadata(file);
+      const { blob, metadata } =
+        await $.getCurrentFS(getState()).loadBlob(path);
       const value: T.StoredBlobFile = {
         metadata,
         storedAt: new Date(),
@@ -534,16 +515,11 @@ export function downloadFileForUser(
       }),
     );
 
-    await $.getDropbox(getState())
-      .filesDownload({
-        path: file.path,
-      })
+    await $.getCurrentFS(getState())
+      .loadBlob(file.path)
       .then(
-        (response) => {
-          downloadBlobForUser(
-            file.name,
-            (response.result as T.BlobFileMetadata).fileBlob,
-          );
+        ({ blob }) => {
+          downloadBlobForUser(file.name, blob);
 
           dispatch(
             addMessage({
@@ -735,17 +711,17 @@ export function loadFilesIndex(
 
     const dropbox = $.getDropbox(getState());
     const fileSystem = $.getCurrentFS(getState());
-    let fileBlob: Blob;
+    let text: string;
     try {
-      const { result } = await dropbox.filesDownload({ path: FilesIndex.path });
-      // The file blob was left off of this type.
-      fileBlob = (result as T.BlobFileMetadata).fileBlob;
+      const response = await fileSystem.loadText(FilesIndex.path);
+      text = response.text;
     } catch (error: any) {
-      if (isPathNotFoundError(error)) {
+      if ((error as FileSystemError)?.isNotFound()) {
         const filesIndex = new FilesIndex(fileSystem, getState());
         dispatch(PlainInternal.fileIndexReceived(filesIndex));
         return filesIndex;
       }
+
       // This is not a path not found error, so dispatch an error.
       dispatchError(
         error,
@@ -754,17 +730,6 @@ export function loadFilesIndex(
         </>,
       );
       return null;
-    }
-
-    let text: string;
-    try {
-      text = await fileBlob.text();
-    } catch (error) {
-      console.error(error);
-      return attemptRecreateFile(
-        `Browser Chord's file index "${FilesIndex.path}" could not be read, would you like to ` +
-          `delete and try recreating it?`,
-      );
     }
 
     let json: any;
