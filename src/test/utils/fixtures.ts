@@ -53,12 +53,12 @@ export function mockDropboxListFolder(
   return fileList.map((file) => Offline.fixupMetadata(file));
 }
 
-interface MockedFilesDownload {
+export interface MockedFilesDownload {
   metadata: T.FileMetadata;
   text: string;
 }
 
-export function mockDropboxFilesDownload(mocks: MockedFilesDownload[]) {
+export function mockDropboxFilesDownload(mocks: MockedFilesDownload[] = []) {
   (window.fetch as FetchMockSandbox).post(
     'https://content.dropboxapi.com/2/files/download',
     (url, opts: any) => {
@@ -99,7 +99,10 @@ export function spyOnDropboxFilesUpload(): UploadSpy[] {
     (url, opts) => {
       const { path } = JSON.parse((opts.headers as any)['Dropbox-API-Arg']);
       results.push({ path, body: String(opts.body) });
-      return 200;
+      return {
+        status: 200,
+        body: createFileMetadataReference(path),
+      };
     },
   );
   return results;

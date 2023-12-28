@@ -1,9 +1,11 @@
 import { createStore } from 'src/store/create-store';
-import { App } from 'src/components/App';
+import { AppRoutes } from 'src/components/App';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
 import {
+  MockedFilesDownload,
+  createFileMetadata,
   mockDropboxAccessToken,
   mockDropboxFilesDownload,
   mockDropboxListFolder,
@@ -11,9 +13,10 @@ import {
 } from './utils/fixtures';
 import { $, T } from 'src';
 import { ensureExists } from 'src/utils';
-import { FilesIndex } from 'src/logic/files-index';
+import { FilesIndex, useFilesIndex } from 'src/logic/files-index';
 import { stripIndent } from 'common-tags';
 import type { FetchMockSandbox } from 'fetch-mock';
+import { MemoryRouter } from 'react-router-dom';
 
 const coldplayChordProText = stripIndent`
   {title: Clocks}
@@ -35,7 +38,10 @@ afterEach(() => {
 });
 
 describe('App', () => {
-  function setup() {
+  interface SetupOptions {
+    filesDownload?: MockedFilesDownload[];
+  }
+  function setup(options?: SetupOptions) {
     const store = createStore();
     mockDropboxAccessToken(store);
     const listFiles = mockDropboxListFolder([
@@ -43,11 +49,20 @@ describe('App', () => {
       { type: 'file', path: '/Clocks - Coldplay.chordpro' },
       { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
     ]);
-    mockDropboxFilesDownload([]);
+    mockDropboxFilesDownload(options?.filesDownload);
+
+    function App() {
+      useFilesIndex();
+      return <AppRoutes />;
+    }
+
+    window.location.href = '/';
     render(
-      <Provider store={store as any}>
-        <App />
-      </Provider>,
+      <MemoryRouter initialEntries={['/']}>
+        <Provider store={store as any}>
+          <App />
+        </Provider>
+      </MemoryRouter>,
     );
 
     /**
@@ -347,7 +362,9 @@ describe('App', () => {
 
     const coldplay = await waitFor(() => screen.getByText(/Coldplay/));
 
-    coldplay.click();
+    act(() => {
+      coldplay.click();
+    });
     await waitFor(() => screen.getByText(/Lights go out and/));
 
     const filesIndex = await waitFor(() =>
@@ -362,5 +379,43 @@ describe('App', () => {
       key: 'Ebmaj',
       title: 'Clocks',
     });
+  });
+
+  it('can create chopro files', async () => {
+    const text = `{title: Beat It}\n{subtitle: Michael Jackson}`;
+    const path = '/Beat It - Michael Jackson.chopro';
+
+    setup({
+      filesDownload: [
+        {
+          metadata: createFileMetadata(path),
+          text,
+        },
+      ],
+    });
+    const fileUpload = spyOnDropboxFilesUpload();
+
+    await waitFor(() => screen.getByText(/Coldplay/));
+
+    let button = screen.getByText('Create ChordPro File');
+    act(() => {
+      button.click();
+    });
+
+    const input = ensureExists(
+      document.activeElement,
+      'There is in active element',
+    );
+    expect(input.tagName).toEqual('INPUT');
+
+    button = screen.getByText('Create');
+
+    act(() => {
+      (input as HTMLInputElement).value = 'Beat It - Michael Jackson.chopro';
+      button.click();
+    });
+    await waitFor(() => expect(fileUpload).toEqual([{ body: text, path }]));
+
+    screen.getByText('{title: Beat It}');
   });
 });

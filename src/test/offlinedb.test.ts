@@ -10,6 +10,15 @@ import {
 import { PlainInternal } from 'src/store/actions';
 
 describe('offline db', () => {
+  // Ignore "Dropbox wasn't available" errors.
+  beforeEach(() => {
+    const consoleError = console.error.bind(console);
+    jest.spyOn(console, 'error').mockImplementation((message) => {
+      if (String(message) !== "Error: Dropbox wasn't available") {
+        consoleError(message);
+      }
+    });
+  });
   it('opens', async () => {
     const { dispatch } = createStore();
     await dispatch(Offline.openDB());

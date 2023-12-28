@@ -16,6 +16,12 @@ beforeEach(function () {
   (global as any).Headers = Headers;
   (global as any).Request = Request;
   (global as any).Response = Response;
+
+  global.ResizeObserver = jest.fn().mockImplementation(() => ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn(),
+  }));
 });
 
 afterEach(() => {

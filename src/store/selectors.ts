@@ -11,6 +11,7 @@ import { parseChordPro, SongKey, transposeParsedSong } from 'src/logic/parse';
 import type * as PDFJS from 'pdfjs-dist';
 import { parseSearchString } from 'src/logic/search';
 import { marked } from 'marked';
+import { DropboxFS } from 'src/logic/file-system';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -170,6 +171,15 @@ export const getIsDropboxInitiallyExpired = createSelector(
 export const getDropbox = dangerousSelector(
   getDropboxOrNull,
   "Dropbox wasn't available",
+);
+
+export const getCurrentFSOrNull = createSelector(getDropboxOrNull, (dropbox) =>
+  dropbox ? new DropboxFS(dropbox) : null,
+);
+
+export const getCurrentFS = dangerousSelector(
+  getCurrentFSOrNull,
+  'The current FileSystem is not available.',
 );
 
 export const getActiveFileOrNull = createSelector(

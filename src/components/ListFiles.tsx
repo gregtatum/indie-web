@@ -1,19 +1,14 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, T, $, Hooks } from 'src';
-import {
-  debounce,
-  ensureExists,
-  getEnv,
-  getStringProp,
-  imageExtensions,
-} from 'src/utils';
+import { debounce, ensureExists, getEnv, imageExtensions } from 'src/utils';
 import { useRetainScroll, useStore } from '../hooks';
 
 Router.useNavigationType;
 
 import './ListFiles.css';
 import { UnhandledCaseError, isChordProExtension } from '../utils';
+import { FileSystemError } from 'src/logic/file-system';
 
 export function ListFiles() {
   useRetainScroll();
@@ -152,7 +147,7 @@ function CreateFileButton(props: {
   children: any;
 }) {
   type Phase = 'not-editing' | 'editing' | 'submitting';
-  const dropbox = Hooks.useSelector($.getDropbox);
+  const fileSystem = Hooks.useSelector($.getCurrentFS);
   const { dispatch, getState } = useStore();
   const [phase, setPhase] = React.useState<Phase>('not-editing');
   const input = React.useRef<HTMLInputElement | null>(null);
@@ -184,28 +179,21 @@ function CreateFileButton(props: {
     path += inputEl.value;
 
     setPhase('submitting');
-    dropbox
-      .filesUpload({
-        path,
-        contents: props.getDefaultContents(inputEl.value),
-        mode: {
-          '.tag': 'add',
-        },
-      })
+    fileSystem
+      .saveFile(path, 'add', props.getDefaultContents(inputEl.value))
       .then(
-        (response) => {
+        (fileMetadata) => {
           // The directory listing is now stale, fetch it again.
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
           dispatch(A.listFiles(props.path));
           if ($.getHideEditor(getState())) {
             dispatch(A.hideEditor(false));
           }
-          navigate(props.slug + (response.result.path_display ?? path));
+          navigate(props.slug + fileMetadata.path);
         },
-        (error) => {
-          let err =
-            getStringProp(error, 'message') ?? 'There was a Dropbox API error';
-          if (error?.status === 409) {
+        (error: FileSystemError) => {
+          let err = error.toString();
+          if (error.status() === 409) {
             err = 'That file already exists, please choose a different name.';
           }
           setError(err);

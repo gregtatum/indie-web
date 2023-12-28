@@ -196,6 +196,7 @@ export function dropboxErrorMessage(error: any): string {
     }
   }
 
+  console.error(error);
   return 'There was an error with Dropbox. Try refreshing?';
 }
 
