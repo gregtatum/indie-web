@@ -194,6 +194,12 @@ describe('App', () => {
           >
             Create ChordPro File
           </button>
+          <button
+            class="button listFilesCreate"
+            type="button"
+          >
+            Create Markdown File
+          </button>
         </div>
       </div>
     `);

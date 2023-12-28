@@ -107,14 +107,50 @@ export function ListFiles() {
               </div>
             );
           })}
-          <CreateChordProButton path={path} />
+          <CreateFileButton
+            path={path}
+            slug="file"
+            extension="chopro"
+            getDefaultContents={choproDefaultContents}
+          >
+            Create ChordPro File
+          </CreateFileButton>
+          <CreateFileButton
+            path={path}
+            slug="md"
+            extension="md"
+            getDefaultContents={markdownDefaultContents}
+          >
+            Create Markdown File
+          </CreateFileButton>
         </div>
       </div>
     </>
   );
 }
 
-function CreateChordProButton(props: { path: string }) {
+function choproDefaultContents(fileName: string): string {
+  const title = fileName.replace(/\.chopro$/, '');
+  let contents = `{title: ${title}}\n{subtitle: Unknown}`;
+  const match = /^(.*) - (.*).*$/.exec(title);
+  if (match) {
+    contents = `{title: ${match[1]}}\n{subtitle: ${match[2]}}`;
+  }
+  return contents;
+}
+
+function markdownDefaultContents(fileName: string): string {
+  const title = fileName.replace(/\.md$/, '');
+  return `# ${title}\n`;
+}
+
+function CreateFileButton(props: {
+  path: string;
+  slug: string;
+  extension: string;
+  getDefaultContents: (fileName: string) => string;
+  children: any;
+}) {
   type Phase = 'not-editing' | 'editing' | 'submitting';
   const dropbox = Hooks.useSelector($.getDropbox);
   const { dispatch, getState } = useStore();
@@ -146,17 +182,12 @@ function CreateChordProButton(props: { path: string }) {
       path += '/';
     }
     path += inputEl.value;
-    const title = inputEl.value.replace(/\.chopro$/, '');
+
     setPhase('submitting');
-    let contents = `{title: ${title}}\n{subtitle: Unknown}`;
-    const match = /^(.*) - (.*).*$/.exec(title);
-    if (match) {
-      contents = `{title: ${match[1]}}\n{subtitle: ${match[2]}}`;
-    }
     dropbox
       .filesUpload({
         path,
-        contents,
+        contents: props.getDefaultContents(inputEl.value),
         mode: {
           '.tag': 'add',
         },
@@ -169,7 +200,7 @@ function CreateChordProButton(props: { path: string }) {
           if ($.getHideEditor(getState())) {
             dispatch(A.hideEditor(false));
           }
-          navigate('file' + (response.result.path_display ?? path));
+          navigate(props.slug + (response.result.path_display ?? path));
         },
         (error) => {
           let err =
@@ -192,7 +223,7 @@ function CreateChordProButton(props: { path: string }) {
             type="text"
             className="listFilesCreateEditorInput"
             ref={input}
-            defaultValue=".chopro"
+            defaultValue={'.' + props.extension}
             disabled={disabled}
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
@@ -217,7 +248,7 @@ function CreateChordProButton(props: { path: string }) {
       className="button listFilesCreate"
       onClick={() => setPhase('editing')}
     >
-      Create ChordPro File
+      {props.children}
     </button>
   );
 }
