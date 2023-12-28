@@ -15,6 +15,7 @@ import {
 import * as Plain from './plain';
 import { fixupFileMetadata, fixupMetadata } from 'src/logic/offline-db';
 import { FilesIndex, tryUpgradeIndexJSON } from 'src/logic/files-index';
+import { FileSystemError } from 'src/logic/file-system';
 
 /**
  * This file contains all of the thunk actions, that contain extra logic,
@@ -301,7 +302,7 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
 
 export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    const dropbox = $.getDropbox(getState());
+    const fileSystem = $.getCurrentFS(getState());
 
     const messageGeneration = dispatch(
       addMessage({
@@ -313,16 +314,10 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
       }),
     );
     try {
-      const { result } = await dropbox.filesUpload({
-        path,
-        contents: text,
-        mode: {
-          '.tag': 'overwrite',
-        },
-      });
+      const metadata = await fileSystem.saveFile(path, 'overwrite', text);
       dispatch(
         PlainInternal.downloadFileReceived(path, {
-          metadata: fixupFileMetadata(result),
+          metadata,
           storedAt: new Date(),
           type: 'text',
           text,
@@ -343,7 +338,7 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
       // Save the updated file to the offline db.
       const db = $.getOfflineDB(getState());
       if (db) {
-        await db.addTextFile(fixupFileMetadata(result), text);
+        await db.addTextFile(metadata, text);
       }
     } catch (error) {
       dispatch(
@@ -487,7 +482,7 @@ export function forceExpiration(): Thunk {
 
 export function createInitialFiles(): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    const dropbox = $.getDropbox(getState());
+    const fileSystem = $.getCurrentFS(getState());
     const files = ['Getting started.chopro'];
     let hasFailure = false;
     let dropboxError: string = '';
@@ -506,15 +501,11 @@ export function createInitialFiles(): Thunk<Promise<void>> {
 
       // Upload it Dropbox.
       try {
-        await dropbox.filesUpload({
-          path: '/' + file,
-          contents,
-          mode: { '.tag': 'add' },
-        });
+        await fileSystem.saveFile('/' + file, 'add', contents);
       } catch (error) {
         console.error(error);
         hasFailure = true;
-        dropboxError = dropboxErrorMessage(error);
+        dropboxError = (error as FileSystemError)?.toString();
       }
     }
     if (hasFailure) {
@@ -743,6 +734,7 @@ export function loadFilesIndex(
     }
 
     const dropbox = $.getDropbox(getState());
+    const fileSystem = $.getCurrentFS(getState());
     let fileBlob: Blob;
     try {
       const { result } = await dropbox.filesDownload({ path: FilesIndex.path });
@@ -750,7 +742,7 @@ export function loadFilesIndex(
       fileBlob = (result as T.BlobFileMetadata).fileBlob;
     } catch (error: any) {
       if (isPathNotFoundError(error)) {
-        const filesIndex = new FilesIndex(dropbox, getState());
+        const filesIndex = new FilesIndex(fileSystem, getState());
         dispatch(PlainInternal.fileIndexReceived(filesIndex));
         return filesIndex;
       }
@@ -794,7 +786,7 @@ export function loadFilesIndex(
       );
     }
     const filesIndex = new FilesIndex(
-      dropbox,
+      fileSystem,
       getState(),
       // For some reason type narrowing `T.IndexJSON | null` to `T.IndexJSON` is
       // not working here.
@@ -816,7 +808,7 @@ export function saveAssetFile(
   contents: Blob,
 ): Thunk<Promise<string | null>> {
   return async (dispatch, getState) => {
-    const dropbox = $.getDropbox(getState());
+    const fileSystem = $.getCurrentFS(getState());
     const path = `${folder}/assets/${fileName}`;
 
     const messageGeneration = dispatch(
@@ -829,15 +821,7 @@ export function saveAssetFile(
       }),
     );
     try {
-      const { result } = await dropbox.filesUpload({
-        path,
-        contents,
-        mode: {
-          '.tag': 'add',
-        },
-        autorename: true,
-      });
-      const metadata = fixupFileMetadata(result);
+      const metadata = await fileSystem.saveFile(path, 'add', contents);
 
       dispatch(
         addMessage({
@@ -855,18 +839,19 @@ export function saveAssetFile(
       return metadata.path;
     } catch (error) {
       console.error(error);
-    }
 
-    dispatch(
-      addMessage({
-        message: (
-          <>
-            Unable to save <code>{path}</code>
-          </>
-        ),
-        generation: messageGeneration,
-      }),
-    );
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Unable to save <code>{path}</code>.{' '}
+              {(error as FileSystemError)?.toString()}
+            </>
+          ),
+          generation: messageGeneration,
+        }),
+      );
+    }
 
     return null;
   };

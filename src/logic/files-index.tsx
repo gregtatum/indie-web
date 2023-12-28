@@ -1,4 +1,3 @@
-import { Dropbox } from 'dropbox';
 import * as React from 'react';
 import { A, $, Hooks, T } from 'src';
 import {
@@ -7,6 +6,7 @@ import {
   isChordProFilePath,
   typedObjectEntries,
 } from 'src/utils';
+import { FileSystem } from './file-system';
 
 export const INDEX_JSON_VERSION = 1;
 
@@ -23,14 +23,14 @@ export class FilesIndex {
 
   data: T.IndexJSON;
 
-  #dropbox: Dropbox;
+  #fileSystem: FileSystem;
   #saveTimeout: ReturnType<typeof setTimeout> | null = null;
   #saveGeneration = 0;
   #pendingSaves: Record<T.FileMetadata['id'], T.IndexedFile> = {};
   #pendingSaveRequest: Promise<void> | null = null;
 
-  constructor(dropbox: Dropbox, state: T.State, data?: T.IndexJSON) {
-    this.#dropbox = dropbox;
+  constructor(fileSystem: FileSystem, state: T.State, data?: T.IndexJSON) {
+    this.#fileSystem = fileSystem;
     if (data) {
       this.data = data;
     } else {
@@ -152,13 +152,11 @@ export class FilesIndex {
   }
 
   async #saveImpl() {
-    await this.#dropbox.filesUpload({
-      path: FilesIndex.path,
-      contents: JSON.stringify(this.data, null, '\t'),
-      mode: {
-        '.tag': 'overwrite',
-      },
-    });
+    await this.#fileSystem.saveFile(
+      FilesIndex.path,
+      'overwrite',
+      JSON.stringify(this.data, null, '\t'),
+    );
     this.#pendingSaveRequest = null;
   }
 

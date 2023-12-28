@@ -1,7 +1,6 @@
 import { Dropbox } from 'dropbox';
 import { T } from 'src';
 import { fixupFileMetadata } from './offline-db';
-import { getStringProp } from 'src/utils';
 
 type SaveMode = 'overwrite' | 'add' | 'update';
 
@@ -32,9 +31,18 @@ export abstract class FileSystemError<T = any> {
 
 export class DropboxError extends FileSystemError {
   toString() {
-    return (
-      getStringProp(this.error, 'message') ?? 'There was a Dropbox API error'
-    );
+    if (this.error?.status >= 500 && this.error?.status < 600) {
+      return 'Dropbox seems to be down at the moment. See https://status.dropbox.com/';
+    }
+    const name = this.error?.name;
+    if (typeof name === 'string') {
+      if (name === 'TypeError') {
+        return 'Unable to connect to the internet. Try again?';
+      }
+    }
+
+    console.error(this.error);
+    return 'There was an error with Dropbox. Try refreshing?';
   }
 
   status() {
@@ -61,6 +69,7 @@ export class DropboxFS extends FileSystem {
         mode: {
           '.tag': mode as any,
         },
+        autorename: mode === 'add' ? true : false,
       })
       .then(
         (response) => {
