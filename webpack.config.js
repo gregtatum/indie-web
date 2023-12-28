@@ -48,7 +48,7 @@ const config = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: process.env.SITE_NAME,
+      title: process.env.SITE_DISPLAY_NAME,
       template: 'src/index.html',
       minify: false,
     }),

@@ -26,7 +26,7 @@ export function ListFiles() {
 
   React.useEffect(() => {
     if (path === '/') {
-      document.title = getEnv('SITE_NAME');
+      document.title = getEnv('SITE_DISPLAY_NAME');
     } else {
       if (path.startsWith('/')) {
         document.title = (activeFileDisplayPath || path).slice(1);

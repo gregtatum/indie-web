@@ -77,7 +77,7 @@ export function Header() {
   let title = (
     <div className="headerTitle" key={key}>
       <span>{getEnv('SITE_ICON')}</span>
-      <span className="headerTitleTitle">{getEnv('SITE_NAME')}</span>
+      <span className="headerTitleTitle">{getEnv('SITE_DISPLAY_NAME')}</span>
     </div>
   );
   switch (view) {

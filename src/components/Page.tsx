@@ -37,16 +37,16 @@ export function Privacy() {
 
         <h2>Definitions</h2>
         <p>
-          <b>The Site:</b> {getEnv('SITE_NAME')} at {getEnv('SITE_URL')}
+          <b>The Site:</b> {getEnv('SITE_DISPLAY_NAME')} at {getEnv('SITE_URL')}
           <br />
           <b>User:</b> A user of The Site.
         </p>
         <p>
-          {getEnv('SITE_NAME')} is a personal project by me, Greg Tatum. It is
-          mainly built to provide a great experience with managing chords, and
-          sheet music for playing music. It is designed to be extremely portable
-          and work with just files stored on a Dropbox account and common music
-          formats.
+          {getEnv('SITE_DISPLAY_NAME')} is a personal project by me, Greg Tatum.
+          It is mainly built to provide a great experience with managing chords,
+          and sheet music for playing music. It is designed to be extremely
+          portable and work with just files stored on a Dropbox account and
+          common music formats.
         </p>
 
         <h2>Dropbox</h2>

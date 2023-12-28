@@ -243,7 +243,7 @@ export function LinkDropbox(props: { children: any }) {
               <div className="linkDropbox">
                 <div className="linkDropboxDescription">
                   <h1 className="linkDropboxH1">
-                    {getEnv('SITE_ICON')} {getEnv('SITE_NAME')}
+                    {getEnv('SITE_ICON')} {getEnv('SITE_DISPLAY_NAME')}
                   </h1>
                   <h2 className="linkDropboxH2">
                     An{' '}

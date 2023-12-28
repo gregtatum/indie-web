@@ -250,7 +250,7 @@ function uploadFileHook(
           A.addMessage({
             message: `"${file.name}" has a mime type of "${
               file.type
-            }" and is not supported by ${getEnv('SITE_NAME')}.`,
+            }" and is not supported by ${getEnv('SITE_DISPLAY_NAME')}.`,
           }),
         );
         return;
