@@ -12,7 +12,6 @@ export function MediaImage({ folderPath, line: { src } }: Props) {
   const [objectUrl, setObjectUrl] = React.useState<string>('');
   const [is404, setIs404] = React.useState<boolean>(false);
   const generationRef = React.useRef(0);
-  const db = Hooks.useSelector($.getOfflineDB);
 
   React.useEffect(() => {
     return () => {
@@ -24,7 +23,7 @@ export function MediaImage({ folderPath, line: { src } }: Props) {
     if (!src) {
       return;
     }
-    downloadImage(fileSystem, db, folderPath, src)
+    downloadImage(fileSystem, folderPath, src)
       .then((objectURL) => {
         setObjectUrl(objectURL);
       })

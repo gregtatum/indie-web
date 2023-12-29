@@ -3,18 +3,39 @@ import { T } from 'src';
 export type SaveMode = 'overwrite' | 'add' | 'update';
 
 export abstract class FileSystem {
-  abstract saveFile(
-    path: string,
+  // Await on this during initialization.
+  cachePromise?: Promise<void>;
+
+  abstract saveBlob(
+    pathOrMetadata: string | T.FileMetadata,
     mode: SaveMode,
-    contents: any,
+    contents: Blob,
   ): Promise<T.FileMetadata>;
 
-  abstract loadBlob(path: string): Promise<BlobFile>;
-  abstract loadText(path: string): Promise<TextFile>;
+  saveText(
+    pathOrMetadata: string | T.FileMetadata,
+    mode: SaveMode,
+    text: string,
+  ): Promise<T.FileMetadata> {
+    return this.saveBlob(
+      pathOrMetadata,
+      mode,
+      new Blob([text], { type: 'text/plain' }),
+    );
+  }
 
-  abstract listFiles(
-    path: string,
-  ): Promise<Array<T.FileMetadata | T.FolderMetadata>>;
+  abstract loadBlob(path: string): Promise<T.BlobFile>;
+
+  loadText(path: string): Promise<T.TextFile> {
+    return this.loadBlob(path).then(async ({ metadata, blob }) => {
+      return {
+        metadata,
+        text: await blob.text(),
+      };
+    });
+  }
+
+  abstract listFiles(path: string): Promise<T.FolderListing>;
 
   abstract move(
     fromPath: string,
@@ -25,17 +46,14 @@ export abstract class FileSystem {
 
   abstract delete(path: string): Promise<void>;
 
-  cache?: FileSystem;
+  cache?: FileSystemCache;
 }
 
-export interface BlobFile {
-  metadata: T.FileMetadata;
-  blob: Blob;
-}
-
-export interface TextFile {
-  metadata: T.FileMetadata;
-  text: string;
+export abstract class FileSystemCache extends FileSystem {
+  abstract addFolderListing(
+    path: string,
+    files: T.FolderListing,
+  ): Promise<void>;
 }
 
 export abstract class FileSystemError<T = any> {

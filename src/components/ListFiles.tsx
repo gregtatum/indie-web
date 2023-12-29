@@ -180,7 +180,7 @@ function CreateFileButton(props: {
 
     setPhase('submitting');
     fileSystem
-      .saveFile(path, 'add', props.getDefaultContents(inputEl.value))
+      .saveText(path, 'add', props.getDefaultContents(inputEl.value))
       .then(
         (fileMetadata) => {
           // The directory listing is now stale, fetch it again.

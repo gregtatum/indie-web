@@ -120,7 +120,6 @@ export async function serializeState(state: State): Promise<unknown> {
     listFilesCache: [...listFilesCache.entries()],
     downloadFileCache: [...downloadFileCache.entries()],
     downloadBlobCache: await serializeDownloadBlobCache(downloadBlobCache),
-    offlineDB: null,
   };
 }
 

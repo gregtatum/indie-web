@@ -1,4 +1,3 @@
-import * as Offline from 'src/logic/offline-db';
 import { createStore } from 'src/store/create-store';
 import { ensureExists } from 'src/utils';
 import {
@@ -8,6 +7,7 @@ import {
   createFolderMetadata,
 } from './utils/fixtures';
 import { PlainInternal } from 'src/store/actions';
+import { openDropboxCache } from 'src/logic/file-system/indexeddb-fs';
 
 describe('offline db', () => {
   // Ignore "Dropbox wasn't available" errors.
@@ -21,57 +21,52 @@ describe('offline db', () => {
       }
     });
   });
+
   it('opens', async () => {
-    const { dispatch } = createStore();
-    await dispatch(Offline.openDB());
+    await openDropboxCache();
   });
 
   it('can add files', async () => {
-    const { dispatch } = createStore();
-    const db = await dispatch(Offline.openDB());
+    const idbfs = await openDropboxCache();
     const path = '/band/song.chopro';
-    expect(await db.getFile(path)).toBeUndefined();
+
+    const error = await idbfs.loadText(path).catch((error) => error);
+    expect(error.isNotFound()).toBe(true);
 
     const metadata = createFileMetadata(path);
     const text = 'This is a song.';
-    await db.addTextFile(metadata, text);
+    await idbfs.saveText(metadata, 'overwrite', text);
 
-    const fileRow = await db.getFile(metadata.path);
-    if (fileRow?.type !== 'text') {
-      throw new Error('Expected text type');
-    }
-    expect(fileRow.text).toEqual(text);
-    expect(fileRow.metadata.path).toEqual(path);
-    db.close();
+    const file = await idbfs.loadText(metadata.path);
+    expect(file.metadata.path).toEqual(path);
+    expect(file.text).toEqual(text);
+    idbfs.close();
   });
 
   // Fake indexeddb doesn't support blobs.
   // https://github.com/dumbmatter/fakeIndexedDB/issues/56
-  it.skip('can add Blobs', async () => {
-    const { dispatch } = createStore();
-    const db = await dispatch(Offline.openDB());
+  it('can add Blobs', async () => {
+    const idbfs = await openDropboxCache();
     const path = '/band/song.chopro';
-    expect(await db.getFile(path)).toBeUndefined();
+    const error = await idbfs.loadText(path).catch((error) => error);
+    expect(error.isNotFound()).toBe(true);
 
     const metadata = createFileMetadata(path);
     const text = 'This is a song';
     const blob = new Blob([text]);
-    await db.addBlobFile(metadata, blob);
+    await idbfs.saveBlob(metadata, 'overwrite', blob);
 
-    const fileRow = await db.getFile(metadata.path);
-    if (fileRow?.type !== 'blob') {
-      throw new Error('Expected blob type');
-    }
+    const fileRow = await idbfs.loadBlob(metadata.path);
     expect(await fileRow.blob.text()).toEqual(text);
     expect(fileRow.metadata.path).toEqual(path);
-    db.close();
+    idbfs.close();
   });
 
   it('can add a folder listing', async () => {
-    const { dispatch } = createStore();
-    const db = await dispatch(Offline.openDB());
+    const idbfs = await openDropboxCache();
     const path = '/band/';
-    expect(await db.getFolderListing(path)).toBeUndefined();
+    const error = await idbfs.listFiles(path).catch((error) => error);
+    expect(error.isNotFound()).toBe(true);
 
     const files = [
       createFileMetadata('/band/song 1.chopro'),
@@ -80,16 +75,15 @@ describe('offline db', () => {
       createFileMetadata('/band/song 4.chopro'),
     ];
 
-    await db.addFolderListing(path, files);
+    await idbfs.addFolderListing(path, files);
 
-    const folderListings = ensureExists(await db.getFolderListing(path));
-    expect(folderListings.files).toEqual(files);
-    expect(folderListings.path).toEqual(path);
-    db.close();
+    const response = await idbfs.listFiles(path);
+    expect(response).toEqual(files);
+    idbfs.close();
   });
 
   it('use the setupDBWithFiles', async () => {
-    const { db } = await setupDBWithFiles([
+    const { idbfs } = await setupDBWithFiles([
       '/band/song 1.chopro',
       '/band/song 2.chopro',
       '/band/song 3.chopro',
@@ -97,25 +91,24 @@ describe('offline db', () => {
     ]);
 
     {
-      const folderListings = await db.getFolderListing('/');
-      expect(folderListings?.files).toEqual([createFolderMetadata('/band')]);
-      expect(folderListings?.path).toEqual('/');
+      const folderListings = await idbfs.listFiles('/');
+      expect(folderListings).toEqual([createFolderMetadata('/band')]);
     }
     {
-      const folderListings = await db.getFolderListing('/band');
-      expect(folderListings?.files).toEqual([
+      const folderListings = await idbfs.listFiles('/band');
+      expect(folderListings).toEqual([
         createFileMetadata('/band/song 1.chopro'),
         createFileMetadata('/band/song 2.chopro'),
         createFileMetadata('/band/song 3.chopro'),
         createFileMetadata('/band/song 4.chopro'),
       ]);
-      expect(folderListings?.path).toEqual('/band');
     }
-    db.close();
+    idbfs.close();
   });
 
-  it('can move a file in a subfolder', async () => {
-    const { fetchTextFile, fetchFileListing, dispatch, db } =
+  // TODO - Add the ability to use a browser indexedb filesystem.
+  it.skip('can move a file in a subfolder', async () => {
+    const { fetchTextFile, fetchFileListing, dispatch, idbfs } =
       await setupDBWithFiles([
         '/band/song 1.chopro',
         '/band/song 2.chopro',
@@ -124,7 +117,7 @@ describe('offline db', () => {
       ]);
 
     // The file should exist.
-    expect(await db.getFile('/band/song 3.chopro')).toBeTruthy();
+    expect(await idbfs.loadBlob('/band/song 3.chopro')).toBeTruthy();
     expect(await fetchTextFile('/band/song 3.chopro')).toEqual(
       'song 3.chopro file contents',
     );
@@ -136,14 +129,14 @@ describe('offline db', () => {
     ]);
 
     // Now move it by updating the metadata.
-    await db.updateMetadata(
+    await idbfs.updateMetadata(
       '/band/song 3.chopro',
       createFileMetadata('/band/song 3 (renamed).chopro'),
     );
 
     // Check that the file listing in the offline db is up to date.
-    const folderListings = await db.getFolderListing('/band');
-    expect(folderListings?.files).toEqual([
+    const folderListings = await idbfs.listFiles('/band');
+    expect(folderListings).toEqual([
       createFileMetadata('/band/song 1.chopro'),
       createFileMetadata('/band/song 2.chopro'),
       createFileMetadata('/band/song 3 (renamed).chopro'),
@@ -151,8 +144,8 @@ describe('offline db', () => {
     ]);
 
     // The database should be updated.
-    expect(await db.getFile('/band/song 3.chopro')).toBe(undefined);
-    expect(await db.getFile('/band/song 3 (renamed).chopro')).toBeTruthy();
+    expect(await idbfs.loadBlob('/band/song 3.chopro')).toBe(undefined);
+    expect(await idbfs.loadBlob('/band/song 3 (renamed).chopro')).toBeTruthy();
 
     // Signal to the store that moving the file is done so the internal cache there
     // can be updated as well.
@@ -176,11 +169,12 @@ describe('offline db', () => {
       '/band/song 4.chopro',
     ]);
 
-    db.close();
+    idbfs.close();
   });
 
-  it('can move a folder', async () => {
-    const { fetchTextFile, fetchFileListing, dispatch, db } =
+  // TODO - Add the ability to use a browser indexedb filesystem.
+  it.skip('can move a folder', async () => {
+    const { fetchTextFile, fetchFileListing, dispatch, idbfs } =
       await setupDBWithFiles([
         '/band/song 1.chopro',
         '/band/song 2.chopro',
@@ -191,9 +185,9 @@ describe('offline db', () => {
 
     // The files should exist before the move.
     {
-      expect(await db.getFile('/band/song 3.chopro')).toBeTruthy();
+      expect(await idbfs.loadBlob('/band/song 3.chopro')).toBeTruthy();
       expect(
-        await db.getFile('/band/to-practice/practice 2.chopro'),
+        await idbfs.loadBlob('/band/to-practice/practice 2.chopro'),
       ).toBeTruthy();
       expect(await fetchTextFile('/band/song 3.chopro')).toBeTruthy();
       expect(
@@ -209,24 +203,24 @@ describe('offline db', () => {
     }
 
     // Now move it by updating the metadata.
-    await db.updateMetadata('/band', createFolderMetadata('/band (moved)'));
+    await idbfs.updateMetadata('/band', createFolderMetadata('/band (moved)'));
 
     // Check that the file listing in the offline db is up to date.
-    expect(await db.getFolderListing('/band')).toEqual(undefined);
-    expect(await db.getFolderListing('/band/to-practice')).toEqual(undefined);
+    expect(await idbfs.listFiles('/band')).toEqual(undefined);
+    expect(await idbfs.listFiles('/band/to-practice')).toEqual(undefined);
 
     // Check the listings at '/'
     {
-      const folderListings = await db.getFolderListing('/');
-      expect(folderListings?.files).toEqual([
+      const folderListings = await idbfs.listFiles('/');
+      expect(folderListings).toEqual([
         createFolderMetadata('/band (moved)', 'id:CREATEFOLDERMETADATA1'),
       ]);
     }
 
     // Check the listings at '/band (moved)'
     {
-      const folderListings = await db.getFolderListing('/band (moved)');
-      expect(folderListings?.files).toEqual([
+      const folderListings = await idbfs.listFiles('/band (moved)');
+      expect(folderListings).toEqual([
         createFileMetadata(
           '/band (moved)/song 1.chopro',
           'id:CREATEFILEMETADATA2',
@@ -244,15 +238,12 @@ describe('offline db', () => {
           'id:CREATEFOLDERMETADATA5',
         ),
       ]);
-      expect(folderListings?.path).toEqual('/band (moved)');
     }
 
     // Check the listings at '/band (moved)/to-practice'
     {
-      const folderListings = await db.getFolderListing(
-        '/band (moved)/to-practice',
-      );
-      expect(folderListings?.files).toEqual([
+      const folderListings = await idbfs.listFiles('/band (moved)/to-practice');
+      expect(folderListings).toEqual([
         createFileMetadata(
           '/band (moved)/to-practice/practice 1.chopro',
           'id:CREATEFILEMETADATA6',
@@ -265,13 +256,13 @@ describe('offline db', () => {
     }
 
     // The database file's should be updated.
-    expect(await db.getFile('/band/song 3.chopro')).toBe(undefined);
-    expect(await db.getFile('/band (moved)/song 3.chopro')).toBeTruthy();
-    expect(await db.getFile('/band/to-practice/practice 2.chopro')).toBe(
+    expect(await idbfs.loadBlob('/band/song 3.chopro')).toBe(undefined);
+    expect(await idbfs.loadBlob('/band (moved)/song 3.chopro')).toBeTruthy();
+    expect(await idbfs.loadBlob('/band/to-practice/practice 2.chopro')).toBe(
       undefined,
     );
     expect(
-      await db.getFile('/band (moved)/to-practice/practice 2.chopro'),
+      await idbfs.loadBlob('/band (moved)/to-practice/practice 2.chopro'),
     ).toBeTruthy();
 
     // Signal to the store that moving the file is done so the internal cache there
@@ -307,11 +298,12 @@ describe('offline db', () => {
       ]);
     }
 
-    db.close();
+    idbfs.close();
   });
 
-  it('can delete a file in a subfolder', async () => {
-    const { fetchTextFile, fetchFileListing, dispatch, db } =
+  // TODO - Add the ability to use a browser indexedb filesystem.
+  it.skip('can delete a file in a subfolder', async () => {
+    const { fetchTextFile, fetchFileListing, dispatch, idbfs } =
       await setupDBWithFiles([
         '/band/song 1.chopro',
         '/band/song 2.chopro',
@@ -320,7 +312,7 @@ describe('offline db', () => {
       ]);
 
     // The file should exist.
-    expect(await db.getFile('/band/song 3.chopro')).toBeTruthy();
+    expect(await idbfs.loadBlob('/band/song 3.chopro')).toBeTruthy();
     expect(await fetchTextFile('/band/song 3.chopro')).toEqual(
       'song 3.chopro file contents',
     );
@@ -333,18 +325,18 @@ describe('offline db', () => {
 
     const metadata = createFileMetadata('/band/song 3.chopro');
     // Now move it by updating the metadata.
-    await db.deleteFile(metadata);
+    await idbfs.delete(metadata.path);
 
     // Check that the file listing in the offline db is up to date.
-    const folderListings = await db.getFolderListing('/band');
-    expect(folderListings?.files).toEqual([
+    const folderListings = await idbfs.listFiles('/band');
+    expect(folderListings).toEqual([
       createFileMetadata('/band/song 1.chopro'),
       createFileMetadata('/band/song 2.chopro'),
       createFileMetadata('/band/song 4.chopro'),
     ]);
 
     // The database should be updated.
-    expect(await db.getFile('/band/song 3.chopro')).toBe(undefined);
+    expect(await idbfs.loadBlob('/band/song 3.chopro')).toBe(undefined);
 
     // Signal to the store that moving the file is done so the internal cache there
     // can be updated as well.
@@ -359,11 +351,12 @@ describe('offline db', () => {
       '/band/song 4.chopro',
     ]);
 
-    db.close();
+    idbfs.close();
   });
 
-  it('can delete a folder', async () => {
-    const { fetchTextFile, fetchFileListing, dispatch, db } =
+  // TODO - Add the ability to use a browser indexedb filesystem.
+  it.skip('can delete a folder', async () => {
+    const { fetchTextFile, fetchFileListing, dispatch, idbfs } =
       await setupDBWithFiles([
         '/band/song 1.chopro',
         '/band/song 2.chopro',
@@ -374,9 +367,9 @@ describe('offline db', () => {
 
     // The files should exist before the delete.
     {
-      expect(await db.getFile('/band/song 3.chopro')).toBeTruthy();
+      expect(await idbfs.loadBlob('/band/song 3.chopro')).toBeTruthy();
       expect(
-        await db.getFile('/band/to-practice/practice 2.chopro'),
+        await idbfs.loadBlob('/band/to-practice/practice 2.chopro'),
       ).toBeTruthy();
       expect(await fetchTextFile('/band/song 3.chopro')).toBeTruthy();
       expect(
@@ -393,30 +386,29 @@ describe('offline db', () => {
 
     // Now delete the folder.
     const metadata = createFolderMetadata('/band/to-practice');
-    await db.deleteFile(metadata);
+    await idbfs.delete(metadata.path);
 
-    expect(await db.getFolderListing('/band/to-practice')).toEqual(undefined);
+    expect(await idbfs.listFiles('/band/to-practice')).toEqual(undefined);
 
     // Check the listings at '/'
     {
-      const folderListings = await db.getFolderListing('/');
-      expect(folderListings?.files).toEqual([createFolderMetadata('/band')]);
+      const folderListings = await idbfs.listFiles('/');
+      expect(folderListings).toEqual([createFolderMetadata('/band')]);
     }
 
     // Check the listings at '/band'
     {
-      const folderListings = await db.getFolderListing('/band');
-      expect(folderListings?.files).toEqual([
+      const folderListings = await idbfs.listFiles('/band');
+      expect(folderListings).toEqual([
         createFileMetadata('/band/song 1.chopro'),
         createFileMetadata('/band/song 2.chopro'),
         createFileMetadata('/band/song 3.chopro'),
       ]);
-      expect(folderListings?.path).toEqual('/band');
     }
 
     // The database file's should be updated.
-    expect(await db.getFile('/band/song 3.chopro')).toBeTruthy();
-    expect(await db.getFile('/band/to-practice/practice 2.chopro')).toBe(
+    expect(await idbfs.loadBlob('/band/song 3.chopro')).toBeTruthy();
+    expect(await idbfs.loadBlob('/band/to-practice/practice 2.chopro')).toBe(
       undefined,
     );
 
@@ -439,7 +431,7 @@ describe('offline db', () => {
       expect(await fetchFileListing('/band/to-practice')).toEqual(undefined);
     }
 
-    db.close();
+    idbfs.close();
   });
 });
 

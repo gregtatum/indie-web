@@ -152,7 +152,7 @@ export class FilesIndex {
   }
 
   async #saveImpl() {
-    await this.#fileSystem.saveFile(
+    await this.#fileSystem.saveText(
       FilesIndex.path,
       'overwrite',
       JSON.stringify(this.data, null, '\t'),

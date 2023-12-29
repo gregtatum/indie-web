@@ -1,108 +1,134 @@
 import * as idb from 'idb';
-import { A, T } from 'src';
-import type { files } from 'dropbox';
-import { getPathFolder, updatePathRoot } from '../utils';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  FileSystemCache,
+  FileSystemError,
+  SaveMode,
+} from 'src/logic/file-system';
+import { T } from 'src';
+import { getPathFileName, getPathFolder, updatePathRoot } from 'src/utils';
+
+export class IDBError extends FileSystemError {
+  #missing = false;
+
+  toString() {
+    return this.error.toString();
+  }
+
+  status() {
+    return this.error.toString();
+  }
+
+  isNotFound() {
+    return this.#missing;
+  }
+
+  static wrap(error: any) {
+    return Promise.reject(new IDBError(error));
+  }
+
+  static notFound(message = 'Not found') {
+    const error = new IDBError(message);
+    error.#missing = true;
+    return error;
+  }
+
+  cacheLog() {
+    if (this.#missing) {
+      log('Cache miss:', this.error);
+    } else {
+      console.error('[idbfs]', this.error);
+    }
+  }
+}
 
 function log(key: string, ...args: any[]) {
   const style = 'color: #FF006D; font-weight: bold';
   if (process.env.NODE_ENV !== 'test') {
-    console.log(`[offline-db] %c"${key}"`, style, ...args);
+    console.log(`[idbfs] %c"${key}"`, style, ...args);
   }
 }
 
-export function openDB(): T.Thunk<Promise<OfflineDB>> {
-  return async (dispatch) => {
-    const db = await idb.openDB<T.OfflineDBSchema>('browser-chords', 1, {
-      /**
-       * Called if this version of the database has never been opened before. Use it to
-       * specify the schema for the database.
-       *
-       * @param database A database instance that you can use to add/remove stores and indexes.
-       * @param oldVersion Last version of the database opened by the user.
-       * @param newVersion Whatever new version you provided.
-       * @param transaction The transaction for this upgrade. This is useful if you need to get data
-       * from other stores as part of a migration.
-       */
-      upgrade(db, _oldVersion, _newVersion, _transaction): void {
-        const files = db.createObjectStore('files', {
-          keyPath: 'metadata.path',
-        });
-        files.createIndex('by-hash', 'metadata.hash');
-        files.createIndex('by-id', 'metadata.id');
+export async function openDropboxCache(): Promise<IDBFS> {
+  let idbfs: IDBFS | null = null;
 
-        db.createObjectStore('folderListings', {
-          keyPath: 'path',
-        });
-      },
+  const db = await idb.openDB<T.IDBFSSchema>('dropbox-fs-cache', 1, {
+    /**
+     * Called if this version of the database has never been opened before. Use it to
+     * specify the schema for the database.
+     *
+     * @param database A database instance that you can use to add/remove stores and indexes.
+     * @param oldVersion Last version of the database opened by the user.
+     * @param newVersion Whatever new version you provided.
+     * @param transaction The transaction for this upgrade. This is useful if you need to get data
+     * from other stores as part of a migration.
+     */
+    upgrade(db, _oldVersion, _newVersion, _transaction): void {
+      const files = db.createObjectStore('files', {
+        keyPath: 'metadata.path',
+      });
+      files.createIndex('by-hash', 'metadata.hash');
+      files.createIndex('by-id', 'metadata.id');
 
-      /**
-       * Called if there are older versions of the database open on the origin, so this
-       * version cannot open.
-       */
-      blocked() {
-        dispatch(A.disconnectOfflineDB());
-        dispatch(
-          A.addMessage({
-            message:
-              'Offline files are not available since another tab is using an ' +
-              'old version. Try closing other tabs and refresh the browser.' +
-              'refreshing the page.',
-          }),
-        );
-      },
+      db.createObjectStore('folderListings', {
+        keyPath: 'path',
+      });
+    },
 
-      /**
-       * Called if this connection is blocking a future version of the database from opening.
-       */
-      blocking() {
-        dispatch(
-          A.addMessage({
-            message:
-              'Your offline files need updating. Close this tab, or refresh ' +
-              'the page to update.',
-          }),
-        );
-      },
+    /**
+     * Called if there are older versions of the database open on the origin, so this
+     * version cannot open.
+     */
+    blocked() {
+      log('The database is currently blocked');
+    },
 
-      /**
-       * Called if the browser abnormally terminates the connection.
-       * This is not called when `db.close()` is called.
-       */
-      terminated() {
-        dispatch(A.disconnectOfflineDB());
-        dispatch(
-          A.addMessage({
-            message:
-              'Offline files stopped unexpectedly and are no longer working. Try ' +
-              'refreshing the page.',
-          }),
-        );
-        console.error('The indexeddb connection terminated.');
-      },
-    });
+    /**
+     * Called if this connection is blocking a future version of the database from opening.
+     */
+    blocking() {
+      log('The database is currently blocking');
+    },
 
-    const wrappedDB = new OfflineDB(db);
-    dispatch(A.connectOfflineDB(wrappedDB));
-    return wrappedDB;
-  };
+    /**
+     * Called if the browser abnormally terminates the connection.
+     * This is not called when `db.close()` is called.
+     */
+    terminated() {
+      log('The database was terminated.');
+      if (idbfs) {
+        idbfs.open = false;
+      }
+    },
+  });
+
+  idbfs = new IDBFS(db);
+
+  return idbfs;
 }
 
-export class OfflineDB {
-  #db: idb.IDBPDatabase<T.OfflineDBSchema>;
-  constructor(db: idb.IDBPDatabase<T.OfflineDBSchema>) {
+export class IDBFS extends FileSystemCache {
+  #db: idb.IDBPDatabase<T.IDBFSSchema>;
+  open = true;
+  constructor(db: idb.IDBPDatabase<T.IDBFSSchema>) {
+    super();
     this.#db = db;
   }
 
-  async getFolderListing(path: string) {
-    const listing = await this.#db.get('folderListings', path);
-    log('getFolderListing', path, { listing });
-    return listing;
+  async listFiles(path: string): Promise<T.FolderListing> {
+    const row = await this.#db.get('folderListings', path);
+    log('listFiles', path, { row });
+    if (row) {
+      return row.files;
+    }
+    return Promise.reject(IDBError.notFound('No files fount at ' + path));
   }
 
-  async addFolderListing(
-    path: string,
-    files: Array<T.FolderMetadata | T.FileMetadata>,
-  ) {
+  async addFolderListing(path: string, files: T.FolderListing): Promise<void> {
+    if (!path) {
+      // Normalize empty paths to just be the root.
+      path = '/';
+    }
     const row: T.FolderListingRow = {
       storedAt: new Date(),
       path,
@@ -112,10 +138,27 @@ export class OfflineDB {
     await this.#db.put('folderListings', row);
   }
 
-  async getFile(path: string) {
-    const file = await this.#db.get('files', path);
-    log('getFile', path, { metadata: file?.metadata });
-    return file;
+  async loadBlob(path: string): Promise<T.BlobFile> {
+    const row = await this.#db.get('files', path);
+    log('getFile', path, { metadata: row?.metadata });
+    if (row) {
+      if (process.env.NODE_ENV === 'test') {
+        // Blob text doesn't work correctly in Node and Jest. Fake it.
+        const { text, metadata } = row as any;
+        const blob = new Blob([text], { type: 'text/plain' });
+        return { blob, metadata };
+      }
+
+      const { blob, metadata } = row;
+      return { blob, metadata };
+    }
+    return Promise.reject(IDBError.notFound('No file found at ' + path));
+  }
+
+  compressFolder() {
+    return Promise.reject(
+      new Error('This is not current supported by the IndexedDB file system.'),
+    );
   }
 
   async #getFileStoreIfNeedsUpdating(metadata: T.FileMetadata) {
@@ -129,14 +172,32 @@ export class OfflineDB {
     return store;
   }
 
-  async addTextFile(metadata: T.FileMetadata, text: string) {
+  async saveBlob(
+    pathOrMetadata: string | T.FileMetadata,
+    _mode: SaveMode,
+    blob: Blob,
+  ): Promise<T.FileMetadata> {
+    const metadata = await getFileMetadata(pathOrMetadata, blob);
     const store = await this.#getFileStoreIfNeedsUpdating(metadata);
     if (store) {
-      await store.put({ metadata, storedAt: new Date(), type: 'text', text });
-      log('addTextFile', metadata.path, { metadata, text: { text } });
+      if (process.env.NODE_ENV === 'test') {
+        // Blob text doesn't work correctly in Node and Jest. Fake it by saving text.
+        const text: string = await blob.text();
+        await store.put({ metadata, storedAt: new Date(), text } as any);
+      } else {
+        await store.put({ metadata, storedAt: new Date(), blob });
+      }
+      log('saveBlob', metadata.path, { metadata });
     } else {
-      log('addTextFile', 'hash match');
+      log('saveBlob', 'hash match');
     }
+
+    await this.#updateFileInFolderListings(
+      getPathFolder(metadata.path),
+      metadata,
+    );
+
+    return metadata;
   }
 
   /**
@@ -288,13 +349,14 @@ export class OfflineDB {
     await tx.done;
   }
 
-  async deleteFile(metadata: T.FileMetadata | T.FolderMetadata) {
+  async delete(path: string) {
+    const { metadata } = await this.loadBlob(path);
     if (metadata.type === 'file') {
-      await this.#deleteFileFromFiles(metadata.path);
-      await this.#deleteFileFromFolderListing(metadata.path);
+      await this.#deleteFileFromFiles(path);
+      await this.#deleteFileFromFolderListing(path);
     } else {
-      await this.#deleteFolderListing(metadata.path);
-      await this.#deleteFilesInFolder(metadata.path);
+      await this.#deleteFolderListing(path);
+      await this.#deleteFilesInFolder(path);
     }
   }
 
@@ -372,6 +434,19 @@ export class OfflineDB {
     await tx.done;
   }
 
+  async move(
+    fromPath: string,
+    toPath: string,
+  ): Promise<T.FileMetadata | T.FolderMetadata> {
+    const { metadata } = await this.loadBlob(fromPath);
+    await this.updateMetadata(fromPath, {
+      ...metadata,
+      name: getPathFileName(toPath),
+      path: toPath,
+    });
+    return metadata;
+  }
+
   async updateMetadata(
     oldPath: string,
     metadata: T.FileMetadata | T.FolderMetadata,
@@ -385,55 +460,42 @@ export class OfflineDB {
     }
   }
 
-  async addBlobFile(metadata: T.FileMetadata, blob: Blob) {
-    const store = await this.#getFileStoreIfNeedsUpdating(metadata);
-    if (store) {
-      await store.put({ metadata, storedAt: new Date(), type: 'blob', blob });
-      log('addBlobFile', metadata.path, metadata, blob);
-    } else {
-      log('addBlobFile', 'hash match');
-    }
-  }
-
   close(): void {
     return this.#db.close();
   }
 }
 
-export function fixupMetadata(
-  rawMetadata: files.FileMetadataReference | files.FolderMetadataReference,
-): T.FileMetadata | T.FolderMetadata {
-  if (rawMetadata['.tag'] === 'file') {
-    return fixupFileMetadata(rawMetadata);
-  } else {
-    return fixupFolderMetadata(rawMetadata);
+function getFileMetadata(
+  pathOrMetadata: string | T.FileMetadata,
+  blob: Blob,
+): Promise<T.FileMetadata> {
+  if (typeof pathOrMetadata === 'string') {
+    return createFileMetadata(pathOrMetadata, blob);
   }
+  return Promise.resolve(pathOrMetadata);
 }
 
-export function fixupFileMetadata(
-  rawMetadata: files.FileMetadata | files.FileMetadataReference,
-): T.FileMetadata {
+async function createFileMetadata(
+  path: string,
+  blob: Blob,
+): Promise<T.FileMetadata> {
+  const now = new Date().toISOString();
+
+  const data = new Uint8Array(await blob.arrayBuffer());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
   return {
     type: 'file',
-    name: rawMetadata.name,
-    path: rawMetadata.path_display ?? '',
-    id: rawMetadata.id,
-    clientModified: rawMetadata.client_modified,
-    serverModified: rawMetadata.server_modified,
-    rev: rawMetadata.rev,
-    size: rawMetadata.size,
-    isDownloadable: rawMetadata.is_downloadable ?? false,
-    hash: rawMetadata.content_hash ?? '',
-  };
-}
-
-export function fixupFolderMetadata(
-  rawMetadata: files.FolderMetadataReference,
-): T.FolderMetadata {
-  return {
-    type: 'folder',
-    name: rawMetadata.name,
-    path: rawMetadata.path_display ?? '',
-    id: rawMetadata.id,
+    name: getPathFileName(path),
+    path: path,
+    id: uuidv4(),
+    clientModified: now,
+    serverModified: now,
+    rev: uuidv4(),
+    size: blob.size,
+    isDownloadable: true,
+    hash,
   };
 }

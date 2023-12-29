@@ -14,6 +14,7 @@ import {
 import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'src/logic/files-index';
 import { FileSystemError } from 'src/logic/file-system';
+import { IDBError } from 'src/logic/file-system/indexeddb-fs';
 
 /**
  * This file contains all of the thunk actions, that contain extra logic,
@@ -50,10 +51,7 @@ export namespace PlainInternal {
     return { type: 'list-files-requested' as const, path };
   }
 
-  export function listFilesReceived(
-    path: string,
-    files: Array<T.FileMetadata | T.FolderMetadata>,
-  ) {
+  export function listFilesReceived(path: string, files: T.FolderListing) {
     return { type: 'list-files-received' as const, path, files };
   }
 
@@ -80,7 +78,7 @@ export namespace PlainInternal {
     return { type: 'download-file-requested' as const, path };
   }
 
-  export function downloadFileReceived(path: string, file: T.StoredTextFile) {
+  export function downloadFileReceived(path: string, file: T.TextFile) {
     return { type: 'download-file-received' as const, path, file };
   }
 
@@ -92,10 +90,7 @@ export namespace PlainInternal {
     return { type: 'download-blob-requested' as const, path };
   }
 
-  export function downloadBlobReceived(
-    path: string,
-    blobFile: T.StoredBlobFile,
-  ) {
+  export function downloadBlobReceived(path: string, blobFile: T.BlobFile) {
     return { type: 'download-blob-received' as const, path, blobFile };
   }
 
@@ -111,27 +106,24 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
       // Dropbox doesn't like the root `/`.
       dropboxPath = '';
     }
+    const fileSystem = $.getCurrentFS(getState());
 
     dispatch(PlainInternal.listFilesRequested(path));
 
-    const db = $.getOfflineDB(getState());
-    if (db) {
+    if (fileSystem.cache) {
       try {
-        const offlineListing = await db.getFolderListing(path);
+        const offlineListing = await fileSystem.cache.listFiles(path);
         if (offlineListing) {
-          dispatch(PlainInternal.listFilesReceived(path, offlineListing.files));
+          dispatch(PlainInternal.listFilesReceived(path, offlineListing));
         }
       } catch (error) {
-        console.error('Error with indexeddb', error);
+        (error as IDBError)?.cacheLog();
       }
     }
 
     try {
-      const files = await $.getCurrentFS(getState()).listFiles(dropboxPath);
+      const files = await fileSystem.listFiles(dropboxPath);
       dispatch(PlainInternal.listFilesReceived(path, files));
-      if (db) {
-        await db.addFolderListing(path, files);
-      }
     } catch (response) {
       dispatch(
         PlainInternal.listFilesError(path, dropboxErrorMessage(response)),
@@ -144,7 +136,7 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     dispatch(PlainInternal.downloadFileRequested(path));
 
-    const handleFile = (file: T.StoredTextFile) => {
+    const handleFile = (file: T.TextFile) => {
       dispatch(PlainInternal.downloadFileReceived(path, file));
 
       // For things like back and next, ensure we have a copy of the prev/next
@@ -158,43 +150,29 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
       }
     };
 
-    let offlineFile: T.FileRow | undefined;
+    let cachedFile: T.TextFile | undefined;
+    const fileSystem = $.getCurrentFS(getState());
 
-    const db = $.getOfflineDB(getState());
-    if (db) {
+    if (fileSystem.cache) {
       try {
-        offlineFile = await db.getFile(path);
-        if (offlineFile?.type === 'text') {
-          handleFile(offlineFile);
-        }
+        cachedFile = await fileSystem.cache.loadText(path);
+        handleFile(cachedFile);
       } catch (error) {
-        console.error('Error with indexeddb', error);
+        (error as IDBError)?.cacheLog();
       }
     }
 
     // Kick off the request, even if an offline version was found.
     try {
-      const { text, metadata } =
-        await $.getCurrentFS(getState()).loadText(path);
+      const { text, metadata } = await fileSystem.loadText(path);
       // The file blob was left off of this type.
-      if (offlineFile?.metadata.hash === metadata.hash) {
+      if (cachedFile?.metadata.hash === metadata.hash) {
         // The files are the same.
         return;
       }
 
-      if (db) {
-        db.addTextFile(metadata, text).catch((error) => {
-          console.error(
-            'Unable to add a text file to the offline db after downloading file',
-            error,
-          );
-        });
-      }
-
       handleFile({
         metadata,
-        storedAt: new Date(),
-        type: 'text',
         text,
       });
     } catch (error) {
@@ -212,7 +190,7 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     dispatch(PlainInternal.downloadBlobRequested(path));
 
-    const handleBlob = (blobFile: T.StoredBlobFile) => {
+    const handleBlob = (blobFile: T.BlobFile) => {
       dispatch(PlainInternal.downloadBlobReceived(path, blobFile));
 
       // For things like back and next, ensure we have a copy of the prev/next
@@ -226,33 +204,17 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
       }
     };
 
-    const db = $.getOfflineDB(getState());
-    if (db) {
+    const fileSystem = $.getCurrentFS(getState());
+    if (fileSystem.cache) {
       try {
-        const file = await db.getFile(path);
-        if (file?.type === 'blob') {
-          handleBlob(file);
-        }
+        handleBlob(await fileSystem.cache.loadBlob(path));
       } catch (error) {
         console.error('Error with indexeddb', error);
       }
     }
 
     try {
-      const { blob, metadata } =
-        await $.getCurrentFS(getState()).loadBlob(path);
-      const value: T.StoredBlobFile = {
-        metadata,
-        storedAt: new Date(),
-        type: 'blob',
-        blob,
-      };
-
-      handleBlob(value);
-
-      if (db) {
-        await db.addBlobFile(metadata, blob);
-      }
+      handleBlob(await fileSystem.loadBlob(path));
     } catch (error) {
       dispatch(
         PlainInternal.downloadFileError(path, dropboxErrorMessage(error)),
@@ -275,12 +237,10 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
       }),
     );
     try {
-      const metadata = await fileSystem.saveFile(path, 'overwrite', text);
+      const metadata = await fileSystem.saveText(path, 'overwrite', text);
       dispatch(
         PlainInternal.downloadFileReceived(path, {
           metadata,
-          storedAt: new Date(),
-          type: 'text',
           text,
         }),
       );
@@ -295,12 +255,6 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
           timeout: true,
         }),
       );
-
-      // Save the updated file to the offline db.
-      const db = $.getOfflineDB(getState());
-      if (db) {
-        await db.addTextFile(metadata, text);
-      }
     } catch (error) {
       dispatch(
         addMessage({
@@ -354,13 +308,6 @@ export function moveFile(
           timeout: true,
         }),
       );
-
-      // Save the updated file to the offline db.
-      const db = $.getOfflineDB(getState());
-
-      if (db) {
-        await db.updateMetadata(fromPath, metadata);
-      }
     } catch (error) {
       dispatch(
         addMessage({
@@ -455,7 +402,7 @@ export function createInitialFiles(): Thunk<Promise<void>> {
 
       // Upload it Dropbox.
       try {
-        await fileSystem.saveFile('/' + file, 'add', contents);
+        await fileSystem.saveText('/' + file, 'add', contents);
       } catch (error) {
         console.error(error);
         hasFailure = true;
@@ -602,11 +549,7 @@ export function deleteFile(
     await $.getCurrentFS(getState())
       .delete(file.path)
       .then(
-        async () => {
-          const db = $.getOfflineDB(getState());
-          if (db) {
-            await db.deleteFile(file);
-          }
+        () => {
           dispatch(PlainInternal.deleteFileDone(file));
 
           dispatch(
@@ -750,7 +693,7 @@ export function saveAssetFile(
       }),
     );
     try {
-      const metadata = await fileSystem.saveFile(path, 'add', contents);
+      const metadata = await fileSystem.saveBlob(path, 'add', contents);
 
       dispatch(
         addMessage({

@@ -3,7 +3,8 @@ import { type files } from 'dropbox';
 import { ensureExists, UnhandledCaseError } from '../../utils';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { createStore } from 'src/store/create-store';
-import * as Offline from 'src/logic/offline-db';
+import { fixupMetadata } from 'src/logic/file-system/dropbox-fs';
+import { IDBFS, openDropboxCache } from 'src/logic/file-system/indexeddb-fs';
 
 export function createFileMetadata(path: string, id?: string): T.FileMetadata {
   const parts = path.split('/');
@@ -43,14 +44,14 @@ type MockedListFolderItem = {
 
 export function mockDropboxListFolder(
   items: MockedListFolderItem[],
-): Array<T.FileMetadata | T.FolderMetadata> {
+): T.FolderListing {
   const fileList = createFileList(items);
   (window.fetch as FetchMockSandbox)
     .catch(404)
     .mock('https://api.dropboxapi.com/2/files/list_folder', () => {
       return createListFolderResponse(fileList);
     });
-  return fileList.map((file) => Offline.fixupMetadata(file));
+  return fileList.map((file) => fixupMetadata(file));
 }
 
 export interface MockedFilesDownload {
@@ -96,9 +97,9 @@ export function spyOnDropboxFilesUpload(): UploadSpy[] {
   const results: UploadSpy[] = [];
   (window.fetch as FetchMockSandbox).post(
     'https://content.dropboxapi.com/2/files/upload',
-    (url, opts) => {
+    async (url, opts) => {
       const { path } = JSON.parse((opts.headers as any)['Dropbox-API-Arg']);
-      results.push({ path, body: String(opts.body) });
+      results.push({ path, body: await (opts.body as Blob).text() });
       return {
         status: 200,
         body: createFileMetadataReference(path),
@@ -259,9 +260,10 @@ export function foldersFromPaths(paths: string[]): TestFolder {
 export async function setupDBWithFiles(paths: string[]) {
   const store = createStore();
   const { dispatch, getState } = store;
-  const db = await store.dispatch(Offline.openDB());
   const folders = foldersFromPaths(paths);
-  await addTestFoldersToDB(db, folders);
+  const idbfs = await openDropboxCache();
+
+  await addTestFoldersToDB(idbfs, folders);
 
   /**
    * Use the store machinery to fetch a file as the active file.
@@ -282,14 +284,14 @@ export async function setupDBWithFiles(paths: string[]) {
       ?.map((listing) => listing.path);
   }
 
-  return { dispatch, getState, fetchTextFile, fetchFileListing, db };
+  return { dispatch, getState, fetchTextFile, fetchFileListing, idbfs };
 }
 
 /**
  * Builds out the offline database with file listings and files.
  */
 async function addTestFoldersToDB(
-  db: T.OfflineDB,
+  idbfs: IDBFS,
   folders: TestFolder,
   prevPath = '',
 ) {
@@ -301,12 +303,12 @@ async function addTestFoldersToDB(
     if (children) {
       const metadata = createFolderMetadata(path);
       files.push(metadata);
-      await addTestFoldersToDB(db, children, path);
+      await addTestFoldersToDB(idbfs, children, path);
     } else {
       const metadata = createFileMetadata(path);
       files.push(metadata);
-      await db.addTextFile(metadata, `${name} file contents`);
+      await idbfs.saveText(metadata, 'overwrite', `${name} file contents`);
     }
   }
-  await db.addFolderListing(prevPath || '/', files);
+  await idbfs.addFolderListing(prevPath || '/', files);
 }

@@ -8,7 +8,6 @@ import { createRoot } from 'react-dom/client';
 
 import * as A from 'src/store/actions';
 import * as $ from 'src/store/selectors';
-import { openDB } from 'src/logic/offline-db';
 
 export * as A from 'src/store/actions';
 export * as $ from 'src/store/selectors';
@@ -44,7 +43,10 @@ export async function init(): Promise<void> {
     },
   });
 
-  await store.dispatch(openDB());
+  const cachePromise = $.getCurrentFSOrNull(store.getState())?.cachePromise;
+  if (cachePromise) {
+    await cachePromise;
+  }
   mountReact(store);
 }
 

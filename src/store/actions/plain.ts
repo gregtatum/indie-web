@@ -1,4 +1,5 @@
 import { T } from 'src';
+import { IDBFS } from 'src/logic/file-system/indexeddb-fs';
 import { SongKey } from 'src/logic/parse';
 
 export function removeDropboxAccessToken(): { type: 'remove-dropbox-oauth' } {
@@ -87,14 +88,6 @@ export function hideEditor(flag: boolean) {
     type: 'hide-editor' as const,
     flag,
   };
-}
-
-export function disconnectOfflineDB() {
-  return { type: 'disconnect-offline-db' as const };
-}
-
-export function connectOfflineDB(db: T.OfflineDB) {
-  return { type: 'connect-offline-db' as const, db };
 }
 
 export function invalidatePath(path: string) {

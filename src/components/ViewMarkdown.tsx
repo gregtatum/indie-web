@@ -99,7 +99,6 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
   const containerRef = React.useRef(null);
   const markdownDiv = React.useRef<HTMLDivElement | null>(null);
   const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
-  const db = Hooks.useSelector($.getOfflineDB);
   const dispatch = Hooks.useDispatch();
 
   useNextPrevSwipe(containerRef);
@@ -141,7 +140,7 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
       // The img src will need to be replaced with the downloaded file.
       img.removeAttribute('src');
 
-      downloadImage(fileSystem, db, folderPath, src)
+      downloadImage(fileSystem, folderPath, src)
         .then((objectURL) => {
           img.src = objectURL;
         })

@@ -1,5 +1,4 @@
 import type * as idb from 'idb';
-import { OfflineDB } from 'src/logic/offline-db';
 import * as Dropbox from 'dropbox';
 import { SongKey } from 'src/logic/parse';
 
@@ -86,10 +85,14 @@ export interface FileMetadata {
   type: 'file';
   name: string; // '500 Miles _ Surrender.chopro';
   path: string; // '/500 Miles _ Surrender.chopro';
-  id: string; // 'id:ywUpYqVN8XAAAAAAAAAACw';
+  // DropboxFS: 'id:ywUpYqVN8XAAAAAAAAAACw'
+  // IDBFS: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
+  id: string;
   clientModified: string; // '2022-04-22T16:39:21Z';
   serverModified: string; // '2022-04-24T17:54:38Z';
-  rev: string; // '015dd6a2747a0250000000266f484e0';
+  // DropboxFS: '015dd6a2747a0250000000266f484e0'
+  // IDBFS: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
+  rev: string;
   size: number; //3296;
   isDownloadable: boolean; // true;
   hash: string; // 'bb6d43dfb6aff9dca4ff4d51f0146b64bdf325c73cd63193189b26ca052a2c51';
@@ -103,6 +106,18 @@ export interface FolderMetadata {
   name: string; // 'Bent and Bruised';
   path: string; // '/Bent and Bruised';
   id: string; // 'id:ywUpYqVN8XAAAAAAAAAAPA';
+}
+
+export type FolderListing = Array<FileMetadata | FolderMetadata>;
+
+export interface BlobFile {
+  metadata: FileMetadata;
+  blob: Blob;
+}
+
+export interface TextFile {
+  metadata: FileMetadata;
+  text: string;
 }
 
 export type Message = {
@@ -135,13 +150,12 @@ export type StoredTextFile = {
 export type StoredBlobFile = {
   metadata: FileMetadata;
   storedAt: Date;
-  type: 'blob';
   blob: Blob;
 };
 
-export interface OfflineDBSchema extends idb.DBSchema {
+export interface IDBFSSchema extends idb.DBSchema {
   files: {
-    value: FileRow;
+    value: StoredBlobFile;
     key: string;
     indexes: {
       'by-hash': string;
@@ -153,11 +167,6 @@ export interface OfflineDBSchema extends idb.DBSchema {
     key: string;
   };
 }
-
-export type OfflineDBState =
-  | { phase: 'connecting'; db: null }
-  | { phase: 'connected'; db: OfflineDB }
-  | { phase: 'disconnected'; db: null };
 
 export type ListFilesCache = Map<string, Array<FileMetadata | FolderMetadata>>;
 export type DownloadFileCache = Map<string, DownloadedTextFile>;

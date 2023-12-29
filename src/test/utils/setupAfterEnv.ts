@@ -4,6 +4,7 @@ import { Headers, Request, Response } from 'node-fetch';
 import { resetTestGeneration } from './fixtures';
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
+import { Blob } from 'node:buffer';
 
 globalThis.structuredClone = structuredClone;
 
@@ -16,6 +17,7 @@ beforeEach(function () {
   (global as any).Headers = Headers;
   (global as any).Request = Request;
   (global as any).Response = Response;
+  (global as any).Blob = Blob;
 
   global.ResizeObserver = jest.fn().mockImplementation(() => ({
     observe: jest.fn(),

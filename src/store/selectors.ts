@@ -72,14 +72,6 @@ export function shouldHideHeader(state: State) {
   return state.shouldHideHeader;
 }
 
-export function getOfflineDBConnection(state: State) {
-  return state.offlineDB;
-}
-
-export function getOfflineDB(state: State) {
-  return getOfflineDBConnection(state).db;
-}
-
 export function getFileMenu(state: State) {
   return state.fileMenu;
 }

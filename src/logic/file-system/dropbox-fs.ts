@@ -1,12 +1,7 @@
-import { Dropbox } from 'dropbox';
-import {
-  BlobFile,
-  FileSystemError,
-  SaveMode,
-  TextFile,
-} from 'src/logic/file-system';
+import { Dropbox, files } from 'dropbox';
+import { FileSystemError, SaveMode, FileSystem } from 'src/logic/file-system';
 import { T } from 'src';
-import { fixupFileMetadata, fixupMetadata } from 'src/logic/offline-db';
+import { openDropboxCache } from './indexeddb-fs';
 
 export class DropboxError extends FileSystemError {
   toString() {
@@ -40,22 +35,39 @@ export class DropboxError extends FileSystemError {
   }
 }
 
+function toPath(pathOrMetadata: string | T.FileMetadata) {
+  return typeof pathOrMetadata === 'string'
+    ? pathOrMetadata
+    : pathOrMetadata.path;
+}
+
 export class DropboxFS extends FileSystem {
   #dropbox: Dropbox;
+  cachePromise?: Promise<void>;
+
   constructor(dropbox: Dropbox) {
     super();
     this.#dropbox = dropbox;
+    if (process.env.NODE_ENV === 'test') {
+      this.cachePromise = Promise.resolve();
+    } else {
+      const cachePromise = openDropboxCache();
+      void cachePromise.then((IDBFS) => {
+        this.cache = IDBFS;
+      });
+      this.cachePromise = cachePromise.then(() => {});
+    }
   }
 
-  saveFile(
-    path: string,
+  saveBlob(
+    pathOrMetadata: string | T.FileMetadata,
     mode: SaveMode,
     contents: any,
   ): Promise<T.FileMetadata> {
     return this.#dropbox
 
       .filesUpload({
-        path,
+        path: toPath(pathOrMetadata),
         contents,
         mode: {
           '.tag': mode as any,
@@ -63,46 +75,37 @@ export class DropboxFS extends FileSystem {
         autorename: mode === 'add' ? true : false,
       })
 
-      .then(
-        (response) => fixupFileMetadata(response.result),
-        DropboxError.wrap,
-      );
+      .then((response) => {
+        const metadata = fixupFileMetadata(response.result);
+        this.cache?.saveBlob(metadata, mode, contents).catch((error) => {
+          console.error('Failed to save blob to IDBFS cache', error);
+        });
+        return metadata;
+      }, DropboxError.wrap);
   }
 
-  loadBlob(path: string): Promise<BlobFile> {
+  loadBlob(path: string): Promise<T.BlobFile> {
     return this.#dropbox
 
       .filesDownload({ path })
 
-      .then(
-        (response): BlobFile => ({
-          metadata: fixupFileMetadata(response.result),
-          blob: (response as T.FilesDownloadResponse).result.fileBlob,
-        }),
-        DropboxError.wrap,
-      );
+      .then((response): T.BlobFile => {
+        const metadata = fixupFileMetadata(response.result);
+        const blob = (response as T.FilesDownloadResponse).result.fileBlob;
+        this.cache?.saveBlob(metadata, 'overwrite', blob).catch((error) => {
+          console.error('Failed to save blob to IDBFS', error);
+        });
+        return { metadata, blob };
+      }, DropboxError.wrap);
   }
 
-  loadText(path: string): Promise<TextFile> {
-    return this.loadBlob(path).then(async ({ metadata, blob }) => ({
-      metadata,
-      text: await blob.text(),
-    }));
-  }
-
-  listFilesCache(
-    _path: string,
-  ): Promise<Array<T.FileMetadata | T.FolderMetadata>> | null {
-    return null;
-  }
-
-  listFiles(path: string): Promise<Array<T.FileMetadata | T.FolderMetadata>> {
+  listFiles(path: string): Promise<T.FolderListing> {
     return this.#dropbox
       .filesListFolder({
         path,
       })
       .then((response) => {
-        const files: Array<T.FileMetadata | T.FolderMetadata> = [];
+        const files: T.FolderListing = [];
 
         for (const entry of response.result.entries) {
           if (entry['.tag'] === 'file' || entry['.tag'] === 'folder') {
@@ -120,6 +123,10 @@ export class DropboxFS extends FileSystem {
           }
           // Sort by file name second.
           return a.name.localeCompare(b.name);
+        });
+
+        this.cache?.addFolderListing(path, files).catch((error) => {
+          console.error('Failed to update folder listing in IDBFS', error);
         });
 
         return files;
@@ -140,6 +147,9 @@ export class DropboxFS extends FileSystem {
           // Satisfy the types.
           throw new Error('Unexpected deletion.');
         }
+        this.cache?.move(fromPath, toPath).catch((error) => {
+          console.error('Failed to move file in IDBFS cache.', error);
+        });
         return fixupMetadata(result.metadata);
       }, DropboxError.wrap);
   }
@@ -156,8 +166,48 @@ export class DropboxFS extends FileSystem {
   }
 
   delete(path: string): Promise<void> {
-    return this.#dropbox
-      .filesDeleteV2({ path })
-      .then(() => {}, DropboxError.wrap);
+    return this.#dropbox.filesDeleteV2({ path }).then((error) => {
+      this.cache?.delete(path).catch(() => {
+        console.error('Failed to delete file in IDBFS cache.', error);
+      });
+    }, DropboxError.wrap);
   }
+}
+
+export function fixupMetadata(
+  rawMetadata: files.FileMetadataReference | files.FolderMetadataReference,
+): T.FileMetadata | T.FolderMetadata {
+  if (rawMetadata['.tag'] === 'file') {
+    return fixupFileMetadata(rawMetadata);
+  } else {
+    return fixupFolderMetadata(rawMetadata);
+  }
+}
+
+function fixupFileMetadata(
+  rawMetadata: files.FileMetadata | files.FileMetadataReference,
+): T.FileMetadata {
+  return {
+    type: 'file',
+    name: rawMetadata.name,
+    path: rawMetadata.path_display ?? '',
+    id: rawMetadata.id,
+    clientModified: rawMetadata.client_modified,
+    serverModified: rawMetadata.server_modified,
+    rev: rawMetadata.rev,
+    size: rawMetadata.size,
+    isDownloadable: rawMetadata.is_downloadable ?? false,
+    hash: rawMetadata.content_hash ?? '',
+  };
+}
+
+function fixupFolderMetadata(
+  rawMetadata: files.FolderMetadataReference,
+): T.FolderMetadata {
+  return {
+    type: 'folder',
+    name: rawMetadata.name,
+    path: rawMetadata.path_display ?? '',
+    id: rawMetadata.id,
+  };
 }

@@ -1,6 +1,6 @@
-import { T } from 'src';
 import { pathJoin } from 'src/utils';
 import { FileSystem } from 'src/logic/file-system';
+import { IDBError } from './file-system/indexeddb-fs';
 
 export const imageCache: Record<string, string> = Object.create(null);
 
@@ -9,7 +9,6 @@ export const imageCache: Record<string, string> = Object.create(null);
  */
 export async function downloadImage(
   fileSystem: FileSystem,
-  db: T.OfflineDB | null,
   folderPath: string,
   unresolvedSrc: string,
 ): Promise<string> {
@@ -26,22 +25,17 @@ export async function downloadImage(
   }
 
   try {
-    if (db) {
+    if (fileSystem.cache) {
       try {
-        const file = await db.getFile(src);
-        if (file?.type === 'blob') {
-          const objectURL = (imageCache[src] = URL.createObjectURL(file.blob));
-          return objectURL;
-        }
+        const file = await fileSystem.cache.loadBlob(src);
+        const objectURL = (imageCache[src] = URL.createObjectURL(file.blob));
+        return objectURL;
       } catch (error) {
-        console.error('Error with indexeddb', error);
+        (error as IDBError)?.cacheLog();
       }
     }
 
-    const { blob, metadata } = await fileSystem.loadBlob(src);
-    if (db) {
-      await db.addBlobFile(metadata, blob);
-    }
+    const { blob } = await fileSystem.loadBlob(src);
     const objectURL = (imageCache[src] = URL.createObjectURL(blob));
     return objectURL;
   } catch (error) {
