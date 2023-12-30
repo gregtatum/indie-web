@@ -167,7 +167,7 @@ function FileSystemSelectionMenu() {
           className="menusFileButton"
           key="1"
           onClick={() => {
-            dispatch(A.changeFileSystemName('dropbox'));
+            dispatch(A.changeFileSystem('dropbox'));
           }}
         >
           Dropbox
@@ -177,7 +177,7 @@ function FileSystemSelectionMenu() {
           className="menusFileButton"
           key="2"
           onClick={() => {
-            dispatch(A.changeFileSystemName('indexeddb'));
+            dispatch(A.changeFileSystem('indexeddb'));
           }}
         >
           {getBrowserName()}

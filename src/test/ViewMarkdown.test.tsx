@@ -24,7 +24,7 @@ TODO - Come up with some great ideas.
 describe('<ViewMarkdown>', () => {
   function setup() {
     const store = createStore();
-    store.dispatch(A.changeFileSystemName('dropbox'));
+    store.dispatch(A.changeFileSystem('dropbox'));
     mockDropboxAccessToken(store);
     const listFiles = mockDropboxListFolder([
       { type: 'folder', path: '/My Cool Notes' },

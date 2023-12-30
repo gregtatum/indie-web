@@ -146,7 +146,7 @@ export function removeKeySettings(path: string) {
   return { type: 'remove-key-settings' as const, path };
 }
 
-export function changeFileSystemName(fileSystemName: T.FileSystemName) {
+export function changeFileSystem(fileSystemName: T.FileSystemName) {
   return { type: 'change-file-system' as const, fileSystemName };
 }
 

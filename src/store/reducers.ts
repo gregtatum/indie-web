@@ -75,6 +75,8 @@ function listFileErrors(
       newState.set(path, error);
       return newState;
     }
+    case 'change-file-system':
+      return new Map();
     default:
       return state;
   }
@@ -163,6 +165,7 @@ function listFilesCache(
       newState.set(path, files);
       return newState;
     }
+    case 'change-file-system':
     case 'clear-api-cache':
       return new Map();
     case 'invalidate-path':
@@ -198,6 +201,8 @@ function downloadFileErrors(
       newState.set(path, error);
       return newState;
     }
+    case 'change-file-system':
+      return new Map();
     default:
       return state;
   }
@@ -263,6 +268,7 @@ function downloadFileCache(
       newState.set(path, file);
       return newState;
     }
+    case 'change-file-system':
     case 'clear-api-cache':
       return new Map();
     case 'invalidate-path':
@@ -300,7 +306,7 @@ function downloadBlobCache(
       newState.set(path, blobFile);
       return newState;
     }
-
+    case 'change-file-system':
     case 'clear-api-cache':
       return new Map();
     default:
@@ -317,6 +323,8 @@ function path(state = '/', action: T.Action): string {
     case 'view-image':
     case 'view-markdown':
       return action.path;
+    case 'change-file-system':
+      return '/';
     default:
       return state;
   }
@@ -350,6 +358,7 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
   switch (action.type) {
     case 'change-active-file':
       return 'view-file';
+    case 'change-file-system':
     case 'view-list-files':
       return 'list-files';
     case 'view-file':
