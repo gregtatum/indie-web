@@ -255,3 +255,5 @@ export type SongKeyLetters =
 export type SongKeySettings =
   | { type: 'capo'; capo: number }
   | { type: 'transpose'; songKey: SongKey };
+
+export type FileSystemName = 'dropbox' | 'indexeddb';

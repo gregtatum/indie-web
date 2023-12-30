@@ -9,6 +9,7 @@ Router.useNavigationType;
 import './ListFiles.css';
 import { UnhandledCaseError, isChordProExtension } from '../utils';
 import { FileSystemError } from 'src/logic/file-system';
+import { getFileSystemDisplayName } from 'src/logic/app-logic';
 
 export function ListFiles() {
   useRetainScroll();
@@ -18,6 +19,7 @@ export function ListFiles() {
   const files = Hooks.useSelector($.getSearchFilteredFiles);
   const error = Hooks.useSelector($.getListFilesErrors).get(path);
   const parsedSearch = Hooks.useSelector($.getParsedSearch);
+  const fileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
 
   React.useEffect(() => {
     if (path === '/') {
@@ -55,7 +57,9 @@ export function ListFiles() {
     if (error) {
       return (
         <div className="appViewError">
-          <p>Unable to list the Dropbox files.</p>
+          <p>
+            Unable to list the {getFileSystemDisplayName(fileSystemName)} files.
+          </p>
           {error}
         </div>
       );

@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client';
 
 import * as A from 'src/store/actions';
 import * as $ from 'src/store/selectors';
+import { openIDBFS } from './logic/file-system/indexeddb-fs';
 
 export * as A from 'src/store/actions';
 export * as $ from 'src/store/selectors';
@@ -47,6 +48,9 @@ export async function init(): Promise<void> {
   if (cachePromise) {
     await cachePromise;
   }
+  const ipdbfs = await openIDBFS('browser-files');
+  store.dispatch(A.connectIDBFS(ipdbfs));
+
   mountReact(store);
 }
 

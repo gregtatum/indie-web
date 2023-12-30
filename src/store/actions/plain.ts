@@ -106,12 +106,20 @@ export function viewSongKeyMenu(clickedSongKeyMenu: T.ClickedSongKeyMenu) {
   return { type: 'view-song-key-menu' as const, clickedSongKeyMenu };
 }
 
+export function viewFileSystemSelectionMenu(clickedButton: HTMLButtonElement) {
+  return { type: 'view-file-system-selection-menu' as const, clickedButton };
+}
+
 export function dismissFileMenu() {
   return { type: 'dismiss-file-menu' as const };
 }
 
 export function dismissSongKeyMenu() {
   return { type: 'dismiss-song-key-menu' as const };
+}
+
+export function dismissFileSystemSelectionMenu() {
+  return { type: 'dismiss-file-system-selection-menu' as const };
 }
 
 export function startRenameFile(path: string) {
@@ -136,4 +144,12 @@ export function applyCapo(path: string, capo: number) {
 
 export function removeKeySettings(path: string) {
   return { type: 'remove-key-settings' as const, path };
+}
+
+export function changeFileSystemName(fileSystemName: T.FileSystemName) {
+  return { type: 'change-file-system' as const, fileSystemName };
+}
+
+export function connectIDBFS(idbfs: IDBFS) {
+  return { type: 'connect-idbfs' as const, idbfs };
 }

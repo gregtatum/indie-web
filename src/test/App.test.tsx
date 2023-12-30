@@ -2,6 +2,7 @@ import { createStore } from 'src/store/create-store';
 import { AppRoutes } from 'src/components/App';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import * as React from 'react';
+import { A, $, T } from 'src';
 import { Provider } from 'react-redux';
 import {
   MockedFilesDownload,
@@ -11,7 +12,6 @@ import {
   mockDropboxListFolder,
   spyOnDropboxFilesUpload,
 } from './utils/fixtures';
-import { $, T } from 'src';
 import { ensureExists } from 'src/utils';
 import { FilesIndex, useFilesIndex } from 'src/logic/files-index';
 import { stripIndent } from 'common-tags';
@@ -43,6 +43,7 @@ describe('App', () => {
   }
   function setup(options?: SetupOptions) {
     const store = createStore();
+    store.dispatch(A.changeFileSystemName('dropbox'));
     mockDropboxAccessToken(store);
     const listFiles = mockDropboxListFolder([
       { type: 'folder', path: '/My Cool Band' },

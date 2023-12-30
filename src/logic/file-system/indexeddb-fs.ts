@@ -6,7 +6,12 @@ import {
   SaveMode,
 } from 'src/logic/file-system';
 import { T } from 'src';
-import { getPathFileName, getPathFolder, updatePathRoot } from 'src/utils';
+import {
+  ensureExists,
+  getPathFileName,
+  getPathFolder,
+  updatePathRoot,
+} from 'src/utils';
 
 export class IDBError extends FileSystemError {
   #missing = false;
@@ -49,10 +54,12 @@ function log(key: string, ...args: any[]) {
   }
 }
 
-export async function openDropboxCache(): Promise<IDBFS> {
+export async function openIDBFS(
+  name: string = 'dropbox-fs-cache',
+): Promise<IDBFS> {
   let idbfs: IDBFS | null = null;
 
-  const db = await idb.openDB<T.IDBFSSchema>('dropbox-fs-cache', 1, {
+  const db = await idb.openDB<T.IDBFSSchema>(name, 1, {
     /**
      * Called if this version of the database has never been opened before. Use it to
      * specify the schema for the database.
@@ -116,17 +123,24 @@ export class IDBFS extends FileSystemCache {
   }
 
   async listFiles(path: string): Promise<T.FolderListing> {
+    if (!path) {
+      path = '/';
+    }
     const row = await this.#db.get('folderListings', path);
     log('listFiles', path, { row });
     if (row) {
       return row.files;
     }
-    return Promise.reject(IDBError.notFound('No files fount at ' + path));
+    if (path === '/') {
+      // Trying to list the root but it was empty. Create an empty root folder.
+      await this.addFolderListing('/', []);
+      return [];
+    }
+    return Promise.reject(IDBError.notFound('No files found at ' + path));
   }
 
   async addFolderListing(path: string, files: T.FolderListing): Promise<void> {
     if (!path) {
-      // Normalize empty paths to just be the root.
       path = '/';
     }
     const row: T.FolderListingRow = {
@@ -139,6 +153,9 @@ export class IDBFS extends FileSystemCache {
   }
 
   async loadBlob(path: string): Promise<T.BlobFile> {
+    if (!path) {
+      path = '/';
+    }
     const row = await this.#db.get('files', path);
     log('getFile', path, { metadata: row?.metadata });
     if (row) {
@@ -177,6 +194,8 @@ export class IDBFS extends FileSystemCache {
     _mode: SaveMode,
     blob: Blob,
   ): Promise<T.FileMetadata> {
+    const oldPath =
+      typeof pathOrMetadata === 'string' ? null : pathOrMetadata.path;
     const metadata = await getFileMetadata(pathOrMetadata, blob);
     const store = await this.#getFileStoreIfNeedsUpdating(metadata);
     if (store) {
@@ -192,10 +211,7 @@ export class IDBFS extends FileSystemCache {
       log('saveBlob', 'hash match');
     }
 
-    await this.#updateFileInFolderListings(
-      getPathFolder(metadata.path),
-      metadata,
-    );
+    await this.#updateFileInFolderListings(oldPath, metadata);
 
     return metadata;
   }
@@ -228,37 +244,76 @@ export class IDBFS extends FileSystemCache {
   /**
    * Updates a single file's metadata in a fileListing.
    */
-  async #updateFileInFolderListings(oldPath: string, metadata: T.FileMetadata) {
+  async #updateFileInFolderListings(
+    oldPath: string | null,
+    metadata: T.FileMetadata,
+  ) {
     const tx = this.#db.transaction('folderListings', 'readwrite');
-    const store = tx.objectStore('folderListings');
-    const oldFolderPath = getPathFolder(oldPath);
-    const folder = await store.get(oldFolderPath);
-    if (!folder) {
-      log('#updateFileInFolderListings - no folder found', {
-        oldFolder: folder,
-        oldPath,
-        oldFolderPath,
-        metadata,
-      });
-      return;
-    }
+    const folderListingsStore = tx.objectStore('folderListings');
+    const oldFolderPath = oldPath ? getPathFolder(oldPath) : null;
+    const newFolderPath = getPathFolder(metadata.path);
+    let folder = await folderListingsStore.get(newFolderPath);
 
-    for (let i = 0; i < folder.files.length; i++) {
-      const file = folder.files[i];
-      if (file.path === oldPath) {
-        folder.files[i] = metadata;
-      }
-    }
-
-    await store.put(folder);
-
-    // Delete the folder entry.
     log('#updateFileInFolderListings', {
       folder,
       oldFolderPath,
       oldPath,
       metadata,
     });
+
+    // If the file is moved, the old folder needs to be updated.
+    if (oldFolderPath !== null && oldFolderPath !== newFolderPath) {
+      const oldFolder = await folderListingsStore.get(oldFolderPath);
+      if (oldFolder) {
+        // Remove the file from the old folder.
+        oldFolder.files = oldFolder.files.filter(
+          (file) => file.path !== oldPath,
+        );
+        await folderListingsStore.put(oldFolder);
+      } else {
+        log('#updateFileInFolderListings - no folder found', {
+          oldFolder,
+          oldPath,
+          oldFolderPath,
+          metadata,
+        });
+      }
+    }
+
+    // Create the folder path if it does not exist.
+    if (!folder) {
+      let path = '';
+      for (const part of newFolderPath.split('/')) {
+        path += '/' + part;
+        const folder = await folderListingsStore.get(path);
+        if (!folder) {
+          await folderListingsStore.put({
+            storedAt: new Date(),
+            path,
+            files: [],
+          });
+        }
+      }
+      folder = ensureExists(
+        await folderListingsStore.get(path),
+        'Expected the folder path to exist.',
+      );
+    }
+
+    // Either add the file or update it.
+    const index = folder.files.findIndex((file) => file.path === oldPath);
+    if (index === -1) {
+      folder.files.push(metadata);
+    } else {
+      for (let i = 0; i < folder.files.length; i++) {
+        const file = folder.files[i];
+        if (file.path === oldPath) {
+          folder.files[i] = metadata;
+        }
+      }
+    }
+
+    await folderListingsStore.put(folder);
     await tx.done;
   }
 
@@ -472,7 +527,7 @@ function getFileMetadata(
   if (typeof pathOrMetadata === 'string') {
     return createFileMetadata(pathOrMetadata, blob);
   }
-  return Promise.resolve(pathOrMetadata);
+  return Promise.resolve(pathOrMetadata || '/');
 }
 
 async function createFileMetadata(

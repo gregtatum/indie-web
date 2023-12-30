@@ -125,9 +125,7 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
       const files = await fileSystem.listFiles(dropboxPath);
       dispatch(PlainInternal.listFilesReceived(path, files));
     } catch (response) {
-      dispatch(
-        PlainInternal.listFilesError(path, dropboxErrorMessage(response)),
-      );
+      dispatch(PlainInternal.listFilesError(path, String(response)));
     }
   };
 }
@@ -381,12 +379,29 @@ export function forceExpiration(): Thunk {
   };
 }
 
+const hasFailureMap = new Map<string, boolean>();
 export function createInitialFiles(): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const fileSystem = $.getCurrentFS(getState());
-    const files = ['Getting started.chopro'];
-    let hasFailure = false;
-    let dropboxError: string = '';
+    const fileSystemName = $.getCurrentFileSystemName(getState());
+    let hasFailure = hasFailureMap.get(fileSystemName);
+    const setFailure = (error: any) => {
+      hasFailure = true;
+      hasFailureMap.set(fileSystemName, true);
+      console.error(error);
+    };
+    if (hasFailure) {
+      console.error('Attempting to createInitialFiles after failiure');
+      return;
+    }
+
+    let files;
+    if (process.env.SITE === 'floppydisk') {
+      files = ['Getting Started.md'];
+    } else {
+      files = ['Getting Started.chopro'];
+    }
+    const fsError: string = '';
 
     for (const file of files) {
       // Load the file locally first.
@@ -395,24 +410,25 @@ export function createInitialFiles(): Thunk<Promise<void>> {
         const response = await fetch('/guide/' + file);
         contents = await response.text();
       } catch (error) {
-        hasFailure = true;
-        console.error(error);
+        setFailure(error);
         continue;
       }
 
       // Upload it Dropbox.
       try {
         await fileSystem.saveText('/' + file, 'add', contents);
+        const files = await fileSystem.listFiles('/');
+        if (files.length === 0) {
+          setFailure(new Error('Failed to create files in the FileSystem'));
+        }
       } catch (error) {
-        console.error(error);
-        hasFailure = true;
-        dropboxError = (error as FileSystemError)?.toString();
+        setFailure(error);
       }
     }
     if (hasFailure) {
       dispatch(
         addMessage({
-          message: `Could not create the initial demo files. ${dropboxError}`,
+          message: `Could not create the initial demo files. ${fsError}`,
         }),
       );
     }

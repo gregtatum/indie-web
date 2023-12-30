@@ -1,9 +1,15 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $, A, Hooks } from 'src';
-import { getEnv, isAppSettingScrollTop, UnhandledCaseError } from 'src/utils';
+import {
+  ensureExists,
+  getEnv,
+  isAppSettingScrollTop,
+  UnhandledCaseError,
+} from 'src/utils';
 
 import './Header.css';
+import { getFileSystemDisplayName } from 'src/logic/app-logic';
 
 export function Header() {
   const view = Hooks.useSelector($.getView);
@@ -110,6 +116,7 @@ export function Header() {
       <div className="headerEnd">
         <SaveFileButton />
         <RequestFullScreen />
+        <FileSystemSelection />
         <SettingsButton />
       </div>
     </div>
@@ -179,6 +186,26 @@ function SettingsButton() {
     <a href="/settings" className="button headerSettings">
       Settings
     </a>
+  );
+}
+
+function FileSystemSelection() {
+  const name = Hooks.useSelector($.getCurrentFileSystemName);
+  const dispatch = Hooks.useDispatch();
+  const button = React.useRef<null | HTMLButtonElement>(null);
+
+  return (
+    <button
+      type="button"
+      className="button headerFileSystemSelection"
+      ref={button}
+      title="Change the file system source"
+      onClick={() => {
+        dispatch(A.viewFileSystemSelectionMenu(ensureExists(button.current)));
+      }}
+    >
+      {'💾 ' + getFileSystemDisplayName(name)}
+    </button>
   );
 }
 

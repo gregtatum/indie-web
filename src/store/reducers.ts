@@ -7,6 +7,7 @@ import {
   updatePathRoot,
 } from 'src/utils';
 import { FilesIndex } from 'src/logic/files-index';
+import { IDBFS } from 'src/logic/file-system/indexeddb-fs';
 
 function getDropboxOauth(): T.DropboxOauth | null {
   const oauthString = window.localStorage.getItem('dropboxOauth');
@@ -434,6 +435,33 @@ function fileMenu(
   }
 }
 
+function currentFileSystemName(
+  state: T.FileSystemName = 'indexeddb',
+  action: T.Action,
+): T.FileSystemName {
+  switch (action.type) {
+    case 'change-file-system':
+      return action.fileSystemName;
+    default:
+      return state;
+  }
+}
+
+function fileSystemSelectionMenu(
+  state: HTMLButtonElement | null = null,
+  action: T.Action,
+): HTMLButtonElement | null {
+  switch (action.type) {
+    case 'view-file-system-selection-menu':
+      return action.clickedButton;
+    case 'dismiss-file-system-selection-menu':
+    case 'change-file-system':
+      return null;
+    default:
+      return state;
+  }
+}
+
 function songKeyMenu(
   state: T.ClickedSongKeyMenu | null = null,
   action: T.Action,
@@ -520,6 +548,15 @@ function searchString(state = '', action: T.Action) {
   }
 }
 
+function idbfs(state: IDBFS | null = null, action: T.Action): IDBFS | null {
+  switch (action.type) {
+    case 'connect-idbfs':
+      return action.idbfs;
+    default:
+      return state;
+  }
+}
+
 export const reducers = combineReducers({
   dropboxOauth,
   listFilesCache,
@@ -536,10 +573,13 @@ export const reducers = combineReducers({
   shouldHideHeader,
   fileMenu,
   songKeyMenu,
+  currentFileSystemName,
+  fileSystemSelectionMenu,
   songKeySettings,
   renameFile,
   filesIndex,
   searchString,
+  idbfs,
 });
 
 function wrapReducer<S>(

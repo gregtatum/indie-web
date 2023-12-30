@@ -12,6 +12,7 @@ import type * as PDFJS from 'pdfjs-dist';
 import { parseSearchString } from 'src/logic/search';
 import { marked } from 'marked';
 import { DropboxFS } from 'src/logic/file-system/dropbox-fs';
+import { FileSystem } from 'src/logic/file-system';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -80,6 +81,14 @@ export function getSongKeyMenu(state: State) {
   return state.songKeyMenu;
 }
 
+export function getFileSystemSelectionMenu(state: State) {
+  return state.fileSystemSelectionMenu;
+}
+
+export function getCurrentFileSystemName(state: State) {
+  return state.currentFileSystemName;
+}
+
 export function getRenameFile(state: State) {
   return state.renameFile;
 }
@@ -94,6 +103,10 @@ export function getSearchString(state: State) {
 
 export function getSongKeySettings(state: State) {
   return state.songKeySettings;
+}
+
+export function getIDBFSOrNull(state: State) {
+  return state.idbfs;
 }
 
 /**
@@ -160,8 +173,25 @@ export const getIsDropboxInitiallyExpired = createSelector(
   },
 );
 
-export const getCurrentFSOrNull = createSelector(getDropboxOrNull, (dropbox) =>
-  dropbox ? new DropboxFS(dropbox) : null,
+export const getCurrentFSOrNull = createSelector(
+  getCurrentFileSystemName,
+  getDropboxOrNull,
+  getIDBFSOrNull,
+  (fsName, dropbox, idbfs): FileSystem | null => {
+    switch (fsName) {
+      case 'dropbox': {
+        if (dropbox) {
+          return new DropboxFS(dropbox);
+        }
+        return null;
+      }
+      case 'indexeddb': {
+        return idbfs;
+      }
+      default:
+        throw new UnhandledCaseError(fsName, 'FileSystemName');
+    }
+  },
 );
 
 export const getCurrentFS = dangerousSelector(

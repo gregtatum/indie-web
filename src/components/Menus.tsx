@@ -3,12 +3,14 @@ import { $, A, Hooks } from 'src';
 import { ensureExists } from 'src/utils';
 
 import './Menus.css';
+import { getBrowserName } from 'src/logic/app-logic';
 
 export function Menus() {
   return (
     <div className="menus">
       <FileMenu />
       <SongKeyMenu />
+      <FileSystemSelectionMenu />
     </div>
   );
 }
@@ -142,6 +144,44 @@ function FileMenu() {
             <span className="icon" data-icon="download" /> Download Zip
           </button>
         ),
+      ]}
+    />
+  );
+}
+
+function FileSystemSelectionMenu() {
+  const button = Hooks.useSelector($.getFileSystemSelectionMenu);
+  const dispatch = Hooks.useDispatch();
+
+  if (!button) {
+    return null;
+  }
+
+  return (
+    <Menu
+      clickedElement={button}
+      dismiss={() => dispatch(A.dismissFileSystemSelectionMenu())}
+      buttons={[
+        <button
+          type="button"
+          className="menusFileButton"
+          key="1"
+          onClick={() => {
+            dispatch(A.changeFileSystemName('dropbox'));
+          }}
+        >
+          Dropbox
+        </button>,
+        <button
+          type="button"
+          className="menusFileButton"
+          key="2"
+          onClick={() => {
+            dispatch(A.changeFileSystemName('indexeddb'));
+          }}
+        >
+          {getBrowserName()}
+        </button>,
       ]}
     />
   );

@@ -8,7 +8,7 @@ import {
   mockDropboxFilesDownload,
   mockDropboxListFolder,
 } from './utils/fixtures';
-import { T } from 'src';
+import { T, A } from 'src';
 import { ensureExists } from 'src/utils';
 import { stripIndent } from 'common-tags';
 import { MemoryRouter } from 'react-router-dom';
@@ -24,6 +24,7 @@ TODO - Come up with some great ideas.
 describe('<ViewMarkdown>', () => {
   function setup() {
     const store = createStore();
+    store.dispatch(A.changeFileSystemName('dropbox'));
     mockDropboxAccessToken(store);
     const listFiles = mockDropboxListFolder([
       { type: 'folder', path: '/My Cool Notes' },
