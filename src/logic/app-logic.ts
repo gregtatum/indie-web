@@ -1,5 +1,5 @@
 import { T } from 'src';
-import { UnhandledCaseError } from '../utils';
+import { UnhandledCaseError, ensureNever } from '../utils';
 
 let browserName: string;
 export function getBrowserName() {
@@ -28,5 +28,22 @@ export function getFileSystemDisplayName(fileSystem: T.FileSystemName): string {
       return getBrowserName();
     default:
       throw new UnhandledCaseError(fileSystem, 'FileSystemName');
+  }
+}
+
+export function toFileSystemDisplayName(
+  text: unknown,
+): T.FileSystemName | null {
+  // Type trickery to ensure we handle all of the cases.
+  const name = text as T.FileSystemName;
+  switch (name) {
+    case 'dropbox':
+      return 'dropbox';
+    case 'indexeddb':
+      return 'indexeddb';
+    default: {
+      ensureNever(name);
+      return null;
+    }
   }
 }

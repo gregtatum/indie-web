@@ -8,6 +8,7 @@ import {
 } from 'src/utils';
 import { FilesIndex } from 'src/logic/files-index';
 import { IDBFS } from 'src/logic/file-system/indexeddb-fs';
+import { toFileSystemDisplayName } from 'src/logic/app-logic';
 
 function getDropboxOauth(): T.DropboxOauth | null {
   const oauthString = window.localStorage.getItem('dropboxOauth');
@@ -444,13 +445,26 @@ function fileMenu(
   }
 }
 
+/**
+ * Remember the previously viewed file system name.
+ */
+function getSavedFSName() {
+  return (
+    toFileSystemDisplayName(window.localStorage.getItem('fileSystemName')) ??
+    'indexeddb'
+  );
+}
+
 function currentFileSystemName(
-  state: T.FileSystemName = 'indexeddb',
+  state: T.FileSystemName = getSavedFSName(),
   action: T.Action,
 ): T.FileSystemName {
   switch (action.type) {
-    case 'change-file-system':
-      return action.fileSystemName;
+    case 'change-file-system': {
+      const { fileSystemName } = action;
+      window.localStorage.setItem('fileSystemName', fileSystemName);
+      return fileSystemName;
+    }
     default:
       return state;
   }

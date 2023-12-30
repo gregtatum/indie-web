@@ -11,6 +11,11 @@ export class UnhandledCaseError extends Error {
 }
 
 /**
+ * Ensures that a type is never.
+ */
+export function ensureNever(_value: never) {}
+
+/**
  * Ensure some T exists when the type systems knows it can be null or undefined.
  */
 export function ensureExists<T>(
