@@ -422,11 +422,12 @@ function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
       aria-label="File Menu"
       className="listFilesFileMenu"
       ref={button}
-      onClick={() => {
+      onClick={(event) => {
         dispatch(
           A.viewFileMenu({
             file: props.dropboxFile,
             element: ensureExists(button.current),
+            openedByKeyboard: event.detail === 0,
           }),
         );
       }}

@@ -80,10 +80,30 @@ export function Header() {
     };
   }, []);
 
+  let siteName;
+  if (process.env.SITE === 'floppydisk') {
+    siteName = (
+      <>
+        <span>💾</span>
+        <span className="headerTitleTitle">
+          FloppyDisk<span className="headerTitleTitleSuffix">.link</span>
+        </span>
+      </>
+    );
+  } else {
+    siteName = (
+      <>
+        <span>🎵</span>
+        <span className="headerTitleTitle">Browser Chords</span>
+      </>
+    );
+  }
+
   let title = (
     <div className="headerTitle" key={key}>
-      <span>{getEnv('SITE_ICON')}</span>
-      <span className="headerTitleTitle">{getEnv('SITE_DISPLAY_NAME')}</span>
+      {siteName}
+      <span>»</span>
+      <FileSystemSelection />
     </div>
   );
   switch (view) {
@@ -116,7 +136,6 @@ export function Header() {
       <div className="headerEnd">
         <SaveFileButton />
         <RequestFullScreen />
-        <FileSystemSelection />
         <SettingsButton />
       </div>
     </div>
@@ -195,17 +214,24 @@ function FileSystemSelection() {
   const button = React.useRef<null | HTMLButtonElement>(null);
 
   return (
-    <button
-      type="button"
-      className="button headerFileSystemSelection"
-      ref={button}
-      title="Change the file system source"
-      onClick={() => {
-        dispatch(A.viewFileSystemSelectionMenu(ensureExists(button.current)));
-      }}
-    >
-      {'💾 ' + getFileSystemDisplayName(name)}
-    </button>
+    <>
+      <button
+        type="button"
+        className="headerFileSystemSelection"
+        ref={button}
+        title="Change the file system source"
+        onClick={(event) => {
+          dispatch(
+            A.viewFileSystemSelectionMenu({
+              element: ensureExists(button.current),
+              openedByKeyboard: event.detail === 0,
+            }),
+          );
+        }}
+      >
+        {getFileSystemDisplayName(name)}
+      </button>
+    </>
   );
 }
 
@@ -236,7 +262,6 @@ function SaveFileButton() {
 
 function Path({ path, title }: { path: string; title?: string }) {
   const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
-
   const breadcrumbs = [];
   let pathGrow = '';
   const parts = path.split('/');
@@ -265,6 +290,8 @@ function Path({ path, title }: { path: string; title?: string }) {
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
         <span>{getEnv('SITE_ICON')}</span>
+        <FileSystemSelection key="fileSystem" />
+        <span>»</span>
         {breadcrumbs}
         <span>»</span>
         {songTitle ?? fileName ? (

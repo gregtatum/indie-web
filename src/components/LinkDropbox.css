@@ -23,14 +23,14 @@
   padding: 10px;
   margin: 2em 0px;
   color: #fff;
-  background-color: #0062ff;
+  background-color: var(--primary-color);
   border-radius: 3px;
   text-decoration: none;
   text-align: center;
 }
 
 .linkDropboxConnect:hover {
-  background-color: #004eca;
+  background-color: var(--primary-color-hover);
 }
 
 .linkDropbox {
@@ -47,7 +47,7 @@
 
 .linkDropboxH2 {
   margin-top: 0;
-  color: #555;
+  color: var(--text-border);
 }
 
 .linkDropboxAuth {

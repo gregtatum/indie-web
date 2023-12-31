@@ -27,6 +27,10 @@
   padding: var(--header-gap);
 }
 
+.headerTitleTitleSuffix {
+  opacity: 0.5;
+}
+
 .headerEnd {
   display: flex;
   flex-shrink: 0;
@@ -76,6 +80,47 @@
   top: 5px;
   position: absolute;
   left: 9px;
+}
+.headerFileSystemSelection {
+  ---text-color: #004195;
+  border: 0;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: #004195;
+  text-decoration: underline;
+  padding: 6px;
+  margin: -6px;
+  padding-inline-end: 12px;
+  border-radius: 3px;
+}
+
+/* The down arrow */
+.headerFileSystemSelection::after {
+  content: "";
+  border: solid var(---text-color);
+  border-width: 0 2px 2px 0;
+  display: inline-block;
+  padding: 3px;
+  transform: rotate(45deg);
+  position: relative;
+  top: -0.1em;
+  right: -0.3em;
+}
+
+.headerFileSystemSelection:hover {
+  outline: 2px solid #0040ff88;
+  background: #0040ff11;
+}
+
+.headerFileSystemSelection:active {
+  outline: 2px solid #0040ff;
+}
+
+.headerFileSystemSelection:focus {
+  outline: 2px solid #0040ffaa;
 }
 
 .button.headerSaveFile {

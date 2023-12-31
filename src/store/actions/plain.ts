@@ -117,8 +117,13 @@ export function viewSongKeyMenu(clickedSongKeyMenu: T.ClickedSongKeyMenu) {
   return { type: 'view-song-key-menu' as const, clickedSongKeyMenu };
 }
 
-export function viewFileSystemSelectionMenu(clickedButton: HTMLButtonElement) {
-  return { type: 'view-file-system-selection-menu' as const, clickedButton };
+export function viewFileSystemSelectionMenu(
+  clickedFileSystemMenu: T.ClickedFileSystemMenu,
+) {
+  return {
+    type: 'view-file-system-selection-menu' as const,
+    clickedFileSystemMenu,
+  };
 }
 
 export function dismissFileMenu() {

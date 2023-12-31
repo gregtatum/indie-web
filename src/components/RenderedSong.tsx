@@ -249,10 +249,11 @@ function RenderedSongKey() {
             type="button"
             className="renderedSongKey"
             ref={songKeyRef}
-            onClick={() =>
+            onClick={(event) =>
               dispatch(
                 A.viewSongKeyMenu({
                   element: ensureExists(songKeyRef.current),
+                  openedByKeyboard: event.detail === 0,
                 }),
               )
             }

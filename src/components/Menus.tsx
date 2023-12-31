@@ -85,11 +85,12 @@ function FileMenu() {
   if (!clickedFileMenu) {
     return null;
   }
-  const { file, element } = clickedFileMenu;
+  const { file, element, openedByKeyboard } = clickedFileMenu;
 
   return (
     <Menu
       key={file.path}
+      openedByKeyboard={openedByKeyboard}
       clickedElement={element ?? null}
       dismiss={() => dispatch(A.dismissFileMenu())}
       buttons={[
@@ -150,28 +151,20 @@ function FileMenu() {
 }
 
 function FileSystemSelectionMenu() {
-  const button = Hooks.useSelector($.getFileSystemSelectionMenu);
+  const clickedFileSystemMenu = Hooks.useSelector($.getFileSystemSelectionMenu);
   const dispatch = Hooks.useDispatch();
 
-  if (!button) {
+  if (!clickedFileSystemMenu) {
     return null;
   }
+  const { element, openedByKeyboard } = clickedFileSystemMenu;
 
   return (
     <Menu
-      clickedElement={button}
+      clickedElement={element}
+      openedByKeyboard={openedByKeyboard}
       dismiss={() => dispatch(A.dismissFileSystemSelectionMenu())}
       buttons={[
-        <button
-          type="button"
-          className="menusFileButton"
-          key="1"
-          onClick={() => {
-            dispatch(A.changeFileSystem('dropbox'));
-          }}
-        >
-          Dropbox
-        </button>,
         <button
           type="button"
           className="menusFileButton"
@@ -181,6 +174,16 @@ function FileSystemSelectionMenu() {
           }}
         >
           {getBrowserName()}
+        </button>,
+        <button
+          type="button"
+          className="menusFileButton"
+          key="1"
+          onClick={() => {
+            dispatch(A.changeFileSystem('dropbox'));
+          }}
+        >
+          Dropbox
         </button>,
       ]}
     />
@@ -201,6 +204,7 @@ function SongKeyMenu() {
   return (
     <Menu
       clickedElement={clickedSongKey.element}
+      openedByKeyboard={clickedSongKey.openedByKeyboard}
       dismiss={() => dispatch(A.dismissSongKeyMenu())}
       buttons={[
         <button
@@ -230,16 +234,37 @@ function SongKeyMenu() {
 }
 
 interface MenuProps {
-  clickedElement: Element;
+  clickedElement: HTMLElement;
+  openedByKeyboard: boolean;
   buttons: React.ReactNode[];
   dismiss: () => void;
 }
 
-function Menu({ clickedElement, buttons, dismiss }: MenuProps) {
+function Menu({
+  clickedElement,
+  openedByKeyboard,
+  buttons,
+  dismiss,
+}: MenuProps) {
   const divRef = React.useRef<HTMLDivElement>(null);
 
   escapeLogic(dismiss);
   clickOutLogic(clickedElement, divRef, dismiss);
+
+  // Focus the menu if opened via keyboard.
+  // eslint-disable-next-line consistent-return
+  React.useEffect(() => {
+    if (openedByKeyboard) {
+      const button = divRef.current?.querySelector('button');
+      if (button) {
+        button.focus();
+        return () => {
+          // Restore the focus.
+          clickedElement.focus();
+        };
+      }
+    }
+  }, [divRef, openedByKeyboard, clickedElement]);
 
   const elementRect = clickedElement.getBoundingClientRect();
   const bodyRect = document.body.getBoundingClientRect();

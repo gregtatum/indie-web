@@ -29,6 +29,15 @@
   text-align: left;
   display: flex;
   align-items: center;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.menusFileButton:focus,
+.menusFileButton:active {
+  background: #d0f4ff;
+  border: 1px solid #000;
+  border-radius: 3px;
 }
 
 .menusFileButton > .icon {

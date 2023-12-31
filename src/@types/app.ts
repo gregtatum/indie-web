@@ -175,10 +175,17 @@ export type DownloadBlobCache = Map<string, DownloadedBlob>;
 export interface ClickedFileMenu {
   file: FileMetadata | FolderMetadata;
   element: HTMLElement;
+  openedByKeyboard: boolean;
 }
 
 export interface ClickedSongKeyMenu {
   element: HTMLElement;
+  openedByKeyboard: boolean;
+}
+
+export interface ClickedFileSystemMenu {
+  element: HTMLElement;
+  openedByKeyboard: boolean;
 }
 
 export type RenameFileState =

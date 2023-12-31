@@ -481,12 +481,12 @@ function currentFileSystemName(
 }
 
 function fileSystemSelectionMenu(
-  state: HTMLButtonElement | null = null,
+  state: T.ClickedFileSystemMenu | null = null,
   action: T.Action,
-): HTMLButtonElement | null {
+): T.ClickedFileSystemMenu | null {
   switch (action.type) {
     case 'view-file-system-selection-menu':
-      return action.clickedButton;
+      return action.clickedFileSystemMenu;
     case 'dismiss-file-system-selection-menu':
     case 'change-file-system':
       return null;

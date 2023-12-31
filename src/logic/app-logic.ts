@@ -6,15 +6,15 @@ export function getBrowserName() {
   if (!browserName) {
     const { userAgent } = navigator;
     if (userAgent.includes('Firefox')) {
-      browserName = 'Firefox';
+      browserName = 'Firefox Storage';
     } else if (userAgent.includes('Safari')) {
-      browserName = 'Safari';
+      browserName = 'Safari Storage';
     } else if (userAgent.includes('Chrome')) {
-      browserName = 'Chrome';
+      browserName = 'Chrome Storage';
     } else if (userAgent.includes('Opera')) {
-      browserName = 'Opera';
+      browserName = 'Opera Storage';
     } else {
-      browserName = 'Your Browser';
+      browserName = 'Browser Storage';
     }
   }
   return browserName;
