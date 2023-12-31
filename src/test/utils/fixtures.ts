@@ -261,7 +261,7 @@ export async function setupDBWithFiles(paths: string[]) {
   const store = createStore();
   const { dispatch, getState } = store;
   const folders = foldersFromPaths(paths);
-  const idbfs = await openIDBFS();
+  const idbfs = await openIDBFS('test-db');
 
   await addTestFoldersToDB(idbfs, folders);
 

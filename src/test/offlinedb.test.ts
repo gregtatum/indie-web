@@ -21,11 +21,11 @@ describe('offline db', () => {
   });
 
   it('opens', async () => {
-    await openIDBFS();
+    await openIDBFS('test-db');
   });
 
   it('can add files', async () => {
-    const idbfs = await openIDBFS();
+    const idbfs = await openIDBFS('test-db');
     const path = '/band/song.chopro';
 
     const error = await idbfs.loadText(path).catch((error) => error);
@@ -44,7 +44,7 @@ describe('offline db', () => {
   // Fake indexeddb doesn't support blobs.
   // https://github.com/dumbmatter/fakeIndexedDB/issues/56
   it('can add Blobs', async () => {
-    const idbfs = await openIDBFS();
+    const idbfs = await openIDBFS('test-db');
     const path = '/band/song.chopro';
     const error = await idbfs.loadText(path).catch((error) => error);
     expect(error.isNotFound()).toBe(true);
@@ -61,7 +61,7 @@ describe('offline db', () => {
   });
 
   it('can add a folder listing', async () => {
-    const idbfs = await openIDBFS();
+    const idbfs = await openIDBFS('test-db');
     const path = '/band/';
     const error = await idbfs.listFiles(path).catch((error) => error);
     expect(error.isNotFound()).toBe(true);
