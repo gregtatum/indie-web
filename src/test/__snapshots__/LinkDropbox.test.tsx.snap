@@ -2,13 +2,50 @@
 
 exports[`LinkDropbox can render 1`] = `
 <div
-  class="linkDropboxHome"
+  class="appView"
 >
   <div
-    class="linkDropboxBegin"
+    class="header"
   >
     <div
-      class="linkDropbox"
+      class="headerStart"
+    >
+      <div
+        class="headerTitle"
+      >
+        <span>
+          🎵
+        </span>
+        <span
+          class="headerTitleTitle"
+        >
+          Browser Chords
+        </span>
+      </div>
+    </div>
+    <div
+      class="headerEnd"
+    >
+      <button
+        class="button headerFileSystemSelection"
+        title="Change the file system source"
+        type="button"
+      >
+        💾 Dropbox
+      </button>
+      <a
+        class="button headerSettings"
+        href="/settings"
+      >
+        Settings
+      </a>
+    </div>
+  </div>
+  <div
+    class="linkDropbox"
+  >
+    <div
+      class="linkDropboxContent"
     >
       <div
         class="linkDropboxDescription"
@@ -16,32 +53,25 @@ exports[`LinkDropbox can render 1`] = `
         <h1
           class="linkDropboxH1"
         >
-          🎵
-           
-          Browser Chords
+          Store Files on Dropbox
         </h1>
         <h2
           class="linkDropboxH2"
         >
-          An
-           
-          <a
-            href="https://en.wikipedia.org/wiki/IndieWeb"
-          >
-            Indie Web
-          </a>
-           
-          project by Greg Tatum
+          Take your files across devices
         </h2>
         <p>
           Manage tabs, chords, and sheet music in Dropbox. Access and edit them directly in the browser, from anywhere.
         </p>
         <p>
-          Privacy is important. This app will only be given access to the 
+          Privacy is important. 
+          Browser Chords
+           will only be given access to the 
           <code>
             Dropbox/Apps/Chords
           </code>
-           folder in Dropbox to manage files. See the
+           
+          folder in Dropbox to manage files. See the
            
           <a
             href="/privacy"
@@ -66,29 +96,6 @@ exports[`LinkDropbox can render 1`] = `
           Connect Dropbox
         </a>
       </div>
-    </div>
-  </div>
-  <div
-    class="linkDropboxEnd"
-  >
-    <div
-      class="linkDropboxScroller"
-    >
-      <img
-        height="1500"
-        src="/Chords.tiny.png"
-        width="1125"
-      />
-      <img
-        height="1500"
-        src="/Songs.tiny.png"
-        width="1125"
-      />
-      <img
-        height="1500"
-        src="/Sheet.tiny.png"
-        width="1125"
-      />
     </div>
   </div>
 </div>

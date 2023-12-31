@@ -2,23 +2,16 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { getEnv } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
-import { useRetainScroll } from '../hooks';
-
+import { Hooks, A, $ } from 'src';
 import './Page.css';
 
 export function Settings() {
-  useRetainScroll();
+  Hooks.useRetainScroll();
   return (
     <div className="page">
       <div className="pageInner">
-        <h2>Your Dropbox Account</h2>
-        <p>
-          Your files are stored in Dropbox in the folder Apps/Chords until you
-          delete them. You can log out of Dropbox and all of your data stored in
-          the browser will be removed. You can always log back in to access your
-          files.
-        </p>
         <UnlinkDropbox />
+        <DeleteBrowserFiles />
         <h2>About</h2>
         <p>
           <Router.Link to="/privacy">Privacy Policy and Usage.</Router.Link>
@@ -28,8 +21,70 @@ export function Settings() {
   );
 }
 
+function DeleteBrowserFiles() {
+  const dispatch = Hooks.useDispatch();
+  const idbfs = Hooks.useSelector($.getIDBFSOrNull);
+  const [fileCount, setFileCount] = React.useState(0);
+
+  React.useEffect(() => {
+    idbfs?.getFileCount().then(
+      (count) => setFileCount(count),
+      (error) => console.error(error),
+    );
+  }, [idbfs]);
+
+  return (
+    <>
+      <h2>Delete Browser Files</h2>
+      {idbfs ? (
+        <>
+          <p>
+            There are {fileCount} files stored in the browser. They can be
+            deleted here. This operation cannot be undone. Note that if you
+            revisit the main file listing, demo files will be recreated.
+          </p>
+          <button
+            onClick={() => {
+              confirm(
+                'Are you sure you want to delete your browser files? This operation cannot ' +
+                  'be undone.',
+              );
+              dispatch(A.removeBrowserFiles());
+            }}
+          >
+            Delete files
+          </button>
+        </>
+      ) : (
+        <p>All files have been deleted.</p>
+      )}
+    </>
+  );
+}
+
 export function Privacy() {
-  useRetainScroll();
+  Hooks.useRetainScroll();
+  let description;
+  if (process.env.SITE === 'floppydisk') {
+    description = (
+      <p>
+        {getEnv('SITE_DISPLAY_NAME')} is a personal project by me, Greg Tatum.
+        It is a collection of tools that work on files. These files are stored
+        either on your machine via the browser, or via a third party service,
+        such as Dropbox.
+      </p>
+    );
+  } else {
+    description = (
+      <p>
+        {getEnv('SITE_DISPLAY_NAME')} is a personal project by me, Greg Tatum.
+        It is mainly built to provide a great experience with managing chords,
+        and sheet music for playing music. It is designed to be extremely
+        portable and work with just files stored on a Dropbox account and common
+        music formats.
+      </p>
+    );
+  }
   return (
     <div className="page">
       <div className="pageInner">
@@ -41,13 +96,7 @@ export function Privacy() {
           <br />
           <b>User:</b> A user of The Site.
         </p>
-        <p>
-          {getEnv('SITE_DISPLAY_NAME')} is a personal project by me, Greg Tatum.
-          It is mainly built to provide a great experience with managing chords,
-          and sheet music for playing music. It is designed to be extremely
-          portable and work with just files stored on a Dropbox account and
-          common music formats.
-        </p>
+        {description}
 
         <h2>Dropbox</h2>
         <p>
@@ -67,7 +116,7 @@ export function Privacy() {
           files and folders are <i>not</i> stored nor collected by The Site.
         </p>
 
-        <h2>Google Analytics</h2>
+        {/* <h2>Google Analytics</h2>
         <p>
           The Site uses Google Analytics to track basic User behavior such as
           what parts of The Site are used. The Site does not collect any
@@ -83,7 +132,7 @@ export function Privacy() {
           <a href="https://policies.google.com/privacy?hl=en-US">
             Google privacy policy.
           </a>
-        </p>
+        </p> */}
 
         <h2>Netlify</h2>
         <p>
@@ -96,7 +145,8 @@ export function Privacy() {
           The Site is a personal project of Greg Tatum, and it is not monetized.
           Users are free to use the service, but Greg Tatum provides no
           guarantees and assumes no responsibility for the usage of the app or
-          the integrity of the data that is stored in the scoped Dropbox folder.
+          the integrity of the data that is stored in the website or stored in
+          third party services, such as Dropbox..
         </p>
         <p>
           Please report any bugs for data integrity on{' '}

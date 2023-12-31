@@ -13,6 +13,8 @@ import {
   updatePathRoot,
 } from 'src/utils';
 
+export const BROWSER_FILES_DB_NAME = 'browser-files';
+
 export class IDBError extends FileSystemError {
   #missing = false;
 
@@ -54,9 +56,7 @@ function log(key: string, ...args: any[]) {
   }
 }
 
-export async function openIDBFS(
-  name: string = 'dropbox-fs-cache',
-): Promise<IDBFS> {
+export async function openIDBFS(name: string): Promise<IDBFS> {
   let idbfs: IDBFS | null = null;
 
   const db = await idb.openDB<T.IDBFSSchema>(name, 1, {
@@ -176,6 +176,14 @@ export class IDBFS extends FileSystemCache {
     return Promise.reject(
       new Error('This is not current supported by the IndexedDB file system.'),
     );
+  }
+
+  async getFileCount(): Promise<number> {
+    const tx = this.#db.transaction('files', 'readwrite');
+    const store = tx.objectStore('files');
+    const count = await store.count();
+    await tx.done;
+    return count;
   }
 
   async #getFileStoreIfNeedsUpdating(metadata: T.FileMetadata) {

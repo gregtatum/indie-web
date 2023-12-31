@@ -118,14 +118,25 @@ export function AppRoutes() {
         </Router.Route>
       </Router.Routes>
       <LinkDropbox>
-        <div className="appView">
-          <Header />
+        <MainView>
           <Views />
-        </div>
+        </MainView>
       </LinkDropbox>
       <Messages />
       <Menus />
     </>
+  );
+}
+
+/**
+ * The main view of the app with a header and view area.
+ */
+export function MainView(props: { children: any }) {
+  return (
+    <div className="appView">
+      <Header />
+      {props.children}
+    </div>
   );
 }
 

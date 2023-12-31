@@ -3,13 +3,11 @@ import * as Router from 'react-router-dom';
 import { A, T, $, Hooks } from 'src';
 import { debounce, ensureExists, getEnv, imageExtensions } from 'src/utils';
 import { useRetainScroll, useStore } from '../hooks';
-
-Router.useNavigationType;
-
-import './ListFiles.css';
 import { UnhandledCaseError, isChordProExtension } from '../utils';
 import { FileSystemError } from 'src/logic/file-system';
 import { getFileSystemDisplayName } from 'src/logic/app-logic';
+
+import './ListFiles.css';
 
 export function ListFiles() {
   useRetainScroll();

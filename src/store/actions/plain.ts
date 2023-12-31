@@ -1,9 +1,14 @@
 import { T } from 'src';
-import { IDBFS } from 'src/logic/file-system/indexeddb-fs';
+import { IDB_CACHE_NAME } from 'src/logic/file-system/dropbox-fs';
+import {
+  BROWSER_FILES_DB_NAME,
+  IDBFS,
+} from 'src/logic/file-system/indexeddb-fs';
 import { SongKey } from 'src/logic/parse';
 
-export function removeDropboxAccessToken(): { type: 'remove-dropbox-oauth' } {
+export function removeDropboxAccessToken() {
   localStorage.clear();
+  indexedDB.deleteDatabase(IDB_CACHE_NAME);
   return { type: 'remove-dropbox-oauth' as const };
 }
 
@@ -26,6 +31,12 @@ export function setDropboxAccessToken(
     type: 'set-dropbox-oauth' as const,
     oauth,
   };
+}
+
+export function removeBrowserFiles() {
+  localStorage.clear();
+  indexedDB.deleteDatabase(BROWSER_FILES_DB_NAME);
+  return { type: 'remove-browser-files' as const };
 }
 
 export function draggingSplitter(isDragging: boolean) {

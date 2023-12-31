@@ -4,13 +4,6 @@ Welcome to FloppyDisk.link, an Indie Web project designed by [Greg Tatum](https:
 
 ## Features
 
-* *Data Ownership*: Store your files in Dropbox and your browser, ensuring you always have ownership of your data.
-    Seamless Integration: Effortlessly sync your files between Dropbox and your web browser for a smooth experience.
-    Versatile File Support: Whether it's project notes, PDF files, or any other document, our platform supports a wide range of file types.
-    User-Friendly Interface: Navigate easily through a clean and intuitive interface designed for efficiency and simplicity.
-    Project Management: Ideal for organizing and writing notes to manage various projects.
-
-## Features
 - **Data Ownership:** Store your files in Dropbox and your browser, ensuring you always have ownership of your data.
 - **Browser Files:** To quickly get started, start saving files in your browser.
 - **Access on Multiple Devices:** Using Dropbox you can access your files across multiple devices.

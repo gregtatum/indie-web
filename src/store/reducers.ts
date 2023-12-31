@@ -77,6 +77,8 @@ function listFileErrors(
       return newState;
     }
     case 'change-file-system':
+    case 'remove-dropbox-oauth':
+    case 'remove-browser-files':
       return new Map();
     default:
       return state;
@@ -168,6 +170,8 @@ function listFilesCache(
     }
     case 'change-file-system':
     case 'clear-api-cache':
+    case 'remove-dropbox-oauth':
+    case 'remove-browser-files':
       return new Map();
     case 'invalidate-path':
       if (state.has(action.path)) {
@@ -203,6 +207,8 @@ function downloadFileErrors(
       return newState;
     }
     case 'change-file-system':
+    case 'remove-dropbox-oauth':
+    case 'remove-browser-files':
       return new Map();
     default:
       return state;
@@ -271,6 +277,8 @@ function downloadFileCache(
     }
     case 'change-file-system':
     case 'clear-api-cache':
+    case 'remove-dropbox-oauth':
+    case 'remove-browser-files':
       return new Map();
     case 'invalidate-path':
       if (state.has(action.path)) {
@@ -309,6 +317,8 @@ function downloadBlobCache(
     }
     case 'change-file-system':
     case 'clear-api-cache':
+    case 'remove-dropbox-oauth':
+    case 'remove-browser-files':
       return new Map();
     default:
       return state;
@@ -575,6 +585,8 @@ function idbfs(state: IDBFS | null = null, action: T.Action): IDBFS | null {
   switch (action.type) {
     case 'connect-idbfs':
       return action.idbfs;
+    case 'remove-browser-files':
+      return null;
     default:
       return state;
   }
