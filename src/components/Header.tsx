@@ -212,8 +212,8 @@ function FileSystemSelection() {
   const buttons = React.useMemo<MenuButton[]>(
     () => [
       {
-        key: 'indexeddb',
-        onClick: () => void dispatch(A.changeFileSystem('indexeddb')),
+        key: 'browser',
+        onClick: () => void dispatch(A.changeFileSystem('browser')),
         children: getBrowserName(),
       },
       {
@@ -278,6 +278,7 @@ function SaveFileButton() {
 
 function Path({ path, title }: { path: string; title?: string }) {
   const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
+  const fsName = Hooks.useSelector($.getCurrentFileSystemName);
   const breadcrumbs = [];
   let pathGrow = '';
   const parts = path.split('/');
@@ -293,7 +294,7 @@ function Path({ path, title }: { path: string; title?: string }) {
       pathGrow += '/' + part;
       breadcrumbs.push(
         <span key={pathGrow + '»'}>»</span>,
-        <Router.Link key={pathGrow} to={`/folder${pathGrow}`}>
+        <Router.Link key={pathGrow} to={`/${fsName}/folder${pathGrow}`}>
           {part}
         </Router.Link>,
       );
@@ -317,7 +318,7 @@ function Path({ path, title }: { path: string; title?: string }) {
       </div>
       <div className="headerPath headerPathMobile" key={'mobile' + path}>
         <Router.Link
-          to={`/folder${backParts.join('/')}`}
+          to={`/${fsName}/folder${backParts.join('/')}`}
           className="headerPathBack"
           aria-label="back"
         ></Router.Link>

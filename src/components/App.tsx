@@ -17,14 +17,18 @@ import { Settings, Privacy } from './Page';
 import { useFilesIndex } from 'src/logic/files-index';
 
 import './App.css';
+import { toFileSystemName } from 'src/logic/app-logic';
 
 function ListFilesRouter() {
+  const currentFileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
+  const { fs } = params;
   const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
-    dispatch(A.viewListFiles(path));
-  }, [path]);
+    const fileSystemName = toFileSystemName(fs) ?? currentFileSystemName;
+    dispatch(A.viewListFiles(fileSystemName, path));
+  }, [fs, path, currentFileSystemName]);
   return null;
 }
 
@@ -100,19 +104,19 @@ export function AppRoutes() {
         <Router.Route path="/" element={<ListFilesRouter />} />
         <Router.Route path="settings" element={<SettingsRouter />} />
         <Router.Route path="privacy" element={<PrivacyRouter />} />
-        <Router.Route path="folder" element={<ListFilesRouter />}>
+        <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
         </Router.Route>
-        <Router.Route path="file" element={<ViewChoproRouter />}>
+        <Router.Route path="/:fs/file" element={<ViewChoproRouter />}>
           <Router.Route path="*" element={<ViewChoproRouter />} />
         </Router.Route>
-        <Router.Route path="pdf" element={<ViewPDFRouter />}>
+        <Router.Route path="/:fs/pdf" element={<ViewPDFRouter />}>
           <Router.Route path="*" element={<ViewPDFRouter />} />
         </Router.Route>
-        <Router.Route path="image" element={<ViewImageRouter />}>
+        <Router.Route path="/:fs/image" element={<ViewImageRouter />}>
           <Router.Route path="*" element={<ViewImageRouter />} />
         </Router.Route>
-        <Router.Route path="md" element={<ViewMarkdownRouter />}>
+        <Router.Route path="/:fs/md" element={<ViewMarkdownRouter />}>
           <Router.Route path="*" element={<ViewMarkdownRouter />} />
         </Router.Route>
       </Router.Routes>

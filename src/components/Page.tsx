@@ -36,7 +36,7 @@ function DeleteBrowserFiles() {
 
   return (
     <>
-      <h2>Delete {getFileSystemDisplayName('indexeddb')}</h2>
+      <h2>Delete {getFileSystemDisplayName('browser')}</h2>
       {idbfs ? (
         <>
           <p>

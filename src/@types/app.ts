@@ -263,4 +263,4 @@ export type SongKeySettings =
   | { type: 'capo'; capo: number }
   | { type: 'transpose'; songKey: SongKey };
 
-export type FileSystemName = 'dropbox' | 'indexeddb';
+export type FileSystemName = 'dropbox' | 'browser';

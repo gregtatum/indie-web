@@ -52,7 +52,9 @@ describe('<ViewChopro>', () => {
     ]);
 
     const renderResults = render(
-      <MemoryRouter initialEntries={['/file/Clocks - Coldplay.chordpro']}>
+      <MemoryRouter
+        initialEntries={['/dropbox/file/Clocks - Coldplay.chordpro']}
+      >
         <Provider store={store as any}>
           <AppRoutes />
         </Provider>

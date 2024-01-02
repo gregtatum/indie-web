@@ -173,7 +173,7 @@ export const getCurrentFSOrNull = createSelector(
         }
         return null;
       }
-      case 'indexeddb': {
+      case 'browser': {
         return idbfs;
       }
       default:

@@ -8,7 +8,7 @@ import {
 } from 'src/utils';
 import { FilesIndex } from 'src/logic/files-index';
 import { IDBFS } from 'src/logic/file-system/indexeddb-fs';
-import { toFileSystemDisplayName } from 'src/logic/app-logic';
+import { toFileSystemName } from 'src/logic/app-logic';
 
 function getDropboxOauth(): T.DropboxOauth | null {
   const oauthString = window.localStorage.getItem('dropboxOauth');
@@ -444,8 +444,7 @@ function shouldHideHeader(state: boolean = false, action: T.Action): boolean {
  */
 function getSavedFSName() {
   return (
-    toFileSystemDisplayName(window.localStorage.getItem('fileSystemName')) ??
-    'indexeddb'
+    toFileSystemName(window.localStorage.getItem('fileSystemName')) ?? 'browser'
   );
 }
 
@@ -459,6 +458,8 @@ function currentFileSystemName(
       window.localStorage.setItem('fileSystemName', fileSystemName);
       return fileSystemName;
     }
+    case 'view-list-files':
+      return action.fileSystemName;
     default:
       return state;
   }

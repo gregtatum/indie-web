@@ -51,7 +51,7 @@ describe('<ViewMarkdown>', () => {
     ]);
 
     const renderResults = render(
-      <MemoryRouter initialEntries={['/md/Ideas.md']}>
+      <MemoryRouter initialEntries={['/dropbox/md/Ideas.md']}>
         <Provider store={store as any}>
           <AppRoutes />
         </Provider>

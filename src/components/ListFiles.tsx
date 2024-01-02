@@ -151,6 +151,7 @@ function CreateFileButton(props: {
 }) {
   type Phase = 'not-editing' | 'editing' | 'submitting';
   const fileSystem = Hooks.useSelector($.getCurrentFS);
+  const fsName = Hooks.useSelector($.getCurrentFileSystemName);
   const { dispatch, getState } = useStore();
   const [phase, setPhase] = React.useState<Phase>('not-editing');
   const input = React.useRef<HTMLInputElement | null>(null);
@@ -192,7 +193,7 @@ function CreateFileButton(props: {
           if ($.getHideEditor(getState())) {
             dispatch(A.hideEditor(false));
           }
-          navigate(props.slug + fileMetadata.path);
+          navigate(`${fsName}/${props.slug}${fileMetadata.path}`);
         },
         (error: FileSystemError) => {
           let err = error.toString();
@@ -246,6 +247,7 @@ function CreateFileButton(props: {
 
 function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   const renameFile = Hooks.useSelector($.getRenameFile);
+  const fsName = Hooks.useSelector($.getCurrentFileSystemName);
 
   const { name, path, type } = props.dropboxFile;
   const isFolder = type === 'folder';
@@ -277,23 +279,23 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
 
   let link = null;
   if (isFolder) {
-    link = `/folder${path}`;
+    link = `/${fsName}/folder${path}`;
   }
 
   if (isChordPro) {
-    link = `/file${path}`;
+    link = `/${fsName}/file${path}`;
   }
 
   if (isPDF) {
-    link = `/pdf${path}`;
+    link = `/${fsName}/pdf${path}`;
   }
 
   if (isImage) {
-    link = `/image${path}`;
+    link = `/${fsName}/image${path}`;
   }
 
   if (isMarkdown) {
-    link = `/md${path}`;
+    link = `/${fsName}/md${path}`;
     icon = '📕';
   }
 

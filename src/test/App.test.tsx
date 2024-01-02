@@ -113,7 +113,7 @@ describe('App', () => {
           >
             <a
               class="listFilesFileLink"
-              href="/folder/My Cool Band"
+              href="/dropbox/folder/My Cool Band"
             >
               <span
                 class="listFilesIcon"
@@ -141,7 +141,7 @@ describe('App', () => {
           >
             <a
               class="listFilesFileLink"
-              href="/file/Clocks - Coldplay.chordpro"
+              href="/dropbox/file/Clocks - Coldplay.chordpro"
             >
               <span
                 class="listFilesIcon"
@@ -175,7 +175,7 @@ describe('App', () => {
           >
             <a
               class="listFilesFileLink"
-              href="/file/Mellow Yellow - Donovan.chordpro"
+              href="/dropbox/file/Mellow Yellow - Donovan.chordpro"
             >
               <span
                 class="listFilesIcon"
