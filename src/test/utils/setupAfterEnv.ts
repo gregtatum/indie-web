@@ -19,6 +19,11 @@ beforeEach(function () {
   (global as any).Response = Response;
   (global as any).Blob = Blob;
 
+  document.body.querySelector('#menus')?.remove();
+  const menus = document.createElement('div');
+  menus.id = 'menus';
+  document.body.appendChild(menus);
+
   global.ResizeObserver = jest.fn().mockImplementation(() => ({
     observe: jest.fn(),
     unobserve: jest.fn(),

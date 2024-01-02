@@ -440,7 +440,6 @@ export function downloadFileForUser(
   file: T.FileMetadata,
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    dispatch(Plain.dismissFileMenu());
     const messageGeneration = dispatch(
       addMessage({
         message: (
@@ -491,7 +490,6 @@ export function downloadFolderForUser(
   file: T.FolderMetadata,
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    dispatch(Plain.dismissFileMenu());
     const messageGeneration = dispatch(
       addMessage({
         message: (
@@ -542,7 +540,6 @@ export function deleteFile(
   file: T.FileMetadata | T.FolderMetadata,
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    dispatch(Plain.dismissFileMenu());
     if (
       !confirm(
         file.type === 'file'

@@ -8,6 +8,7 @@ import { FileSystemError } from 'src/logic/file-system';
 import { getFileSystemDisplayName } from 'src/logic/app-logic';
 
 import './ListFiles.css';
+import { Menu, menuPortal } from './Menus';
 
 export function ListFiles() {
   useRetainScroll();
@@ -415,25 +416,90 @@ function RenameFile(props: {
 function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
+  const [openGeneration, setOpenGeneration] = React.useState(0);
+  const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const file = props.dropboxFile;
 
   return (
-    <button
-      type="button"
-      aria-label="File Menu"
-      className="listFilesFileMenu"
-      ref={button}
-      onClick={(event) => {
-        dispatch(
-          A.viewFileMenu({
-            file: props.dropboxFile,
-            element: ensureExists(button.current),
-            openedByKeyboard: event.detail === 0,
-          }),
-        );
-      }}
-    >
-      <span className="listFilesFileMenuIcon" />
-    </button>
+    <>
+      <button
+        type="button"
+        aria-label="File Menu"
+        className="listFilesFileMenu"
+        ref={button}
+        onClick={(event) => {
+          setOpenGeneration((generation) => generation + 1);
+          setOpenEventDetail(event.detail);
+        }}
+      >
+        <span className="listFilesFileMenuIcon" />
+      </button>
+      {menuPortal(
+        <Menu
+          clickedElement={button}
+          openEventDetail={openEventDetail}
+          openGeneration={openGeneration}
+          buttons={[
+            {
+              key: 'Rename',
+              children: (
+                <>
+                  <span className="icon" data-icon="pencil-fill" /> Rename
+                </>
+              ),
+              onClick() {
+                dispatch(A.startRenameFile(file.path));
+              },
+            },
+            // {
+            //   // TODO
+            //   key: 'Move',
+            //   onClick() {},
+            //   text: (<><span className="icon" data-icon="box-arrow-in-right" /> Move</>)
+            // },
+            {
+              key: 'Delete',
+              onClick() {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                dispatch(A.deleteFile(file));
+              },
+              children: (
+                <>
+                  <span className="icon" data-icon="trash-fill" /> Delete{' '}
+                  {file.type === 'file' ? 'File' : 'Folder'}
+                </>
+              ),
+            },
+            file.type === 'file'
+              ? {
+                  key: 'Download',
+                  onClick() {
+                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                    dispatch(A.downloadFileForUser(file));
+                  },
+                  children: (
+                    <>
+                      <span className="icon" data-icon="download" /> Download
+                    </>
+                  ),
+                }
+              : {
+                  key: 'Download',
+                  onClick() {
+                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                    dispatch(A.downloadFolderForUser(file));
+                  },
+                  children: (
+                    <>
+                      <span className="icon" data-icon="download" /> Download
+                      Zip
+                    </>
+                  ),
+                },
+          ]}
+        />,
+      )}
+    </>
   );
 }
 

@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { createStore } from './store/create-store';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
-import { maybeMockGoogleAnalytics } from 'src/utils';
+import { ensureExists, maybeMockGoogleAnalytics } from 'src/utils';
 import { createRoot } from 'react-dom/client';
 
 import * as A from 'src/store/actions';
@@ -19,8 +19,10 @@ export * as T from 'src/@types';
 export * as Hooks from 'src/hooks';
 
 if (process.env.NODE_ENV !== 'test') {
-  init().catch((error) => {
-    console.error('Error during initialization', error);
+  document.addEventListener('DOMContentLoaded', () => {
+    init().catch((error) => {
+      console.error('Error during initialization', error);
+    });
   });
 }
 
@@ -66,15 +68,10 @@ export function createRootApp(store: T.Store): JSX.Element {
 }
 
 function mountReact(store: T.Store): void {
-  const mountElement = document.createElement('div');
-  mountElement.className = 'appRoot';
-  const body = document.body;
-  if (!body) {
-    throw new Error(
-      'Attempting to mount the <App> React component but no document body was found.',
-    );
-  }
-  body.appendChild(mountElement);
+  const mountElement = ensureExists(
+    document.querySelector('.appRoot'),
+    'Could not find the app root',
+  );
   const root = createRoot(mountElement);
   root.render(createRootApp(store));
 }

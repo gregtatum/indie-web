@@ -14,7 +14,6 @@ import { ViewMarkdown } from './ViewMarkdown';
 import { Messages } from './Messages';
 import { UnhandledCaseError } from 'src/utils';
 import { Settings, Privacy } from './Page';
-import { Menus } from './Menus';
 import { useFilesIndex } from 'src/logic/files-index';
 
 import './App.css';
@@ -123,7 +122,6 @@ export function AppRoutes() {
         </MainView>
       </LinkDropbox>
       <Messages />
-      <Menus />
     </>
   );
 }

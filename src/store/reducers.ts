@@ -439,22 +439,6 @@ function shouldHideHeader(state: boolean = false, action: T.Action): boolean {
   }
 }
 
-function fileMenu(
-  state: T.ClickedFileMenu | null = null,
-  action: T.Action,
-): T.ClickedFileMenu | null {
-  switch (action.type) {
-    case 'view-file-menu':
-      return action.clickedFileMenu;
-    case 'dismiss-file-menu':
-    case 'start-rename-file':
-      return null;
-      break;
-    default:
-      return state;
-  }
-}
-
 /**
  * Remember the previously viewed file system name.
  */
@@ -475,38 +459,6 @@ function currentFileSystemName(
       window.localStorage.setItem('fileSystemName', fileSystemName);
       return fileSystemName;
     }
-    default:
-      return state;
-  }
-}
-
-function fileSystemSelectionMenu(
-  state: T.ClickedFileSystemMenu | null = null,
-  action: T.Action,
-): T.ClickedFileSystemMenu | null {
-  switch (action.type) {
-    case 'view-file-system-selection-menu':
-      return action.clickedFileSystemMenu;
-    case 'dismiss-file-system-selection-menu':
-    case 'change-file-system':
-      return null;
-    default:
-      return state;
-  }
-}
-
-function songKeyMenu(
-  state: T.ClickedSongKeyMenu | null = null,
-  action: T.Action,
-): T.ClickedSongKeyMenu | null {
-  switch (action.type) {
-    case 'view-song-key-menu':
-      return action.clickedSongKeyMenu;
-    case 'dismiss-song-key-menu':
-    case 'transpose-key':
-    case 'apply-capo':
-      return null;
-      break;
     default:
       return state;
   }
@@ -606,10 +558,7 @@ export const reducers = combineReducers({
   hideEditor,
   isDraggingSplitter,
   shouldHideHeader,
-  fileMenu,
-  songKeyMenu,
   currentFileSystemName,
-  fileSystemSelectionMenu,
   songKeySettings,
   renameFile,
   filesIndex,

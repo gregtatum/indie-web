@@ -1,15 +1,10 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $, A, Hooks } from 'src';
-import {
-  ensureExists,
-  getEnv,
-  isAppSettingScrollTop,
-  UnhandledCaseError,
-} from 'src/utils';
-
+import { getEnv, isAppSettingScrollTop, UnhandledCaseError } from 'src/utils';
+import { getBrowserName, getFileSystemDisplayName } from 'src/logic/app-logic';
 import './Header.css';
-import { getFileSystemDisplayName } from 'src/logic/app-logic';
+import { Menu, MenuButton, menuPortal } from './Menus';
 
 export function Header() {
   const view = Hooks.useSelector($.getView);
@@ -212,6 +207,23 @@ function FileSystemSelection() {
   const name = Hooks.useSelector($.getCurrentFileSystemName);
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
+  const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const [openGeneration, setOpenGeneration] = React.useState(0);
+  const buttons = React.useMemo<MenuButton[]>(
+    () => [
+      {
+        key: 'indexeddb',
+        onClick: () => void dispatch(A.changeFileSystem('indexeddb')),
+        children: getBrowserName(),
+      },
+      {
+        key: 'dropbox',
+        onClick: () => void dispatch(A.changeFileSystem('dropbox')),
+        children: 'Dropbox',
+      },
+    ],
+    [],
+  );
 
   return (
     <>
@@ -221,16 +233,20 @@ function FileSystemSelection() {
         ref={button}
         title="Change the file system source"
         onClick={(event) => {
-          dispatch(
-            A.viewFileSystemSelectionMenu({
-              element: ensureExists(button.current),
-              openedByKeyboard: event.detail === 0,
-            }),
-          );
+          setOpenGeneration((generation) => generation + 1);
+          setOpenEventDetail(event.detail);
         }}
       >
         {getFileSystemDisplayName(name)}
       </button>
+      {menuPortal(
+        <Menu
+          clickedElement={button}
+          openEventDetail={openEventDetail}
+          openGeneration={openGeneration}
+          buttons={buttons}
+        />,
+      )}
     </>
   );
 }

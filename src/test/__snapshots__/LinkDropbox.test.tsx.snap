@@ -21,18 +21,21 @@ exports[`LinkDropbox can render 1`] = `
         >
           Browser Chords
         </span>
+        <span>
+          »
+        </span>
+        <button
+          class="headerFileSystemSelection"
+          title="Change the file system source"
+          type="button"
+        >
+          Dropbox
+        </button>
       </div>
     </div>
     <div
       class="headerEnd"
     >
-      <button
-        class="button headerFileSystemSelection"
-        title="Change the file system source"
-        type="button"
-      >
-        💾 Dropbox
-      </button>
       <a
         class="button headerSettings"
         href="/settings"

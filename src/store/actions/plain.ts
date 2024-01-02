@@ -109,35 +109,6 @@ export function shouldHideHeader(hide: boolean) {
   return { type: 'should-hide-header' as const, hide };
 }
 
-export function viewFileMenu(clickedFileMenu: T.ClickedFileMenu) {
-  return { type: 'view-file-menu' as const, clickedFileMenu };
-}
-
-export function viewSongKeyMenu(clickedSongKeyMenu: T.ClickedSongKeyMenu) {
-  return { type: 'view-song-key-menu' as const, clickedSongKeyMenu };
-}
-
-export function viewFileSystemSelectionMenu(
-  clickedFileSystemMenu: T.ClickedFileSystemMenu,
-) {
-  return {
-    type: 'view-file-system-selection-menu' as const,
-    clickedFileSystemMenu,
-  };
-}
-
-export function dismissFileMenu() {
-  return { type: 'dismiss-file-menu' as const };
-}
-
-export function dismissSongKeyMenu() {
-  return { type: 'dismiss-song-key-menu' as const };
-}
-
-export function dismissFileSystemSelectionMenu() {
-  return { type: 'dismiss-file-system-selection-menu' as const };
-}
-
 export function startRenameFile(path: string) {
   return { type: 'start-rename-file' as const, path };
 }

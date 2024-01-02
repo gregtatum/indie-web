@@ -73,18 +73,6 @@ export function shouldHideHeader(state: State) {
   return state.shouldHideHeader;
 }
 
-export function getFileMenu(state: State) {
-  return state.fileMenu;
-}
-
-export function getSongKeyMenu(state: State) {
-  return state.songKeyMenu;
-}
-
-export function getFileSystemSelectionMenu(state: State) {
-  return state.fileSystemSelectionMenu;
-}
-
 export function getCurrentFileSystemName(state: State) {
   return state.currentFileSystemName;
 }

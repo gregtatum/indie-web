@@ -1,18 +1,18 @@
 import * as React from 'react';
-import { $, A, Hooks } from 'src';
 import { ensureExists } from 'src/utils';
 
 import './Menus.css';
-import { getBrowserName } from 'src/logic/app-logic';
+import { createPortal } from 'react-dom';
 
-export function Menus() {
-  return (
-    <div className="menus">
-      <FileMenu />
-      <SongKeyMenu />
-      <FileSystemSelectionMenu />
-    </div>
-  );
+let menus: HTMLDivElement;
+export function menuPortal(child: React.ReactNode) {
+  if (!menus) {
+    menus = ensureExists(
+      document.querySelector<HTMLDivElement>('#menus'),
+      'Could not find the menus',
+    );
+  }
+  return createPortal(child, menus);
 }
 
 // The bottom and top border.
@@ -26,11 +26,14 @@ const menuMargin = 10;
 /**
  * Handle leaving the menu by hitting escape.
  */
-function escapeLogic(dismiss: () => void) {
+function escapeLogic(dismiss: () => void, isOpen: boolean) {
   const keyHandler = React.useRef<null | ((event: KeyboardEvent) => void)>(
     null,
   );
   React.useEffect(() => {
+    if (!isOpen) {
+      return () => {};
+    }
     keyHandler.current = (event) => {
       if (event.key === 'Escape') {
         dismiss();
@@ -42,16 +45,17 @@ function escapeLogic(dismiss: () => void) {
         document.removeEventListener('keydown', keyHandler.current);
       }
     };
-  }, []);
+  }, [isOpen]);
 }
 
 /**
  * Logic for handling when a user clicks outside of the menu.
  */
 function clickOutLogic(
-  element: Element,
+  elementRef: React.MutableRefObject<HTMLElement | null>,
   divRef: React.RefObject<HTMLDivElement>,
   dismiss: () => void,
+  isOpen: boolean,
 ) {
   const clickHandler = React.useRef<null | ((event: MouseEvent) => void)>(null);
 
@@ -62,9 +66,16 @@ function clickOutLogic(
   }
 
   React.useEffect(() => {
+    if (!isOpen) {
+      return () => {};
+    }
+    const element = elementRef.current;
     removeHandler();
+    if (!element) {
+      return () => {};
+    }
     clickHandler.current = (event) => {
-      const div = ensureExists(divRef.current);
+      const div = ensureExists(divRef.current, 'There is no divRef');
       if (!div.contains(event.target as Node | null)) {
         // We clicked outside of the menu, dismiss it.
         dismiss();
@@ -75,209 +86,147 @@ function clickOutLogic(
     };
     document.addEventListener('click', clickHandler.current, true);
     return removeHandler;
-  }, [element]);
+  }, [elementRef, isOpen]);
 }
 
-function FileMenu() {
-  const clickedFileMenu = Hooks.useSelector($.getFileMenu);
-  const dispatch = Hooks.useDispatch();
-
-  if (!clickedFileMenu) {
-    return null;
-  }
-  const { file, element, openedByKeyboard } = clickedFileMenu;
-
-  return (
-    <Menu
-      key={file.path}
-      openedByKeyboard={openedByKeyboard}
-      clickedElement={element ?? null}
-      dismiss={() => dispatch(A.dismissFileMenu())}
-      buttons={[
-        <button
-          type="button"
-          className="menusFileButton"
-          key="Rename"
-          onClick={() => {
-            dispatch(A.startRenameFile(file.path));
-          }}
-        >
-          <span className="icon" data-icon="pencil-fill" /> Rename
-        </button>,
-        // TODO
-        // <button type="button" className="menusFileButton" key="Move">
-        //   <span className="icon" data-icon="box-arrow-in-right" /> Move
-        // </button>,
-        <button
-          type="button"
-          className="menusFileButton"
-          key="Delete"
-          onClick={() => {
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            dispatch(A.deleteFile(file));
-          }}
-        >
-          <span className="icon" data-icon="trash-fill" /> Delete{' '}
-          {file.type === 'file' ? 'File' : 'Folder'}
-        </button>,
-        file.type === 'file' ? (
-          <button
-            type="button"
-            className="menusFileButton"
-            key="Download"
-            onClick={() => {
-              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-              dispatch(A.downloadFileForUser(file));
-            }}
-          >
-            <span className="icon" data-icon="download" /> Download
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="menusFileButton"
-            key="Download"
-            onClick={() => {
-              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-              dispatch(A.downloadFolderForUser(file));
-            }}
-          >
-            <span className="icon" data-icon="download" /> Download Zip
-          </button>
-        ),
-      ]}
-    />
-  );
-}
-
-function FileSystemSelectionMenu() {
-  const clickedFileSystemMenu = Hooks.useSelector($.getFileSystemSelectionMenu);
-  const dispatch = Hooks.useDispatch();
-
-  if (!clickedFileSystemMenu) {
-    return null;
-  }
-  const { element, openedByKeyboard } = clickedFileSystemMenu;
-
-  return (
-    <Menu
-      clickedElement={element}
-      openedByKeyboard={openedByKeyboard}
-      dismiss={() => dispatch(A.dismissFileSystemSelectionMenu())}
-      buttons={[
-        <button
-          type="button"
-          className="menusFileButton"
-          key="2"
-          onClick={() => {
-            dispatch(A.changeFileSystem('indexeddb'));
-          }}
-        >
-          {getBrowserName()}
-        </button>,
-        <button
-          type="button"
-          className="menusFileButton"
-          key="1"
-          onClick={() => {
-            dispatch(A.changeFileSystem('dropbox'));
-          }}
-        >
-          Dropbox
-        </button>,
-      ]}
-    />
-  );
-}
-
-function SongKeyMenu() {
-  const clickedSongKey = Hooks.useSelector($.getSongKeyMenu);
-  const dispatch = Hooks.useDispatch();
-  const songKey = Hooks.useSelector($.getActiveFileSongKey);
-  const file = Hooks.useSelector($.getActiveFileOrNull);
-
-  if (!clickedSongKey) {
-    return null;
-  }
-  const path = ensureExists(file).metadata.path;
-
-  return (
-    <Menu
-      clickedElement={clickedSongKey.element}
-      openedByKeyboard={clickedSongKey.openedByKeyboard}
-      dismiss={() => dispatch(A.dismissSongKeyMenu())}
-      buttons={[
-        <button
-          type="button"
-          className="menusFileButton"
-          key="Transpose"
-          onClick={() => {
-            dispatch(A.transposeKey(path, ensureExists(songKey)));
-          }}
-        >
-          Transpose
-        </button>,
-        // TODO
-        // <button
-        //   type="button"
-        //   className="menusFileButton"
-        //   key="Capo"
-        //   onClick={() => {
-        //     dispatch(A.applyCapo(path, 0));
-        //   }}
-        // >
-        //   Apply Capo
-        // </button>,
-      ]}
-    />
-  );
+export interface MenuButton {
+  children: React.ReactNode;
+  key: string;
+  onClick(): void;
 }
 
 interface MenuProps {
-  clickedElement: HTMLElement;
-  openedByKeyboard: boolean;
-  buttons: React.ReactNode[];
-  dismiss: () => void;
+  clickedElement: React.MutableRefObject<HTMLElement | null>;
+  openEventDetail: React.MouseEvent['detail'];
+  openGeneration: number;
+  buttons: MenuButton[];
 }
 
-function Menu({
+export function Menu({
   clickedElement,
-  openedByKeyboard,
+  openEventDetail,
+  openGeneration,
   buttons,
-  dismiss,
 }: MenuProps) {
+  const [closeGeneration, setCloseGeneration] = React.useState(0);
+  const isOpen = Boolean(openGeneration && openGeneration !== closeGeneration);
+  const isClosed = !isOpen;
   const divRef = React.useRef<HTMLDivElement>(null);
+  const [focusIndex, setFocusIndex] = React.useState<null | number>(null);
+  const focusRef = React.useRef(focusIndex);
+  focusRef.current = focusIndex;
 
-  escapeLogic(dismiss);
-  clickOutLogic(clickedElement, divRef, dismiss);
+  const dismiss = () => void setCloseGeneration((n) => n + 1);
+
+  escapeLogic(dismiss, isOpen);
+  clickOutLogic(clickedElement, divRef, dismiss, isOpen);
 
   // Focus the menu if opened via keyboard.
   // eslint-disable-next-line consistent-return
   React.useEffect(() => {
-    if (openedByKeyboard) {
+    // Was this opened by keyboard?
+    if (openEventDetail === 0) {
       const button = divRef.current?.querySelector('button');
       if (button) {
-        button.focus();
-        return () => {
-          // Restore the focus.
-          clickedElement.focus();
-        };
+        setFocusIndex(0);
+      }
+    } else {
+      divRef.current?.focus();
+    }
+  }, [divRef, openEventDetail]);
+
+  React.useEffect(() => {
+    if (isClosed) {
+      return () => {};
+    }
+    return () => {
+      if (focusRef.current !== null) {
+        // Restore the focus. Intentionally use the capture value.
+        clickedElement.current?.focus();
+      }
+    };
+  }, [isOpen, clickedElement]);
+
+  // Remove the focus when the dialog is closed.
+  React.useEffect(() => {
+    if (focusIndex !== null && isClosed) {
+      setFocusIndex(null);
+    }
+  }, [focusIndex, isOpen]);
+
+  // Apply the current focus.
+  React.useEffect(() => {
+    const div = divRef.current;
+    if (!div || focusIndex === null) {
+      return;
+    }
+    const buttons = div.querySelectorAll('button');
+    const button = buttons[focusIndex];
+    button.focus();
+  }, [focusIndex]);
+
+  React.useEffect(() => {
+    if (isClosed) {
+      return () => {};
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      switch (event.key) {
+        case 'ArrowUp':
+          event.preventDefault();
+          setFocusIndex((index) => moveFocusUp(index, buttons));
+          break;
+        case 'ArrowDown':
+          event.preventDefault();
+          setFocusIndex((index) => moveFocusDown(index, buttons));
+          break;
+        case 'Tab':
+          event.preventDefault();
+          if (event.shiftKey) {
+            setFocusIndex((index) => moveFocusUp(index, buttons));
+          } else {
+            setFocusIndex((index) => moveFocusDown(index, buttons));
+          }
+          break;
+        default:
+          break;
       }
     }
-  }, [divRef, openedByKeyboard, clickedElement]);
+    document.body.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [buttons, isClosed]);
 
-  const elementRect = clickedElement.getBoundingClientRect();
-  const bodyRect = document.body.getBoundingClientRect();
+  if (process.env.NODE_ENV === 'development') {
+    React.useEffect(() => {
+      const div = divRef.current;
+      if (div) {
+        if (div.parentElement?.id !== 'menus') {
+          throw new Error('The <Menu> should be wrapped in menuPortal.');
+        }
+      }
+    }, [divRef, isOpen]);
+  }
 
-  const elementY1 = elementRect.top + elementRect.height / 3 - bodyRect.top;
-  const elementY2 = elementRect.bottom - elementRect.height / 3 - bodyRect.top;
+  if (isClosed) {
+    return null;
+  }
+
+  const elementRect = ensureExists(
+    clickedElement.current,
+  ).getBoundingClientRect();
+  const docBodyRect = document.body.getBoundingClientRect();
+
+  const elementY1 = elementRect.top + elementRect.height / 3 - docBodyRect.top;
+  const elementY2 =
+    elementRect.bottom - elementRect.height / 3 - docBodyRect.top;
   const elementCenterX = elementRect.width / 2 + elementRect.left;
 
   let left = elementCenterX - menuWidth / 2;
   if (left < menuMargin) {
     left = menuMargin;
-  } else if (left + menuWidth > bodyRect.width - menuMargin) {
-    left = bodyRect.width - menuWidth - menuMargin;
+  } else if (left + menuWidth > docBodyRect.width - menuMargin) {
+    left = docBodyRect.width - menuWidth - menuMargin;
   }
 
   let top = elementY2;
@@ -285,7 +234,6 @@ function Menu({
 
   const { scrollTop } = document.documentElement;
   const scrollBottom = scrollTop + innerHeight;
-
   const menuHeight = buttons.length * menuItemHeight + menuBorderHeight;
 
   if (elementY2 + menuHeight + menuMargin > scrollBottom) {
@@ -304,7 +252,28 @@ function Menu({
         width: menuWidth,
       }}
     >
-      {buttons}
+      {buttons.map((button) => (
+        <button
+          type="button"
+          className="menusFileButton"
+          tabIndex={0}
+          key={button.key}
+          onClick={() => {
+            button.onClick();
+            dismiss();
+          }}
+        >
+          {button.children}
+        </button>
+      ))}
     </div>
   );
+}
+
+function moveFocusDown(index: null | number, buttons: MenuButton[]) {
+  return ((index ?? -1) + 1) % buttons.length;
+}
+
+function moveFocusUp(index: null | number, buttons: MenuButton[]) {
+  return ((index ?? buttons.length) - 1 + buttons.length) % buttons.length;
 }

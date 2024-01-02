@@ -21,6 +21,8 @@
 
   --primary-color: #004eca;
   --primary-color-hover: #0062ff;
+
+  --text-border: #555;
 }
 
 @keyframes fadein {

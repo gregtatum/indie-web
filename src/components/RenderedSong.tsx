@@ -11,6 +11,7 @@ import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
 import { SongKey } from 'src/logic/parse';
+import { Menu, menuPortal } from './Menus';
 
 function getSpotifyLink(
   { title, subtitle }: Record<string, string>,
@@ -175,7 +176,6 @@ export function RenderedSong() {
 }
 
 function RenderedSongKey() {
-  const songKeyRef = React.useRef<HTMLButtonElement | null>(null);
   const path = Hooks.useSelector($.getPath);
   const songKey = Hooks.useSelector($.getActiveFileSongKey);
   const songKeyRaw = Hooks.useSelector($.getActiveFileSongKeyRaw);
@@ -242,29 +242,64 @@ function RenderedSongKey() {
         </div>
       );
     }
-    case undefined:
-      return (
-        <div className="renderedSongStickyHeaderRow">
-          <button
-            type="button"
-            className="renderedSongKey"
-            ref={songKeyRef}
-            onClick={(event) =>
-              dispatch(
-                A.viewSongKeyMenu({
-                  element: ensureExists(songKeyRef.current),
-                  openedByKeyboard: event.detail === 0,
-                }),
-              )
-            }
-          >
-            Key: {songKey.display}
-          </button>
-        </div>
-      );
+    case undefined: {
+      return <SongKeyMenu songKey={songKey} />;
+    }
     default:
       throw new UnhandledCaseError(songKeyType, 'Unhandled song key setting');
   }
+}
+
+interface SongKeyMenu {
+  songKey: SongKey;
+}
+
+function SongKeyMenu({ songKey }: SongKeyMenu) {
+  const dispatch = Hooks.useDispatch();
+  const path = Hooks.useSelector($.getPath);
+  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+  const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const [openGeneration, setOpenGeneration] = React.useState(0);
+
+  return (
+    <div className="renderedSongStickyHeaderRow">
+      <button
+        type="button"
+        className="renderedSongKey"
+        ref={buttonRef}
+        onClick={(event) => {
+          setOpenGeneration((generation) => generation + 1);
+          setOpenEventDetail(event.detail);
+        }}
+      >
+        Key: {songKey.display}
+      </button>
+      {menuPortal(
+        <Menu
+          clickedElement={buttonRef}
+          openEventDetail={openEventDetail}
+          openGeneration={openGeneration}
+          buttons={[
+            {
+              key: 'Transpose',
+              children: 'Transpose',
+              onClick() {
+                dispatch(A.transposeKey(path, ensureExists(songKey)));
+              },
+            },
+            // TODO
+            // {
+            //   key: 'Apply Capo',
+            //   children: 'Apply Capo',
+            //   onClick() {
+            //     dispatch(A.transposeKey(path, ensureExists(songKey)));
+            //   },
+            // },
+          ]}
+        />,
+      )}
+    </div>
+  );
 }
 
 function getLineTypeKey(line: T.LineType): string {
