@@ -218,7 +218,7 @@ export const getActiveFileText = dangerousSelector(
 export const getActiveFileParsedOrNull = createSelector(
   getActiveFileTextOrNull,
   (text) => {
-    if (!text) {
+    if (text === null) {
       return null;
     }
     return parseChordPro(text);
@@ -228,7 +228,7 @@ export const getActiveFileParsedOrNull = createSelector(
 export const getActiveFileMarkdownOrNull = createSelector(
   getActiveFileTextOrNull,
   (text) => {
-    if (!text) {
+    if (text === null) {
       return null;
     }
     marked.use({

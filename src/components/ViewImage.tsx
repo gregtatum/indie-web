@@ -61,9 +61,7 @@ function LoadImage() {
     return (
       <div className="viewImage" data-fullscreen ref={swipeDiv}>
         <NextPrevLinks />
-        <div className="viewImageWidth">
-          <img src={image} />
-        </div>
+        <img src={image} />
       </div>
     );
   }

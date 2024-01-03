@@ -91,6 +91,28 @@
   border: 1px solid #ddd;
 }
 
+.viewMarkdownDiv pre {
+  padding: 16px;
+  background-color: #eee;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+/* Override the global <code> rules. */
+.viewMarkdownDiv pre > code {
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.viewMarkdownDiv blockquote {
+  padding: 0 1em;
+  margin: 0;
+  color: #555;
+  border-left: 2px solid #555;
+}
+
 @media (max-width: 600px) {
   .viewMarkdownContainer,
   .splitterSolo .viewMarkdownContainer {

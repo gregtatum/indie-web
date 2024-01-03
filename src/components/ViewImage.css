@@ -1,14 +1,13 @@
 .viewImage {
   justify-content: center;
+  align-items: center;
   display: flex;
   animation: fadein 200ms;
+  height: calc(100vh - var(--header-padding))
 }
 
-.viewImageWidth {
-  padding: 10px;
-  max-width: 1000px;
-}
-
-.viewImageWidth img {
-  max-width: 100%;
+.viewImage img {
+  --image-padding: 30px;
+  max-width: calc(100vw - var(--image-padding));
+  max-height: calc(100vh - var(--image-padding) - var(--header-padding));
 }
