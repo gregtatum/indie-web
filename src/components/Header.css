@@ -31,6 +31,21 @@
   opacity: 0.5;
 }
 
+.headerSlideIn {
+  display: inline-block;
+  overflow: hidden;
+}
+
+.headerSlideInAnimate {
+  transition: width 200ms;
+}
+
+.headerSlideInContents {
+  padding: 0 var(--header-gap);
+  display: inline-flex;
+  overflow: hidden;
+}
+
 .headerEnd {
   display: flex;
   flex-shrink: 0;
@@ -38,7 +53,8 @@
   gap: var(--header-gap);
 }
 
-.headerStart {
+.headerStart,
+.headerSiteName {
   display: flex;
   text-overflow: ellipsis;
   overflow: hidden;

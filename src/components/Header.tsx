@@ -1,7 +1,11 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $, A, Hooks } from 'src';
-import { getEnv, isAppSettingScrollTop, UnhandledCaseError } from 'src/utils';
+import {
+  UnhandledCaseError,
+  assertType,
+  isAppSettingScrollTop,
+} from 'src/utils';
 import { getBrowserName, getFileSystemDisplayName } from 'src/logic/app-logic';
 import './Header.css';
 import { Menu, MenuButton, menuPortal } from './Menus';
@@ -75,58 +79,46 @@ export function Header() {
     };
   }, []);
 
-  let siteName;
-  if (process.env.SITE === 'floppydisk') {
-    siteName = (
-      <>
-        <span>💾</span>
-        <span className="headerTitleTitle">
-          FloppyDisk<span className="headerTitleTitleSuffix">.link</span>
-        </span>
-      </>
-    );
-  } else {
-    siteName = (
-      <>
-        <span>🎵</span>
-        <span className="headerTitleTitle">Browser Chords</span>
-      </>
-    );
-  }
-
-  let title = (
-    <div className="headerTitle" key={key}>
-      {siteName}
-      <span>»</span>
-      <FileSystemSelection />
-    </div>
-  );
+  let isOpen;
+  let title;
   switch (view) {
-    case null:
-      break;
     case 'settings':
+      isOpen = true;
       title = <Path path="/" key={key} title="⚙️ Settings" />;
       break;
     case 'privacy':
+      isOpen = true;
       title = <Path path="/" key={key} title="👀 Privacy Policy and Usage" />;
       break;
     case 'view-file':
     case 'view-pdf':
     case 'view-image':
     case 'view-markdown':
+      isOpen = false;
       title = <Path key={key} path={path} />;
       break;
     case 'list-files':
       if (location.pathname !== '/folder' && location.pathname !== '/') {
+        isOpen = false;
         title = <Path key={key} path={path} />;
+        break;
       }
-      break;
+    // fallthrough
+    case null:
     default:
-      throw new UnhandledCaseError(view, 'View');
+      isOpen = true;
+      assertType<'list-files' | null>(view);
+      title = (
+        <div className="headerTitle" key={key}>
+          <FileSystemSelection />
+        </div>
+      );
+      break;
   }
 
   return (
     <div className="header" style={headerStyle}>
+      <SiteName isOpen={isOpen} />
       <div className="headerStart">{title}</div>
       <div className="headerEnd">
         <SaveFileButton />
@@ -276,7 +268,7 @@ function SaveFileButton() {
   );
 }
 
-function Path({ path, title }: { path: string; title?: string }) {
+function Path({ path, title }: { path: string; title?: any }) {
   const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
   const fsName = Hooks.useSelector($.getCurrentFileSystemName);
   const breadcrumbs = [];
@@ -306,7 +298,7 @@ function Path({ path, title }: { path: string; title?: string }) {
   return (
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
-        <span>{getEnv('SITE_ICON')}</span>
+        <SiteName isOpen={!(songTitle ?? fileName)} />
         <FileSystemSelection key="fileSystem" />
         <span>»</span>
         {breadcrumbs}
@@ -325,4 +317,72 @@ function Path({ path, title }: { path: string; title?: string }) {
       </div>
     </>
   );
+}
+
+interface SlideInProps {
+  isOpen: boolean;
+  skipAnimation?: boolean;
+  children: any;
+}
+
+function SlideIn({ isOpen, skipAnimation, children }: SlideInProps) {
+  const contentsRef = React.useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    const { current } = contentsRef;
+    if (!current) {
+      return;
+    }
+    const rect = current.getBoundingClientRect();
+    setWidth(rect.width);
+  }, [contentsRef]);
+
+  const className = skipAnimation
+    ? 'headerSlideIn'
+    : 'headerSlideIn headerSlideInAnimate';
+
+  return (
+    <div className={className} style={{ width: isOpen ? width : 0 }}>
+      <div className="headerSlideInContents" ref={contentsRef}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+let wasAnimated = false;
+function SiteName(props: { isOpen: boolean }) {
+  const [skipAnimation, setSkipAnimation] = React.useState(!wasAnimated);
+
+  React.useEffect(() => {
+    if (wasAnimated) {
+      setSkipAnimation(false);
+    }
+    wasAnimated = true;
+  }, [props.isOpen]);
+
+  if (process.env.SITE === 'floppydisk') {
+    return (
+      <div className="headerSiteName">
+        <SlideIn isOpen={props.isOpen} skipAnimation={skipAnimation}>
+          <span>💾</span>
+          <span className="headerTitleTitle">
+            FloppyDisk<span className="headerTitleTitleSuffix">.link</span>
+          </span>
+        </SlideIn>
+      </div>
+    );
+  } else {
+    return (
+      <div className="headerSiteName">
+        <SlideIn isOpen={props.isOpen} skipAnimation={skipAnimation}>
+          <div className="headerTitleSlideIn">
+            <span>🎵 </span>
+            <span className="headerTitleTitle">Browser Chords</span>
+          </div>
+        </SlideIn>
+      </div>
+    );
+  }
 }
