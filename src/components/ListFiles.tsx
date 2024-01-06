@@ -82,7 +82,7 @@ export function ListFiles() {
     parent = (
       <Router.Link
         className="listFilesBack"
-        to={`/folder${parts.join('/')}`}
+        to={`${fileSystemName}/folder${parts.join('/')}`}
         aria-label="Back"
       >
         ←

@@ -255,7 +255,7 @@ export const imageExtensions = new Set([
   'tiff',
 ]);
 
-export function getUrlForFile(path: string): string | null {
+export function getUrlForFile(fsName: string, path: string): string | null {
   let extension;
   for (let i = path.length; i >= 0; i--) {
     if (path[i] === '/') {
@@ -266,13 +266,13 @@ export function getUrlForFile(path: string): string | null {
     }
   }
   if (extension === 'pdf') {
-    return '/pdf' + path;
+    return fsName + '/pdf' + path;
   }
   if (isChordProExtension(extension)) {
-    return '/file' + path;
+    return fsName + '/file' + path;
   }
   if (extension && imageExtensions.has(extension)) {
-    return '/image' + path;
+    return fsName + '/image' + path;
   }
   return null;
 }

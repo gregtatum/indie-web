@@ -429,8 +429,9 @@ type NextPrevSong = Partial<{
 
 export const getNextPrevSong = createSelector(
   getPath,
+  getCurrentFileSystemName,
   getListFilesCache,
-  (path, listFilesCache): NextPrevSong => {
+  (path, fsName, listFilesCache): NextPrevSong => {
     const results: NextPrevSong = {};
     const folder = getDirName(path);
 
@@ -451,7 +452,7 @@ export const getNextPrevSong = createSelector(
       }
 
       // Ensure it's something we can open.
-      const url = getUrlForFile(file.path ?? '');
+      const url = getUrlForFile(fsName, file.path ?? '');
       if (!url) {
         continue;
       }
