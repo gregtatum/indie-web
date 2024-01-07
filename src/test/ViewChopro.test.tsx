@@ -81,7 +81,7 @@ describe('<ViewChopro>', () => {
           <a
             aria-label="Next"
             class="nextPrev nextPrevNext"
-            href="/file/Mellow Yellow - Donovan.chordpro"
+            href="/dropbox/file/Mellow Yellow - Donovan.chordpro"
             title="Mellow Yellow - Donovan.chordpro"
             type="button"
           />

@@ -8,22 +8,36 @@ exports[`LinkDropbox can render 1`] = `
     class="header"
   >
     <div
+      class="headerSiteName"
+    >
+      <div
+        class="headerSlideIn"
+        style="width: 0px;"
+      >
+        <div
+          class="headerSlideInContents"
+        >
+          <div
+            class="headerTitleSlideIn"
+          >
+            <span>
+              🎵 
+            </span>
+            <span
+              class="headerTitleTitle"
+            >
+              Browser Chords
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
       class="headerStart"
     >
       <div
         class="headerTitle"
       >
-        <span>
-          🎵
-        </span>
-        <span
-          class="headerTitleTitle"
-        >
-          Browser Chords
-        </span>
-        <span>
-          »
-        </span>
         <button
           class="headerFileSystemSelection"
           title="Change the file system source"
