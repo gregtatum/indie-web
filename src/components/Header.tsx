@@ -1,11 +1,7 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $, A, Hooks } from 'src';
-import {
-  UnhandledCaseError,
-  assertType,
-  isAppSettingScrollTop,
-} from 'src/utils';
+import { assertType, isAppSettingScrollTop } from 'src/utils';
 import { getBrowserName, getFileSystemDisplayName } from 'src/logic/app-logic';
 import './Header.css';
 import { Menu, MenuButton, menuPortal } from './Menus';
