@@ -24,7 +24,7 @@ exports[`LinkDropbox can render 1`] = `
               🎵 
             </span>
             <span
-              class="headerTitleTitle"
+              class="headerSiteNameTitle"
             >
               Browser Chords
             </span>

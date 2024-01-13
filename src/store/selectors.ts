@@ -202,11 +202,22 @@ export const getActiveFileTextOrNull = createSelector(
     if (!activeFile) {
       return null;
     }
-    if (modifiedText.text !== '') {
+    if (modifiedText.text !== null) {
       return modifiedText.text;
     }
 
     return activeFile.text;
+  },
+);
+
+export const getIsActiveFileModified = createSelector(
+  getActiveFileOrNull,
+  getModifiedText,
+  (activeFile, modifiedText): boolean => {
+    if (!activeFile || modifiedText.text === null) {
+      return false;
+    }
+    return modifiedText.text !== activeFile.text;
   },
 );
 

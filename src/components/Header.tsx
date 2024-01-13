@@ -241,12 +241,12 @@ function FileSystemSelection() {
 
 function SaveFileButton() {
   const text = Hooks.useSelector($.getActiveFileTextOrNull);
-  const view = Hooks.useSelector($.getView);
   const dispatch = Hooks.useDispatch();
   const path = Hooks.useSelector($.getPath);
   const request = Hooks.useSelector($.getDownloadFileCache).get(path);
+  const isModified = Hooks.useSelector($.getIsActiveFileModified);
 
-  if (text === null || view !== 'view-file' || !request) {
+  if (!isModified || text === null || !request) {
     return null;
   }
 
@@ -362,9 +362,9 @@ function SiteName(props: { isOpen: boolean }) {
     return (
       <div className="headerSiteName">
         <SlideIn isOpen={props.isOpen} skipAnimation={skipAnimation}>
-          <span>💾</span>
-          <span className="headerTitleTitle">
-            FloppyDisk<span className="headerTitleTitleSuffix">.link</span>
+          <span>💾 </span>
+          <span className="headerSiteNameTitle">
+            FloppyDisk<span className="headerSiteNameSuffix">.link</span>
           </span>
         </SlideIn>
       </div>
@@ -375,7 +375,7 @@ function SiteName(props: { isOpen: boolean }) {
         <SlideIn isOpen={props.isOpen} skipAnimation={skipAnimation}>
           <div className="headerTitleSlideIn">
             <span>🎵 </span>
-            <span className="headerTitleTitle">Browser Chords</span>
+            <span className="headerSiteNameTitle">Browser Chords</span>
           </div>
         </SlideIn>
       </div>

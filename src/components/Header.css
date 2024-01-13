@@ -27,7 +27,11 @@
   padding: var(--header-gap);
 }
 
-.headerTitleTitleSuffix {
+.headerSiteNameTitle {
+  padding-inline-start: 5px;
+}
+
+.headerSiteNameSuffix {
   opacity: 0.5;
 }
 

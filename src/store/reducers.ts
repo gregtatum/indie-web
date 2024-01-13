@@ -342,9 +342,9 @@ function path(state = '/', action: T.Action): string {
 }
 
 function modifiedText(
-  state = { text: '', generation: 0 },
+  state = { text: null, generation: 0 },
   action: T.Action,
-): { text: string; generation: number } {
+): { text: string | null; generation: number } {
   switch (action.type) {
     case 'modify-active-file':
       return {
@@ -357,7 +357,7 @@ function modifiedText(
       };
     case 'download-file-received':
       return {
-        text: '',
+        text: null,
         generation: 0,
       };
     default:
