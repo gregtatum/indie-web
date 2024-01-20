@@ -750,8 +750,9 @@ export function insertTextAtLineInActiveFile(
   insert: string,
 ): Thunk<void> {
   return (dispatch, getState) => {
+    const path = $.getPath(getState());
     const oldText = $.getActiveFileText(getState());
     const newText = insertTextAtLine(oldText, lineIndex, insert);
-    dispatch(Plain.modifyActiveFile(newText, true));
+    dispatch(Plain.modifyActiveFile(newText, path, true));
   };
 }

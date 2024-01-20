@@ -16,18 +16,13 @@ export function ViewMarkdown() {
   const path = Hooks.useSelector($.getPath);
   const textFile = Hooks.useSelector($.getDownloadFileCache).get(path);
   const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
-  const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
   const hideEditor = Hooks.useSelector($.getHideEditor);
 
   React.useEffect(() => {
-    if (songTitle) {
-      document.title = songTitle;
-    } else {
-      const parts = path.split('/');
-      const file = parts[parts.length - 1];
-      document.title = file.replace(/\.\w+$/, '');
-    }
-  }, [path, songTitle]);
+    const parts = path.split('/');
+    const file = parts[parts.length - 1];
+    document.title = file.replace(/\.\w+$/, '');
+  }, [path]);
 
   React.useEffect(() => {
     if (textFile === undefined) {

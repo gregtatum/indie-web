@@ -39,8 +39,8 @@ export function TextArea(props: {
   const [editor, setEditor] = React.useState<null | EditorView>(null);
 
   const dispatch = Hooks.useDispatch();
-  function onChange(newText: string) {
-    dispatch(A.modifyActiveFile(newText, false));
+  function onChange([newText, path]: [string, string]) {
+    dispatch(A.modifyActiveFile(newText, path, false));
   }
   const flush = React.useRef<(() => void) | null>(null);
   const throttledOnChange = React.useMemo(
@@ -90,7 +90,7 @@ export function TextArea(props: {
         props.language(),
         EditorView.updateListener.of((viewUpdate: ViewUpdate) => {
           if (viewUpdate.docChanged) {
-            throttledOnChange(viewUpdate.state.doc.toString());
+            throttledOnChange([viewUpdate.state.doc.toString(), props.path]);
           }
         }),
         // Extensions doesn't have an iterable property, so coerce to any.

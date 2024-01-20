@@ -341,25 +341,32 @@ function path(state = '/', action: T.Action): string {
   }
 }
 
-function modifiedText(
-  state = { text: null, generation: 0 },
+function modifiedTextByPath(
+  state = new Map(),
   action: T.Action,
-): { text: string | null; generation: number } {
+): Map<string, { text: string | null; generation: number; path: string }> {
   switch (action.type) {
-    case 'modify-active-file':
-      return {
+    case 'modify-active-file': {
+      const path = action.path;
+      const newState = new Map(state);
+      const oldModifiedText = state.get(path);
+      const generation = oldModifiedText?.generation ?? 0;
+      newState.set(path, {
         text: action.modifiedText,
         // The textarea needs a signal that the text has been modified by something
         // external, so that it can update the textarea.value.
-        generation: action.forceRefresh
-          ? state.generation + 1
-          : state.generation,
-      };
-    case 'download-file-received':
-      return {
-        text: null,
-        generation: 0,
-      };
+        generation: action.forceRefresh ? generation + 1 : generation,
+      });
+      return newState;
+    }
+    case 'download-file-received': {
+      if (!state.has(action.path)) {
+        return state;
+      }
+      const newState = new Map(state);
+      newState.delete(action.path);
+      return newState;
+    }
     default:
       return state;
   }
@@ -554,7 +561,7 @@ export const reducers = combineReducers({
   downloadBlobCache,
   path,
   view,
-  modifiedText,
+  modifiedTextByPath,
   messages,
   hideEditor,
   isDraggingSplitter,

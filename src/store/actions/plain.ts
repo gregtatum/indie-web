@@ -51,8 +51,17 @@ export function changeActiveFile(path: string) {
   return { type: 'change-active-file' as const, path };
 }
 
-export function modifyActiveFile(modifiedText: string, forceRefresh: boolean) {
-  return { type: 'modify-active-file' as const, modifiedText, forceRefresh };
+export function modifyActiveFile(
+  modifiedText: string,
+  path: string,
+  forceRefresh: boolean,
+) {
+  return {
+    type: 'modify-active-file' as const,
+    modifiedText,
+    path,
+    forceRefresh,
+  };
 }
 
 export function viewListFiles(fileSystemName: T.FileSystemName, path: string) {

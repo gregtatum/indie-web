@@ -53,8 +53,8 @@ export function getPath(state: State) {
   return state.path;
 }
 
-export function getModifiedText(state: State) {
-  return state.modifiedText;
+export function getModifiedTextByPath(state: State) {
+  return state.modifiedTextByPath;
 }
 
 export function getMessages(state: State) {
@@ -193,6 +193,13 @@ export const getActiveFileOrNull = createSelector(
   (downloadFileCache, path): T.DownloadedTextFile | null => {
     return downloadFileCache.get(path) ?? null;
   },
+);
+
+export const getModifiedText = createSelector(
+  getModifiedTextByPath,
+  getPath,
+  (modifiedTextByPath, path) =>
+    modifiedTextByPath.get(path) ?? { path, generation: 0, text: null },
 );
 
 export const getActiveFileTextOrNull = createSelector(
