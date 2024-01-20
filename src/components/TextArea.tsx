@@ -148,7 +148,11 @@ export function TextArea(props: {
         aria-label="Hide Editor"
         onClick={() => dispatch(A.hideEditor(true))}
       ></button>
-      <div className="textAreaMount" ref={codeMirrorRef} />
+      <div
+        className="textAreaMount"
+        data-testid="textAreaMount"
+        ref={codeMirrorRef}
+      />
     </div>
   );
 }

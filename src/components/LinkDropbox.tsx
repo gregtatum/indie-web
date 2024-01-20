@@ -60,7 +60,11 @@ export function LinkDropbox(props: { children: any }) {
     useRefreshToken();
 
     function useRefreshToken() {
-      if (!oauth || oauthRef.current !== oauth) {
+      if (
+        !oauth ||
+        oauthRef.current !== oauth ||
+        process.env.NODE_ENV === 'test'
+      ) {
         return;
       }
       console.log('Refresh token is out of date, fetching a new one.');
@@ -405,6 +409,9 @@ export function DropboxLogin(props: { children: any }) {
     if (!oauth) {
       return;
     }
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
     if (oauth.expires === Infinity) {
       // This is most likely a test that is opting out of refresh token behavior.
       return;
@@ -416,7 +423,11 @@ export function DropboxLogin(props: { children: any }) {
     useRefreshToken();
 
     function useRefreshToken() {
-      if (!oauth || oauthRef.current !== oauth) {
+      if (
+        !oauth ||
+        oauthRef.current !== oauth ||
+        process.env.NODE_ENV === 'test'
+      ) {
         return;
       }
       console.log('Refresh token is out of date, fetching a new one.');

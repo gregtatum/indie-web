@@ -24,6 +24,20 @@ beforeEach(function () {
   menus.id = 'menus';
   document.body.appendChild(menus);
 
+  document.createRange = () => {
+    const range = new Range();
+
+    range.getBoundingClientRect = jest.fn();
+
+    range.getClientRects = jest.fn(() => ({
+      item: () => null,
+      length: 0,
+      [Symbol.iterator]: jest.fn(),
+    }));
+
+    return range;
+  };
+
   global.ResizeObserver = jest.fn().mockImplementation(() => ({
     observe: jest.fn(),
     unobserve: jest.fn(),

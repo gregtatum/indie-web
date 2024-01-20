@@ -167,7 +167,11 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
   }, [htmlText, view, displayPath, fileSystem]);
 
   return (
-    <div className="viewMarkdown" ref={containerRef}>
+    <div
+      className="viewMarkdown"
+      data-testid="renderedMarkdown"
+      ref={containerRef}
+    >
       {hideEditor ? <NextPrevLinks /> : null}
       <div className="viewMarkdownContainer">
         <div className="viewMarkdownStickyHeader">
