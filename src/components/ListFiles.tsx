@@ -201,6 +201,7 @@ function CreateFileButton(props: {
             err = 'That file already exists, please choose a different name.';
           }
           setError(err);
+          setPhase('editing');
         },
       );
   }
