@@ -122,6 +122,7 @@
     "react-router-dom": "^6.21.1",
     "redux": "^5.0.1",
     "redux-thunk": "^3.1.0",
+    "turndown": "^7.1.2",
     "uuid": "^9.0.1"
   }
 }

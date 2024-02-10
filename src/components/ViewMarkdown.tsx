@@ -9,6 +9,7 @@ import { TextArea } from './TextArea';
 import { downloadImage } from 'src/logic/download-image';
 import { getEnv, getPathFolder } from 'src/utils';
 import { EditorView } from 'codemirror';
+import TurndownService from 'turndown';
 
 export function ViewMarkdown() {
   useRetainScroll();
@@ -74,7 +75,37 @@ export function ViewMarkdown() {
           path={path}
           textFile={textFile}
           language={markdown}
-          editorExtensions={[EditorView.lineWrapping]}
+          editorExtensions={[
+            EditorView.lineWrapping,
+            EditorView.domEventHandlers({
+              paste(event, view) {
+                const { clipboardData } = event;
+                if (!clipboardData) {
+                  return;
+                }
+                const html = clipboardData.getData('text/html');
+                if (html) {
+                  // Convert HTML to Markdown.
+                  event.preventDefault();
+
+                  const turndownService: TurndownService =
+                    new TurndownService();
+                  const markdown = turndownService.turndown(html);
+                  const [range] = view.state.selection.ranges;
+                  const anchor = range.from + markdown.length;
+                  view.dispatch({
+                    changes: {
+                      from: range.from,
+                      to: range.to,
+                      insert: markdown,
+                    },
+                    selection: { anchor },
+                    effects: EditorView.scrollIntoView(anchor),
+                  });
+                }
+              },
+            }),
+          ]}
         />
       }
       end={<RenderedMarkdown view="split" />}
