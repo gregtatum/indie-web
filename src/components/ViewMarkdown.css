@@ -113,6 +113,11 @@
   border-left: 2px solid #555;
 }
 
+.splitterSplit .viewMarkdownDiv {
+  /* When editing the markdown, give more padding at the bottom. */
+  padding-bottom: calc(100vh - var(--header-padding) - 100px);
+}
+
 @media (max-width: 600px) {
   .viewMarkdownContainer,
   .splitterSolo .viewMarkdownContainer {

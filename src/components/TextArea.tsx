@@ -12,6 +12,7 @@ import {
   keymap,
   Command,
   ViewUpdate,
+  scrollPastEnd,
 } from '@codemirror/view';
 import {
   syntaxHighlighting,
@@ -87,6 +88,7 @@ export function TextArea(props: {
         crosshairCursor(),
         highlightActiveLine(),
         highlightSelectionMatches(),
+        scrollPastEnd(),
         props.language(),
         EditorView.updateListener.of((viewUpdate: ViewUpdate) => {
           if (viewUpdate.docChanged) {

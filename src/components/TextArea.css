@@ -50,7 +50,10 @@
 .cm-wrap, .cm-editor { height: 100% }
 .cm-scroller { overflow: auto }
 .cm-content {
-  padding: 20px 0 !important;
+  padding-top: 20px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  /* padding bottom is handled by scrollPastEnd */
   font-size: 14px;
 }
 .cm-line {
