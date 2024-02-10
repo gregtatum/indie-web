@@ -1,7 +1,8 @@
-import { Dropbox, files } from 'dropbox';
+import { Dropbox, DropboxAuth, files } from 'dropbox';
 import { FileSystemError, SaveMode, FileSystem } from 'src/logic/file-system';
 import { T } from 'src';
 import { openIDBFS } from './indexeddb-fs';
+import { getNumberProp, getStringProp } from 'src/utils';
 
 export const IDB_CACHE_NAME = 'dropbox-fs-cache';
 
@@ -45,11 +46,14 @@ function toPath(pathOrMetadata: string | T.FileMetadata) {
 
 export class DropboxFS extends FileSystem {
   #dropbox: Dropbox;
+  #auth: DropboxAuth;
   cachePromise?: Promise<void>;
+  #refresh?: Promise<void>;
 
   constructor(dropbox: Dropbox) {
     super();
     this.#dropbox = dropbox;
+    this.#auth = (dropbox as any).auth;
     if (process.env.NODE_ENV === 'test') {
       this.cachePromise = Promise.resolve();
     } else {
@@ -61,11 +65,47 @@ export class DropboxFS extends FileSystem {
     }
   }
 
-  saveBlob(
+  /**
+   * Ensure the token is still valid and doesn't need to be refreshed. It will
+   * automatically by refreshed when the token is expired.
+   */
+  ensureTokenIsValid(): Promise<void> {
+    if (this.#refresh) {
+      return this.#refresh;
+    }
+
+    const accessToken = this.#auth.getAccessToken();
+    const expiresIn = this.#auth.getAccessTokenExpiresAt();
+    const refreshToken = this.#auth.getRefreshToken();
+
+    // This API type is wrong. It returns a promise.
+    const promise = this.#auth.checkAndRefreshAccessToken() as any;
+    this.#refresh = promise;
+
+    // If the access token changes, then save it to local storage.
+    promise.finally(() => {
+      const newAccessToken = this.#auth.getAccessToken();
+      console.log(`!!! done`, expiresIn);
+      if (accessToken !== newAccessToken) {
+        storeDropboxAccessTokenToLocalStorage(
+          newAccessToken,
+          Number(expiresIn),
+          refreshToken,
+        );
+      }
+      this.#refresh = undefined;
+    });
+
+    return promise;
+  }
+
+  async saveBlob(
     pathOrMetadata: string | T.FileMetadata,
     mode: SaveMode,
     contents: any,
   ): Promise<T.FileMetadata> {
+    await this.ensureTokenIsValid();
+
     return this.#dropbox
 
       .filesUpload({
@@ -86,7 +126,9 @@ export class DropboxFS extends FileSystem {
       }, DropboxError.wrap);
   }
 
-  loadBlob(path: string): Promise<T.BlobFile> {
+  async loadBlob(path: string): Promise<T.BlobFile> {
+    await this.ensureTokenIsValid();
+
     return this.#dropbox
 
       .filesDownload({ path })
@@ -101,7 +143,9 @@ export class DropboxFS extends FileSystem {
       }, DropboxError.wrap);
   }
 
-  listFiles(path: string): Promise<T.FolderListing> {
+  async listFiles(path: string): Promise<T.FolderListing> {
+    await this.ensureTokenIsValid();
+
     return this.#dropbox
       .filesListFolder({
         path,
@@ -135,10 +179,12 @@ export class DropboxFS extends FileSystem {
       }, DropboxError.wrap);
   }
 
-  move(
+  async move(
     fromPath: string,
     toPath: string,
   ): Promise<T.FileMetadata | T.FolderMetadata> {
+    await this.ensureTokenIsValid();
+
     return this.#dropbox
       .filesMoveV2({
         from_path: fromPath,
@@ -156,7 +202,9 @@ export class DropboxFS extends FileSystem {
       }, DropboxError.wrap);
   }
 
-  compressFolder(path: string): Promise<Blob> {
+  async compressFolder(path: string): Promise<Blob> {
+    await this.ensureTokenIsValid();
+
     return this.#dropbox
 
       .filesDownloadZip({ path })
@@ -167,7 +215,9 @@ export class DropboxFS extends FileSystem {
       );
   }
 
-  delete(path: string): Promise<void> {
+  async delete(path: string): Promise<void> {
+    await this.ensureTokenIsValid();
+
     return this.#dropbox.filesDeleteV2({ path }).then((error) => {
       this.cache?.delete(path).catch(() => {
         console.error('Failed to delete file in IDBFS cache.', error);
@@ -212,4 +262,53 @@ function fixupFolderMetadata(
     path: rawMetadata.path_display ?? '',
     id: rawMetadata.id,
   };
+}
+
+export function getDropboxOauthFromLocalStorage(): T.DropboxOauth | null {
+  const oauthString = window.localStorage.getItem('dropboxOauth');
+  if (!oauthString) {
+    return null;
+  }
+
+  let oauthRaw: unknown;
+  try {
+    oauthRaw = JSON.parse(oauthString);
+  } catch (error) {
+    console.error(
+      'Could not parse the Dropbox oauth data from localStorage',
+      error,
+    );
+    return null;
+  }
+
+  const accessToken = getStringProp(oauthRaw, 'accessToken');
+  const refreshToken = getStringProp(oauthRaw, 'refreshToken');
+  const expires = getNumberProp(oauthRaw, 'expires');
+
+  if (accessToken !== null && refreshToken !== null && expires !== null) {
+    return { accessToken, refreshToken, expires };
+  }
+
+  console.error(
+    'Could not find all of the required Dropbox oauth data from localStorage',
+    { accessToken, refreshToken, expires },
+  );
+  return null;
+}
+
+export function storeDropboxAccessTokenToLocalStorage(
+  accessToken: string,
+  expiresIn: number,
+  refreshToken: string,
+): T.DropboxOauth {
+  // Convert the expires into milliseconds, and end it at 90% of the time.
+  const expires = Date.now() + expiresIn * 1000 * 0.9;
+
+  const oauth: T.DropboxOauth = {
+    accessToken,
+    expires,
+    refreshToken,
+  };
+  window.localStorage.setItem('dropboxOauth', JSON.stringify(oauth));
+  return oauth;
 }

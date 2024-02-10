@@ -264,3 +264,8 @@ export type SongKeySettings =
   | { type: 'transpose'; songKey: SongKey };
 
 export type FileSystemName = 'dropbox' | 'browser';
+
+/**
+ * The authorization state for services like Dropbox.
+ */
+export type AuthState = 'no-auth' | 'await-auth' | 'auth-failed' | 'refreshing';

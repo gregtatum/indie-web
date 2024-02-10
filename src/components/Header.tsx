@@ -294,7 +294,6 @@ function Path({ path, title }: { path: string; title?: any }) {
   return (
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
-        <SiteName isOpen={!(songTitle ?? fileName)} />
         <FileSystemSelection key="fileSystem" />
         <span>»</span>
         {breadcrumbs}

@@ -1,5 +1,8 @@
 import { T } from 'src';
-import { IDB_CACHE_NAME } from 'src/logic/file-system/dropbox-fs';
+import {
+  IDB_CACHE_NAME,
+  storeDropboxAccessTokenToLocalStorage,
+} from 'src/logic/file-system/dropbox-fs';
 import {
   BROWSER_FILES_DB_NAME,
   IDBFS,
@@ -20,11 +23,11 @@ export function setDropboxAccessToken(
   // Convert the expires into milliseconds, and end it at 90% of the time.
   const expires = Date.now() + expiresIn * 1000 * 0.9;
 
-  const oauth: T.DropboxOauth = {
+  const oauth = storeDropboxAccessTokenToLocalStorage(
     accessToken,
     expires,
     refreshToken,
-  };
+  );
   window.localStorage.setItem('dropboxOauth', JSON.stringify(oauth));
 
   return {

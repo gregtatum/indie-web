@@ -1,49 +1,13 @@
 import * as T from 'src/@types';
 import { combineReducers } from 'redux';
-import {
-  getStringProp,
-  getNumberProp,
-  getPathFolder,
-  updatePathRoot,
-} from 'src/utils';
+import { getPathFolder, updatePathRoot } from 'src/utils';
 import { FilesIndex } from 'src/logic/files-index';
 import { IDBFS } from 'src/logic/file-system/indexeddb-fs';
 import { toFileSystemName } from 'src/logic/app-logic';
-
-function getDropboxOauth(): T.DropboxOauth | null {
-  const oauthString = window.localStorage.getItem('dropboxOauth');
-  if (!oauthString) {
-    return null;
-  }
-
-  let oauthRaw: unknown;
-  try {
-    oauthRaw = JSON.parse(oauthString);
-  } catch (error) {
-    console.error(
-      'Could not parse the Dropbox oauth data from localStorage',
-      error,
-    );
-    return null;
-  }
-
-  const accessToken = getStringProp(oauthRaw, 'accessToken');
-  const refreshToken = getStringProp(oauthRaw, 'refreshToken');
-  const expires = getNumberProp(oauthRaw, 'expires');
-
-  if (accessToken !== null && refreshToken !== null && expires !== null) {
-    return { accessToken, refreshToken, expires };
-  }
-
-  console.error(
-    'Could not find all of the required Dropbox oauth data from localStorage',
-    { accessToken, refreshToken, expires },
-  );
-  return null;
-}
+import { getDropboxOauthFromLocalStorage } from 'src/logic/file-system/dropbox-fs';
 
 function dropboxOauth(
-  state: T.DropboxOauth | null = getDropboxOauth(),
+  state: T.DropboxOauth | null = getDropboxOauthFromLocalStorage(),
   action: T.Action,
 ): T.DropboxOauth | null {
   switch (action.type) {
@@ -55,6 +19,22 @@ function dropboxOauth(
       return state;
   }
 }
+
+// function dropboxAuthState(
+//   state: T.AuthState = 'no-auth',
+//   action: T.Action,
+// ): T.AuthState {
+//   switch (action.type) {
+//     case 'set-dropbox-oauth':
+//       return action.oauth;
+//     case 'set-dropbox-auth-state':
+//       return action.authState;
+//     case 'remove-dropbox-oauth':
+//       return 'no-auth';
+//     default:
+//       return state;
+//   }
+// }
 
 function listFileErrors(
   state: Map<string, string> = new Map(),

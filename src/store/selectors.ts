@@ -1,5 +1,5 @@
 import * as T from 'src/@types';
-import { Dropbox } from 'dropbox';
+import { Dropbox, DropboxAuth } from 'dropbox';
 import { createSelector } from 'reselect';
 import {
   ensureExists,
@@ -106,6 +106,38 @@ function dangerousSelector<T>(
 ): (state: State) => T {
   return (state) => ensureExists(selector(state), message);
 }
+function wrapWithLog(object: Record<string, any>, key: string) {
+  if (typeof object[key] !== 'function') {
+    return object[key];
+  }
+
+  return (...args: any[]) => {
+    // First log the request.
+    const style = 'color: #006DFF; font-weight: bold';
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(`[dropbox] calling %c"${key}"`, style, ...args);
+    }
+
+    // Monitor the response, and pass on the promise result.
+    return new Promise((resolve, reject) => {
+      const result = object[key](...args);
+      result.then(
+        (response: any) => {
+          if (process.env.NODE_ENV !== 'test') {
+            console.log(`[dropbox] response %c"${key}"`, style, response);
+          }
+          resolve(response);
+        },
+        (error: any) => {
+          if (process.env.NODE_ENV !== 'test') {
+            console.log(`[dropbox] error %c"${key}"`, style, args, error);
+          }
+          reject(error);
+        },
+      );
+    });
+  };
+}
 
 export const getDropboxOrNull = createSelector(
   getDropboxOauth,
@@ -113,40 +145,27 @@ export const getDropboxOrNull = createSelector(
     if (!oauth) {
       return null;
     }
-    const { accessToken } = oauth;
+    const { accessToken, refreshToken, expires } = oauth;
     // Initiate dropbox.
-    const dropbox = new Dropbox({ accessToken });
+    const dropbox = new Dropbox({
+      accessToken,
+      refreshToken,
+      accessTokenExpiresAt: new Date(expires),
+    });
     // Intercept all calls to dropbox and log them.
     const fakeDropbox: Record<string, any> = {};
 
     for (const key in dropbox) {
-      fakeDropbox[key] = (...args: any[]) => {
-        // First log the request.
-        const style = 'color: #006DFF; font-weight: bold';
-        if (process.env.NODE_ENV !== 'test') {
-          console.log(`[dropbox] calling %c"${key}"`, style, ...args);
-        }
-
-        // Monitor the response, and pass on the promise result.
-        return new Promise((resolve, reject) => {
-          const result = (dropbox as any)[key](...args);
-          result.then(
-            (response: any) => {
-              if (process.env.NODE_ENV !== 'test') {
-                console.log(`[dropbox] response %c"${key}"`, style, response);
-              }
-              resolve(response);
-            },
-            (error: any) => {
-              if (process.env.NODE_ENV !== 'test') {
-                console.log(`[dropbox] error %c"${key}"`, style, args, error);
-              }
-              reject(error);
-            },
-          );
-        });
-      };
+      fakeDropbox[key] = wrapWithLog(dropbox, key);
     }
+
+    // Also wrap the auth API.
+    const fakeAuth: Record<string, any> = {};
+    const realAuth: Record<string, any> = (dropbox as any).auth;
+    for (const key in (dropbox as any).auth as DropboxAuth) {
+      fakeAuth[key] = wrapWithLog(realAuth, key);
+    }
+
     return fakeDropbox as any;
   },
 );
