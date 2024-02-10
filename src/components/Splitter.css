@@ -52,3 +52,15 @@
   right: 0;
   overflow: auto;
 }
+
+@media print {
+  /* Do not print the splitter */
+  .splitterSplitStart,
+  .splitterSplitMiddle {
+    display: none;
+  }
+
+  .splitterSplitEnd {
+    width: 100% !important;
+  }
+}
