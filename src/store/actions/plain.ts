@@ -21,14 +21,14 @@ export function setDropboxAccessToken(
   refreshToken: string,
 ) {
   // Convert the expires into milliseconds, and end it at 90% of the time.
-  const expires = Date.now() + expiresIn * 1000 * 0.9;
+  const expires = Date.now() + expiresIn * 1000;
+  console.log(`!!! expiresIn`, expiresIn);
 
   const oauth = storeDropboxAccessTokenToLocalStorage(
     accessToken,
     expires,
     refreshToken,
   );
-  window.localStorage.setItem('dropboxOauth', JSON.stringify(oauth));
 
   return {
     type: 'set-dropbox-oauth' as const,

@@ -2,7 +2,7 @@ import { Dropbox, DropboxAuth, files } from 'dropbox';
 import { FileSystemError, SaveMode, FileSystem } from 'src/logic/file-system';
 import { T } from 'src';
 import { openIDBFS } from './indexeddb-fs';
-import { getNumberProp, getStringProp } from 'src/utils';
+import { ensureExists, getNumberProp, getStringProp } from 'src/utils';
 
 export const IDB_CACHE_NAME = 'dropbox-fs-cache';
 
@@ -71,32 +71,56 @@ export class DropboxFS extends FileSystem {
    */
   ensureTokenIsValid(): Promise<void> {
     if (this.#refresh) {
+      console.log(`!!! Returning refresh promise`);
       return this.#refresh;
     }
 
     const accessToken = this.#auth.getAccessToken();
     const expiresIn = this.#auth.getAccessTokenExpiresAt();
     const refreshToken = this.#auth.getRefreshToken();
+    const clientId = this.#auth.getClientId();
 
     // This API type is wrong. It returns a promise.
-    const promise = this.#auth.checkAndRefreshAccessToken() as any;
-    this.#refresh = promise;
+    console.log(`!!! checkAndRefreshAccessToken`, expiresIn, refreshToken);
+    const TokenExpirationBuffer = 300 * 1000;
+    const canRefresh = this.#auth.getRefreshToken() && this.#auth.getClientId();
+    const needsRefresh =
+      !this.#auth.getAccessTokenExpiresAt() ||
+      new Date(Date.now() + TokenExpirationBuffer) >=
+        this.#auth.getAccessTokenExpiresAt();
+    const needsToken = !this.#auth.getAccessToken();
+
+    // TODO - The Dropbox API is broken here.
+    console.log(`!!! `, {
+      canRefresh,
+      needsRefresh,
+      needsToken,
+      refreshToken,
+      clientId,
+    });
+    if ((needsRefresh || needsToken) && canRefresh) {
+      console.log(`!!! Refresh will be called`);
+    }
 
     // If the access token changes, then save it to local storage.
-    promise.finally(() => {
-      const newAccessToken = this.#auth.getAccessToken();
-      console.log(`!!! done`, expiresIn);
-      if (accessToken !== newAccessToken) {
-        storeDropboxAccessTokenToLocalStorage(
-          newAccessToken,
-          Number(expiresIn),
-          refreshToken,
-        );
-      }
-      this.#refresh = undefined;
-    });
+    this.#refresh = (this.#auth.checkAndRefreshAccessToken() as any).finally(
+      () => {
+        console.log(`!!! Refresh promise finished`);
+        const newAccessToken = this.#auth.getAccessToken();
+        if (accessToken !== newAccessToken) {
+          // TODO - This should be removed, and state should just be managed here.
+          // Currently this invalidates the dropbox stored here.
+          storeDropboxAccessTokenToLocalStorage(
+            newAccessToken,
+            Number(this.#auth.getAccessTokenExpiresAt()),
+            this.#auth.getRefreshToken(),
+          );
+        }
+        this.#refresh = undefined;
+      },
+    );
 
-    return promise;
+    return ensureExists(this.#refresh);
   }
 
   async saveBlob(
@@ -298,17 +322,15 @@ export function getDropboxOauthFromLocalStorage(): T.DropboxOauth | null {
 
 export function storeDropboxAccessTokenToLocalStorage(
   accessToken: string,
-  expiresIn: number,
+  expires: number, // Epoch milliseconds
   refreshToken: string,
 ): T.DropboxOauth {
-  // Convert the expires into milliseconds, and end it at 90% of the time.
-  const expires = Date.now() + expiresIn * 1000 * 0.9;
-
   const oauth: T.DropboxOauth = {
     accessToken,
     expires,
     refreshToken,
   };
+  console.log(`!!! oauth`, oauth, new Date(expires));
   window.localStorage.setItem('dropboxOauth', JSON.stringify(oauth));
   return oauth;
 }

@@ -4,6 +4,7 @@ import { createSelector } from 'reselect';
 import {
   ensureExists,
   getDirName,
+  getEnv,
   getUrlForFile,
   UnhandledCaseError,
 } from 'src/utils';
@@ -150,6 +151,7 @@ export const getDropboxOrNull = createSelector(
     const dropbox = new Dropbox({
       accessToken,
       refreshToken,
+      clientId: getEnv('DROPBOX_CLIENT_ID'),
       accessTokenExpiresAt: new Date(expires),
     });
     // Intercept all calls to dropbox and log them.
