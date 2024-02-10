@@ -243,3 +243,9 @@ code {
   border-radius: 30px;
   pointer-events: none;
 }
+
+@media print {
+  .appView {
+    padding: 0;
+  }
+}

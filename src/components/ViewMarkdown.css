@@ -133,3 +133,13 @@
   border-radius: 4px;
   background: #00f1;
 }
+
+@media print {
+  .splitterSolo .viewMarkdownContainer {
+    margin: 0;
+    border: 0;
+  }
+  .viewMarkdownStickyHeader {
+    display: none;
+  }
+}
