@@ -65,6 +65,14 @@
 
 .viewMarkdownDiv h3 {
   font-size: 1.25em;
+  padding-bottom: 0.5;
+}
+
+.viewMarkdownDiv h3,
+.viewMarkdownDiv h4,
+.viewMarkdownDiv h5,
+.viewMarkdownDiv h6 {
+  margin-bottom: 0.5em;
 }
 
 .viewMarkdownDiv img {
@@ -143,6 +151,9 @@
   .splitterSolo .viewMarkdownContainer {
     margin: 0;
     border: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
   }
   .viewMarkdownStickyHeader {
     display: none;

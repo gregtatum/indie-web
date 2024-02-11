@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, $, Hooks } from 'src';
+import { A, T, $, Hooks } from 'src';
 import { markdown } from '@codemirror/lang-markdown';
 import './ViewMarkdown.css';
 import { useRetainScroll } from '../hooks';
@@ -7,7 +7,7 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
 import { downloadImage } from 'src/logic/download-image';
-import { getEnv, getPathFileNameNoExt, getPathFolder } from 'src/utils';
+import { getEnv, getPathFolder } from 'src/utils';
 import { EditorView } from 'codemirror';
 import TurndownService from 'turndown';
 
@@ -67,6 +67,82 @@ export function ViewMarkdown() {
     );
   }
 
+  function addText(
+    view: EditorView,
+    insert: string,
+    coords?: { x: number; y: number },
+  ) {
+    let anchor: number;
+    let from: number;
+    let to: number;
+    if (coords) {
+      anchor = view.posAtCoords(coords) ?? 0;
+      from = anchor;
+      to = anchor;
+    } else {
+      const [range] = view.state.selection.ranges;
+      anchor = range.from + insert.length;
+      from = range.from;
+      to = range.to;
+    }
+
+    view.dispatch({
+      changes: {
+        from,
+        to,
+        insert,
+      },
+      selection: { anchor },
+      effects: EditorView.scrollIntoView(anchor),
+    });
+  }
+
+  function paste(event: ClipboardEvent, view: EditorView) {
+    const { clipboardData } = event;
+    if (!clipboardData) {
+      return;
+    }
+
+    // For for files in the list.
+    if (clipboardData.types.includes('Files')) {
+      uploadFromFileList(clipboardData.files, displayPath, dispatch).then(
+        (markdowns) => {
+          for (const markdown of markdowns) {
+            addText(view, markdown);
+          }
+        },
+        (error) => void console.error(error),
+      );
+      return;
+    }
+
+    // Check for HTML in the paste.
+    const html = clipboardData.getData('text/html');
+    if (html) {
+      // Convert HTML to Markdown.
+      event.preventDefault();
+
+      const turndownService: TurndownService = new TurndownService();
+      addText(view, turndownService.turndown(html));
+    }
+  }
+
+  function drop(event: DragEvent, view: EditorView) {
+    const { dataTransfer } = event;
+    if (!dataTransfer) {
+      return;
+    }
+
+    // This should be infallible, as a message is dispatched on failure.
+    void uploadFromFileList(dataTransfer.files, displayPath, dispatch).then(
+      (markdowns) => {
+        for (const markdown of markdowns) {
+          addText(view, markdown, { x: event.clientX, y: event.clientY });
+        }
+      },
+    );
+  }
+
   return (
     <Splitter
       data-testid="viewMarkdown"
@@ -79,62 +155,8 @@ export function ViewMarkdown() {
           editorExtensions={[
             EditorView.lineWrapping,
             EditorView.domEventHandlers({
-              paste(event, view) {
-                const { clipboardData } = event;
-                if (!clipboardData) {
-                  return;
-                }
-
-                const [range] = view.state.selection.ranges;
-                const addText = (insert: string) => {
-                  const anchor = range.from + insert.length;
-                  view.dispatch({
-                    changes: {
-                      from: range.from,
-                      to: range.to,
-                      insert,
-                    },
-                    selection: { anchor },
-                    effects: EditorView.scrollIntoView(anchor),
-                  });
-                };
-
-                // Check for an image in the paste.
-                if (clipboardData.types.includes('Files')) {
-                  const file = clipboardData.files[0];
-                  if (file && file.type.startsWith('image/')) {
-                    event.preventDefault();
-
-                    const folderPath = getPathFolder(displayPath);
-                    const name = getPathFileNameNoExt(displayPath);
-                    const ext = file.type.replace('image/', '');
-                    const number = Math.floor(Math.random() * 10_000_000);
-                    const fileName = `${name}-${number}.${ext}`;
-
-                    dispatch(A.saveAssetFile(folderPath, fileName, file)).then(
-                      () => {
-                        addText(`![](assets/${fileName})`);
-                      },
-                      (error) => {
-                        // The A.saveAssetFile() handles the `addMessage`.
-                        console.error(error);
-                      },
-                    );
-                  }
-                  return;
-                }
-
-                // Check for HTML in the paste.
-                const html = clipboardData.getData('text/html');
-                if (html) {
-                  // Convert HTML to Markdown.
-                  event.preventDefault();
-
-                  const turndownService: TurndownService =
-                    new TurndownService();
-                  addText(turndownService.turndown(html));
-                }
-              },
+              paste,
+              drop,
             }),
           ]}
         />
@@ -249,6 +271,73 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
 }
 
 /**
+ * Uploads the file to dropbox, and then returns the markdown to render it.
+ */
+async function uploadFromFileList(
+  fileList: FileList,
+  displayPath: string,
+  dispatch: T.Dispatch,
+): Promise<string[]> {
+  const responsePromises = [...fileList].map(async (file) => {
+    const [type, _subtype] = file.type.split('/');
+    let makeTag;
+    switch (type) {
+      case 'audio':
+        makeTag = (src: string) =>
+          `\n<audio controls>\n` +
+          `  <source src="${src}" type="${file.type}">\n` +
+          `</audio>`;
+        break;
+      case 'video':
+        makeTag = (src: string) =>
+          `\n<video controls>\n` +
+          `  <source src="${src}" type="${file.type}">\n` +
+          `</video>\n`;
+
+        break;
+      case 'image': {
+        makeTag = (src: string) => /* html */ `<img src="${src}" />\n`;
+        break;
+      }
+      default:
+      // Do nothing.
+    }
+
+    if (!makeTag) {
+      // This is an unhandled file type.
+      console.error(`Unknown file type`, file);
+      dispatch(
+        A.addMessage({
+          message: `"${file.name}" has a mime type of "${
+            file.type
+          }" and is not supported by ${getEnv('SITE_DISPLAY_NAME')}.`,
+        }),
+      );
+      return null;
+    }
+
+    const folderPath = getPathFolder(displayPath);
+    const savedFilePath = await dispatch(
+      A.saveAssetFile(folderPath, file.name, file),
+    );
+
+    if (!savedFilePath) {
+      // The A.saveAssetFile() handles the `addMessage`.
+      return null;
+    }
+
+    return makeTag(savedFilePath);
+  });
+  const markdownsOrNull: Array<string | null> =
+    await Promise.all(responsePromises);
+
+  // TypeScript doesn't understand Array.prototype.filter.
+  const markdowns: Array<string> = markdownsOrNull.filter((v) => v) as any;
+
+  return markdowns;
+}
+
+/**
  * Handle what happens when a user drops a file in the rendered song.
  */
 function uploadFileHook(
@@ -278,57 +367,12 @@ function uploadFileHook(
       lineIndex++;
     }
 
-    for (const file of fileList) {
-      const [type, _subtype] = file.type.split('/');
-      let makeTag;
-      switch (type) {
-        case 'audio':
-          makeTag = (src: string) =>
-            `\n<audio controls>\n` +
-            `  <source src="${src}" type="${file.type}">\n` +
-            `</audio>`;
-          break;
-        case 'video':
-          makeTag = (src: string) =>
-            `\n<video controls>\n` +
-            `  <source src="${src}" type="${file.type}">\n` +
-            `</video>\n`;
-
-          break;
-        case 'image': {
-          makeTag = (src: string) => /* html */ `\n<img src="${src}" />\n`;
-          break;
-        }
-        default:
-        // Do nothing.
-      }
-
-      if (!makeTag) {
-        // This is an unhandled file type.
-        console.error(`Unknown file type`, file);
-        dispatch(
-          A.addMessage({
-            message: `"${file.name}" has a mime type of "${
-              file.type
-            }" and is not supported by ${getEnv('SITE_DISPLAY_NAME')}.`,
-          }),
-        );
-        return;
-      }
-
-      const folderPath = getPathFolder(displayPath);
-      const savedFilePath = await dispatch(
-        A.saveAssetFile(folderPath, file.name, file),
-      );
-
-      if (!savedFilePath) {
-        // The A.saveAssetFile() handles the `addMessage`.
-        return;
-      }
-
-      dispatch(
-        A.insertTextAtLineInActiveFile(lineIndex, makeTag(savedFilePath)),
-      );
+    for (const markdown of await uploadFromFileList(
+      fileList,
+      displayPath,
+      dispatch,
+    )) {
+      dispatch(A.insertTextAtLineInActiveFile(lineIndex, markdown));
     }
   });
 }

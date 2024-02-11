@@ -90,7 +90,7 @@ export function useRetainScroll() {
 export function useFileDrop(
   targetRef: React.RefObject<HTMLElement | null>,
   onDropCallback: (files: FileList, element: HTMLElement) => any,
-) {
+): boolean {
   const [dragging, setDraggingState] = React.useState(false);
 
   function setDragging(value: boolean) {
