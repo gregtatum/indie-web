@@ -7,7 +7,7 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
 import { downloadImage } from 'src/logic/download-image';
-import { getEnv, getPathFolder } from 'src/utils';
+import { getEnv, getPathFileNameNoExt, getPathFolder } from 'src/utils';
 import { EditorView } from 'codemirror';
 import TurndownService from 'turndown';
 
@@ -18,6 +18,7 @@ export function ViewMarkdown() {
   const textFile = Hooks.useSelector($.getDownloadFileCache).get(path);
   const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
   const hideEditor = Hooks.useSelector($.getHideEditor);
+  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
 
   React.useEffect(() => {
     const parts = path.split('/');
@@ -83,6 +84,47 @@ export function ViewMarkdown() {
                 if (!clipboardData) {
                   return;
                 }
+
+                const [range] = view.state.selection.ranges;
+                const addText = (insert: string) => {
+                  const anchor = range.from + insert.length;
+                  view.dispatch({
+                    changes: {
+                      from: range.from,
+                      to: range.to,
+                      insert,
+                    },
+                    selection: { anchor },
+                    effects: EditorView.scrollIntoView(anchor),
+                  });
+                };
+
+                // Check for an image in the paste.
+                if (clipboardData.types.includes('Files')) {
+                  const file = clipboardData.files[0];
+                  if (file && file.type.startsWith('image/')) {
+                    event.preventDefault();
+
+                    const folderPath = getPathFolder(displayPath);
+                    const name = getPathFileNameNoExt(displayPath);
+                    const ext = file.type.replace('image/', '');
+                    const number = Math.floor(Math.random() * 10_000_000);
+                    const fileName = `${name}-${number}.${ext}`;
+
+                    dispatch(A.saveAssetFile(folderPath, fileName, file)).then(
+                      () => {
+                        addText(`![](assets/${fileName})`);
+                      },
+                      (error) => {
+                        // The A.saveAssetFile() handles the `addMessage`.
+                        console.error(error);
+                      },
+                    );
+                  }
+                  return;
+                }
+
+                // Check for HTML in the paste.
                 const html = clipboardData.getData('text/html');
                 if (html) {
                   // Convert HTML to Markdown.
@@ -90,18 +132,7 @@ export function ViewMarkdown() {
 
                   const turndownService: TurndownService =
                     new TurndownService();
-                  const markdown = turndownService.turndown(html);
-                  const [range] = view.state.selection.ranges;
-                  const anchor = range.from + markdown.length;
-                  view.dispatch({
-                    changes: {
-                      from: range.from,
-                      to: range.to,
-                      insert: markdown,
-                    },
-                    selection: { anchor },
-                    effects: EditorView.scrollIntoView(anchor),
-                  });
+                  addText(turndownService.turndown(html));
                 }
               },
             }),
