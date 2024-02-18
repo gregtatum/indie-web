@@ -92,7 +92,7 @@ export function ListFiles() {
 
   return (
     <>
-      <div className="listFiles" data-testid="list-files">
+      <div className="listFiles" data-testid="list-files" tabIndex={0}>
         <div className="listFilesFilter">
           {parent}
           <Search />

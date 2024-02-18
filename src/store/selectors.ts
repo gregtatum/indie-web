@@ -97,6 +97,9 @@ export function getIDBFSOrNull(state: State) {
   return state.idbfs;
 }
 
+export function getListFilesActive(state: State) {
+  return state.listFilesActive;
+}
 /**
  * Returns the value of the selector and assert that it is non-null.
  */
