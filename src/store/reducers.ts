@@ -231,6 +231,21 @@ function listFilesCache(
   }
 }
 
+/**
+ * The index of the active file on this list, for keyboard navigation.
+ */
+function listFilesActive(
+  state: { index: number; path: string } | null = null,
+  action: T.Action,
+): { index: number; path: string } | null {
+  switch (action.type) {
+    case 'change-list-file-active':
+      return { index: action.index, path: action.path };
+    default:
+      return state;
+  }
+}
+
 function downloadFileErrors(
   state: Map<string, string> = new Map(),
   action: T.Action,
@@ -619,6 +634,7 @@ export const reducers = combineReducers({
   filesIndex,
   searchString,
   idbfs,
+  listFilesActive,
 });
 
 function wrapReducer<S>(

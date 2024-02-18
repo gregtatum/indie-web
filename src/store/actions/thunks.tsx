@@ -97,6 +97,10 @@ export namespace PlainInternal {
   export function fileIndexReceived(filesIndex: FilesIndex) {
     return { type: 'files-index-received' as const, filesIndex };
   }
+
+  export function changeListFileActive(path: string, index: number) {
+    return { type: 'change-list-file-active' as const, path, index };
+  }
 }
 
 export function listFiles(path = ''): Thunk<Promise<void>> {
@@ -127,6 +131,28 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
     } catch (response) {
       dispatch(PlainInternal.listFilesError(path, String(response)));
     }
+  };
+}
+
+export function changeListFilesActive(direction: 1 | -1): Thunk<void> {
+  return (dispatch, getState) => {
+    const listFilesActive = $.getListFilesActive(getState());
+    let index = -1;
+    const path = $.getPath(getState());
+    if (listFilesActive?.path === path) {
+      index = listFilesActive.index;
+    }
+    const files = $.getSearchFilteredFiles(getState());
+    if (!files) {
+      return;
+    }
+    if (index === null) {
+      index = 0;
+    } else {
+      index += direction;
+    }
+    index = (index + files.length) % files.length;
+    dispatch(PlainInternal.changeListFileActive(path, index));
   };
 }
 

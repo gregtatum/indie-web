@@ -102,6 +102,10 @@ export function getS3CredentialsOrNull(state: State) {
   return state.s3Credentials;
 }
 
+export function getListFilesActive(state: State) {
+  return state.listFilesActive;
+}
+
 /**
  * Returns the value of the selector and assert that it is non-null.
  */
