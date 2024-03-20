@@ -97,7 +97,7 @@ export function ListFiles() {
           {parent}
           <Search />
         </div>
-        <div className="listFilesList">
+        <div className="listFilesList" tabIndex={0}>
           {files.map((file) => {
             return (
               <div key={file.id} className="listFilesFile">
@@ -315,7 +315,7 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   if (link) {
     return (
       <>
-        <Router.Link className="listFilesFileLink" to={link}>
+        <Router.Link className="listFilesFileLink" to={link} tabIndex={-1}>
           <span className="listFilesIcon">{icon}</span>
           {fileDisplayName}
         </Router.Link>
@@ -434,6 +434,7 @@ function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
           setOpenGeneration((generation) => generation + 1);
           setOpenEventDetail(event.detail);
         }}
+        tabIndex={-1}
       >
         <span className="listFilesFileMenuIcon" />
       </button>
