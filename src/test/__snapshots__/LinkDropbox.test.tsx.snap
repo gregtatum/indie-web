@@ -59,21 +59,21 @@ exports[`LinkDropbox can render 1`] = `
     </div>
   </div>
   <div
-    class="linkDropbox"
+    class="linkView"
   >
     <div
-      class="linkDropboxContent"
+      class="linkViewContent"
     >
       <div
-        class="linkDropboxDescription"
+        class="linkViewDescription"
       >
         <h1
-          class="linkDropboxH1"
+          class="linkViewH1"
         >
           Store Files on Dropbox
         </h1>
         <h2
-          class="linkDropboxH2"
+          class="linkViewH2"
         >
           Take your files across devices
         </h2>
@@ -107,7 +107,7 @@ exports[`LinkDropbox can render 1`] = `
       </div>
       <div>
         <a
-          class="linkDropboxConnect"
+          class="linkViewConnect"
           href="https://www.dropbox.com/oauth2/authorize?response_type=code&code_challenge_method=S256&client_id=FAKE_DROPBOX_CLIENT_ID&code_challenge=fakebase64&redirect_uri=http%3A%2F%2Flocalhost%2Flogin&token_access_type=offline"
         >
           Connect Dropbox

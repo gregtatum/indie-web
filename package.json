@@ -102,6 +102,7 @@
     "workbox-webpack-plugin": "^7.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.515.0",
     "@codemirror/commands": "^6.3.2",
     "@codemirror/lang-markdown": "^6.2.3",
     "@codemirror/language": "^6.9.3",

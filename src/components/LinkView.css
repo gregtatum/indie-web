@@ -1,24 +1,24 @@
-.linkDropboxContent {
+.linkViewContent {
   max-width: 500px;
   margin: 20px;
   line-height: 1.4;
 }
 
-.linkDropboxForm {
+.linkViewForm {
   display: flex;
 }
 
-.linkDropboxInput {
+.linkViewInput {
   flex: 1;
   padding: 7px;
   margin-inline-end: 10px;
 }
 
-.linkDropboxSubmit {
+.linkViewSubmit {
   padding: 7px;
 }
 
-.linkDropboxConnect {
+.linkViewConnect {
   display: block;
   padding: 10px;
   margin: 2em 0px;
@@ -27,13 +27,26 @@
   border-radius: 3px;
   text-decoration: none;
   text-align: center;
+  border: 0;
+  font-size: inherit;
 }
 
-.linkDropboxConnect:hover {
+button[type=submit].linkViewConnect {
+  width: 100%;
+  margin: 1em 0;
+}
+
+.linkViewConnect:hover {
   background-color: var(--primary-color-hover);
 }
 
-.linkDropbox {
+.linkViewConnect:active {
+  background-color: var(--primary-color-hover);
+  outline: var(--outline-active);
+}
+
+
+.linkView {
   position: absolute;
   inset: var(--header-padding) 0 0 0;
   display: flex;
@@ -41,32 +54,47 @@
   align-items: center;
 }
 
-.linkDropboxH1 {
+.linkViewH1 {
   margin: 0;
 }
 
-.linkDropboxH2 {
+.linkViewH2 {
   margin-top: 0;
   color: var(--text-border);
 }
 
-.linkDropboxAuth {
+.linkViewAuth {
   animation: fadein 500ms;
 }
 
+.linkViewForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+}
+
+.linkViewForm input {
+  padding: 0.5em;
+}
+
+.linkViewForm label {
+  margin-top: 1em;
+  font-weight: bold;
+}
+
 @media (max-width: 1100px) {
-  .linkDropboxEnd {
+  .linkViewEnd {
     width: 100%;
   }
 
-  .linkDropboxEnd img {
+  .linkViewEnd img {
     max-width: min(800px, calc(100% - var(--margin)));
     max-height: none;
     height: auto;
   }
 
-  .linkDropboxEnd::before,
-  .linkDropboxEnd::after {
+  .linkViewEnd::before,
+  .linkViewEnd::after {
     display: none;
   }
 }

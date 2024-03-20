@@ -1,5 +1,6 @@
 import { T } from 'src';
-import { IDB_CACHE_NAME } from 'src/logic/file-system/dropbox-fs';
+import { DROPBOX_CACHE_NAME } from 'src/logic/file-system/dropbox-fs';
+import { S3_CACHE_NAME } from 'src/logic/file-system/s3-fs';
 import {
   BROWSER_FILES_DB_NAME,
   IDBFS,
@@ -8,7 +9,7 @@ import { SongKey } from 'src/logic/parse';
 
 export function removeDropboxAccessToken() {
   localStorage.clear();
-  indexedDB.deleteDatabase(IDB_CACHE_NAME);
+  indexedDB.deleteDatabase(DROPBOX_CACHE_NAME);
   return { type: 'remove-dropbox-oauth' as const };
 }
 
@@ -31,6 +32,30 @@ export function setDropboxAccessToken(
     type: 'set-dropbox-oauth' as const,
     oauth,
   };
+}
+
+export function setS3Credentials(
+  region: string,
+  accessKeyId: string,
+  secretAccessKey: string,
+) {
+  const credentials: T.S3Credentials = {
+    region,
+    accessKeyId,
+    secretAccessKey,
+  };
+  window.localStorage.setItem('s3Credentials', JSON.stringify(credentials));
+
+  return {
+    type: 'set-s3-credentials' as const,
+    credentials,
+  };
+}
+
+export function removeS3Credentials() {
+  localStorage.clear();
+  indexedDB.deleteDatabase(S3_CACHE_NAME);
+  return { type: 'remove-s3-credentials' as const };
 }
 
 export function removeBrowserFiles() {

@@ -13,6 +13,7 @@ import { parseSearchString } from 'src/logic/search';
 import { marked } from 'marked';
 import { DropboxFS } from 'src/logic/file-system/dropbox-fs';
 import { FileSystem } from 'src/logic/file-system';
+import { S3FS } from 'src/logic/file-system/s3-fs';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -97,6 +98,10 @@ export function getIDBFSOrNull(state: State) {
   return state.idbfs;
 }
 
+export function getS3CredentialsOrNull(state: State) {
+  return state.s3Credentials;
+}
+
 /**
  * Returns the value of the selector and assert that it is non-null.
  */
@@ -165,7 +170,8 @@ export const getCurrentFSOrNull = createSelector(
   getCurrentFileSystemName,
   getDropboxOrNull,
   getIDBFSOrNull,
-  (fsName, dropbox, idbfs): FileSystem | null => {
+  getS3CredentialsOrNull,
+  (fsName, dropbox, idbfs, s3Credentials): FileSystem | null => {
     switch (fsName) {
       case 'dropbox': {
         if (dropbox) {
@@ -175,6 +181,12 @@ export const getCurrentFSOrNull = createSelector(
       }
       case 'browser': {
         return idbfs;
+      }
+      case 's3': {
+        if (s3Credentials) {
+          return new S3FS(s3Credentials);
+        }
+        return null;
       }
       default:
         throw new UnhandledCaseError(fsName, 'FileSystemName');

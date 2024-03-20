@@ -2,7 +2,7 @@ import * as React from 'react';
 import { A, T, $, Hooks } from 'src';
 import * as Router from 'react-router-dom';
 
-import './LinkDropbox.css';
+import './LinkView.css';
 import {
   getEnv,
   UnhandledCaseError,
@@ -24,8 +24,13 @@ export function LinkDropbox(props: { children: any }) {
     $.getIsDropboxInitiallyExpired,
   );
   const oauth = Hooks.useSelector($.getDropboxOauth);
-  const fileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
   const view = Hooks.useSelector($.getView);
+  const fileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
+  if (fileSystemName !== 'dropbox') {
+    throw new Error(
+      'The <LinkDropbox> component was mounted for the wrong file system.',
+    );
+  }
 
   const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
 
@@ -241,14 +246,10 @@ export function LinkDropbox(props: { children: any }) {
       ensureNever(view);
   }
 
-  if (fileSystemName !== 'dropbox') {
-    return props.children;
-  }
-
   if (isDropboxInitiallyExpired) {
     return (
       <MainView>
-        <div className="linkDropboxAuth centered">
+        <div className="linkViewAuth centered">
           <img
             src="/logo.png"
             width="148"
@@ -266,13 +267,11 @@ export function LinkDropbox(props: { children: any }) {
       case 'no-auth':
         return (
           <MainView>
-            <div className="linkDropbox">
-              <div className="linkDropboxContent">
-                <div className="linkDropboxDescription">
-                  <h1 className="linkDropboxH1">Store Files on Dropbox</h1>
-                  <h2 className="linkDropboxH2">
-                    Take your files across devices
-                  </h2>
+            <div className="linkView">
+              <div className="linkViewContent">
+                <div className="linkViewDescription">
+                  <h1 className="linkViewH1">Store Files on Dropbox</h1>
+                  <h2 className="linkViewH2">Take your files across devices</h2>
                   <p>
                     {process.env.SITE === 'floppydisk' ? (
                       <>
@@ -302,7 +301,7 @@ export function LinkDropbox(props: { children: any }) {
                 <div>
                   <a
                     href={authorizationUrl}
-                    className="linkDropboxConnect"
+                    className="linkViewConnect"
                     onClick={persistCodeVerifier}
                   >
                     Connect Dropbox
@@ -331,7 +330,7 @@ export function LinkDropbox(props: { children: any }) {
               <p>The Dropbox login failed. </p>
               <a
                 href={authorizationUrl}
-                className="linkDropboxConnect"
+                className="linkViewConnect"
                 onClick={persistCodeVerifier}
               >
                 Try Again…
@@ -361,7 +360,7 @@ export function UnlinkDropbox() {
             your files.
           </p>
           <button
-            className="button linkDropboxUnlink"
+            className="button linkViewUnlink"
             type="button"
             onClick={() => {
               confirm(
@@ -594,7 +593,7 @@ export function DropboxLogin(props: { children: any }) {
 
   if (isDropboxInitiallyExpired) {
     return (
-      <div className="linkDropboxAuth centered">
+      <div className="linkViewAuth centered">
         <img
           src="/logo.png"
           width="148"
@@ -613,13 +612,11 @@ export function DropboxLogin(props: { children: any }) {
           return <Privacy />;
         }
         return (
-          <div className="linkDropbox">
-            <div className="linkDropboxContent">
-              <div className="linkDropboxDescription">
-                <h1 className="linkDropboxH1">Store Files on Dropbox</h1>
-                <h2 className="linkDropboxH2">
-                  Take your files across devices
-                </h2>
+          <div className="linkView">
+            <div className="linkViewContent">
+              <div className="linkViewDescription">
+                <h1 className="linkViewH1">Store Files on Dropbox</h1>
+                <h2 className="linkViewH2">Take your files across devices</h2>
                 <p>
                   {process.env.SITE === 'floppydisk' ? (
                     <>
@@ -649,7 +646,7 @@ export function DropboxLogin(props: { children: any }) {
               <div>
                 <a
                   href={authorizationUrl}
-                  className="linkDropboxConnect"
+                  className="linkViewConnect"
                   onClick={persistCodeVerifier}
                 >
                   Connect Dropbox
@@ -668,7 +665,7 @@ export function DropboxLogin(props: { children: any }) {
             <p>The Dropbox login failed. </p>
             <a
               href={authorizationUrl}
-              className="linkDropboxConnect"
+              className="linkViewConnect"
               onClick={persistCodeVerifier}
             >
               Try Again…

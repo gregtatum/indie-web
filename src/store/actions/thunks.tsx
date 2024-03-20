@@ -636,7 +636,7 @@ export function loadFilesIndex(
       const response = await fileSystem.loadText(FilesIndex.path);
       text = response.text;
     } catch (error: any) {
-      if ((error as FileSystemError)?.isNotFound()) {
+      if ((error as FileSystemError)?.isNotFound?.()) {
         const filesIndex = new FilesIndex(fileSystem, getState());
         dispatch(PlainInternal.fileIndexReceived(filesIndex));
         return filesIndex;

@@ -132,6 +132,12 @@ export interface DropboxOauth {
   expires: number;
 }
 
+export interface S3Credentials {
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
 export interface FolderListingRow {
   storedAt: Date;
   path: string;
@@ -263,4 +269,4 @@ export type SongKeySettings =
   | { type: 'capo'; capo: number }
   | { type: 'transpose'; songKey: SongKey };
 
-export type FileSystemName = 'dropbox' | 'browser';
+export type FileSystemName = 'dropbox' | 'browser' | 's3';

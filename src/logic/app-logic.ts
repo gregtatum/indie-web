@@ -26,6 +26,8 @@ export function getFileSystemDisplayName(fileSystem: T.FileSystemName): string {
       return 'Dropbox';
     case 'browser':
       return getBrowserName();
+    case 's3':
+      return 'S3 Bucket';
     default:
       throw new UnhandledCaseError(fileSystem, 'FileSystemName');
   }
@@ -39,6 +41,8 @@ export function toFileSystemName(text: unknown): T.FileSystemName | null {
       return 'dropbox';
     case 'browser':
       return 'browser';
+    case 's3':
+      return 's3';
     default: {
       ensureNever(name);
       return null;

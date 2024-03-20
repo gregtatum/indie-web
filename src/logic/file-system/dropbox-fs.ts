@@ -3,7 +3,7 @@ import { FileSystemError, SaveMode, FileSystem } from 'src/logic/file-system';
 import { T } from 'src';
 import { openIDBFS } from './indexeddb-fs';
 
-export const IDB_CACHE_NAME = 'dropbox-fs-cache';
+export const DROPBOX_CACHE_NAME = 'dropbox-fs-cache';
 
 export class DropboxError extends FileSystemError {
   toString() {
@@ -53,7 +53,7 @@ export class DropboxFS extends FileSystem {
     if (process.env.NODE_ENV === 'test') {
       this.cachePromise = Promise.resolve();
     } else {
-      const cachePromise = openIDBFS(IDB_CACHE_NAME);
+      const cachePromise = openIDBFS(DROPBOX_CACHE_NAME);
       void cachePromise.then((IDBFS) => {
         this.cache = IDBFS;
       });

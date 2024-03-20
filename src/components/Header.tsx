@@ -209,6 +209,11 @@ function FileSystemSelection() {
         onClick: () => void dispatch(A.changeFileSystem('dropbox')),
         children: 'Dropbox',
       },
+      // {
+      //   key: 's3',
+      //   onClick: () => void dispatch(A.changeFileSystem('s3')),
+      //   children: 'S3 Bucket',
+      // },
     ],
     [],
   );

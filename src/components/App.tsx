@@ -4,6 +4,7 @@ import { A, $ } from 'src';
 import * as Hooks from 'src/hooks';
 
 import { LinkDropbox } from './LinkDropbox';
+import { LinkS3 } from './LinkS3';
 import { Header } from './Header';
 import { ListFiles } from './ListFiles';
 import { ViewChopro } from './ViewChopro';
@@ -120,16 +121,29 @@ export function AppRoutes() {
           <Router.Route path="*" element={<ViewMarkdownRouter />} />
         </Router.Route>
       </Router.Routes>
-      <LinkDropbox>
+      <LinkServices>
         <MainView>
           <Views />
         </MainView>
-      </LinkDropbox>
+      </LinkServices>
       <Messages />
     </>
   );
 }
 
+function LinkServices({ children }: { children: any }) {
+  const fileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
+  switch (fileSystemName) {
+    case 'dropbox':
+      return <LinkDropbox>{children}</LinkDropbox>;
+    case 's3':
+      return <LinkS3>{children}</LinkS3>;
+    case 'browser':
+      return children;
+    default:
+      throw new UnhandledCaseError(fileSystemName, 'fileSystemName');
+  }
+}
 /**
  * The main view of the app with a header and view area.
  */

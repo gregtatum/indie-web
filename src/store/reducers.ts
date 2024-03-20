@@ -42,6 +42,38 @@ function getDropboxOauth(): T.DropboxOauth | null {
   return null;
 }
 
+function getS3Credentials(): T.S3Credentials | null {
+  const s3Credentials = window.localStorage.getItem('s3Credentials');
+  if (!s3Credentials) {
+    return null;
+  }
+
+  let s3Raw: unknown;
+  try {
+    s3Raw = JSON.parse(s3Credentials);
+  } catch (error) {
+    console.error(
+      'Could not parse the Dropbox oauth data from localStorage',
+      error,
+    );
+    return null;
+  }
+
+  const region = getStringProp(s3Raw, 'region');
+  const accessKeyId = getStringProp(s3Raw, 'accessKeyId');
+  const secretAccessKey = getStringProp(s3Raw, 'secretAccessKey');
+
+  if (region && accessKeyId && secretAccessKey) {
+    return { region, accessKeyId, secretAccessKey };
+  }
+
+  console.error(
+    'Could not find all of the required Dropbox oauth data from localStorage',
+    { accessKeyId, secretAccessKey },
+  );
+  return null;
+}
+
 function dropboxOauth(
   state: T.DropboxOauth | null = getDropboxOauth(),
   action: T.Action,
@@ -50,6 +82,20 @@ function dropboxOauth(
     case 'set-dropbox-oauth':
       return action.oauth;
     case 'remove-dropbox-oauth':
+      return null;
+    default:
+      return state;
+  }
+}
+
+function s3Credentials(
+  state: T.S3Credentials | null = getS3Credentials(),
+  action: T.Action,
+): T.S3Credentials | null {
+  switch (action.type) {
+    case 'set-s3-credentials':
+      return action.credentials;
+    case 'remove-s3-credentials':
       return null;
     default:
       return state;
@@ -554,6 +600,7 @@ function idbfs(state: IDBFS | null = null, action: T.Action): IDBFS | null {
 
 export const reducers = combineReducers({
   dropboxOauth,
+  s3Credentials,
   listFilesCache,
   listFileErrors,
   downloadFileCache,
