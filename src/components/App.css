@@ -21,6 +21,9 @@
 
   --primary-color: #004eca;
   --primary-color-hover: #0062ff;
+  --active-background: var(--primary-color);
+  --active-color: #fff;
+
 
   --text-border: #555;
 }

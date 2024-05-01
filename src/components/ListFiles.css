@@ -1,6 +1,7 @@
 .listFiles {
   display: flex;
   flex-direction: column;
+  min-height: calc(100vh - var(--header-padding));
 }
 
 .listFilesList,
@@ -54,6 +55,12 @@
   border-radius: 3px;
   text-align: center;
   padding: 4px;
+}
+
+.listFilesList:focus .listFilesFile.selected,
+.listFilesList:focus .listFilesFile.selected a.listFilesFileLink {
+  background-color: var(--active-background);
+  color: var(--active-color);
 }
 
 .listFilesFile {

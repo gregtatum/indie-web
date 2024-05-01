@@ -19,6 +19,7 @@ export function ListFiles() {
   const error = Hooks.useSelector($.getListFilesErrors).get(path);
   const parsedSearch = Hooks.useSelector($.getParsedSearch);
   const fileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
+  const listFilesListRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (path === '/') {
@@ -49,6 +50,9 @@ export function ListFiles() {
     ) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       dispatch(A.createInitialFiles());
+    }
+    if (files) {
+      listFilesListRef.current?.focus();
     }
   }, [activeFileDisplayPath, files]);
 
@@ -97,7 +101,7 @@ export function ListFiles() {
           {parent}
           <Search />
         </div>
-        <div className="listFilesList" tabIndex={0}>
+        <div className="listFilesList" tabIndex={0} ref={listFilesListRef}>
           {files.map((file) => {
             return (
               <div key={file.id} className="listFilesFile">
