@@ -318,7 +318,11 @@ async function uploadFromFileList(
 
     const folderPath = getPathFolder(displayPath);
     const savedFilePath = await dispatch(
-      A.saveAssetFile(folderPath, file.name, file),
+      A.saveAssetFile(
+        folderPath,
+        prompt('What do you want to name this file?', file.name) || file.name,
+        file,
+      ),
     );
 
     if (!savedFilePath) {
