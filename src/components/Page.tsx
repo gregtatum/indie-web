@@ -124,7 +124,7 @@ export function Privacy() {
           information about specific files that are being accessed and viewed,
           beyond general characterizations such as the file type, and what parts
           of the app are being used to view the file. Please{' '}
-          <a href="https://github.com/gregtatum/browser-chords/">
+          <a href="https://github.com/gregtatum/indie-web/">
             file an issue
           </a>{' '}
           if any data about file paths and contents is found to be leaking.
@@ -151,7 +151,7 @@ export function Privacy() {
         </p>
         <p>
           Please report any bugs for data integrity on{' '}
-          <a href="https://github.com/gregtatum/browser-chords/">GitHub</a>.
+          <a href="https://github.com/gregtatum/indie-web/">GitHub</a>.
         </p>
       </div>
     </div>

@@ -697,20 +697,15 @@ export function saveAssetFile(
     let path = `${folder}/assets/${fileName}`;
 
     // See if there is a root asset folder, as this is the preferred place to put assets.
-    console.log(`!!! folder`, folder);
     const rootFolder = folder.split('/')[1];
-    console.log(`!!! rootFolder`, rootFolder);
     if (rootFolder) {
       const files = await fileSystem.listFiles('/' + rootFolder);
-      console.log(`!!! files`, files);
       if (
         files.find((file) => file.name === 'assets' && file.type === 'folder')
       ) {
         path = `/${rootFolder}/assets/${fileName}`;
-        console.log(`!!! updating path`, path);
       }
     }
-    console.log(`!!! path`, path);
 
     const messageGeneration = dispatch(
       addMessage({

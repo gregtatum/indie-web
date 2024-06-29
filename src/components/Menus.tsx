@@ -214,6 +214,7 @@ export function Menu({
 
   const elementRect = ensureExists(
     clickedElement.current,
+    'The clicked element did not exist in the menu',
   ).getBoundingClientRect();
   const docBodyRect = document.body.getBoundingClientRect();
 

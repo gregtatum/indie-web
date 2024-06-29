@@ -293,10 +293,7 @@ export function LinkDropbox(props: { children: any }) {
                     folder in Dropbox to manage files. See the{' '}
                     <Router.Link to="/privacy">privacy policy</Router.Link> for
                     more details. The source code is on{' '}
-                    <a href="https://github.com/gregtatum/browser-chords">
-                      GitHub
-                    </a>
-                    .
+                    <a href="https://github.com/gregtatum/indie-web">GitHub</a>.
                   </p>
                 </div>
                 <div>
@@ -640,10 +637,7 @@ export function DropboxLogin(props: { children: any }) {
                   in Dropbox to manage files. See the{' '}
                   <Router.Link to="/privacy">privacy policy</Router.Link> for
                   more details. The source code is on{' '}
-                  <a href="https://github.com/gregtatum/browser-chords">
-                    GitHub
-                  </a>
-                  .
+                  <a href="https://github.com/gregtatum/indie-web">GitHub</a>.
                 </p>
               </div>
               <div>

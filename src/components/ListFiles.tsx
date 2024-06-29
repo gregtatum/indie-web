@@ -3,7 +3,7 @@ import * as Router from 'react-router-dom';
 import { A, T, $, Hooks } from 'src';
 import { debounce, ensureExists, getEnv, imageExtensions } from 'src/utils';
 import { useRetainScroll, useStore } from '../hooks';
-import { UnhandledCaseError, isChordProExtension } from '../utils';
+import { isChordProExtension } from '../utils';
 import { FileSystemError } from 'src/logic/file-system';
 import { getFileSystemDisplayName } from 'src/logic/app-logic';
 
@@ -105,24 +105,180 @@ export function ListFiles() {
               </div>
             );
           })}
-          <CreateFileButton
-            path={path}
-            slug="file"
-            extension="chopro"
-            getDefaultContents={choproDefaultContents}
-          >
-            Create ChordPro File
-          </CreateFileButton>
-          <CreateFileButton
-            path={path}
-            slug="md"
-            extension="md"
-            getDefaultContents={markdownDefaultContents}
-          >
-            Create Markdown File
-          </CreateFileButton>
+          <AddMenu path={path} />
         </div>
       </div>
+    </>
+  );
+}
+
+// const order = ['Folder', 'Markdown', 'ChordPro', 'Upload File'];
+const order = ['Markdown', 'ChordPro'];
+
+interface AddMenuProps {
+  path: string;
+}
+function AddMenu(props: AddMenuProps) {
+  type FileDetails = {
+    slug: string;
+    extension: string;
+    getDefaultContents: (fileName: string) => string;
+    isSubmitting: boolean;
+  };
+  const button = React.useRef<null | HTMLButtonElement>(null);
+  const [fileDetails, setFileDetails] = React.useState<FileDetails | null>(
+    null,
+  );
+  const [openGeneration, setOpenGeneration] = React.useState(0);
+  const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const fileSystem = Hooks.useSelector($.getCurrentFS);
+  const fsName = Hooks.useSelector($.getCurrentFileSystemName);
+  const { dispatch, getState } = useStore();
+  const input = React.useRef<HTMLInputElement | null>(null);
+  const navigate = Router.useNavigate();
+  const [error, setError] = React.useState<null | string>(null);
+
+  React.useEffect(() => {
+    if (fileDetails) {
+      if (fileDetails.isSubmitting) {
+        setError(null);
+      } else {
+        input.current?.focus();
+        input.current?.setSelectionRange(0, 0);
+      }
+    }
+  }, [fileDetails]);
+
+  function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const inputEl = ensureExists(input.current, 'Input ref value');
+    let path = props.path;
+    if (path[path.length - 1] !== '/') {
+      path += '/';
+    }
+    path += inputEl.value;
+    const { getDefaultContents, slug, extension } = ensureExists(
+      fileDetails,
+      'fileDetails',
+    );
+
+    setFileDetails({
+      getDefaultContents,
+      slug,
+      extension,
+      isSubmitting: true,
+    });
+
+    fileSystem.saveText(path, 'add', getDefaultContents(inputEl.value)).then(
+      (fileMetadata) => {
+        // The directory listing is now stale, fetch it again.
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        dispatch(A.listFiles(props.path));
+        if ($.getHideEditor(getState())) {
+          dispatch(A.hideEditor(false));
+        }
+        navigate(`${fsName}/${slug}${fileMetadata.path}`);
+      },
+      (error: FileSystemError) => {
+        let err = error.toString();
+        if (error.status() === 409) {
+          err = 'That file already exists, please choose a different name.';
+        }
+        setError(err);
+        setFileDetails({
+          getDefaultContents,
+          slug,
+          extension,
+          isSubmitting: false,
+        });
+      },
+    );
+  }
+
+  const items: Record<string, () => void> = {
+    Folder() {
+      // TODO
+    },
+    Markdown() {
+      setFileDetails({
+        slug: 'file',
+        extension: 'md',
+        isSubmitting: false,
+        getDefaultContents: markdownDefaultContents,
+      });
+    },
+    ChordPro() {
+      setFileDetails({
+        slug: 'file',
+        extension: 'chopro',
+        getDefaultContents: choproDefaultContents,
+        isSubmitting: false,
+      });
+    },
+    'Upload File': () => {
+      // TODO
+    },
+  };
+
+  let component;
+  if (fileDetails) {
+    const disabled = fileDetails.isSubmitting;
+    component = (
+      <>
+        {error ? <div className="listFilesCreateError">{error}</div> : null}
+        <form className="listFilesCreateEditor" onSubmit={onSubmit}>
+          <input
+            type="text"
+            className="listFilesCreateEditorInput"
+            ref={input}
+            defaultValue={'.' + fileDetails.extension}
+            disabled={disabled}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setFileDetails(null);
+              }
+            }}
+          />
+          <input
+            type="submit"
+            value={fileDetails.isSubmitting ? 'Submitting' : 'Create'}
+            className="button"
+            disabled={disabled}
+          />
+        </form>
+      </>
+    );
+  } else {
+    component = (
+      <button
+        type="button"
+        className="button listFilesCreate"
+        ref={button}
+        onClick={(event) => {
+          setOpenGeneration((generation) => generation + 1);
+          setOpenEventDetail(event.detail);
+        }}
+      >
+        Add File
+      </button>
+    );
+  }
+
+  return (
+    <>
+      {component}
+      {menuPortal(
+        <Menu
+          clickedElement={button}
+          openEventDetail={openEventDetail}
+          openGeneration={openGeneration}
+          buttons={order.map((buttonName) => ({
+            key: buttonName,
+            children: buttonName,
+            onClick: items[buttonName],
+          }))}
+        />,
+      )}
     </>
   );
 }
@@ -140,110 +296,6 @@ function choproDefaultContents(fileName: string): string {
 function markdownDefaultContents(fileName: string): string {
   const title = fileName.replace(/\.md$/, '');
   return `# ${title}\n`;
-}
-
-function CreateFileButton(props: {
-  path: string;
-  slug: string;
-  extension: string;
-  getDefaultContents: (fileName: string) => string;
-  children: any;
-}) {
-  type Phase = 'not-editing' | 'editing' | 'submitting';
-  const fileSystem = Hooks.useSelector($.getCurrentFS);
-  const fsName = Hooks.useSelector($.getCurrentFileSystemName);
-  const { dispatch, getState } = useStore();
-  const [phase, setPhase] = React.useState<Phase>('not-editing');
-  const input = React.useRef<HTMLInputElement | null>(null);
-  const navigate = Router.useNavigate();
-  const [error, setError] = React.useState<null | string>(null);
-
-  React.useEffect(() => {
-    switch (phase) {
-      case 'editing':
-        input.current?.focus();
-        input.current?.setSelectionRange(0, 0);
-        break;
-      case 'not-editing':
-      case 'submitting':
-        setError(null);
-        break;
-      default:
-        throw new UnhandledCaseError(phase, 'Phase');
-    }
-  }, [phase]);
-
-  function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    const inputEl = ensureExists(input.current, 'Input ref value');
-    let path = props.path;
-    if (path[path.length - 1] !== '/') {
-      path += '/';
-    }
-    path += inputEl.value;
-
-    setPhase('submitting');
-    fileSystem
-      .saveText(path, 'add', props.getDefaultContents(inputEl.value))
-      .then(
-        (fileMetadata) => {
-          // The directory listing is now stale, fetch it again.
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          dispatch(A.listFiles(props.path));
-          if ($.getHideEditor(getState())) {
-            dispatch(A.hideEditor(false));
-          }
-          navigate(`${fsName}/${props.slug}${fileMetadata.path}`);
-        },
-        (error: FileSystemError) => {
-          let err = error.toString();
-          if (error.status() === 409) {
-            err = 'That file already exists, please choose a different name.';
-          }
-          setError(err);
-          setPhase('editing');
-        },
-      );
-  }
-
-  if (phase === 'editing' || phase === 'submitting') {
-    const disabled = phase === 'submitting';
-    return (
-      <>
-        {error ? <div className="listFilesCreateError">{error}</div> : null}
-        <form className="listFilesCreateEditor" onSubmit={onSubmit}>
-          <input
-            type="text"
-            className="listFilesCreateEditorInput"
-            ref={input}
-            defaultValue={'.' + props.extension}
-            disabled={disabled}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setPhase('not-editing');
-              }
-            }}
-          />
-          <input
-            type="submit"
-            value={phase === 'submitting' ? 'Submitting' : 'Create'}
-            className="button"
-            disabled={disabled}
-          />
-        </form>
-      </>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      className="button listFilesCreate"
-      onClick={() => setPhase('editing')}
-    >
-      {props.children}
-    </button>
-  );
 }
 
 function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
