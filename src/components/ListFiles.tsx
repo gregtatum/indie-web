@@ -3,7 +3,7 @@ import * as Router from 'react-router-dom';
 import { A, T, $, Hooks } from 'src';
 import { debounce, ensureExists, getEnv, imageExtensions } from 'src/utils';
 import { useRetainScroll, useStore } from '../hooks';
-import { isChordProExtension } from '../utils';
+import { isChordProExtension, UnhandledCaseError } from '../utils';
 import { FileSystemError } from 'src/logic/file-system';
 import { getFileSystemDisplayName } from 'src/logic/app-logic';
 
@@ -113,18 +113,25 @@ export function ListFiles() {
 }
 
 // const order = ['Folder', 'Markdown', 'ChordPro', 'Upload File'];
-const order = ['Markdown', 'ChordPro'];
+const order = ['Folder', 'Markdown', 'ChordPro'];
+
+type FileDetails =
+  | {
+      slug: string;
+      extension: string;
+      getDefaultContents: (fileName: string) => string;
+      isSubmitting: boolean;
+      type: 'text';
+    }
+  | {
+      isSubmitting: boolean;
+      type: 'folder';
+    };
 
 interface AddMenuProps {
   path: string;
 }
 function AddMenu(props: AddMenuProps) {
-  type FileDetails = {
-    slug: string;
-    extension: string;
-    getDefaultContents: (fileName: string) => string;
-    isSubmitting: boolean;
-  };
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [fileDetails, setFileDetails] = React.useState<FileDetails | null>(
     null,
@@ -157,53 +164,78 @@ function AddMenu(props: AddMenuProps) {
       path += '/';
     }
     path += inputEl.value;
-    const { getDefaultContents, slug, extension } = ensureExists(
-      fileDetails,
-      'fileDetails',
-    );
+    if (!fileDetails) {
+      throw new Error('No file details when they were expected');
+    }
 
     setFileDetails({
-      getDefaultContents,
-      slug,
-      extension,
+      ...fileDetails,
       isSubmitting: true,
     });
 
-    fileSystem.saveText(path, 'add', getDefaultContents(inputEl.value)).then(
-      (fileMetadata) => {
-        // The directory listing is now stale, fetch it again.
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        dispatch(A.listFiles(props.path));
-        if ($.getHideEditor(getState())) {
-          dispatch(A.hideEditor(false));
-        }
-        navigate(`${fsName}/${slug}${fileMetadata.path}`);
-      },
-      (error: FileSystemError) => {
-        let err = error.toString();
-        if (error.status() === 409) {
-          err = 'That file already exists, please choose a different name.';
-        }
-        setError(err);
-        setFileDetails({
-          getDefaultContents,
-          slug,
-          extension,
-          isSubmitting: false,
-        });
-      },
-    );
+    switch (fileDetails.type) {
+      case 'text': {
+        const { getDefaultContents, slug } = fileDetails;
+        fileSystem
+          .saveText(path, 'add', getDefaultContents(inputEl.value))
+          .then(
+            (fileMetadata) => {
+              // The directory listing is now stale, fetch it again.
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              dispatch(A.listFiles(props.path));
+              if ($.getHideEditor(getState())) {
+                dispatch(A.hideEditor(false));
+              }
+              navigate(`${fsName}/${slug}${fileMetadata.path}`);
+            },
+            (error: FileSystemError) => {
+              let err = error.toString();
+              if (error.status() === 409) {
+                err =
+                  'That file already exists, please choose a different name.';
+              }
+              setError(err);
+              setFileDetails({
+                ...fileDetails,
+                isSubmitting: false,
+              });
+            },
+          );
+        break;
+      }
+      case 'folder': {
+        fileSystem.createFolder(path).then(
+          (folderMetadata) => {
+            navigate(`${fsName}/folder/${folderMetadata.path}`);
+          },
+          (error) => {
+            setError(error.toString());
+            setFileDetails({
+              ...fileDetails,
+              isSubmitting: false,
+            });
+          },
+        );
+        break;
+      }
+      default:
+        throw new UnhandledCaseError(fileDetails, 'FileDetails');
+    }
   }
 
   const items: Record<string, () => void> = {
     Folder() {
-      // TODO
+      setFileDetails({
+        isSubmitting: false,
+        type: 'folder',
+      });
     },
     Markdown() {
       setFileDetails({
         slug: 'md',
         extension: 'md',
         isSubmitting: false,
+        type: 'text',
         getDefaultContents: markdownDefaultContents,
       });
     },
@@ -212,6 +244,7 @@ function AddMenu(props: AddMenuProps) {
         slug: 'file',
         extension: 'chopro',
         getDefaultContents: choproDefaultContents,
+        type: 'text',
         isSubmitting: false,
       });
     },
@@ -231,7 +264,9 @@ function AddMenu(props: AddMenuProps) {
             type="text"
             className="listFilesCreateEditorInput"
             ref={input}
-            defaultValue={'.' + fileDetails.extension}
+            defaultValue={
+              fileDetails.type === 'text' ? '.' + fileDetails.extension : ''
+            }
             disabled={disabled}
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
@@ -241,7 +276,7 @@ function AddMenu(props: AddMenuProps) {
           />
           <input
             type="submit"
-            value={fileDetails.isSubmitting ? 'Submitting' : 'Create'}
+            value={getSubmitButtonValue(fileDetails)}
             className="button"
             disabled={disabled}
           />
@@ -259,7 +294,7 @@ function AddMenu(props: AddMenuProps) {
           setOpenEventDetail(event.detail);
         }}
       >
-        Add File
+        Add File or Folder
       </button>
     );
   }
@@ -578,4 +613,26 @@ function Search() {
       onChange={onChange}
     />
   );
+}
+function getSubmitButtonValue(fileDetails: FileDetails): string {
+  switch (fileDetails.type) {
+    case 'text': {
+      const { isSubmitting, slug } = fileDetails;
+      if (isSubmitting) {
+        return 'Submitting…';
+      }
+      if (slug === 'md') {
+        return 'Add Markdown File';
+      }
+      if (slug === 'file') {
+        return 'Add ChordPro File';
+      }
+      throw new Error('Unknown file type.');
+    }
+    case 'folder': {
+      return fileDetails.isSubmitting ? 'Adding Folder…' : 'Add Folder';
+    }
+    default:
+      throw new UnhandledCaseError(fileDetails, 'FileDetails');
+  }
 }

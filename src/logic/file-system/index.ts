@@ -42,6 +42,8 @@ export abstract class FileSystem {
     toPath: string,
   ): Promise<T.FileMetadata | T.FolderMetadata>;
 
+  abstract createFolder(path: string): Promise<T.FolderMetadata>;
+
   abstract compressFolder(path: string): Promise<Blob>;
 
   abstract delete(path: string): Promise<void>;

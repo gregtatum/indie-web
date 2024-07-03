@@ -137,6 +137,11 @@ export class IDBFS extends FileSystemCache {
     return Promise.reject(IDBError.notFound('No files found at ' + path));
   }
 
+  async createFolder(path: string): Promise<T.FolderMetadata> {
+    const listingRow = await this.addFolderListing(path, []);
+    return createFolderMetadata(listingRow.path);
+  }
+
   async addFolderListing(
     pathOrMetadata: string | T.FolderMetadata,
     files: T.FolderListing,

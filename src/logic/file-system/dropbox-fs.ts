@@ -156,6 +156,25 @@ export class DropboxFS extends FileSystem {
       }, DropboxError.wrap);
   }
 
+  async createFolder(path: string): Promise<T.FolderMetadata> {
+    let metadata: T.FolderMetadata;
+    try {
+      const response = await this.#dropbox.filesCreateFolderV2({ path });
+      const { name, id } = response.result.metadata;
+      metadata = { type: 'folder', path, name, id };
+    } catch (error) {
+      return DropboxError.wrap(error);
+    }
+
+    await this.cache?.addFolderListing(path, []).catch((error) => {
+      console.error('Failed to update folder listing in IDBFS', error);
+    });
+
+    this.cache?.saveBlob;
+
+    return metadata;
+  }
+
   compressFolder(path: string): Promise<Blob> {
     return this.#dropbox
 
