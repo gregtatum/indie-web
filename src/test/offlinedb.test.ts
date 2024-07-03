@@ -5,7 +5,7 @@ import {
   createFolderMetadata,
 } from './utils/fixtures';
 import { PlainInternal } from 'src/store/actions';
-import { openIDBFS } from 'src/logic/file-system/indexeddb-fs';
+import { IDBFS, openIDBFS } from 'src/logic/file-system/indexeddb-fs';
 
 describe('offline db', () => {
   // Ignore "Dropbox wasn't available" errors.
@@ -38,6 +38,78 @@ describe('offline db', () => {
     const file = await idbfs.loadText(metadata.path);
     expect(file.metadata.path).toEqual(path);
     expect(file.text).toEqual(text);
+    idbfs.close();
+  });
+
+  /**
+   * Get a text represent of a file tree, similar to the Unix `tree` command.
+   */
+  async function getFileTree(
+    idbfs: IDBFS,
+    path = '/',
+    indent = '',
+  ): Promise<string> {
+    let output = '';
+    if (path === '/') {
+      output += '\n.\n';
+    }
+
+    const files = await idbfs.listFiles(path);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const art = i === files.length - 1 ? '└──' : '├──';
+      output += `${indent}${art} ${file.name}\n`;
+      if (file.type === 'folder') {
+        const nextIndent = i + 1 === files.length ? '    ' : '│   ';
+        output += await getFileTree(idbfs, file.path, indent + nextIndent);
+      }
+    }
+    return output;
+  }
+
+  it('can create files as the root of the folder', async () => {
+    const idbfs = await openIDBFS('test-db');
+    const paths = ['/song.chopro', '/song2.chopro'];
+    for (const path of paths) {
+      await idbfs.saveText(
+        createFileMetadata(path),
+        'overwrite',
+        'This is a song.',
+      );
+    }
+
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      ├── song.chopro
+      └── song2.chopro
+      "
+    `);
+    idbfs.close();
+  });
+
+  it('can create files inside of a directory', async () => {
+    const idbfs = await openIDBFS('test-db');
+
+    await idbfs.addFolderListing('/subdirectory', []);
+
+    const paths = ['/subdirectory/song.chopro', '/subdirectory/song2.chopro'];
+    for (const path of paths) {
+      await idbfs.saveText(
+        createFileMetadata(path),
+        'overwrite',
+        'This is a song.',
+      );
+    }
+
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      └── subdirectory
+          ├── song.chopro
+          └── song2.chopro
+      "
+    `);
     idbfs.close();
   });
 
@@ -74,6 +146,16 @@ describe('offline db', () => {
     ];
 
     await idbfs.addFolderListing(path, files);
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      └── band
+          ├── song 1.chopro
+          ├── song 2.chopro
+          ├── song 3.chopro
+          └── song 4.chopro
+      "
+    `);
 
     const response = await idbfs.listFiles(path);
     expect(response).toEqual(files);
@@ -88,8 +170,23 @@ describe('offline db', () => {
       '/band/song 4.chopro',
     ]);
 
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      └── band
+          ├── song 1.chopro
+          ├── song 2.chopro
+          ├── song 3.chopro
+          └── song 4.chopro
+      "
+    `);
+
     {
       const folderListings = await idbfs.listFiles('/');
+      for (const folderListing of folderListings) {
+        // This will be a uuid, overwrite it.
+        folderListing.id = 'id:CREATEFOLDERMETADATA5';
+      }
       expect(folderListings).toEqual([createFolderMetadata('/band')]);
     }
     {

@@ -53,7 +53,7 @@ export abstract class FileSystemCache extends FileSystem {
   abstract addFolderListing(
     path: string,
     files: T.FolderListing,
-  ): Promise<void>;
+  ): Promise<T.FolderListingRow>;
 }
 
 export abstract class FileSystemError<T = any> {

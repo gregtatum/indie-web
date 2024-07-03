@@ -260,10 +260,16 @@ export function foldersFromPaths(paths: string[]): TestFolder {
 export async function setupDBWithFiles(paths: string[]) {
   const store = createStore();
   const { dispatch, getState } = store;
-  const folders = foldersFromPaths(paths);
   const idbfs = await openIDBFS('test-db');
 
-  await addTestFoldersToDB(idbfs, folders);
+  for (const path of paths) {
+    const metadata = createFileMetadata(path);
+    await idbfs.saveText(
+      metadata,
+      'overwrite',
+      `${metadata.name} file contents`,
+    );
+  }
 
   /**
    * Use the store machinery to fetch a file as the active file.
@@ -285,30 +291,4 @@ export async function setupDBWithFiles(paths: string[]) {
   }
 
   return { dispatch, getState, fetchTextFile, fetchFileListing, idbfs };
-}
-
-/**
- * Builds out the offline database with file listings and files.
- */
-async function addTestFoldersToDB(
-  idbfs: IDBFS,
-  folders: TestFolder,
-  prevPath = '',
-) {
-  const files = [];
-
-  for (const [name, children] of Object.entries<TestFolder | null>(folders)) {
-    const path = prevPath + '/' + name;
-
-    if (children) {
-      const metadata = createFolderMetadata(path);
-      files.push(metadata);
-      await addTestFoldersToDB(idbfs, children, path);
-    } else {
-      const metadata = createFileMetadata(path);
-      files.push(metadata);
-      await idbfs.saveText(metadata, 'overwrite', `${name} file contents`);
-    }
-  }
-  await idbfs.addFolderListing(prevPath || '/', files);
 }

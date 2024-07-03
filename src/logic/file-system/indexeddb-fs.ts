@@ -8,6 +8,7 @@ import {
 import { T } from 'src';
 import {
   ensureExists,
+  getDirName,
   getPathFileName,
   getPathFolder,
   updatePathRoot,
@@ -123,9 +124,7 @@ export class IDBFS extends FileSystemCache {
   }
 
   async listFiles(path: string): Promise<T.FolderListing> {
-    if (!path) {
-      path = '/';
-    }
+    path = normalizePath(path);
     const row = await this.#db.get('folderListings', path);
     log('listFiles', path, { row });
     if (row) {
@@ -139,9 +138,23 @@ export class IDBFS extends FileSystemCache {
     return Promise.reject(IDBError.notFound('No files found at ' + path));
   }
 
-  async addFolderListing(path: string, files: T.FolderListing): Promise<void> {
-    if (!path) {
-      path = '/';
+  async addFolderListing(
+    pathOrMetadata: string | T.FolderMetadata,
+    files: T.FolderListing,
+    // We may be recursively adding folder listings.
+    tx?: idb.IDBPTransaction<T.IDBFSSchema, ['folderListings'], 'readwrite'>,
+  ): Promise<T.FolderListingRow> {
+    const metadata = getFolderMetadata(pathOrMetadata);
+    const { path } = metadata;
+    log('addFolderListing', path, files);
+
+    // Insert the folder listing.
+    if (!tx) {
+      tx = this.#db.transaction('folderListings', 'readwrite');
+    }
+    const folderListingsStore = tx.objectStore('folderListings');
+    if (await folderListingsStore.get(path)) {
+      throw new Error('The folder already exists: ' + path);
     }
     const row: T.FolderListingRow = {
       storedAt: new Date(),
@@ -149,7 +162,37 @@ export class IDBFS extends FileSystemCache {
       files,
     };
     log('addFolderListing', path, files);
-    await this.#db.put('folderListings', row);
+    await folderListingsStore.put(row);
+
+    if (path !== '/') {
+      // Recursively construct the folder listings.
+      const parentPath = getDirName(path);
+      const parent = await folderListingsStore.get(parentPath);
+      if (parent) {
+        // The parent exists, add the folder to it.
+        const fileInParent = parent.files.find(
+          (file) => file.path === parentPath,
+        );
+        if (fileInParent) {
+          if (fileInParent.type !== 'folder') {
+            tx.abort();
+            throw new Error(
+              'The file in the parent was not of type folder: ' +
+                fileInParent.path,
+            );
+          }
+        } else {
+          // Adding the folder.
+          parent.files.push(createFolderMetadata(path));
+          await folderListingsStore.put(parent);
+        }
+      } else {
+        // The parent folder does not exist, create it with this folder.
+        await this.addFolderListing(parentPath, [metadata], tx);
+      }
+    }
+    await tx.done;
+    return row;
   }
 
   async loadBlob(path: string): Promise<T.BlobFile> {
@@ -288,40 +331,26 @@ export class IDBFS extends FileSystemCache {
       }
     }
 
-    // Create the folder path if it does not exist.
-    if (!folder) {
-      let path = '';
-      for (const part of newFolderPath.split('/')) {
-        path += '/' + part;
-        const folder = await folderListingsStore.get(path);
-        if (!folder) {
-          await folderListingsStore.put({
-            storedAt: new Date(),
-            path,
-            files: [],
-          });
+    if (folder) {
+      // Either add the file or update it.
+      const index = folder.files.findIndex((file) => file.path === oldPath);
+      if (index === -1) {
+        folder.files.push(metadata);
+      } else {
+        for (let i = 0; i < folder.files.length; i++) {
+          const file = folder.files[i];
+          if (file.path === oldPath) {
+            folder.files[i] = metadata;
+          }
         }
       }
-      folder = ensureExists(
-        await folderListingsStore.get(path),
-        'Expected the folder path to exist.',
-      );
-    }
 
-    // Either add the file or update it.
-    const index = folder.files.findIndex((file) => file.path === oldPath);
-    if (index === -1) {
-      folder.files.push(metadata);
+      await folderListingsStore.put(folder);
     } else {
-      for (let i = 0; i < folder.files.length; i++) {
-        const file = folder.files[i];
-        if (file.path === oldPath) {
-          folder.files[i] = metadata;
-        }
-      }
+      // Create the folder path if it does not exist.
+      folder = await this.addFolderListing(newFolderPath, [metadata], tx);
     }
 
-    await folderListingsStore.put(folder);
     await tx.done;
   }
 
@@ -561,4 +590,53 @@ async function createFileMetadata(
     isDownloadable: true,
     hash,
   };
+}
+
+function getFolderMetadata(
+  pathOrMetadata: string | T.FolderMetadata,
+): T.FolderMetadata {
+  if (typeof pathOrMetadata === 'string') {
+    const path = pathOrMetadata;
+    return createFolderMetadata(normalizePath(path));
+  }
+  const metadata = pathOrMetadata;
+  const path = normalizePath(metadata.path);
+  if (metadata.path !== path) {
+    console.error({ metadata, path });
+    throw new Error("The folder's path was given in a non-normalized form");
+  }
+  return metadata;
+}
+
+function createFolderMetadata(path: string): T.FolderMetadata {
+  return {
+    type: 'folder',
+    name: getPathFileName(path),
+    path: path,
+    id: uuidv4(),
+  };
+}
+
+/**
+ * Normalize the path.
+ */
+function normalizePath(pathOrMetadata: string | T.FolderMetadata): string {
+  const path =
+    typeof pathOrMetadata === 'string' ? pathOrMetadata : pathOrMetadata.path;
+
+  const pathParts = path.split('/').filter((part) => part);
+  const finalParts = [];
+  for (let i = 0; i < pathParts.length; i++) {
+    const part = pathParts[i];
+    if (!part || part === '.') {
+      continue;
+    }
+    if (part === '..') {
+      finalParts.pop();
+      continue;
+    }
+    finalParts.push(part);
+  }
+
+  return '/' + finalParts.join('/');
 }
