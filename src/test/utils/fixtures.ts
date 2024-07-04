@@ -4,7 +4,7 @@ import { ensureExists, UnhandledCaseError } from '../../utils';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { createStore } from 'src/store/create-store';
 import { fixupMetadata } from 'src/logic/file-system/dropbox-fs';
-import { IDBFS, openIDBFS } from 'src/logic/file-system/indexeddb-fs';
+import { openIDBFS } from 'src/logic/file-system/indexeddb-fs';
 
 export function createFileMetadata(path: string, id?: string): T.FileMetadata {
   const parts = path.split('/');
@@ -261,6 +261,7 @@ export async function setupDBWithFiles(paths: string[]) {
   const store = createStore();
   const { dispatch, getState } = store;
   const idbfs = await openIDBFS('test-db');
+  store.dispatch(A.connectIDBFS(idbfs));
 
   for (const path of paths) {
     const metadata = createFileMetadata(path);

@@ -7,7 +7,6 @@ import {
 } from 'src/logic/file-system';
 import { T } from 'src';
 import {
-  ensureExists,
   getDirName,
   getPathFileName,
   getPathFolder,
@@ -276,7 +275,9 @@ export class IDBFS extends FileSystemCache {
     const oldFile = await store.get(oldPath);
     if (oldFile) {
       log('#updateFileMetadata', { oldFile, oldPath, metadata });
-      await store.delete(oldPath);
+      if (metadata.path !== oldPath) {
+        await store.delete(oldPath);
+      }
       await store.put({
         ...oldFile,
         metadata,
@@ -442,11 +443,13 @@ export class IDBFS extends FileSystemCache {
   }
 
   async delete(path: string) {
-    const { metadata } = await this.loadBlob(path);
-    if (metadata.type === 'file') {
+    try {
+      // See if this is a file.
+      await this.loadBlob(path);
       await this.#deleteFileFromFiles(path);
       await this.#deleteFileFromFolderListing(path);
-    } else {
+    } catch {
+      // Try the folder next.
       await this.#deleteFolderListing(path);
       await this.#deleteFilesInFolder(path);
     }
