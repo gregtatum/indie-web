@@ -201,7 +201,7 @@ function AddMenu(props: AddMenuProps) {
     },
     Markdown() {
       setFileDetails({
-        slug: 'file',
+        slug: 'md',
         extension: 'md',
         isSubmitting: false,
         getDefaultContents: markdownDefaultContents,

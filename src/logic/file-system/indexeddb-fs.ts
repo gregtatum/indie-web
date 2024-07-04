@@ -152,9 +152,6 @@ export class IDBFS extends FileSystemCache {
       tx = this.#db.transaction('folderListings', 'readwrite');
     }
     const folderListingsStore = tx.objectStore('folderListings');
-    if (await folderListingsStore.get(path)) {
-      throw new Error('The folder already exists: ' + path);
-    }
     const row: T.FolderListingRow = {
       storedAt: new Date(),
       path,

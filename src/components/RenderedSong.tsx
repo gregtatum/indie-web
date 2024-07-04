@@ -119,7 +119,6 @@ export function RenderedSong() {
                       </span>
                     </span>
                   );
-                  return <div key={`-${spanIndex}`} />;
                 })}
               </div>
             );
