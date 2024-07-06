@@ -53,7 +53,7 @@ const config = {
       minify: false,
     }),
     new CopyWebpackPlugin({
-      patterns: [{ from: 'data' }],
+      patterns: [{ from: 'data/common' }, { from: 'data/' + process.env.SITE }],
     }),
   ],
 };

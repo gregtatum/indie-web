@@ -80,11 +80,20 @@ export function Header() {
   switch (view) {
     case 'settings':
       isOpen = true;
-      title = <Path path="/" key={key} title="⚙️ Settings" />;
+      title = (
+        <Path path="/" key={key} title="⚙️ Settings" hideSiteName={true} />
+      );
       break;
     case 'privacy':
       isOpen = true;
-      title = <Path path="/" key={key} title="👀 Privacy Policy and Usage" />;
+      title = (
+        <Path
+          path="/"
+          key={key}
+          title="👀 Privacy Policy and Usage"
+          hideSiteName={true}
+        />
+      );
       break;
     case 'view-file':
     case 'view-pdf':
@@ -264,7 +273,15 @@ function SaveFileButton() {
   );
 }
 
-function Path({ path, title }: { path: string; title?: any }) {
+function Path({
+  path,
+  title,
+  hideSiteName,
+}: {
+  path: string;
+  title?: any;
+  hideSiteName?: boolean;
+}) {
   const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
   const fsName = Hooks.useSelector($.getCurrentFileSystemName);
   const breadcrumbs = [];
@@ -294,7 +311,7 @@ function Path({ path, title }: { path: string; title?: any }) {
   return (
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
-        <SiteName isOpen={!(songTitle ?? fileName)} />
+        <SiteName isOpen={!hideSiteName && !(songTitle ?? fileName)} />
         <FileSystemSelection key="fileSystem" />
         <span>»</span>
         {breadcrumbs}
