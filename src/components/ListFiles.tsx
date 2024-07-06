@@ -1,7 +1,13 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, T, $, Hooks } from 'src';
-import { debounce, ensureExists, getEnv, imageExtensions } from 'src/utils';
+import {
+  debounce,
+  ensureExists,
+  getEnv,
+  imageExtensions,
+  pathJoin,
+} from 'src/utils';
 import { useRetainScroll, useStore } from '../hooks';
 import { isChordProExtension, UnhandledCaseError } from '../utils';
 import { FileSystemError } from 'src/logic/file-system';
@@ -112,8 +118,7 @@ export function ListFiles() {
   );
 }
 
-// const order = ['Folder', 'Markdown', 'ChordPro', 'Upload File'];
-const order = ['Folder', 'Markdown', 'ChordPro'];
+const order = ['Folder', 'Markdown', 'ChordPro', 'Upload File'];
 
 type FileDetails =
   | {
@@ -126,6 +131,10 @@ type FileDetails =
   | {
       isSubmitting: boolean;
       type: 'folder';
+    }
+  | {
+      isSubmitting: boolean;
+      type: 'upload-file';
     };
 
 interface AddMenuProps {
@@ -218,6 +227,10 @@ function AddMenu(props: AddMenuProps) {
         );
         break;
       }
+      case 'upload-file': {
+        // Do nothing.
+        break;
+      }
       default:
         throw new UnhandledCaseError(fileDetails, 'FileDetails');
     }
@@ -249,7 +262,77 @@ function AddMenu(props: AddMenuProps) {
       });
     },
     'Upload File': () => {
-      // TODO
+      // Wrap this in a raF because the menu wasn't closing otherwise.
+      requestAnimationFrame(() => {
+        const fileInput = document.createElement('input');
+        fileInput.setAttribute('type', 'file');
+        fileInput.setAttribute('multiple', 'true');
+        document.body.appendChild(fileInput);
+
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        fileInput.addEventListener('change', async () => {
+          const { files } = fileInput;
+          if (!files) {
+            return;
+          }
+          for (const file of files) {
+            const path = pathJoin(props.path, file.name);
+            const messageGeneration = dispatch(
+              A.addMessage({
+                message: (
+                  <>
+                    Adding <code>{file.name}</code>
+                  </>
+                ),
+              }),
+            );
+
+            try {
+              await fileSystem.saveBlob(path, 'add', file);
+              dispatch(
+                A.addMessage({
+                  message: (
+                    <>
+                      Added <code>{file.name}</code>
+                    </>
+                  ),
+                  generation: messageGeneration,
+                  timeout: true,
+                }),
+              );
+              dispatch(A.listFiles(props.path)).catch((error) => {
+                console.error(error);
+                dispatch(
+                  A.addMessage({
+                    message: (
+                      <>
+                        Error listing files <code>{props.path}</code>
+                      </>
+                    ),
+                    timeout: true,
+                    generation: messageGeneration,
+                  }),
+                );
+              });
+            } catch (error) {
+              console.error(error);
+              dispatch(
+                A.addMessage({
+                  message: (
+                    <>
+                      Error saving <code>{path}</code>
+                    </>
+                  ),
+                  timeout: true,
+                  generation: messageGeneration,
+                }),
+              );
+            }
+          }
+        });
+        fileInput.click();
+        fileInput.remove();
+      });
     },
   };
 
@@ -632,6 +715,8 @@ function getSubmitButtonValue(fileDetails: FileDetails): string {
     case 'folder': {
       return fileDetails.isSubmitting ? 'Adding Folder…' : 'Add Folder';
     }
+    case 'upload-file':
+      throw new Error('Upload file does not have a submit button.');
     default:
       throw new UnhandledCaseError(fileDetails, 'FileDetails');
   }
