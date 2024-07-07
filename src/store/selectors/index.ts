@@ -21,6 +21,8 @@ if (process.env.NODE_ENV !== 'test') {
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
 }
 
+export * from './language-coach';
+
 export function getView(state: State) {
   return state.view;
 }
@@ -429,6 +431,7 @@ export function canGoFullScreen(state: State) {
     case 'list-files':
     case 'settings':
     case 'privacy':
+    case 'language-coach':
       return false;
     default:
       throw new UnhandledCaseError(view, 'view');

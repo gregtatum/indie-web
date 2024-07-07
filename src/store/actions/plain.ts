@@ -68,6 +68,10 @@ export function viewListFiles(fileSystemName: T.FileSystemName, path: string) {
   return { type: 'view-list-files' as const, fileSystemName, path };
 }
 
+export function viewLanguageCoach(path: string) {
+  return { type: 'view-language-coach' as const, path };
+}
+
 export function viewFile(path: string) {
   return { type: 'view-file' as const, path };
 }
@@ -148,4 +152,53 @@ export function changeFileSystem(fileSystemName: T.FileSystemName) {
 
 export function connectIDBFS(idbfs: IDBFS) {
   return { type: 'connect-idbfs' as const, idbfs };
+}
+
+export function stemFrequencyAnalysis(stems: T.Stem[]) {
+  return {
+    type: 'stem-frequency-analysis' as const,
+    stems,
+  };
+}
+
+export function selectStem(stemIndex: number) {
+  return {
+    type: 'select-stem' as const,
+    stemIndex,
+  };
+}
+
+export function learnStem(stem: string) {
+  return {
+    type: 'learn-stem' as const,
+    stem,
+  };
+}
+
+export function ignoreStem(stem: string) {
+  return {
+    type: 'ignore-stem' as const,
+    stem,
+  };
+}
+
+export function changeLanguage(code: string) {
+  return {
+    type: 'change-language' as const,
+    code,
+  };
+}
+
+export function updateLearnedWords(words: Set<string>) {
+  return {
+    type: 'update-learned-words' as const,
+    words,
+  };
+}
+
+export function loadLanguageData(languageData: T.LanguageDataV1) {
+  return {
+    type: 'load-language-data' as const,
+    languageData,
+  };
 }

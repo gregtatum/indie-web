@@ -373,12 +373,12 @@ async function createLanguageCoach(
   }
   const folderMetadata = await fileSystem.createFolder(path);
   const normalizedPath = folderMetadata.path;
-  const data: T.LanguageCoachStateV1 = {
+  const data: T.LanguageDataV1 = {
     description: 'The data store for the language coach',
     lastSaved: Date.now(),
     version: 1,
-    stems: [],
-    ignored: [],
+    learnedStems: [],
+    ignoredStems: [],
   };
   await fileSystem.saveText(
     pathJoin(normalizedPath, 'words.json'),

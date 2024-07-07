@@ -99,6 +99,7 @@ export function Header() {
     case 'view-pdf':
     case 'view-image':
     case 'view-markdown':
+    case 'language-coach':
       isOpen = false;
       title = <Path key={key} path={path} />;
       break;

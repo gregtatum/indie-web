@@ -18,6 +18,7 @@ import { useFilesIndex } from 'src/logic/files-index';
 
 import './App.css';
 import { toFileSystemName } from 'src/logic/app-logic';
+import { LanguageCoach } from './LanguageCoach';
 
 function ListFilesRouter() {
   const currentFileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
@@ -29,6 +30,16 @@ function ListFilesRouter() {
     const fileSystemName = toFileSystemName(fs) ?? currentFileSystemName;
     dispatch(A.viewListFiles(fileSystemName, path));
   }, [fs, path, currentFileSystemName]);
+  return null;
+}
+
+function LanguageCoachRouter() {
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const dispatch = Hooks.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewLanguageCoach(path));
+  }, [path]);
   return null;
 }
 
@@ -107,6 +118,12 @@ export function AppRoutes() {
         <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
         </Router.Route>
+        <Router.Route
+          path="/:fs/language-coach"
+          element={<LanguageCoachRouter />}
+        >
+          <Router.Route path="*" element={<LanguageCoachRouter />} />
+        </Router.Route>
         <Router.Route path="/:fs/file" element={<ViewChoproRouter />}>
           <Router.Route path="*" element={<ViewChoproRouter />} />
         </Router.Route>
@@ -163,6 +180,8 @@ function Views() {
       return <Settings key={key} />;
     case 'privacy':
       return <Privacy key={key} />;
+    case 'language-coach':
+      return <LanguageCoach key={key} />;
     default:
       throw new UnhandledCaseError(view, 'view');
   }

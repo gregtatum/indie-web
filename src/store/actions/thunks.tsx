@@ -97,6 +97,22 @@ export namespace PlainInternal {
   export function fileIndexReceived(filesIndex: FilesIndex) {
     return { type: 'files-index-received' as const, filesIndex };
   }
+
+  export function undoLearnStem(stem: string) {
+    return { type: 'undo-learn-stem' as const, stem };
+  }
+
+  export function undoIgnoreStem(stem: string) {
+    return { type: 'undo-ignore-stem' as const, stem };
+  }
+
+  export function nextSentence(stem: T.Stem, direction: -1 | 1) {
+    return {
+      type: 'next-sentence' as const,
+      direction,
+      stem,
+    };
+  }
 }
 
 export function listFiles(path = ''): Thunk<Promise<void>> {
@@ -765,5 +781,69 @@ export function insertTextAtLineInActiveFile(
     const oldText = $.getActiveFileText(getState());
     const newText = insertTextAtLine(oldText, lineIndex, insert);
     dispatch(Plain.modifyActiveFile(newText, path, true));
+  };
+}
+
+export function selectNextStem(direction: -1 | 1): Thunk<number> {
+  return (dispatch, getState) => {
+    const stems = $.getUnknownStems(getState());
+    if (!stems) {
+      throw new Error('Expected stems when selecting a new stem');
+    }
+    let stemIndex = $.getSelectedStemIndex(getState()) ?? -1;
+    stemIndex += direction;
+    // Keep the index in bounds.
+    stemIndex = Math.max(0, Math.min(stemIndex, stems.length - 1));
+    dispatch(Plain.selectStem(stemIndex));
+    return stemIndex;
+  };
+}
+
+export function ignoreSelectedStem(): Thunk {
+  return (dispatch, getState) => {
+    const stem = $.getSelectedStem(getState());
+    if (stem) {
+      dispatch(Plain.ignoreStem(stem.stem));
+    }
+  };
+}
+
+export function learnSelectedStem(): Thunk {
+  return (dispatch, getState) => {
+    const stem = $.getSelectedStem(getState());
+    if (stem) {
+      dispatch(Plain.learnStem(stem.stem));
+    }
+  };
+}
+
+export function applyUndo(): Thunk {
+  return (dispatch, getState) => {
+    const undoList = $.getUndoList(getState());
+    const action = undoList[undoList.length - 1];
+    if (!action) {
+      return;
+    }
+    switch (action.type) {
+      case 'learn-stem':
+        dispatch(PlainInternal.undoLearnStem(action.stem));
+        break;
+      case 'ignore-stem':
+        dispatch(PlainInternal.undoIgnoreStem(action.stem));
+        break;
+      default:
+        throw new Error('Unknown undo action: ' + action.type);
+    }
+  };
+}
+
+export function nextSentence(direction: -1 | 1, stemIndex?: number): Thunk {
+  return (dispatch, getState) => {
+    if (stemIndex === undefined) {
+      stemIndex = ensureExists($.getSelectedStemIndex(getState()));
+    }
+    const stem = ensureExists($.getUnknownStems(getState()))[stemIndex];
+
+    dispatch(PlainInternal.nextSentence(stem, direction));
   };
 }

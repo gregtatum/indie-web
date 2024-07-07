@@ -136,6 +136,7 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   const isPDF = !isFolder && extension === 'pdf';
   const isImage = !isFolder && imageExtensions.has(extension);
   const isMarkdown = !isFolder && extension === 'md';
+  const isLanguageCoach = isFolder && extension === 'coach';
 
   let icon = '📄';
   if (isFolder) {
@@ -164,6 +165,11 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
   if (isMarkdown) {
     link = `/${fsName}/md${path}`;
     icon = '📕';
+  }
+
+  if (isLanguageCoach) {
+    link = `/${fsName}/language-coach${path}`;
+    icon = '🧳';
   }
 
   let fileDisplayName: React.ReactNode;

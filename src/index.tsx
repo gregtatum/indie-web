@@ -7,14 +7,14 @@ import { ensureExists, maybeMockGoogleAnalytics } from 'src/utils';
 import { createRoot } from 'react-dom/client';
 
 import * as A from 'src/store/actions';
-import * as $ from 'src/store/selectors';
+import * as $ from 'src/store/selectors/index';
 import {
   BROWSER_FILES_DB_NAME,
   openIDBFS,
 } from './logic/file-system/indexeddb-fs';
 
 export * as A from 'src/store/actions';
-export * as $ from 'src/store/selectors';
+export * as $ from 'src/store/selectors/index';
 export * as T from 'src/@types';
 export * as Hooks from 'src/hooks';
 

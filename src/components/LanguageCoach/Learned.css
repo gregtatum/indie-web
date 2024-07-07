@@ -1,0 +1,28 @@
+.learned {
+  --bottom-padding: 20px;
+  height: calc(100% - var(--header-height) - var(--bottom-padding));
+  position: absolute;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.learned > * {
+  max-width: 700px;
+  width: 100%;
+}
+
+.learnedContents p {
+  line-height: 1.4;
+  align-self: start;
+}
+
+.learned > p {
+  margin: 20px 0;
+}
+
+.learnedList {
+  width: 100%;
+  flex: 1;
+}

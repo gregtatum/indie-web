@@ -9,6 +9,7 @@ import {
 import { FilesIndex } from 'src/logic/files-index';
 import { IDBFS } from 'src/logic/file-system/indexeddb-fs';
 import { toFileSystemName } from 'src/logic/app-logic';
+import { languageCoachReducer } from './language-coach';
 
 function getDropboxOauth(): T.DropboxOauth | null {
   const oauthString = window.localStorage.getItem('dropboxOauth');
@@ -329,6 +330,7 @@ function path(state = '/', action: T.Action): string {
   switch (action.type) {
     case 'change-active-file':
     case 'view-list-files':
+    case 'view-language-coach':
     case 'view-file':
     case 'view-pdf':
     case 'view-image':
@@ -381,6 +383,8 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'list-files';
     case 'view-file':
       return 'view-file';
+    case 'view-language-coach':
+      return 'language-coach';
     case 'view-pdf':
       return 'view-pdf';
     case 'view-image':
@@ -553,25 +557,26 @@ function idbfs(state: IDBFS | null = null, action: T.Action): IDBFS | null {
 }
 
 export const reducers = combineReducers({
-  dropboxOauth,
-  listFilesCache,
-  listFileErrors,
+  currentFileSystemName,
+  downloadBlobCache,
   downloadFileCache,
   downloadFileErrors,
-  downloadBlobCache,
-  path,
-  view,
-  modifiedTextByPath,
-  messages,
-  hideEditor,
-  isDraggingSplitter,
-  shouldHideHeader,
-  currentFileSystemName,
-  songKeySettings,
-  renameFile,
+  dropboxOauth,
   filesIndex,
-  searchString,
+  hideEditor,
   idbfs,
+  isDraggingSplitter,
+  languageCoach: languageCoachReducer,
+  listFileErrors,
+  listFilesCache,
+  messages,
+  modifiedTextByPath,
+  path,
+  renameFile,
+  searchString,
+  shouldHideHeader,
+  songKeySettings,
+  view,
 });
 
 function wrapReducer<S>(

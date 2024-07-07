@@ -66,7 +66,8 @@ export type View =
   | 'view-markdown'
   | 'list-files'
   | 'settings'
-  | 'privacy';
+  | 'privacy'
+  | 'language-coach';
 
 export type DownloadedTextFile = {
   metadata: FileMetadata;
@@ -265,10 +266,23 @@ export type SongKeySettings =
 
 export type FileSystemName = 'dropbox' | 'browser';
 
-export interface LanguageCoachStateV1 {
+export interface LanguageDataV1 {
   description: string;
   lastSaved: number;
-  version: number;
-  stems: string[];
-  ignored: string[];
+  version: 1;
+  learnedStems: string[];
+  ignoredStems: string[];
 }
+
+export interface Stem {
+  stem: string;
+  frequency: number;
+  tokens: string[];
+  sentences: string[];
+}
+
+export type Language = {
+  code: string;
+  long: string;
+  short: string;
+};
