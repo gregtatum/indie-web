@@ -1,0 +1,24 @@
+.addFileMenuError {
+  margin: 8px;
+  background: #ffbfbf;
+  padding: 8px;
+  border-radius: 3px;
+  border: 1px solid #f00;
+  font-size: var(--font-size-small);
+}
+
+.addFileMenuInput {
+  flex: 1;
+  font-size: var(--font-size-small);
+}
+
+.addFileMenuForm {
+  display: flex;
+  gap: 8px;
+  margin: 8px;
+  max-width: 300px;
+}
+
+.button.addFileMenuButton {
+  margin: 8px;
+}

@@ -205,7 +205,7 @@ describe('App', () => {
             </button>
           </div>
           <button
-            class="button listFilesCreate"
+            class="button addFileMenuButton"
             type="button"
           >
             Add File or Folder
