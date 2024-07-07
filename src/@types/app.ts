@@ -264,3 +264,11 @@ export type SongKeySettings =
   | { type: 'transpose'; songKey: SongKey };
 
 export type FileSystemName = 'dropbox' | 'browser';
+
+export interface LanguageCoachStateV1 {
+  description: string;
+  lastSaved: number;
+  version: number;
+  stems: string[];
+  ignored: string[];
+}

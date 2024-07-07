@@ -1,15 +1,18 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, $, Hooks } from 'src';
+import { A, T, $, Hooks } from 'src';
 import { ensureExists, pathJoin } from 'src/utils';
 import { useStore } from '../hooks';
 import { UnhandledCaseError } from '../utils';
-import { FileSystemError } from 'src/logic/file-system';
+import { FileSystem, FileSystemError } from 'src/logic/file-system';
 
 import { Menu, menuPortal } from './Menus';
 import './AddFileMenu.css';
 
-const order = ['Folder', 'Markdown', 'ChordPro', 'Upload File'];
+const order =
+  process.env.SITE === 'floppydisk'
+    ? ['Folder', 'Markdown', 'ChordPro', 'Language Coach', 'Upload File']
+    : ['ChordPro', 'Folder', 'Markdown', 'Upload File'];
 
 type FileDetails =
   | {
@@ -18,6 +21,11 @@ type FileDetails =
       getDefaultContents: (fileName: string) => string;
       isSubmitting: boolean;
       type: 'text';
+    }
+  | {
+      isSubmitting: boolean;
+      extension: string;
+      type: 'language-coach';
     }
   | {
       isSubmitting: boolean;
@@ -59,11 +67,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     const inputEl = ensureExists(input.current, 'Input ref value');
-    let path = props.path;
-    if (path[path.length - 1] !== '/') {
-      path += '/';
-    }
-    path += inputEl.value;
+    const path = pathJoin(props.path, inputEl.value);
     if (!fileDetails) {
       throw new Error('No file details when they were expected');
     }
@@ -81,12 +85,11 @@ export function AddFileMenu(props: AddFileMenuProps) {
           .then(
             (fileMetadata) => {
               // The directory listing is now stale, fetch it again.
-              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-              dispatch(A.listFiles(props.path));
+              void dispatch(A.listFiles(props.path));
               if ($.getHideEditor(getState())) {
                 dispatch(A.hideEditor(false));
               }
-              navigate(`${fsName}/${slug}${fileMetadata.path}`);
+              navigate(pathJoin(fsName, slug, fileMetadata.path));
             },
             (error: FileSystemError) => {
               let err = error.toString();
@@ -106,7 +109,9 @@ export function AddFileMenu(props: AddFileMenuProps) {
       case 'folder': {
         fileSystem.createFolder(path).then(
           (folderMetadata) => {
-            navigate(`${fsName}/folder/${folderMetadata.path}`);
+            // The directory listing is now stale, fetch it again.
+            void dispatch(A.listFiles(props.path));
+            navigate(pathJoin(fsName, 'folder', folderMetadata.path));
           },
           (error) => {
             setError(error.toString());
@@ -116,6 +121,21 @@ export function AddFileMenu(props: AddFileMenuProps) {
             });
           },
         );
+        break;
+      }
+      case 'language-coach': {
+        createLanguageCoach(path, fileSystem)
+          .then((normalizedPath) => {
+            void dispatch(A.listFiles(props.path));
+            navigate(pathJoin(fsName, 'folder', normalizedPath));
+          })
+          .catch((error) => {
+            setError(error.toString());
+            setFileDetails({
+              ...fileDetails,
+              isSubmitting: false,
+            });
+          });
         break;
       }
       case 'upload-file': {
@@ -225,6 +245,13 @@ export function AddFileMenu(props: AddFileMenuProps) {
         fileInput.remove();
       });
     },
+    'Language Coach': () => {
+      setFileDetails({
+        type: 'language-coach',
+        extension: 'coach',
+        isSubmitting: false,
+      });
+    },
   };
 
   let component;
@@ -239,7 +266,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
             className="addFileMenuInput"
             ref={input}
             defaultValue={
-              fileDetails.type === 'text' ? '.' + fileDetails.extension : ''
+              'extension' in fileDetails ? '.' + fileDetails.extension : ''
             }
             disabled={disabled}
             onKeyDown={(event) => {
@@ -325,9 +352,39 @@ function getSubmitButtonValue(fileDetails: FileDetails): string {
     case 'folder': {
       return fileDetails.isSubmitting ? 'Adding Folder…' : 'Add Folder';
     }
+    case 'language-coach': {
+      return fileDetails.isSubmitting
+        ? 'Adding Language Coach…'
+        : 'Add Language';
+    }
     case 'upload-file':
       throw new Error('Upload file does not have a submit button.');
     default:
       throw new UnhandledCaseError(fileDetails, 'FileDetails');
   }
+}
+
+async function createLanguageCoach(
+  path: string,
+  fileSystem: FileSystem,
+): Promise<string> {
+  if (!path.endsWith('.coach')) {
+    throw new Error('The Language Coach must end in .coach');
+  }
+  const folderMetadata = await fileSystem.createFolder(path);
+  const normalizedPath = folderMetadata.path;
+  const data: T.LanguageCoachStateV1 = {
+    description: 'The data store for the language coach',
+    lastSaved: Date.now(),
+    version: 1,
+    stems: [],
+    ignored: [],
+  };
+  await fileSystem.saveText(
+    pathJoin(normalizedPath, 'words.json'),
+    'overwrite',
+    JSON.stringify(data),
+  );
+
+  return normalizedPath;
 }
