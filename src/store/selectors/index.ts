@@ -102,7 +102,7 @@ export function getIDBFSOrNull(state: State) {
 /**
  * Returns the value of the selector and assert that it is non-null.
  */
-function dangerousSelector<T>(
+export function dangerousSelector<T>(
   selector: (state: State) => T | null,
   message: string,
 ): (state: State) => T {

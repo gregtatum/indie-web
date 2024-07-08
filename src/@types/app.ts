@@ -269,6 +269,7 @@ export type FileSystemName = 'dropbox' | 'browser';
 export interface LanguageDataV1 {
   description: string;
   lastSaved: number;
+  language: Language;
   version: 1;
   learnedStems: string[];
   ignoredStems: string[];

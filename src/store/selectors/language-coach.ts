@@ -1,37 +1,47 @@
 import * as T from 'src/@types';
 import { createSelector } from 'reselect';
 import { State } from 'src/@types';
+import { dangerousSelector } from '.';
 
 export function getLanguageCoach(state: State) {
   return state.languageCoach;
+}
+
+export function getLanguageCoachDataOrNull(state: State) {
+  return getLanguageCoach(state).data;
 }
 
 export function getLanguageCoachPath(state: State) {
   return getLanguageCoach(state).path;
 }
 
+export const getLanguageCoachData = dangerousSelector(
+  getLanguageCoachDataOrNull,
+  'The language coach data has not been downloaded.',
+);
+
 export function getStems(state: State) {
-  return getLanguageCoach(state).stems;
+  return getLanguageCoachData(state).stems;
 }
 
 export function getSelectedStemIndex(state: State) {
-  return getLanguageCoach(state).selectedStem;
+  return getLanguageCoachData(state).selectedStem;
 }
 
 export function getIgnoredStems(state: State) {
-  return getLanguageCoach(state).ignoredStems;
+  return getLanguageCoachData(state).ignoredStems;
 }
 
 export function getLearnedStems(state: State) {
-  return getLanguageCoach(state).learnedStems;
+  return getLanguageCoachData(state).learnedStems;
 }
 
 export function getUndoList(state: State) {
-  return getLanguageCoach(state).undoList;
+  return getLanguageCoachData(state).undoList;
 }
 
 export function getLanguage(state: State) {
-  return getLanguageCoach(state).language;
+  return getLanguageCoachData(state).language;
 }
 
 export function getLanguageCode(state: State) {
@@ -39,7 +49,7 @@ export function getLanguageCode(state: State) {
 }
 
 export function getSelectedSentences(state: State) {
-  return getLanguageCoach(state).selectedSentences;
+  return getLanguageCoachData(state).selectedSentences;
 }
 
 export function getDisplayLanguage(state: State) {

@@ -1,6 +1,6 @@
 import * as T from 'src/@types';
 import { combineReducers } from 'redux';
-import { getLanguageByCode } from 'src/logic/languages';
+import { ensureExists } from 'src/utils';
 
 function path(state = '', action: T.Action): string {
   switch (action.type) {
@@ -11,6 +11,9 @@ function path(state = '', action: T.Action): string {
   }
 }
 
+/**
+ * The stems after a frequency analysis.
+ */
 function stems(
   state: T.Stem[] | null = null,
   action: T.Action,
@@ -23,8 +26,11 @@ function stems(
   }
 }
 
+/**
+ * The currently selected stem in a frequency analysis.
+ */
 function selectedStem(
-  state: null | number = 3,
+  state: null | number = null,
   action: T.Action,
 ): null | number {
   switch (action.type) {
@@ -37,11 +43,17 @@ function selectedStem(
   }
 }
 
+/**
+ * The stems to be ignored in a frequency analysis. These can be proper names or
+ * non-word things like acronyms, or non-sensical stems.
+ */
 function ignoredStems(
   state: Set<string> = new Set(),
   action: T.Action,
 ): Set<string> {
   switch (action.type) {
+    case 'load-language-data':
+      return new Set(action.languageData.ignoredStems);
     case 'ignore-stem': {
       const { stem } = action;
       const stems = new Set(state);
@@ -54,20 +66,21 @@ function ignoredStems(
       stems.delete(stem);
       return stems;
     }
-    case 'load-language-data':
-      return new Set(action.languageData.ignoredStems);
-    case 'view-language-coach':
-      return new Set();
     default:
       return state;
   }
 }
 
+/**
+ * This is the set of learned stems.
+ */
 function learnedStems(
   state: Set<string> = new Set(),
   action: T.Action,
 ): Set<string> {
   switch (action.type) {
+    case 'load-language-data':
+      return new Set(action.languageData.learnedStems);
     case 'learn-stem': {
       const { stem } = action;
       const stems = new Set(state);
@@ -80,32 +93,31 @@ function learnedStems(
       stems.delete(stem);
       return stems;
     }
-    case 'load-language-data':
-      return new Set(action.languageData.learnedStems);
     case 'update-learned-words': {
       const { words } = action;
       return words;
     }
-    case 'change-language':
-      throw new Error('TODO');
     default:
       return state;
   }
 }
 
-function language(
-  state: T.Language = getLanguageByCode('es'),
-  action: T.Action,
-) {
+/**
+ * The language that is being studied.
+ */
+function language(state: T.Language | undefined, action: T.Action): T.Language {
   switch (action.type) {
-    case 'change-language': {
-      return getLanguageByCode(action.code);
+    case 'load-language-data': {
+      return action.languageData.language;
     }
     default:
-      return state;
+      return ensureExists(state, 'The language should be defined');
   }
 }
 
+/**
+ * The undo history for the stem analysis and learning words.
+ */
 function undoList(state: T.Action[] = [], action: T.Action): T.Action[] {
   switch (action.type) {
     case 'learn-stem':
@@ -126,6 +138,9 @@ function undoList(state: T.Action[] = [], action: T.Action): T.Action[] {
   }
 }
 
+/**
+ * The currently selected sentence in the frequency analysis.
+ */
 function selectedSentences(
   state: Map<string, number> = new Map(),
   action: T.Action,
@@ -148,8 +163,7 @@ function selectedSentences(
   }
 }
 
-export const languageCoachReducer = combineReducers({
-  path,
+const dataReducer = combineReducers({
   ignoredStems,
   language,
   learnedStems,
@@ -157,4 +171,35 @@ export const languageCoachReducer = combineReducers({
   selectedStem,
   stems,
   undoList,
+});
+
+type DataState = ReturnType<typeof dataReducer>;
+
+/**
+ * Wrap the data reducer, to only run it if the data is actually available.
+ */
+function dataOrNullReducer(
+  state: DataState | null = null,
+  action: T.Action,
+): DataState | null {
+  if (action.type === 'load-language-data') {
+    // Initiate the reducer.
+    return dataReducer(undefined, action);
+  }
+  if (!state) {
+    // The state has not been initialized, as there is no language data available.
+    return null;
+  }
+  if (action.type === 'view-language-coach' || !state) {
+    // The language coach is being viewed for the first time, invalidate any previous
+    // language data.
+    return null;
+  }
+
+  return dataReducer(state, action);
+}
+
+export const languageCoachReducer = combineReducers({
+  path,
+  data: dataOrNullReducer,
 });

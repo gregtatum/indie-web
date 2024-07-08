@@ -8,6 +8,7 @@ import { FileSystem, FileSystemError } from 'src/logic/file-system';
 
 import { Menu, menuPortal } from './Menus';
 import './AddFileMenu.css';
+import { getLanguageByCode } from '../logic/languages';
 
 const order =
   process.env.SITE === 'floppydisk'
@@ -124,7 +125,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
         break;
       }
       case 'language-coach': {
-        createLanguageCoach(path, fileSystem)
+        createLanguageCoach(path, fileSystem, fileDetails.code)
           .then((normalizedPath) => {
             void dispatch(A.listFiles(props.path));
             navigate(pathJoin(fsName, 'folder', normalizedPath));
@@ -249,6 +250,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
       setFileDetails({
         type: 'language-coach',
         extension: 'coach',
+        code,
         isSubmitting: false,
       });
     },
@@ -367,6 +369,7 @@ function getSubmitButtonValue(fileDetails: FileDetails): string {
 async function createLanguageCoach(
   path: string,
   fileSystem: FileSystem,
+  code: string,
 ): Promise<string> {
   if (!path.endsWith('.coach')) {
     throw new Error('The Language Coach must end in .coach');
@@ -376,6 +379,7 @@ async function createLanguageCoach(
   const data: T.LanguageDataV1 = {
     description: 'The data store for the language coach',
     lastSaved: Date.now(),
+    language: getLanguageByCode(code),
     version: 1,
     learnedStems: [],
     ignoredStems: [],

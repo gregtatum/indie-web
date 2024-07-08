@@ -182,13 +182,6 @@ export function ignoreStem(stem: string) {
   };
 }
 
-export function changeLanguage(code: string) {
-  return {
-    type: 'change-language' as const,
-    code,
-  };
-}
-
 export function updateLearnedWords(words: Set<string>) {
   return {
     type: 'update-learned-words' as const,

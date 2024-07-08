@@ -4,12 +4,12 @@ import { pathJoin } from 'src/utils';
 
 export function LanguageCoach() {
   const path = Hooks.useSelector($.getLanguageCoachPath);
-  const languageDataOrNull = Hooks.useSelector($.getLanguageDataOrNull);
+  const dataOrNull = Hooks.useSelector($.getLanguageCoachDataOrNull);
   const fileSystem = Hooks.useSelector($.getCurrentFS);
   const dispatch = Hooks.useDispatch();
 
   React.useEffect(() => {
-    if (!languageDataOrNull) {
+    if (!dataOrNull) {
       fileSystem.loadText(pathJoin(path, 'words.json')).then(
         (text) => {
           try {
@@ -30,7 +30,7 @@ export function LanguageCoach() {
         },
       );
     }
-  }, [languageDataOrNull]);
+  }, [dataOrNull]);
 
   return <div>Language Coach {path}</div>;
 }

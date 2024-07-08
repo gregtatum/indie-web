@@ -3,8 +3,8 @@
  */
 export * from './app';
 
-import type { State } from 'src/store/reducers/index.ts';
-export type { State } from 'src/store/reducers/index.ts';
+import type { State } from 'src/store/reducers/index';
+export type { State } from 'src/store/reducers/index';
 import type * as Thunks from 'src/store/actions/thunks';
 import type * as PlainActions from 'src/store/actions/plain';
 
