@@ -21,7 +21,7 @@ export function HomePage() {
         </p>
         <div className="lcHomepageButtons">
           <Router.Link
-            to={`${pathname}?view=most-used`}
+            to={`${pathname}?section=most-used`}
             className="lcHomepageButton"
           >
             Get Started

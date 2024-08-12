@@ -168,13 +168,13 @@ function selectedSentences(
   }
 }
 
-function view(
-  state: T.LanguageCoachView = 'home',
+function section(
+  state: T.LanguageCoachSection = 'home',
   action: T.Action,
-): T.LanguageCoachView {
+): T.LanguageCoachSection {
   switch (action.type) {
-    case 'set-language-coach-view':
-      return action.view;
+    case 'set-language-coach-section':
+      return action.section;
     default:
       return state;
   }
@@ -219,5 +219,5 @@ function dataOrNullReducer(
 export const languageCoachReducer = combineReducers({
   path,
   data: dataOrNullReducer,
-  view,
+  section,
 });

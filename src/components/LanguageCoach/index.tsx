@@ -68,15 +68,15 @@ export function LanguageCoach() {
     <DataSync key={path} data={dataOrNull}>
       <div className="language-coach">
         <LCHeader />
-        <Views />
+        <Sections />
       </div>
     </DataSync>
   );
 }
 
-function Views() {
-  const view = Hooks.useSelector($.getLanguageCoachView);
-  switch (view) {
+function Sections() {
+  const section = Hooks.useSelector($.getLanguageCoachSection);
+  switch (section) {
     case 'home':
       return <HomePage />;
     case 'most-used':
@@ -84,7 +84,7 @@ function Views() {
     case 'learned':
       return <Learned />;
     default:
-      throw new UnhandledCaseError(view, 'Unhandled view');
+      throw new UnhandledCaseError(section, 'Unhandled view');
   }
 }
 

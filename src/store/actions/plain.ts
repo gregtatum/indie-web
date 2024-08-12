@@ -72,8 +72,8 @@ export function viewLanguageCoach(path: string) {
   return { type: 'view-language-coach' as const, path };
 }
 
-export function setLanguageCoachView(view: T.LanguageCoachView) {
-  return { type: 'set-language-coach-view' as const, view };
+export function setLanguageCoachSection(section: T.LanguageCoachSection) {
+  return { type: 'set-language-coach-section' as const, section };
 }
 
 export function viewFile(path: string) {

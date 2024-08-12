@@ -15,8 +15,8 @@ export function getLanguageCoachPath(state: State) {
   return getLanguageCoach(state).path;
 }
 
-export function getLanguageCoachView(state: State) {
-  return getLanguageCoach(state).view;
+export function getLanguageCoachSection(state: State) {
+  return getLanguageCoach(state).section;
 }
 
 export const getLanguageCoachData = dangerousSelector(

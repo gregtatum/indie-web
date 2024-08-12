@@ -33,9 +33,9 @@ function ListFilesRouter() {
   return null;
 }
 
-function toValidLanguageCoachView(value: unknown): T.LanguageCoachView {
+function toValidLanguageCoachSection(value: unknown): T.LanguageCoachSection {
   if (typeof value === 'string') {
-    const view = value as T.LanguageCoachView;
+    const view = value as T.LanguageCoachSection;
     switch (view) {
       case 'home':
         return view;
@@ -53,7 +53,7 @@ function toValidLanguageCoachView(value: unknown): T.LanguageCoachView {
 function LanguageCoachRouter() {
   const params = Router.useParams();
   const [urlParams] = Router.useSearchParams();
-  const view = toValidLanguageCoachView(urlParams.get('view'));
+  const section = toValidLanguageCoachSection(urlParams.get('section'));
   const path = '/' + (params['*'] ?? '');
   const dispatch = Hooks.useDispatch();
 
@@ -62,8 +62,8 @@ function LanguageCoachRouter() {
   }, [path]);
 
   React.useEffect(() => {
-    dispatch(A.setLanguageCoachView(view));
-  }, [view]);
+    dispatch(A.setLanguageCoachSection(section));
+  }, [section]);
 
   return null;
 }

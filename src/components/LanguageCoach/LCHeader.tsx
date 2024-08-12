@@ -5,11 +5,11 @@ import { $$, T } from 'src';
 import './LCHeader.css';
 
 export function LCHeader() {
-  const view = $$.getLanguageCoachView();
+  const view = $$.getLanguageCoachSection();
   const learnedWords = $$.getLearnedStems();
   const { pathname } = window.location;
 
-  function getActiveClass(v: T.LanguageCoachView): string {
+  function getActiveClass(v: T.LanguageCoachSection): string {
     if (v === view) {
       return ' active';
     }
@@ -26,13 +26,13 @@ export function LCHeader() {
           Language Coach
         </Router.Link>
         <Router.Link
-          to={`${pathname}?view=most-used`}
+          to={`${pathname}?section=most-used`}
           className={'lcHeaderLink' + getActiveClass('most-used')}
         >
           Most Used Words
         </Router.Link>
         <Router.Link
-          to={`${pathname}?view=learned`}
+          to={`${pathname}?section=learned`}
           className={'lcHeaderLink' + getActiveClass('learned')}
         >
           Learned Words{' '}
