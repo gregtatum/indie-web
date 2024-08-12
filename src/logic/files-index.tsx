@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, $, Hooks, T } from 'src';
+import { A, $, $$, Hooks, T } from 'src';
 import {
   asTypedRecord,
   ensureExists,
@@ -217,7 +217,7 @@ export function tryUpgradeIndexJSON(json: any): T.IndexJSON | null {
  */
 export function useFilesIndex(): void {
   const dispatch = Hooks.useDispatch();
-  const fileSystem = Hooks.useSelector($.getCurrentFSOrNull);
+  const fileSystem = $$.getCurrentFSOrNull();
   React.useEffect(() => {
     if (fileSystem) {
       // TODO - This can still respond with a 401 not authorized.

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { $, T, A } from 'src';
+import { $$, T, A } from 'src';
 import { ensureExists, throttle1 } from 'src/utils';
 import * as Hooks from 'src/hooks';
 
@@ -32,8 +32,8 @@ export function TextArea(props: {
   language: any;
   editorExtensions?: EditorStateConfig['extensions'];
 }) {
-  const isDragging = Hooks.useSelector($.getIsDraggingSplitter);
-  const modifiedText = Hooks.useSelector($.getModifiedText);
+  const isDragging = $$.getIsDraggingSplitter();
+  const modifiedText = $$.getModifiedText();
   const textGeneration = React.useRef(0);
   const codeMirrorRef = React.useRef<null | HTMLDivElement>(null);
   const editorStateConfig = React.useRef<null | EditorStateConfig>(null);

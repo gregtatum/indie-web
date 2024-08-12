@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, $, Hooks } from 'src';
+import { A, $, $$, Hooks } from 'src';
 
 import './ViewPDF.css';
 import { ensureExists, UnhandledCaseError } from 'src/utils';
@@ -14,10 +14,10 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 export function ViewPDF() {
   useRetainScroll();
   const dispatch = Hooks.useDispatch();
-  const path = Hooks.useSelector($.getPath);
-  const blob = Hooks.useSelector($.getDownloadBlobCache).get(path);
-  const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
-  const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
+  const path = $$.getPath();
+  const blob = $$.getDownloadBlobCache().get(path);
+  const error = $$.getDownloadFileErrors().get(path);
+  const songTitle = $$.getActiveFileSongTitleOrNull();
 
   React.useEffect(() => {
     if (songTitle) {

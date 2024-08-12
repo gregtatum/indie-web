@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, T, $, Hooks } from 'src';
+import { A, T, $$, Hooks } from 'src';
 import { debounce, ensureExists, getEnv, imageExtensions } from 'src/utils';
 import { useRetainScroll } from '../hooks';
 import { isChordProExtension } from '../utils';
@@ -12,13 +12,13 @@ import { AddFileMenu } from './AddFileMenu';
 
 export function ListFiles() {
   useRetainScroll();
-  const path = Hooks.useSelector($.getPath);
-  const activeFileDisplayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const path = $$.getPath();
+  const activeFileDisplayPath = $$.getActiveFileDisplayPath();
   const dispatch = Hooks.useDispatch();
-  const files = Hooks.useSelector($.getSearchFilteredFiles);
-  const error = Hooks.useSelector($.getListFilesErrors).get(path);
-  const parsedSearch = Hooks.useSelector($.getParsedSearch);
-  const fileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
+  const files = $$.getSearchFilteredFiles();
+  const error = $$.getListFilesErrors().get(path);
+  const parsedSearch = $$.getParsedSearch();
+  const fileSystemName = $$.getCurrentFileSystemName();
 
   React.useEffect(() => {
     if (path === '/') {
@@ -113,8 +113,8 @@ export function ListFiles() {
 }
 
 function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
-  const renameFile = Hooks.useSelector($.getRenameFile);
-  const fsName = Hooks.useSelector($.getCurrentFileSystemName);
+  const renameFile = $$.getRenameFile();
+  const fsName = $$.getCurrentFileSystemName();
 
   const { name, path, type } = props.dropboxFile;
   const isFolder = type === 'folder';
@@ -380,7 +380,7 @@ function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
 
 function Search() {
   const dispatch = Hooks.useDispatch();
-  const searchString = Hooks.useSelector($.getSearchString);
+  const searchString = $$.getSearchString();
   const wait = 100;
 
   const onChange = React.useMemo(() => {

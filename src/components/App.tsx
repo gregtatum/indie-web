@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, $, T } from 'src';
+import { A, $$, T } from 'src';
 import * as Hooks from 'src/hooks';
 
 import { LinkDropbox } from './LinkDropbox';
@@ -21,7 +21,7 @@ import { toFileSystemName } from 'src/logic/app-logic';
 import { LanguageCoach } from './LanguageCoach';
 
 function ListFilesRouter() {
-  const currentFileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
+  const currentFileSystemName = $$.getCurrentFileSystemName();
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
   const { fs } = params;
@@ -185,8 +185,8 @@ export function MainView(props: { children: any }) {
 }
 
 function Views() {
-  const view = Hooks.useSelector($.getView);
-  const path = Hooks.useSelector($.getPath);
+  const view = $$.getView();
+  const path = $$.getPath();
   const key = (view ?? '') + path;
   switch (view) {
     case null:

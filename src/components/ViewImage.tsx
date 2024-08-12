@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, $, Hooks } from 'src';
+import { A, $$, Hooks } from 'src';
 
 import './ViewImage.css';
 import { useRetainScroll } from '../hooks';
@@ -8,10 +8,10 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 export function ViewImage() {
   useRetainScroll();
   const dispatch = Hooks.useDispatch();
-  const path = Hooks.useSelector($.getPath);
-  const blob = Hooks.useSelector($.getDownloadBlobCache).get(path);
-  const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
-  const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
+  const path = $$.getPath();
+  const blob = $$.getDownloadBlobCache().get(path);
+  const error = $$.getDownloadFileErrors().get(path);
+  const songTitle = $$.getActiveFileSongTitleOrNull();
 
   React.useEffect(() => {
     if (songTitle) {
@@ -53,7 +53,7 @@ export function ViewImage() {
 }
 
 function LoadImage() {
-  const image = Hooks.useSelector($.getActiveImageOrNull);
+  const image = $$.getActiveImageOrNull();
   const swipeDiv = React.useRef(null);
   useNextPrevSwipe(swipeDiv);
 

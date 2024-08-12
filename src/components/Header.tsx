@@ -1,14 +1,14 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { $, A, Hooks } from 'src';
+import { $$, A, Hooks } from 'src';
 import { assertType, isAppSettingScrollTop } from 'src/utils';
 import { getBrowserName, getFileSystemDisplayName } from 'src/logic/app-logic';
 import './Header.css';
 import { Menu, MenuButton, menuPortal } from './Menus';
 
 export function Header() {
-  const view = Hooks.useSelector($.getView);
-  const path = Hooks.useSelector($.getActiveFileDisplayPath);
+  const view = $$.getView();
+  const path = $$.getActiveFileDisplayPath();
   const [shouldHideHeader, setShouldHideHeader] = React.useState(false);
   const key = (view ?? '') + path;
 
@@ -166,7 +166,7 @@ function fullScreenEventHandler(event: KeyboardEvent) {
 }
 
 function RequestFullScreen() {
-  const canGoFullScreen = Hooks.useSelector($.canGoFullScreen);
+  const canGoFullScreen = $$.canGoFullScreen();
   React.useEffect(() => {
     if (canGoFullScreen) {
       document.addEventListener('keyup', fullScreenEventHandler);
@@ -190,7 +190,7 @@ function RequestFullScreen() {
 }
 
 function SettingsButton() {
-  const view = Hooks.useSelector($.getView);
+  const view = $$.getView();
   if (view === 'settings') {
     return null;
   }
@@ -202,7 +202,7 @@ function SettingsButton() {
 }
 
 function FileSystemSelection() {
-  const name = Hooks.useSelector($.getCurrentFileSystemName);
+  const name = $$.getCurrentFileSystemName();
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
@@ -250,11 +250,11 @@ function FileSystemSelection() {
 }
 
 function SaveFileButton() {
-  const text = Hooks.useSelector($.getActiveFileTextOrNull);
+  const text = $$.getActiveFileTextOrNull();
   const dispatch = Hooks.useDispatch();
-  const path = Hooks.useSelector($.getPath);
-  const request = Hooks.useSelector($.getDownloadFileCache).get(path);
-  const isModified = Hooks.useSelector($.getIsActiveFileModified);
+  const path = $$.getPath();
+  const request = $$.getDownloadFileCache().get(path);
+  const isModified = $$.getIsActiveFileModified();
 
   if (!isModified || text === null || !request) {
     return null;
@@ -283,8 +283,8 @@ function Path({
   title?: any;
   hideSiteName?: boolean;
 }) {
-  const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
-  const fsName = Hooks.useSelector($.getCurrentFileSystemName);
+  const songTitle = $$.getActiveFileSongTitleOrNull();
+  const fsName = $$.getCurrentFileSystemName();
   const breadcrumbs = [];
   let pathGrow = '';
   const parts = path.split('/');

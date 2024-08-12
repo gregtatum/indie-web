@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, T, $, Hooks } from 'src';
+import { A, T, $$, Hooks } from 'src';
 import * as Router from 'react-router-dom';
 
 import './LinkDropbox.css';
@@ -20,12 +20,10 @@ const dropboxClientId = getEnv('DROPBOX_CLIENT_ID');
 type AuthState = 'no-auth' | 'await-auth' | 'auth-failed' | 'refreshing';
 
 export function LinkDropbox(props: { children: any }) {
-  const isDropboxInitiallyExpired = Hooks.useSelector(
-    $.getIsDropboxInitiallyExpired,
-  );
-  const oauth = Hooks.useSelector($.getDropboxOauth);
-  const fileSystemName = Hooks.useSelector($.getCurrentFileSystemName);
-  const view = Hooks.useSelector($.getView);
+  const isDropboxInitiallyExpired = $$.getIsDropboxInitiallyExpired();
+  const oauth = $$.getDropboxOauth();
+  const fileSystemName = $$.getCurrentFileSystemName();
+  const view = $$.getView();
 
   const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
 
@@ -346,7 +344,7 @@ export function LinkDropbox(props: { children: any }) {
 
 export function UnlinkDropbox() {
   const dispatch = Hooks.useDispatch();
-  const dropbox = Hooks.useSelector($.getDropboxOrNull);
+  const dropbox = $$.getDropboxOrNull();
   return (
     <>
       <h2>Your Dropbox Account</h2>
@@ -385,10 +383,8 @@ export function UnlinkDropbox() {
  */
 export function DropboxLogin(props: { children: any }) {
   const isLogin = window.location.pathname === '/login';
-  const isDropboxInitiallyExpired = Hooks.useSelector(
-    $.getIsDropboxInitiallyExpired,
-  );
-  const oauth = Hooks.useSelector($.getDropboxOauth);
+  const isDropboxInitiallyExpired = $$.getIsDropboxInitiallyExpired();
+  const oauth = $$.getDropboxOauth();
   const oauthRef = React.useRef<T.DropboxOauth | null>(null);
   oauthRef.current = oauth;
   let defaultAuthState: AuthState = 'no-auth';
@@ -588,7 +584,7 @@ export function DropboxLogin(props: { children: any }) {
   }, [isLogin]);
 
   const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
-  const view = Hooks.useSelector($.getView);
+  const view = $$.getView();
 
   if (isDropboxInitiallyExpired) {
     return (

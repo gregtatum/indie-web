@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, T, $, Hooks } from 'src';
+import { A, T, $, $$ } from 'src';
 import { ensureExists, pathJoin } from 'src/utils';
 import { useStore } from '../hooks';
 import { UnhandledCaseError } from '../utils';
@@ -48,8 +48,8 @@ export function AddFileMenu(props: AddFileMenuProps) {
   const [languageCode, setLanguageCode] = React.useState<string>('es');
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
-  const fileSystem = Hooks.useSelector($.getCurrentFS);
-  const fsName = Hooks.useSelector($.getCurrentFileSystemName);
+  const fileSystem = $$.getCurrentFS();
+  const fsName = $$.getCurrentFileSystemName();
   const { dispatch, getState } = useStore();
   const input = React.useRef<HTMLInputElement | null>(null);
   const navigate = Router.useNavigate();

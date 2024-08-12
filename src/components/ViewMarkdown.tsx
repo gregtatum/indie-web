@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, T, $, Hooks } from 'src';
+import { A, T, $, $$, Hooks } from 'src';
 import { markdown } from '@codemirror/lang-markdown';
 import './ViewMarkdown.css';
 import { useRetainScroll } from '../hooks';
@@ -14,11 +14,11 @@ import TurndownService from 'turndown';
 export function ViewMarkdown() {
   useRetainScroll();
   const dispatch = Hooks.useDispatch();
-  const path = Hooks.useSelector($.getPath);
-  const textFile = Hooks.useSelector($.getDownloadFileCache).get(path);
-  const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
-  const hideEditor = Hooks.useSelector($.getHideEditor);
-  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const path = $$.getPath();
+  const textFile = $$.getDownloadFileCache().get(path);
+  const error = $$.getDownloadFileErrors().get(path);
+  const hideEditor = $$.getHideEditor();
+  const displayPath = $$.getActiveFileDisplayPath();
 
   React.useEffect(() => {
     const parts = path.split('/');
@@ -172,12 +172,12 @@ interface RenderedMarkdownProps {
 }
 
 function RenderedMarkdown({ view }: RenderedMarkdownProps) {
-  const fileSystem = Hooks.useSelector($.getCurrentFS);
-  const hideEditor = Hooks.useSelector($.getHideEditor);
-  const htmlText = Hooks.useSelector($.getActiveFileMarkdown);
+  const fileSystem = $$.getCurrentFS();
+  const hideEditor = $$.getHideEditor();
+  const htmlText = $$.getActiveFileMarkdown();
   const containerRef = React.useRef(null);
   const markdownDiv = React.useRef<HTMLDivElement | null>(null);
-  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const displayPath = $$.getActiveFileDisplayPath();
   const dispatch = Hooks.useDispatch();
 
   useNextPrevSwipe(containerRef);

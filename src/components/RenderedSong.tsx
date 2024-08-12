@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, $, T, Hooks } from 'src';
+import { A, $$, T, Hooks } from 'src';
 import {
   ensureExists,
   getEnv,
@@ -35,16 +35,14 @@ function getSpotifyLink(
 }
 
 export function RenderedSong() {
-  const displayPath = Hooks.useSelector($.getActiveFileDisplayPath);
+  const displayPath = $$.getActiveFileDisplayPath();
   const folderPath = getPathFolder(displayPath);
   const fileNameNoExt = getPathFileNameNoExt(displayPath);
 
   const renderedSongRef = React.useRef(null);
-  const path = Hooks.useSelector($.getPath);
-  const hideEditor = Hooks.useSelector($.getHideEditor);
-  const { directives, lines } = Hooks.useSelector(
-    $.getActiveFileParsedTransformed,
-  );
+  const path = $$.getPath();
+  const hideEditor = $$.getHideEditor();
+  const { directives, lines } = $$.getActiveFileParsedTransformed();
   const dispatch = Hooks.useDispatch();
   uploadFileHook(renderedSongRef, path, folderPath);
 
@@ -175,10 +173,10 @@ export function RenderedSong() {
 }
 
 function RenderedSongKey() {
-  const path = Hooks.useSelector($.getPath);
-  const songKey = Hooks.useSelector($.getActiveFileSongKey);
-  const songKeyRaw = Hooks.useSelector($.getActiveFileSongKeyRaw);
-  const songKeySettings = Hooks.useSelector($.getActiveSongKeySettings);
+  const path = $$.getPath();
+  const songKey = $$.getActiveFileSongKey();
+  const songKeyRaw = $$.getActiveFileSongKeyRaw();
+  const songKeySettings = $$.getActiveSongKeySettings();
   const dispatch = Hooks.useDispatch();
 
   if (!songKey) {
@@ -255,7 +253,7 @@ interface SongKeyMenu {
 
 function SongKeyMenu({ songKey }: SongKeyMenu) {
   const dispatch = Hooks.useDispatch();
-  const path = Hooks.useSelector($.getPath);
+  const path = $$.getPath();
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
   const [openGeneration, setOpenGeneration] = React.useState(0);

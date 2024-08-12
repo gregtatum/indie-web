@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { $, Hooks } from 'src';
+import { $$ } from 'src';
 import { downloadImage } from 'src/logic/download-image';
 
 interface Props {
@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function MediaImage({ folderPath, line: { src } }: Props) {
-  const fileSystem = Hooks.useSelector($.getCurrentFS);
+  const fileSystem = $$.getCurrentFS();
   const [objectUrl, setObjectUrl] = React.useState<string>('');
   const [is404, setIs404] = React.useState<boolean>(false);
   const generationRef = React.useRef(0);

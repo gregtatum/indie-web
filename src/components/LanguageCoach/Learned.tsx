@@ -1,10 +1,10 @@
 import * as React from 'react';
-import { Hooks, $, A } from 'src';
+import { Hooks, $, $$, A } from 'src';
 import './Learned.css';
 
 export function Learned() {
-  const stems = Hooks.useSelector($.getSortedLearnedStems);
-  const languageCode = Hooks.useSelector($.getLanguageCode);
+  const stems = $$.getSortedLearnedStems();
+  const languageCode = $$.getLanguageCode();
   const store = Hooks.useStore();
   return (
     <div className="learned AppScroll" key={languageCode}>

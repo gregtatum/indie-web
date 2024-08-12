@@ -1,11 +1,11 @@
 import * as React from 'react';
-import { A, $, Hooks } from 'src';
+import { A, $$, Hooks } from 'src';
 
 import './Messages.css';
 
 export function Messages() {
   const dispatch = Hooks.useDispatch();
-  const messages = Hooks.useSelector($.getMessages);
+  const messages = $$.getMessages();
 
   React.useEffect(() => {
     function onKeydown(event: KeyboardEvent) {

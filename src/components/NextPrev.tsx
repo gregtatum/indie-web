@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { $, Hooks } from 'src';
+import { $$ } from 'src';
 
 import './NextPrev.css';
 
@@ -13,7 +13,7 @@ export function useNextPrevSwipe(
   const prevRemoveHandlers = React.useRef<null | (() => void)>(null);
   const pxStartThreshold = 30;
   const pxSwipeThreshold = window.innerWidth / 3;
-  const { prevSong, nextSong } = Hooks.useSelector($.getNextPrevSong);
+  const { prevSong, nextSong } = $$.getNextPrevSong();
   const navigate = Router.useNavigate();
 
   React.useEffect(() => {
@@ -136,7 +136,7 @@ export function useNextPrevSwipe(
 }
 
 export function NextPrevLinks() {
-  const { nextSong, prevSong } = Hooks.useSelector($.getNextPrevSong);
+  const { nextSong, prevSong } = $$.getNextPrevSong();
   const navigate = Router.useNavigate();
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {

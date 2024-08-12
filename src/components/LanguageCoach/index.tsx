@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, T, $, Hooks } from 'src';
+import { A, T, $$, Hooks } from 'src';
 import { pathJoin, UnhandledCaseError } from 'src/utils';
 import { Learned } from './Learned';
 import { HomePage } from './HomePage';
@@ -8,9 +8,9 @@ import { LCHeader } from './LCHeader';
 import './index.css';
 
 export function LanguageCoach() {
-  const path = Hooks.useSelector($.getLanguageCoachPath);
-  const dataOrNull = Hooks.useSelector($.getLanguageCoachDataOrNull);
-  const fileSystem = Hooks.useSelector($.getCurrentFS);
+  const path = $$.getLanguageCoachPath();
+  const dataOrNull = $$.getLanguageCoachDataOrNull();
+  const fileSystem = $$.getCurrentFS();
   const dispatch = Hooks.useDispatch();
 
   React.useEffect(() => {
@@ -75,7 +75,7 @@ export function LanguageCoach() {
 }
 
 function Sections() {
-  const section = Hooks.useSelector($.getLanguageCoachSection);
+  const section = $$.getLanguageCoachSection();
   switch (section) {
     case 'home':
       return <HomePage />;
@@ -107,11 +107,8 @@ function DataSync(props: {
   const unloadMessageGeneration = React.useRef<null | number>(null);
   const firstLoad = React.useRef<boolean>(true);
 
-  const fileSystem = Hooks.useSelector($.getCurrentFS);
-  const fullPath = pathJoin(
-    Hooks.useSelector($.getLanguageCoachPath),
-    'words.json',
-  );
+  const fileSystem = $$.getCurrentFS();
+  const fullPath = pathJoin($$.getLanguageCoachPath(), 'words.json');
 
   const { language, learnedStems, ignoredStems } = data;
   const invalidations = [

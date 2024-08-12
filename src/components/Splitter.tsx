@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, $, Hooks } from 'src';
+import { A, $$, Hooks } from 'src';
 import './Splitter.css';
 
 interface SplitterProps {
@@ -12,7 +12,7 @@ interface SplitterProps {
 export function Splitter(props: SplitterProps) {
   const { start, end, className, persistLocalStorage } = props;
   const container = React.useRef<HTMLDivElement>(null);
-  const isDragging = Hooks.useSelector($.getIsDraggingSplitter);
+  const isDragging = $$.getIsDraggingSplitter();
   const dispatch = Hooks.useDispatch();
   const touchId = React.useRef<null | number>(null);
 

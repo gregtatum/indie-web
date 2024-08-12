@@ -2,7 +2,7 @@ import * as React from 'react';
 import './MostUsed.css';
 import { Stem } from 'src/@types';
 import { Hunspell, loadModule } from 'hunspell-asm';
-import { Hooks, $, A } from 'src';
+import { Hooks, $$, A } from 'src';
 import { isElementInViewport } from 'src/utils';
 
 function segmentSentence(text: string, locale = 'es'): string[] {
@@ -94,10 +94,10 @@ export function MostUsed() {
   const stemsContainer = React.useRef<HTMLDivElement | null>(null);
 
   const dispatch = Hooks.useDispatch();
-  const stems = Hooks.useSelector($.getUnknownStems);
-  const selectedStem = Hooks.useSelector($.getSelectedStemIndex);
-  const languageCode = Hooks.useSelector($.getLanguageCode);
-  const selectedSentences = Hooks.useSelector($.getSelectedSentences);
+  const stems = $$.getUnknownStems();
+  const selectedStem = $$.getSelectedStemIndex();
+  const languageCode = $$.getLanguageCode();
+  const selectedSentences = $$.getSelectedSentences();
 
   const [text, setText] = React.useState<string>('');
   const [hunspell, setHunspell] = React.useState<Hunspell | undefined>();

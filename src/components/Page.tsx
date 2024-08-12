@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { getEnv } from 'src/utils';
 import { UnlinkDropbox } from './LinkDropbox';
-import { Hooks, A, $ } from 'src';
+import { Hooks, A, $$ } from 'src';
 import { getFileSystemDisplayName } from 'src/logic/app-logic';
 import './Page.css';
 
@@ -24,7 +24,7 @@ export function Settings() {
 
 function DeleteBrowserFiles() {
   const dispatch = Hooks.useDispatch();
-  const idbfs = Hooks.useSelector($.getIDBFSOrNull);
+  const idbfs = $$.getIDBFSOrNull();
   const [fileCount, setFileCount] = React.useState(0);
 
   React.useEffect(() => {
