@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { A, $, Hooks } from 'src';
+import { A, $$, Hooks } from 'src';
 import { RenderedSong } from './RenderedSong';
 import { TextArea } from './TextArea';
 import { useRetainScroll } from '../hooks';
@@ -11,11 +11,11 @@ import { ChordPro } from 'codemirror-lang-chordpro';
 export function ViewChopro() {
   useRetainScroll();
   const dispatch = Hooks.useDispatch();
-  const path = Hooks.useSelector($.getPath);
-  const textFile = Hooks.useSelector($.getDownloadFileCache).get(path);
-  const error = Hooks.useSelector($.getDownloadFileErrors).get(path);
-  const songTitle = Hooks.useSelector($.getActiveFileSongTitleOrNull);
-  const hideEditor = Hooks.useSelector($.getHideEditor);
+  const path = $$.getPath();
+  const textFile = $$.getDownloadFileCache().get(path);
+  const error = $$.getDownloadFileErrors().get(path);
+  const songTitle = $$.getActiveFileSongTitleOrNull();
+  const hideEditor = $$.getHideEditor();
   const swipeDiv = React.useRef(null);
   useNextPrevSwipe(swipeDiv);
 
