@@ -1,7 +1,7 @@
 import * as React from 'react';
 import './MostUsed.css';
 import { Stem } from 'src/@types';
-import { Hunspell, loadModule } from 'hunspell-asm';
+import { type Hunspell, loadModule } from 'hunspell-asm';
 import { Hooks, $$, A } from 'src';
 import { isElementInViewport } from 'src/utils';
 

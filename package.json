@@ -40,8 +40,10 @@
     "moduleDirectories": [
       "node_modules"
     ],
+    "transformIgnorePatterns": ["/node_modules/(?!${esModules})"],
     "moduleNameMapper": {
-      "\\.(css|less)$": "<rootDir>/src/test/__mocks__/style.ts"
+      "\\.(css|less)$": "<rootDir>/src/test/__mocks__/style.ts",
+      "^nanoid(/(.*)|$)": "nanoid$1"
     },
     "roots": [
       "src/test"
