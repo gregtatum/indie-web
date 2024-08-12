@@ -287,3 +287,5 @@ export type Language = {
   long: string;
   short: string;
 };
+
+export type LanguageCoachView = 'home' | 'most-used' | 'learned';

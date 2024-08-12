@@ -1,6 +1,5 @@
 import * as T from 'src/@types';
 import { combineReducers } from 'redux';
-import { ensureExists } from 'src/utils';
 
 function path(state = '', action: T.Action): string {
   switch (action.type) {
@@ -105,13 +104,19 @@ function learnedStems(
 /**
  * The language that is being studied.
  */
-function language(state: T.Language | undefined, action: T.Action): T.Language {
+function language(state: T.Language, action: T.Action): T.Language {
   switch (action.type) {
-    case 'load-language-data': {
+    case 'load-language-data':
       return action.languageData.language;
-    }
     default:
-      return ensureExists(state, 'The language should be defined');
+      if (action.type.startsWith('@@redux')) {
+        // This is an internal action, ignore it.
+        return state ?? null;
+      }
+      if (!state) {
+        throw new Error('Expected there to be an initiated language');
+      }
+      return state;
   }
 }
 
@@ -163,6 +168,18 @@ function selectedSentences(
   }
 }
 
+function view(
+  state: T.LanguageCoachView = 'home',
+  action: T.Action,
+): T.LanguageCoachView {
+  switch (action.type) {
+    case 'set-language-coach-view':
+      return action.view;
+    default:
+      return state;
+  }
+}
+
 const dataReducer = combineReducers({
   ignoredStems,
   language,
@@ -173,15 +190,15 @@ const dataReducer = combineReducers({
   undoList,
 });
 
-type DataState = ReturnType<typeof dataReducer>;
+export type LanguagCoachDataState = ReturnType<typeof dataReducer>;
 
 /**
  * Wrap the data reducer, to only run it if the data is actually available.
  */
 function dataOrNullReducer(
-  state: DataState | null = null,
+  state: LanguagCoachDataState | null = null,
   action: T.Action,
-): DataState | null {
+): LanguagCoachDataState | null {
   if (action.type === 'load-language-data') {
     // Initiate the reducer.
     return dataReducer(undefined, action);
@@ -202,4 +219,5 @@ function dataOrNullReducer(
 export const languageCoachReducer = combineReducers({
   path,
   data: dataOrNullReducer,
+  view,
 });

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, $ } from 'src';
+import { A, $, T } from 'src';
 import * as Hooks from 'src/hooks';
 
 import { LinkDropbox } from './LinkDropbox';
@@ -12,7 +12,7 @@ import { ViewImage } from './ViewImage';
 import { ViewMarkdown } from './ViewMarkdown';
 
 import { Messages } from './Messages';
-import { UnhandledCaseError } from 'src/utils';
+import { ensureNever, UnhandledCaseError } from 'src/utils';
 import { Settings, Privacy } from './Page';
 import { useFilesIndex } from 'src/logic/files-index';
 
@@ -33,13 +33,38 @@ function ListFilesRouter() {
   return null;
 }
 
+function toValidLanguageCoachView(value: unknown): T.LanguageCoachView {
+  if (typeof value === 'string') {
+    const view = value as T.LanguageCoachView;
+    switch (view) {
+      case 'home':
+        return view;
+      case 'most-used':
+        return view;
+      case 'learned':
+        return view;
+      default:
+        ensureNever(view);
+    }
+  }
+  return 'home';
+}
+
 function LanguageCoachRouter() {
   const params = Router.useParams();
+  const [urlParams] = Router.useSearchParams();
+  const view = toValidLanguageCoachView(urlParams.get('view'));
   const path = '/' + (params['*'] ?? '');
   const dispatch = Hooks.useDispatch();
+
   React.useEffect(() => {
     dispatch(A.viewLanguageCoach(path));
   }, [path]);
+
+  React.useEffect(() => {
+    dispatch(A.setLanguageCoachView(view));
+  }, [view]);
+
   return null;
 }
 

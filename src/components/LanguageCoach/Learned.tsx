@@ -40,12 +40,32 @@ export function Learned() {
         className="learnedList"
         defaultValue={stems.join('\n')}
         lang={languageCode}
+        spellCheck="false"
         onBlur={(event) => {
           const words = new Set<string>();
+          const previousWords = $.getLearnedStems(store.getState());
+
           for (const word of event.target.value.split('\n')) {
             words.add(word.trim());
           }
           words.delete('');
+
+          if (previousWords.size === words.size) {
+            console.log(`!!! Sets are the same size`);
+            let isEqual = true;
+            for (const word of words) {
+              if (!previousWords.has(word)) {
+                isEqual = false;
+                break;
+              }
+            }
+            if (isEqual) {
+              console.log(`!!! Sets are equal, not saving`);
+              // No need to to update, these sets are equal.
+              return;
+            }
+          }
+
           store.dispatch(A.updateLearnedWords(words));
         }}
       />

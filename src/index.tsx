@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Provider } from 'react-redux';
+import { Provider, useSelector } from 'react-redux';
 import { createStore } from './store/create-store';
 import * as T from 'src/@types';
 import { App } from 'src/components/App';
@@ -17,6 +17,27 @@ export * as A from 'src/store/actions';
 export * as $ from 'src/store/selectors/index';
 export * as T from 'src/@types';
 export * as Hooks from 'src/hooks';
+
+type HookedSelectors = {
+  [FnName in keyof typeof $]: () => ReturnType<(typeof $)[FnName]>;
+};
+
+/**
+ * Exports all of the selectors as hooks that can be used directly inside of
+ * a React component.
+ *
+ * e.g. instead of:
+ *
+ * const view = Hooks.useSelector($.getView);
+ *
+ * Write:
+ *
+ * const view = $$.getView();
+ */
+export const $$: HookedSelectors = {} as any;
+for (const [name, fn] of Object.entries($)) {
+  ($$ as any)[name] = () => useSelector(fn as any);
+}
 
 if (process.env.NODE_ENV !== 'test') {
   document.addEventListener('DOMContentLoaded', () => {

@@ -102,6 +102,7 @@
     "workbox-webpack-plugin": "^7.0.0"
   },
   "dependencies": {
+    "hunspell-asm": "github:gregtatum/hunspell-asm#72494a846ea709815b0bebf037f59853912dd4a3",
     "@codemirror/commands": "^6.3.2",
     "@codemirror/lang-markdown": "^6.2.3",
     "@codemirror/language": "^6.9.3",

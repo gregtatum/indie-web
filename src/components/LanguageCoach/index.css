@@ -1,0 +1,10 @@
+.language-coach {
+  --accent-color: #6a72fb;
+  /* For use with transparency. */
+  --accent-color-rgb: 84, 92, 251;
+  --lc-header-height: 56px;
+
+  * {
+    scroll-margin-top: var(--header-height);
+  }
+}

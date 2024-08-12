@@ -153,6 +153,10 @@ export const getDropboxOrNull = createSelector(
   },
 );
 
+export const getDropboxFSOrNull = createSelector(getDropboxOrNull, (dropbox) =>
+  dropbox ? new DropboxFS(dropbox) : null,
+);
+
 export const getIsDropboxInitiallyExpired = createSelector(
   getDropboxOauth,
   (oauth) => {
@@ -165,15 +169,12 @@ export const getIsDropboxInitiallyExpired = createSelector(
 
 export const getCurrentFSOrNull = createSelector(
   getCurrentFileSystemName,
-  getDropboxOrNull,
+  getDropboxFSOrNull,
   getIDBFSOrNull,
   (fsName, dropbox, idbfs): FileSystem | null => {
     switch (fsName) {
       case 'dropbox': {
-        if (dropbox) {
-          return new DropboxFS(dropbox);
-        }
-        return null;
+        return dropbox;
       }
       case 'browser': {
         return idbfs;

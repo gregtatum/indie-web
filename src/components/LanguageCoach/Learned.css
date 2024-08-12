@@ -1,6 +1,8 @@
 .learned {
   --bottom-padding: 20px;
-  height: calc(100% - var(--header-height) - var(--bottom-padding));
+  height: calc(
+    100% - var(--header-height) - var(--bottom-padding) - var(--lc-header-height)
+  );
   position: absolute;
   width: 100%;
   display: flex;

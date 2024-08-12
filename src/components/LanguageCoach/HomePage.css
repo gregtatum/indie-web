@@ -1,0 +1,45 @@
+.lcHomepageWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: calc(100vh - var(--lc-header-height) - var(--header-height));
+}
+
+.lcHomepage {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 1em;
+  max-width: 600px;
+}
+
+.lcHomepageHeader {
+  font-size: 2em;
+  margin-bottom: 1em;
+  color: #000;
+}
+
+.lcHomepageParagraph {
+  font-size: 1.1em;
+  line-height: 1.5;
+  margin-bottom: 2em;
+  color: #555;
+}
+
+a.lcHomepageButton {
+  text-decoration: none;
+  padding: 0.7em 1.7em;
+  font-size: 1.2em;
+  border-radius: 3em;
+  border: none;
+  background-color: #6a72fb;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.1s;
+  box-shadow: 0 0.3em 0.6em #0003;
+}
+
+.lcHomepageButton:hover {
+  background-color: #545cfb;
+}

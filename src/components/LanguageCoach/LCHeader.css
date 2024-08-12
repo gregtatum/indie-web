@@ -1,0 +1,61 @@
+.lcHeader {
+  width: 100%;
+  height: var(--lc-header-height);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  box-sizing: border-box;
+  position: relative;
+  background-color: #545cfb;
+  color: #fff;
+  z-index: 1;
+  box-shadow: 0 0 50px rgba(var(--accent-color-rgb), 0.2);
+  gap: 10px;
+  padding: 0 8px;
+}
+
+.lcHeaderLinks {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-self: stretch;
+}
+
+a.lcHeaderLink {
+  text-decoration: none;
+  color: #fff;
+  padding: 0 20px;
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+
+  &.active {
+    color: var(--accent-color);
+    line-height: 14px;
+    
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 11px 5px;
+      background-color: #fff;
+      border-radius: 7px;
+      z-index: -1;
+    }
+
+    .lcHeaderBubble {
+      background-color: var(--accent-color);
+      color: #fff;
+    }
+  }
+}
+
+
+.lcHeaderBubble {
+  background-color: #fff;
+  border-radius: 12px;
+  margin-inline-start: 5px;
+  color: var(--accent-color);
+  padding: 5px;
+  font-size: 12px;
+}

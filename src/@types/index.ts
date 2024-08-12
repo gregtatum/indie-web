@@ -5,6 +5,7 @@ export * from './app';
 
 import type { State } from 'src/store/reducers/index';
 export type { State } from 'src/store/reducers/index';
+export type { LanguagCoachDataState } from 'src/store/reducers/language-coach';
 import type * as Thunks from 'src/store/actions/thunks';
 import type * as PlainActions from 'src/store/actions/plain';
 

@@ -8,12 +8,12 @@ import { FileSystem, FileSystemError } from 'src/logic/file-system';
 
 import { Menu, menuPortal } from './Menus';
 import './AddFileMenu.css';
-import { getLanguageByCode } from '../logic/languages';
+import { getLanguageByCode, languages } from '../logic/languages';
 
 const order =
   process.env.SITE === 'floppydisk'
     ? ['Folder', 'Markdown', 'ChordPro', 'Language Coach', 'Upload File']
-    : ['ChordPro', 'Folder', 'Markdown', 'Upload File'];
+    : ['ChordPro', 'Folder', 'Upload File'];
 
 type FileDetails =
   | {
@@ -45,6 +45,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
   const [fileDetails, setFileDetails] = React.useState<FileDetails | null>(
     null,
   );
+  const [languageCode, setLanguageCode] = React.useState<string>('es');
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
   const fileSystem = Hooks.useSelector($.getCurrentFS);
@@ -67,10 +68,19 @@ export function AddFileMenu(props: AddFileMenuProps) {
 
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const inputEl = ensureExists(input.current, 'Input ref value');
-    const path = pathJoin(props.path, inputEl.value);
+
     if (!fileDetails) {
       throw new Error('No file details when they were expected');
+    }
+    let path;
+    let fileName;
+    if (fileDetails.type === 'language-coach') {
+      fileName = getLanguageByCode(languageCode).short + '.coach';
+      path = pathJoin(props.path, fileName);
+    } else {
+      const inputEl = ensureExists(input.current, 'Input ref value');
+      fileName = inputEl.value;
+      path = pathJoin(props.path, inputEl.value);
     }
 
     setFileDetails({
@@ -81,30 +91,27 @@ export function AddFileMenu(props: AddFileMenuProps) {
     switch (fileDetails.type) {
       case 'text': {
         const { getDefaultContents, slug } = fileDetails;
-        fileSystem
-          .saveText(path, 'add', getDefaultContents(inputEl.value))
-          .then(
-            (fileMetadata) => {
-              // The directory listing is now stale, fetch it again.
-              void dispatch(A.listFiles(props.path));
-              if ($.getHideEditor(getState())) {
-                dispatch(A.hideEditor(false));
-              }
-              navigate(pathJoin(fsName, slug, fileMetadata.path));
-            },
-            (error: FileSystemError) => {
-              let err = error.toString();
-              if (error.status() === 409) {
-                err =
-                  'That file already exists, please choose a different name.';
-              }
-              setError(err);
-              setFileDetails({
-                ...fileDetails,
-                isSubmitting: false,
-              });
-            },
-          );
+        fileSystem.saveText(path, 'add', getDefaultContents(fileName)).then(
+          (fileMetadata) => {
+            // The directory listing is now stale, fetch it again.
+            void dispatch(A.listFiles(props.path));
+            if ($.getHideEditor(getState())) {
+              dispatch(A.hideEditor(false));
+            }
+            navigate(pathJoin(fsName, slug, fileMetadata.path));
+          },
+          (error: FileSystemError) => {
+            let err = error.toString();
+            if (error.status() === 409) {
+              err = 'That file already exists, please choose a different name.';
+            }
+            setError(err);
+            setFileDetails({
+              ...fileDetails,
+              isSubmitting: false,
+            });
+          },
+        );
         break;
       }
       case 'folder': {
@@ -125,10 +132,10 @@ export function AddFileMenu(props: AddFileMenuProps) {
         break;
       }
       case 'language-coach': {
-        createLanguageCoach(path, fileSystem, fileDetails.code)
+        createLanguageCoach(path, fileSystem, languageCode)
           .then((normalizedPath) => {
             void dispatch(A.listFiles(props.path));
-            navigate(pathJoin(fsName, 'folder', normalizedPath));
+            navigate(pathJoin(fsName, 'language-coach', normalizedPath));
           })
           .catch((error) => {
             setError(error.toString());
@@ -250,7 +257,6 @@ export function AddFileMenu(props: AddFileMenuProps) {
       setFileDetails({
         type: 'language-coach',
         extension: 'coach',
-        code,
         isSubmitting: false,
       });
     },
@@ -263,20 +269,36 @@ export function AddFileMenu(props: AddFileMenuProps) {
       <>
         {error ? <div className="addFileMenuError">{error}</div> : null}
         <form className="addFileMenuForm" onSubmit={onSubmit}>
-          <input
-            type="text"
-            className="addFileMenuInput"
-            ref={input}
-            defaultValue={
-              'extension' in fileDetails ? '.' + fileDetails.extension : ''
-            }
-            disabled={disabled}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setFileDetails(null);
+          {fileDetails.type === 'language-coach' ? (
+            <select
+              className="headerLanguageSelect"
+              value={languageCode}
+              onChange={(event) => {
+                setLanguageCode(event.target.value);
+              }}
+            >
+              {languages.map(({ code, long }) => (
+                <option key={code} value={code}>
+                  {long}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              className="addFileMenuInput"
+              ref={input}
+              defaultValue={
+                'extension' in fileDetails ? '.' + fileDetails.extension : ''
               }
-            }}
-          />
+              disabled={disabled}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setFileDetails(null);
+                }
+              }}
+            />
+          )}
           <input
             type="submit"
             value={getSubmitButtonValue(fileDetails)}
@@ -369,7 +391,7 @@ function getSubmitButtonValue(fileDetails: FileDetails): string {
 async function createLanguageCoach(
   path: string,
   fileSystem: FileSystem,
-  code: string,
+  languageCode: string,
 ): Promise<string> {
   if (!path.endsWith('.coach')) {
     throw new Error('The Language Coach must end in .coach');
@@ -379,7 +401,7 @@ async function createLanguageCoach(
   const data: T.LanguageDataV1 = {
     description: 'The data store for the language coach',
     lastSaved: Date.now(),
-    language: getLanguageByCode(code),
+    language: getLanguageByCode(languageCode),
     version: 1,
     learnedStems: [],
     ignoredStems: [],

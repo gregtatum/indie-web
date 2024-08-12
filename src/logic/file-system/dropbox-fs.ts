@@ -53,11 +53,9 @@ export class DropboxFS extends FileSystem {
     if (process.env.NODE_ENV === 'test') {
       this.cachePromise = Promise.resolve();
     } else {
-      const cachePromise = openIDBFS(IDB_CACHE_NAME);
-      void cachePromise.then((IDBFS) => {
+      this.cachePromise = void openIDBFS(IDB_CACHE_NAME).then((IDBFS) => {
         this.cache = IDBFS;
       });
-      this.cachePromise = cachePromise.then(() => {});
     }
   }
 

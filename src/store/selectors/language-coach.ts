@@ -15,6 +15,10 @@ export function getLanguageCoachPath(state: State) {
   return getLanguageCoach(state).path;
 }
 
+export function getLanguageCoachView(state: State) {
+  return getLanguageCoach(state).view;
+}
+
 export const getLanguageCoachData = dangerousSelector(
   getLanguageCoachDataOrNull,
   'The language coach data has not been downloaded.',
