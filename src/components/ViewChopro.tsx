@@ -33,8 +33,7 @@ export function ViewChopro() {
 
   React.useEffect(() => {
     if (textFile === undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      dispatch(A.downloadFile(path));
+      void dispatch(A.downloadFile(path));
     }
   }, [textFile]);
 

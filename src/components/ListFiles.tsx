@@ -34,8 +34,7 @@ export function ListFiles() {
 
   React.useEffect(() => {
     if (!files) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      dispatch(A.listFiles(path));
+      void dispatch(A.listFiles(path));
     }
   }, [files]);
 
@@ -47,8 +46,7 @@ export function ListFiles() {
       files.length === 0 &&
       !parsedSearch
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      dispatch(A.createInitialFiles());
+      void dispatch(A.createInitialFiles());
     }
   }, [activeFileDisplayPath, files]);
 
@@ -258,8 +256,7 @@ function RenameFile(props: {
     pathParts.push(value);
     const toPath = pathParts.join('/');
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    dispatch(A.moveFile(fromPath, toPath));
+    void dispatch(A.moveFile(fromPath, toPath));
   }
 
   function cancel() {
@@ -352,8 +349,7 @@ function FileMenu(props: { file: T.FileMetadata | T.FolderMetadata }) {
             {
               key: 'Delete',
               onClick() {
-                // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                dispatch(A.deleteFile(file));
+                void dispatch(A.deleteFile(file));
               },
               children: (
                 <>
@@ -366,8 +362,7 @@ function FileMenu(props: { file: T.FileMetadata | T.FolderMetadata }) {
               ? {
                   key: 'Download',
                   onClick() {
-                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                    dispatch(A.downloadFileForUser(file));
+                    void dispatch(A.downloadFileForUser(file));
                   },
                   children: (
                     <>
@@ -378,8 +373,7 @@ function FileMenu(props: { file: T.FileMetadata | T.FolderMetadata }) {
               : {
                   key: 'Download',
                   onClick() {
-                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                    dispatch(A.downloadFolderForUser(file));
+                    void dispatch(A.downloadFolderForUser(file));
                   },
                   children: (
                     <>

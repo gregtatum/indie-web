@@ -139,8 +139,7 @@ export class FilesIndex {
     // Limit the updates by saving every 3 seconds.
     this.#saveTimeout = setTimeout(() => {
       if (this.#pendingSaveRequest) {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.#pendingSaveRequest.catch().then(() => {
+        void this.#pendingSaveRequest.catch().then(() => {
           // Check the generation so that only the latest save is sent.
           if (this.#saveGeneration === generation) {
             this.#pendingSaveRequest = this.#saveImpl();

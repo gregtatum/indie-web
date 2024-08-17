@@ -35,8 +35,7 @@ function ReadingList() {
 
   React.useEffect(() => {
     if (!files) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      dispatch(A.listFiles(readingPath));
+      void dispatch(A.listFiles(readingPath));
     }
   }, [files]);
 
