@@ -81,8 +81,17 @@ export function viewLanguageCoach(
   };
 }
 
-export function setLanguageCoachSection(section: T.LanguageCoachSection) {
-  return { type: 'set-language-coach-section' as const, section };
+export function setLanguageCoachSection(
+  section: T.LanguageCoachSection,
+  coachPath: string,
+  path: string,
+) {
+  return {
+    type: 'set-language-coach-section' as const,
+    section,
+    coachPath,
+    path,
+  };
 }
 
 export function viewFile(path: string) {

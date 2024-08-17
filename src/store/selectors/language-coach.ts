@@ -60,6 +60,10 @@ export function getDisplayLanguage(state: State) {
   return getLanguage(state).code;
 }
 
+export function getLastReadingPath(state: State) {
+  return getLanguageCoachData(state).lastReadingPath;
+}
+
 export function getSelectedStem(state: State) {
   const stemIndex = getSelectedStemIndex(state);
   const stems = getUnknownStems(state);

@@ -59,21 +59,22 @@ function LanguageCoachRouter() {
   const path = '/' + (params['*'] ?? '');
   const { dispatch, getState } = Hooks.useStore();
 
+  // Determine the path to the root part of the language coach.
+  // e.g. /French.coach/reading/File.txt -> /French.coach
+  const pathParts = path.split('/');
+  const coachPartIndex = pathParts.findIndex((pathPart) =>
+    pathPart.endsWith('.coach'),
+  );
+  const coachPath = pathParts.slice(0, coachPartIndex + 1).join('/');
+
   React.useEffect(() => {
-    // Determine the path to the root part of the language coach.
-    // e.g. /French.coach/reading/File.txt -> /French.coach
-    const pathParts = path.split('/');
-    const coachPartIndex = pathParts.findIndex((pathPart) =>
-      pathPart.endsWith('.coach'),
-    );
-    const coachPath = pathParts.slice(0, coachPartIndex + 1).join('/');
     const invalidateOldData = $.getLanguageCoachPath(getState()) !== coachPath;
     dispatch(A.viewLanguageCoach(coachPath, path, invalidateOldData));
   }, [path]);
 
   React.useEffect(() => {
-    dispatch(A.setLanguageCoachSection(section));
-  }, [section]);
+    dispatch(A.setLanguageCoachSection(section, coachPath, path));
+  }, [section, path]);
 
   return null;
 }

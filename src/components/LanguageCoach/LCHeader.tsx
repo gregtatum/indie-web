@@ -9,7 +9,15 @@ export function LCHeader() {
   const learnedWords = $$.getLearnedStems();
   const fsName = $$.getCurrentFileSystemName();
   const coachPath = $$.getLanguageCoachPath();
+  const lastReadingPath = $$.getLastReadingPath();
   const pathPrefix = `${fsName}/language-coach${coachPath}`;
+  const section = $$.getLanguageCoachSection();
+
+  // Go back to the last read book.
+  let lastReadingPrefix;
+  if (lastReadingPath && section !== 'reading') {
+    lastReadingPrefix = `${fsName}/language-coach${lastReadingPath}`;
+  }
 
   function getActiveClass(v: T.LanguageCoachSection): string {
     if (v === view) {
@@ -34,7 +42,7 @@ export function LCHeader() {
           Most Used Words
         </Router.Link>
         <Router.Link
-          to={`${pathPrefix}?section=reading`}
+          to={`${lastReadingPrefix ?? pathPrefix}?section=reading`}
           className={'lcHeaderLink' + getActiveClass('reading')}
         >
           Reading

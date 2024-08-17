@@ -174,13 +174,34 @@ function selectedSentences(
   }
 }
 
-function section(
+function setLanguageCoachSection(
   state: T.LanguageCoachSection = 'home',
   action: T.Action,
 ): T.LanguageCoachSection {
   switch (action.type) {
     case 'set-language-coach-section':
       return action.section;
+    default:
+      return state;
+  }
+}
+
+function lastReadingPath(
+  state: string | null = null,
+  action: T.Action,
+): string | null {
+  switch (action.type) {
+    case 'view-language-coach':
+      if (action.coachPath !== action.path) {
+        return action.path;
+      }
+      return state;
+    case 'set-language-coach-section':
+      if (action.section === 'reading' && action.coachPath === action.path) {
+        // We're at the reading main page.
+        return null;
+      }
+      return state;
     default:
       return state;
   }
@@ -194,6 +215,7 @@ const dataReducer = combineReducers({
   selectedStem,
   stems,
   undoList,
+  lastReadingPath,
 });
 
 export type LanguagCoachDataState = ReturnType<typeof dataReducer>;
@@ -222,5 +244,5 @@ function dataOrNullReducer(
 export const languageCoachReducer = combineReducers({
   path,
   data: dataOrNullReducer,
-  section,
+  section: setLanguageCoachSection,
 });

@@ -53,11 +53,18 @@ export async function init(): Promise<void> {
 
   const store = createStore();
 
+  // Expose the $$ as a global for the webconsole.
+  const $$ = {};
+  for (const [name, fn] of Object.entries($)) {
+    ($$ as any)[name] = () => (fn as any)(store.getState());
+  }
+
   Object.assign(window as any, {
     store,
     dispatch: store.dispatch,
     getState: store.getState,
     $,
+    $$,
     A,
     expireOauth() {
       const oauth = $.getDropboxOauth(store.getState());
