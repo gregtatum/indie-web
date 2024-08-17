@@ -1,12 +1,14 @@
+.lcReading {
+  --margin-bottom: 20px;
+}
+
 .lcReadingAdd {
   display: flex;
   flex-direction: column;
   align-items: start;
   max-width: 700px;
   padding: 0 10px;
-  margin: 0 auto;
-
-  --margin-bottom: 20px;
+  margin: 50px auto;
 
   & p {
     line-height: 1.4;
@@ -18,6 +20,14 @@
     font-size: var(--font-size-normal);
     margin-block: 6px;
   }
+}
+
+.lcReadingListFiles {
+  max-width: 700px;
+  margin: var(--margin-bottom) auto;
+  border: 1px solid var(--light-border);
+  border-radius: 5px;
+  margin-block: 24px;
 }
 
 .lcReadingTextArea {
@@ -55,7 +65,7 @@
   min-height: 100%;
   & h1 {
     margin-top: 0;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--light-border);
   }
 }
 
@@ -98,7 +108,7 @@
   }
 
   & .lcReadingLeft {
-    border: 1px solid #ddd;
+    border: 1px solid var(--light-border);
     border-right: none;
     border-radius: 6px;
    }
@@ -124,6 +134,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    padding-inline: 25px;
   }
 }
 
@@ -160,6 +171,12 @@
     background-color: var(--accent-color);
     color: #fff;
   }
+
+  .lcReadingStems:not(:focus) &.selected {
+    background-color: rgba(var(--accent-color-rgb), 0.2);
+    outline-color: rgba(var(--accent-color-rgb), 0.2);
+    color: #000;
+  }
 }
 
 .lcReadingStemCount {
@@ -189,4 +206,8 @@
 .lcReadingLeft {
   flex: 1;
   padding: var(--reading-padding);
+}
+
+.lcReadingAddButton {
+  font-size: 1.0em;
 }

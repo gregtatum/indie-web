@@ -299,18 +299,7 @@ function Path({
       continue;
     }
 
-    const prevPath = pathGrow;
     pathGrow += '/' + part;
-
-    // // Add logic here to skip parts.
-    // if (
-    //   // Language coach reading folder should not be clickable, as it has its own
-    //   // custom view.
-    //   prevPath.endsWith('.coach') &&
-    //   part === 'reading'
-    // ) {
-    //   continue;
-    // }
 
     if (part.endsWith('.coach')) {
       // Use special handling for language coach breadcrumbs.

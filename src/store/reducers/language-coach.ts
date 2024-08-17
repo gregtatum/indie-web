@@ -207,6 +207,15 @@ function lastReadingPath(
   }
 }
 
+function areStemsActive(state = false, action: T.Action): boolean {
+  switch (action.type) {
+    case 'set-are-stems-active':
+      return action.isActive;
+    default:
+      return state;
+  }
+}
+
 const dataReducer = combineReducers({
   ignoredStems,
   language,
@@ -216,6 +225,7 @@ const dataReducer = combineReducers({
   stems,
   undoList,
   lastReadingPath,
+  areStemsActive,
 });
 
 export type LanguagCoachDataState = ReturnType<typeof dataReducer>;

@@ -217,3 +217,10 @@ export function loadLanguageData(languageData: T.LanguageDataV1) {
     languageData,
   };
 }
+
+export function setAreStemsActive(isActive: boolean) {
+  return {
+    type: 'set-are-stems-active' as const,
+    isActive,
+  };
+}

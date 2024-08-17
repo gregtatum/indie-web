@@ -114,17 +114,24 @@ a.listFilesFileLink,
   opacity: 0.6;
 }
 
+
 .listFilesFileMenu {
+  box-sizing: border-box;
   border: 0;
   padding: 0;
   margin: 0;
   background: none;
   font-size: inherit;
   line-height: 0;
-}
 
-.listFilesFileMenu:hover {
-  background-color: #eee;
+  &:hover {
+    border-right: 8px solid #fff;
+    background-color: #eee;
+
+    & .listFilesFileMenuIcon {
+      margin-inline-end: 10px;
+    }
+  }
 }
 
 .listFilesFileMenuIcon {

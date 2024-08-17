@@ -2,6 +2,10 @@
   --accent-color: #6a72fb;
   /* For use with transparency. */
   --accent-color-rgb: 84, 92, 251;
+
+  --outline-active: 2px solid #282ea6;
+  --outline-focus: 2px solid #282ea6aa;
+
   --lc-header-height: 56px;
 
   height: 100%;
@@ -15,4 +19,39 @@
   * {
     scroll-margin-top: var(--header-height);
   }
+}
+
+a.lcButton,
+.lcButton {
+  text-decoration: none;
+  padding: 0.7em 1.7em;
+  border-radius: 3em;
+  border: none;
+  background-color: var(--accent-color);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.1s;
+  box-shadow: 0 0.3em 0.6em #0003;
+}
+
+.lcButton:hover:not(:disabled) {
+  background-color: #545cfb;
+}
+
+.lcButton:active:not(:disabled) {
+  outline: var(--outline-active);
+}
+
+.lcButton:focus {
+  outline: var(--outline-focus);
+}
+
+
+.lcButton:hover {
+  opacity: 1;
+}
+
+.lcButton:disabled {
+  cursor: default;
+  opacity: 0.6;
 }

@@ -9,6 +9,7 @@ import { TextArea } from '../TextArea';
 import { Splitter } from '../Splitter';
 import { useStemNavigation, useStems } from './hooks';
 import { applyClassToWords } from 'src/logic/language-tools';
+import * as Router from 'react-router-dom';
 
 export function Reading() {
   const coachPath = $$.getLanguageCoachPath();
@@ -16,7 +17,7 @@ export function Reading() {
 
   if (coachPath === path) {
     return (
-      <div>
+      <div className="lcReading">
         <Add />
         <ReadingList />
       </div>
@@ -44,7 +45,7 @@ function ReadingList() {
   }
 
   return (
-    <div className="listFilesList">
+    <div className="listFilesList lcReadingListFiles">
       {files.map((file) => {
         return (
           <div key={file.id} className="listFilesFile">
@@ -63,35 +64,37 @@ function ReadingList() {
 function Add() {
   const dispatch = Hooks.useDispatch();
   const fileSystem = $$.getCurrentFS();
+  const fsName = $$.getCurrentFileSystemName();
   const path = $$.getLanguageCoachPath();
-  const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const navigate = Router.useNavigate();
+  const [canSubmit, setCanSubmit] = React.useState(false);
 
   function addReadingMaterial(event: Event | React.FormEvent) {
     event.preventDefault();
     let title = inputRef.current?.value;
-    const text = textAreaRef.current?.value;
     setErrorMessage(null);
     if (!title) {
       inputRef.current?.focus();
       setErrorMessage('Please add a title for the reading material.');
       return;
     }
-    if (!text) {
-      setErrorMessage('Please add text for the reading material.');
-      textAreaRef.current?.focus();
-      return;
-    }
     title = title.replaceAll('/', '');
     title = title.replaceAll('\\', '');
     const readingPath = pathJoin(path, 'reading');
+    const savePath = pathJoin(readingPath, `${title}.txt`);
 
     fileSystem
-      .saveText(pathJoin(readingPath, `${title}.txt`), 'add', text)
+      .saveText(savePath, 'add', '')
+      .then(() => dispatch(A.listFiles(readingPath)))
       .then(
         () => {
-          void dispatch(A.listFiles(readingPath));
+          console.log(
+            `!!! navigate`,
+            `${fsName}/language-coach${savePath}?section=reading`,
+          );
+          navigate(`${fsName}/language-coach${savePath}?section=reading`);
         },
         (error) => {
           console.error(error);
@@ -100,44 +103,36 @@ function Add() {
       );
   }
 
-  function hideError(event: React.SyntheticEvent<FocusEvent>) {
-    const { relatedTarget } = event.nativeEvent as any;
-    if (
-      relatedTarget === inputRef.current ||
-      relatedTarget === textAreaRef.current
-    ) {
-      // Don't hide the error message when the focus is programatically shifted.
-      return;
-    }
+  function hideError() {
     setErrorMessage(null);
   }
 
   return (
     <form className="lcReadingAdd" onSubmit={addReadingMaterial}>
       <p>
-        Paste text from a book, article, or podcast transcript to begin reading.
+        Add text from a book, article, or podcast transcript to begin reading.
         Language Coach will help you along the way.
       </p>
-      <label htmlFor="lcReadingTextArea">Text to Read</label>
-      <textarea
-        id="lcReadingTextArea"
-        className="lcReadingTextArea"
-        ref={textAreaRef}
-        onBlur={hideError as any}
-        placeholder="Paste your text here…"
-      />
       {errorMessage ? (
         <div className="lcReadingErrorMessage">{errorMessage}</div>
       ) : null}
-      <label htmlFor="lcReadingTitleInput">Title</label>
+      <label htmlFor="lcReadingTitleInput">Title for reading material</label>
       <input
         className="lcReadingTitleInput"
         id="lcReadingTitleInput"
         ref={inputRef}
         onBlur={hideError as any}
-        placeholder="Add a title"
+        placeholder="Filename…"
+        onKeyUp={() => {
+          setCanSubmit(Boolean(inputRef.current?.value));
+        }}
       />
-      <button type="button" className="button" onClick={addReadingMaterial}>
+      <button
+        type="submit"
+        className="lcButton lcReadingAddButton"
+        onClick={addReadingMaterial}
+        disabled={!canSubmit}
+      >
         Add reading material
       </button>
     </form>
@@ -203,6 +198,7 @@ function RenderedReading() {
   const text = $$.getActiveFileText();
   const title = getPathFileNameNoExt($$.getPath());
   const hideEditor = $$.getHideEditor();
+  const areStemsActive = $$.getAreStemsActive();
   const dispatch = Hooks.useDispatch();
 
   const unknownStems = $$.getUnknownStems();
@@ -251,7 +247,7 @@ function RenderedReading() {
           </div>
           <h1>{title}</h1>
           {paragraphs.map((paragraph) => {
-            if (!selectedStem) {
+            if (!selectedStem || !areStemsActive) {
               return <p key={paragraph}>{paragraph}</p>;
             }
             return (

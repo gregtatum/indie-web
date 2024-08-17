@@ -24,6 +24,7 @@
   --primary-color-hover: #0062ff;
 
   --text-border: #555;
+  --light-border: #ddd;
 }
 
 @keyframes fadein {
@@ -83,8 +84,8 @@ button.icon-mask {
   margin: 0;
 }
 
-.button:active,
-.ͼ2 .cm-button:active {
+.button:active:not(:disabled),
+.ͼ2 .cm-button:active:not(:disabled) {
   outline: var(--outline-active);
 }
 
@@ -93,23 +94,24 @@ button.icon-mask {
   outline: var(--outline-focus);
 }
 
-.button:hover,
+.button:hover:not(:disabled),
 .ͼ2 .cm-button:hover {
   opacity: 1;
 }
 
 .button:disabled,
 .ͼ2 .cm-button:disabled {
+  cursor: default;
   opacity: 0.6;
 }
 
 .button-primary {
-  border-color: var(--primar-color);
-  background-color: var(--primar-color);
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
   color: #fff;
 }
 
-.button-primary:active,
+.button-primary:active:not(:disabled),
 .button-primary:focus {
   border-color: #fff;
 }

@@ -53,6 +53,13 @@ export function useStemNavigation(
   stemsContainer: React.RefObject<HTMLDivElement>,
 ) {
   const dispatch = Hooks.useDispatch();
+  Hooks.useListener(stemsContainer, 'focus', [], () => {
+    dispatch(A.setAreStemsActive(true));
+  });
+  Hooks.useListener(stemsContainer, 'blur', [], () => {
+    dispatch(A.setAreStemsActive(false));
+  });
+
   Hooks.useListener(stemsContainer, 'keydown', [], (event) => {
     let stemIndex;
     const keyboardEvent = event as KeyboardEvent;
