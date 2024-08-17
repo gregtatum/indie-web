@@ -296,15 +296,43 @@ function Path({
           Home
         </Router.Link>,
       );
-    } else {
-      pathGrow += '/' + part;
+      continue;
+    }
+
+    const prevPath = pathGrow;
+    pathGrow += '/' + part;
+
+    // // Add logic here to skip parts.
+    // if (
+    //   // Language coach reading folder should not be clickable, as it has its own
+    //   // custom view.
+    //   prevPath.endsWith('.coach') &&
+    //   part === 'reading'
+    // ) {
+    //   continue;
+    // }
+
+    if (part.endsWith('.coach')) {
+      // Use special handling for language coach breadcrumbs.
+      const section = $$.getLanguageCoachSection();
       breadcrumbs.push(
         <span key={pathGrow + '»'}>»</span>,
-        <Router.Link key={pathGrow} to={`/${fsName}/folder${pathGrow}`}>
+        <Router.Link
+          key={pathGrow}
+          to={`/${fsName}/language-coach${pathGrow}?section=${section}`}
+        >
           {part}
         </Router.Link>,
       );
+      break;
     }
+
+    breadcrumbs.push(
+      <span key={pathGrow + '»'}>»</span>,
+      <Router.Link key={pathGrow} to={`/${fsName}/folder${pathGrow}`}>
+        {part}
+      </Router.Link>,
+    );
   }
   const backParts = path.split('/');
   backParts.pop();
