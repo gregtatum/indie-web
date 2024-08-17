@@ -1,11 +1,11 @@
 import * as React from 'react';
-import './MostUsed.css';
+import './StudyList.css';
 import { Stem } from 'src/@types';
 import { Hooks, $$, A } from 'src';
 import { boldWords, computeStems } from 'src/logic/language-tools';
 import { useHunspell, useStemNavigation } from './hooks';
 
-export function MostUsed() {
+export function StudyList() {
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const stemsContainer = React.useRef<HTMLDivElement | null>(null);
   useStemNavigation(stemsContainer);
@@ -37,12 +37,13 @@ export function MostUsed() {
   }, [text, hunspell]);
 
   return (
-    <div className="lcMostUsed AppScroll">
-      <div className="lcMostUsedTop">
+    <div className="lcStudyList AppScroll">
+      <div className="lcStudyListTop">
         <p>
           Paste text from a book, article, or podcast transcript into the box to
-          find the most used words. This will give you a targeted list of new
-          words to study. Your learned words will be hidden from the list.{' '}
+          create a study list. This will give you the most frequent words in the
+          text that you don&apos;t know yet. Your learned words won&apos;t show
+          up in the list.{' '}
           {showLearnMore ? null : (
             <button
               type="button"
@@ -63,7 +64,7 @@ export function MostUsed() {
               Marking a word as ignored hides the word. This is useful for
               invented words, or proper nouns.
             </p>
-            <p className="lcMostUsedCodes">
+            <p className="lcStudyListCodes">
               <code>k</code>, <code>↑</code> - Move the selected row up.
               <br />
               <code>j</code>, <code>↓</code> - Move the selected row down.
@@ -97,7 +98,7 @@ export function MostUsed() {
           </>
         ) : null}
         <textarea
-          className="lcMostUsedTextArea"
+          className="lcStudyListTextArea"
           ref={textAreaRef}
           placeholder="Paste your text here…"
           defaultValue={defaultText}
@@ -118,11 +119,11 @@ export function MostUsed() {
           Get the Word List
         </button>
       </div>
-      <div className="lcMostUsedStems" tabIndex={0} ref={stemsContainer}>
+      <div className="lcStudyListStems" tabIndex={0} ref={stemsContainer}>
         {stems ? (
           <>
-            <div className="lcMostUsedStemsRow lcMostUsedStemsHeader">
-              <div className="lcMostUsedStemsHeaderRight">Count</div>
+            <div className="lcStudyListStemsRow lcStudyListStemsHeader">
+              <div className="lcStudyListStemsHeaderRight">Count</div>
               <div>Word Root</div>
               <div>Word Uses</div>
               <div></div>
@@ -166,7 +167,7 @@ function StemRow({
   const dispatch = Hooks.useDispatch();
   const isSelected = selectedStem === stemIndex;
 
-  let className = 'lcMostUsedStemsRow';
+  let className = 'lcStudyListStemsRow';
   if (isSelected) {
     className += ' selected';
   }
@@ -181,20 +182,20 @@ function StemRow({
       aria-selected={isSelected}
       data-stem-index={stemIndex}
     >
-      <div className="lcMostUsedStemsCount">{stem.frequency}</div>
+      <div className="lcStudyListStemsCount">{stem.frequency}</div>
       <div>{stem.stem}</div>
       <div lang={languageCode}>{stem.tokens.join(', ')}</div>
-      <div className="lcMostUsedButtons">
+      <div className="lcStudyListButtons">
         <button
           type="button"
-          className="lcMostUsedButton button"
+          className="lcStudyListButton button"
           onClick={() => dispatch(A.learnStem(stem.stem))}
         >
           learn
         </button>
         <button
           type="button"
-          className="lcMostUsedButton button"
+          className="lcStudyListButton button"
           onClick={() => dispatch(A.ignoreStem(stem.stem))}
         >
           ignore

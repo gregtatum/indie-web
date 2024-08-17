@@ -1,4 +1,4 @@
-.lcMostUsedTop {
+.lcStudyListTop {
   display: flex;
   flex-direction: column;
   align-items: start;
@@ -7,11 +7,11 @@
   margin: 0 auto;
 }
 
-.lcMostUsedTop p {
+.lcStudyListTop p {
   line-height: 1.4;
 }
 
-.lcMostUsedTop code {
+.lcStudyListTop code {
   font-size: 16px;
   padding: 3px 6px;
   border: 2px solid #aaa;
@@ -19,7 +19,7 @@
   background: #eee;
 }
 
-.lcMostUsedTextArea {
+.lcStudyListTextArea {
   margin-bottom: 12px;
   /* Only allow the textarea to grow vertically */
   width: 100% !important;
@@ -28,60 +28,60 @@
   padding: 20px;
 }
 
-.lcMostUsedStems {
+.lcStudyListStems {
   width: 100%;
   margin-top: 10px;
 }
 
-.lcMostUsedStemsRow {
+.lcStudyListStemsRow {
   display: grid;
   grid-template-columns: 70px 0.7fr 1fr 100px 2fr;
   gap: 20px;
   padding: 4px 0;
 }
 
-.lcMostUsedStemsRow:hover {
+.lcStudyListStemsRow:hover {
   background-color: #6a72fb14;
 }
 
-.lcMostUsedStemsRow.selected {
+.lcStudyListStemsRow.selected {
   outline: 1px solid var(--accent-color);
   border-radius: 3px;
   background-color: var(--accent-color);
   color: #fff;
 }
 
-.lcMostUsedStartButton {
+.lcStudyListStartButton {
   align-self: center;
 }
 
-.lcMostUsedStemsCount {
+.lcStudyListStemsCount {
   text-align: right;
 }
 
-.lcMostUsedButtons {
+.lcStudyListButtons {
   display: flex;
   align-items: start;
   gap: 3px;
 }
 
-.lcMostUsedButton {
+.lcStudyListButton {
   padding: 0.1em 0.4em;
   transition: none;
 }
 
-.lcMostUsedStemsRow.selected .lcMostUsedButton {
+.lcStudyListStemsRow.selected .lcStudyListButton {
   border: 2px solid #fff;
   background-color: var(--accent-color);
   color: #fff;
 }
 
-.lcMostUsedStemsRow.selected .lcMostUsedButton:hover {
+.lcStudyListStemsRow.selected .lcStudyListButton:hover {
   background-color: #fff;
   color: rgba(var(--accent-color-rgb), 0.9);
 }
 
-.lcMostUsedStemsHeader {
+.lcStudyListStemsHeader {
   background-color: #eee;
   color: #888;
   text-transform: uppercase;
@@ -89,14 +89,14 @@
   font-weight: bold;
 }
 
-.lcMostUsedStemsHeader > div {
+.lcStudyListStemsHeader > div {
   padding: 5px 0;
 }
 
-.lcMostUsedStemsHeaderRight {
+.lcStudyListStemsHeaderRight {
   text-align: right;
 }
 
-p.lcMostUsedCodes {
+p.lcStudyListCodes {
   line-height: 2.2;
 }

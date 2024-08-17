@@ -39,7 +39,7 @@ function toValidLanguageCoachSection(value: unknown): T.LanguageCoachSection {
     switch (view) {
       case 'home':
         return view;
-      case 'most-used':
+      case 'study-list':
         return view;
       case 'reading':
         return view;

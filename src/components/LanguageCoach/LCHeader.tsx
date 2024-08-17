@@ -36,16 +36,16 @@ export function LCHeader() {
           Language Coach
         </Router.Link>
         <Router.Link
-          to={`${pathPrefix}?section=most-used`}
-          className={'lcHeaderLink' + getActiveClass('most-used')}
-        >
-          Most Used Words
-        </Router.Link>
-        <Router.Link
           to={`${lastReadingPrefix ?? pathPrefix}?section=reading`}
           className={'lcHeaderLink' + getActiveClass('reading')}
         >
           Reading
+        </Router.Link>
+        <Router.Link
+          to={`${pathPrefix}?section=study-list`}
+          className={'lcHeaderLink' + getActiveClass('study-list')}
+        >
+          Study List
         </Router.Link>
         <Router.Link
           to={`${pathPrefix}?section=learned`}

@@ -288,4 +288,8 @@ export type Language = {
   short: string;
 };
 
-export type LanguageCoachSection = 'home' | 'most-used' | 'learned' | 'reading';
+export type LanguageCoachSection =
+  | 'home'
+  | 'study-list'
+  | 'learned'
+  | 'reading';

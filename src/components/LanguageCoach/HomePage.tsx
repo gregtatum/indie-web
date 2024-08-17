@@ -12,16 +12,16 @@ export function HomePage() {
       <div className="lcHomepage">
         <h1 className="lcHomepageHeader">Language Coach</h1>
         <p className="lcHomepageParagraph">
-          Use the Language Coach tools to help learn another language. Right now
-          you can generate a study list with the &ldquo;Most Used Words&rdquo;
-          tool. More tools are coming soon, like a translation coach.
+          Use the Language Coach tools to help learn another language. You can
+          add reading materials, and generate study lists. Add words to
+          &ldquo;Learned Words&rdquo; to track your progress.
           <br />
           <br />
           Select your language at top right.
         </p>
         <div className="lcHomepageButtons">
           <Router.Link
-            to={`${pathname}?section=most-used`}
+            to={`${pathname}?section=study-list`}
             className="lcHomepageButton"
           >
             Get Started

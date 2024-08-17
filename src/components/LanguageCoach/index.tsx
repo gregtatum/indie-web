@@ -3,7 +3,7 @@ import { A, T, $$, Hooks } from 'src';
 import { pathJoin, UnhandledCaseError } from 'src/utils';
 import { Learned } from './Learned';
 import { HomePage } from './HomePage';
-import { MostUsed } from './MostUsed';
+import { StudyList } from './StudyList';
 import { LCHeader } from './LCHeader';
 import { Reading } from './Reading';
 import './index.css';
@@ -79,8 +79,8 @@ function Sections() {
   switch (section) {
     case 'home':
       return <HomePage />;
-    case 'most-used':
-      return <MostUsed />;
+    case 'study-list':
+      return <StudyList />;
     case 'learned':
       return <Learned />;
     case 'reading':
