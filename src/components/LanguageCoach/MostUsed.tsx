@@ -15,6 +15,16 @@ export function MostUsed() {
   const selectedStem = $$.getSelectedStemIndex();
   const languageCode = $$.getLanguageCode();
   const selectedSentences = $$.getSelectedSentences();
+  const lastReadingPath = $$.getLastReadingPath();
+
+  let defaultText: string = '';
+  if (lastReadingPath) {
+    const fileCache = $$.getDownloadFileCache();
+    const downloadedFile = fileCache.get(lastReadingPath);
+    if (downloadedFile) {
+      defaultText = downloadedFile.text;
+    }
+  }
 
   const [text, setText] = React.useState<string>('');
   const hunspell = useHunspell();
@@ -90,6 +100,7 @@ export function MostUsed() {
           className="lcMostUsedTextArea"
           ref={textAreaRef}
           placeholder="Paste your text here…"
+          defaultValue={defaultText}
         />
         <button
           onClick={() => {
