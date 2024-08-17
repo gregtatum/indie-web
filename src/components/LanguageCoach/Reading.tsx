@@ -204,17 +204,13 @@ function RenderedReading() {
   const title = getPathFileNameNoExt($$.getPath());
   const hideEditor = $$.getHideEditor();
   const dispatch = Hooks.useDispatch();
-  const languageCode = $$.getLanguageCode();
-  const stemsContainer = React.useRef<HTMLDivElement | null>(null);
-  const stems = useStems(text);
+
   const unknownStems = $$.getUnknownStems();
   const selectedStemIndex = $$.getSelectedStemIndex();
   const selectedStem =
     selectedStemIndex === null || !unknownStems
       ? null
       : unknownStems[selectedStemIndex];
-
-  useStemNavigation(stemsContainer);
 
   const paragraphs = React.useMemo(() => {
     const paragraphs: string[] = [];
@@ -238,17 +234,11 @@ function RenderedReading() {
     return paragraphs;
   }, [text]);
 
-  React.useEffect(() => {
-    if (stems) {
-      dispatch(A.stemFrequencyAnalysis(stems));
-    }
-  }, [stems]);
-
   return (
-    <div className="lcRenderedReading">
-      <div className="lcRenderedReadingContainer">
-        <div>
-          <div className="lcRenderedReadingStickyHeader">
+    <>
+      <div className="lcReadingContainer">
+        <div className="lcReadingLeft">
+          <div className="lcReadingStickyHeader">
             {hideEditor ? (
               <button
                 className="button"
@@ -266,32 +256,57 @@ function RenderedReading() {
             }
             return (
               <p key={paragraph}>
-                {applyClassToWords(paragraph, selectedStem.tokens, 'lcHovered')}
+                {applyClassToWords(
+                  paragraph,
+                  selectedStem.tokens,
+                  'lcReadingHovered',
+                )}
               </p>
             );
           })}
         </div>
-        <div
-          className="lcRenderedReadingStems"
-          tabIndex={0}
-          ref={stemsContainer}
-        >
-          <h2>Study List</h2>
-          {unknownStems
-            ? unknownStems.map((stem, stemIndex) => (
-                <>
-                  <StemRow
-                    stem={stem}
-                    key={stemIndex}
-                    stemIndex={stemIndex}
-                    selectedStemIndex={selectedStemIndex}
-                    stemsContainer={stemsContainer}
-                    languageCode={languageCode}
-                  />
-                </>
-              ))
-            : null}
-        </div>
+        {hideEditor ? <Stems /> : null}
+      </div>
+    </>
+  );
+}
+
+function Stems() {
+  const text = $$.getActiveFileText();
+  const languageCode = $$.getLanguageCode();
+  const stemsContainer = React.useRef<HTMLDivElement | null>(null);
+  const dispatch = Hooks.useDispatch();
+  const unknownStems = $$.getUnknownStems();
+  const selectedStemIndex = $$.getSelectedStemIndex();
+
+  useStemNavigation(stemsContainer);
+
+  const stems = useStems(text);
+
+  React.useEffect(() => {
+    if (stems) {
+      dispatch(A.stemFrequencyAnalysis(stems));
+    }
+  }, [stems]);
+
+  return (
+    <div className="lcReadingStems" tabIndex={0} ref={stemsContainer}>
+      <h2>Study List</h2>
+      <div className="lcReadingStemsScroll">
+        {unknownStems
+          ? unknownStems.map((stem, stemIndex) => (
+              <>
+                <StemRow
+                  stem={stem}
+                  key={stemIndex}
+                  stemIndex={stemIndex}
+                  selectedStemIndex={selectedStemIndex}
+                  stemsContainer={stemsContainer}
+                  languageCode={languageCode}
+                />
+              </>
+            ))
+          : null}
       </div>
     </div>
   );
@@ -304,7 +319,6 @@ interface StemRowProps {
   stemsContainer: React.RefObject<HTMLDivElement | null>;
   languageCode: string;
 }
-
 function StemRow({
   stem,
   selectedStemIndex,
