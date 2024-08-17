@@ -64,15 +64,7 @@ export function ListFiles() {
       );
     }
 
-    return (
-      <div className="listFilesBlocks">
-        <div className="listFilesFileBlock"></div>
-        <div className="listFilesFileBlock"></div>
-        <div className="listFilesFileBlock"></div>
-        <div className="listFilesFileBlock"></div>
-        <div className="listFilesFileBlock"></div>
-      </div>
-    );
+    return <ListFilesSkeleton />;
   }
 
   let parent = null;
@@ -101,7 +93,7 @@ export function ListFiles() {
           {files.map((file) => {
             return (
               <div key={file.id} className="listFilesFile">
-                <File dropboxFile={file} />
+                <File file={file} />
               </div>
             );
           })}
@@ -112,25 +104,48 @@ export function ListFiles() {
   );
 }
 
-function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
+export function ListFilesSkeleton() {
+  return (
+    <div className="listFilesBlocks">
+      <div className="listFilesFileBlock"></div>
+      <div className="listFilesFileBlock"></div>
+      <div className="listFilesFileBlock"></div>
+      <div className="listFilesFileBlock"></div>
+      <div className="listFilesFileBlock"></div>
+    </div>
+  );
+}
+
+interface FileProps {
+  file: T.FileMetadata | T.FolderMetadata;
+  hideExtension?: boolean;
+  linkOverride?: string;
+}
+
+export function File(props: FileProps) {
   const renameFile = $$.getRenameFile();
   const fsName = $$.getCurrentFileSystemName();
 
-  const { name, path, type } = props.dropboxFile;
+  const { name, path, type } = props.file;
   const isFolder = type === 'folder';
   const nameParts = name.split('.');
   const extension =
     nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
   let displayName: React.ReactNode = name;
+
   if (extension) {
-    displayName = (
-      <>
-        {nameParts.slice(0, -1).join('.')}.
-        <span className="listFilesExtension">
-          {nameParts[nameParts.length - 1]}
-        </span>
-      </>
-    );
+    if (props.hideExtension) {
+      displayName = nameParts.slice(0, -1).join('.');
+    } else {
+      displayName = (
+        <>
+          {nameParts.slice(0, -1).join('.')}.
+          <span className="listFilesExtension">
+            {nameParts[nameParts.length - 1]}
+          </span>
+        </>
+      );
+    }
   }
   const isChordPro = !isFolder && isChordProExtension(extension);
   const isPDF = !isFolder && extension === 'pdf';
@@ -172,12 +187,14 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
     icon = '🧳';
   }
 
+  if (props.linkOverride) {
+    link = props.linkOverride;
+  }
+
   let fileDisplayName: React.ReactNode;
   if (renameFile.path === path) {
     link = null;
-    fileDisplayName = (
-      <RenameFile dropboxFile={props.dropboxFile} state={renameFile} />
-    );
+    fileDisplayName = <RenameFile file={props.file} state={renameFile} />;
   } else {
     fileDisplayName = (
       <span className="listFileDisplayName">{displayName}</span>
@@ -191,7 +208,7 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
           <span className="listFilesIcon">{icon}</span>
           {fileDisplayName}
         </Router.Link>
-        <FileMenu dropboxFile={props.dropboxFile} />
+        <FileMenu file={props.file} />
       </>
     );
   }
@@ -202,18 +219,18 @@ function File(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
         <span className="listFilesIcon">{icon}</span>
         {fileDisplayName}
       </div>
-      <FileMenu dropboxFile={props.dropboxFile} />
+      <FileMenu file={props.file} />
     </>
   );
 }
 
 function RenameFile(props: {
-  dropboxFile: T.FileMetadata | T.FolderMetadata;
+  file: T.FileMetadata | T.FolderMetadata;
   state: T.RenameFileState;
 }) {
   const dispatch = Hooks.useDispatch();
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const name = props.dropboxFile.name;
+  const name = props.file.name;
   function input() {
     return ensureExists(inputRef.current, 'Could not find input from ref.');
   }
@@ -234,7 +251,7 @@ function RenameFile(props: {
       // Only rename if there is a real value.
       return;
     }
-    const fromPath = props.dropboxFile.path;
+    const fromPath = props.file.path;
 
     const pathParts = fromPath.split('/');
     pathParts.pop();
@@ -288,12 +305,12 @@ function RenameFile(props: {
   );
 }
 
-function FileMenu(props: { dropboxFile: T.FileMetadata | T.FolderMetadata }) {
+function FileMenu(props: { file: T.FileMetadata | T.FolderMetadata }) {
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
-  const file = props.dropboxFile;
+  const file = props.file;
 
   return (
     <>

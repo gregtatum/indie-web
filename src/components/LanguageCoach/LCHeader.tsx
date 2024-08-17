@@ -7,7 +7,9 @@ import './LCHeader.css';
 export function LCHeader() {
   const view = $$.getLanguageCoachSection();
   const learnedWords = $$.getLearnedStems();
-  const { pathname } = window.location;
+  const fsName = $$.getCurrentFileSystemName();
+  const coachPath = $$.getLanguageCoachPath();
+  const pathPrefix = `${fsName}/language-coach${coachPath}`;
 
   function getActiveClass(v: T.LanguageCoachSection): string {
     if (v === view) {
@@ -20,19 +22,25 @@ export function LCHeader() {
     <div className="lcHeader">
       <div className="lcHeaderLinks">
         <Router.Link
-          to={pathname}
+          to={pathPrefix}
           className={'lcHeaderLink' + getActiveClass('home')}
         >
           Language Coach
         </Router.Link>
         <Router.Link
-          to={`${pathname}?section=most-used`}
+          to={`${pathPrefix}?section=most-used`}
           className={'lcHeaderLink' + getActiveClass('most-used')}
         >
           Most Used Words
         </Router.Link>
         <Router.Link
-          to={`${pathname}?section=learned`}
+          to={`${pathPrefix}?section=reading`}
+          className={'lcHeaderLink' + getActiveClass('reading')}
+        >
+          Reading
+        </Router.Link>
+        <Router.Link
+          to={`${pathPrefix}?section=learned`}
           className={'lcHeaderLink' + getActiveClass('learned')}
         >
           Learned Words{' '}

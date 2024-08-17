@@ -29,7 +29,7 @@ import { EditorState, EditorStateConfig } from '@codemirror/state';
 export function TextArea(props: {
   path: string;
   textFile: T.DownloadedTextFile;
-  language: any;
+  language?: any;
   editorExtensions?: EditorStateConfig['extensions'];
 }) {
   const isDragging = $$.getIsDraggingSplitter();
@@ -89,7 +89,7 @@ export function TextArea(props: {
         highlightActiveLine(),
         highlightSelectionMatches(),
         scrollPastEnd(),
-        props.language(),
+        ...(props.language ? [props.language()] : []),
         EditorView.updateListener.of((viewUpdate: ViewUpdate) => {
           if (viewUpdate.docChanged) {
             throttledOnChange([viewUpdate.state.doc.toString(), props.path]);

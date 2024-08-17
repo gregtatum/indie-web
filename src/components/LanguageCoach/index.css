@@ -4,6 +4,14 @@
   --accent-color-rgb: 84, 92, 251;
   --lc-header-height: 56px;
 
+  height: 100%;
+  width: 100%;
+  position: relative;
+
+  .splitterSplit {
+    height: calc(100% - var(--lc-header-height));
+  }
+
   * {
     scroll-margin-top: var(--header-height);
   }

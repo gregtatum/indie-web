@@ -51,7 +51,6 @@ export function Learned() {
           words.delete('');
 
           if (previousWords.size === words.size) {
-            console.log(`!!! Sets are the same size`);
             let isEqual = true;
             for (const word of words) {
               if (!previousWords.has(word)) {
@@ -60,7 +59,6 @@ export function Learned() {
               }
             }
             if (isEqual) {
-              console.log(`!!! Sets are equal, not saving`);
               // No need to to update, these sets are equal.
               return;
             }

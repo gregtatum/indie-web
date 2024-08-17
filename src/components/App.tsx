@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, $$, T } from 'src';
+import { A, $, $$, T } from 'src';
 import * as Hooks from 'src/hooks';
 
 import { LinkDropbox } from './LinkDropbox';
@@ -41,6 +41,8 @@ function toValidLanguageCoachSection(value: unknown): T.LanguageCoachSection {
         return view;
       case 'most-used':
         return view;
+      case 'reading':
+        return view;
       case 'learned':
         return view;
       default:
@@ -55,10 +57,18 @@ function LanguageCoachRouter() {
   const [urlParams] = Router.useSearchParams();
   const section = toValidLanguageCoachSection(urlParams.get('section'));
   const path = '/' + (params['*'] ?? '');
-  const dispatch = Hooks.useDispatch();
+  const { dispatch, getState } = Hooks.useStore();
 
   React.useEffect(() => {
-    dispatch(A.viewLanguageCoach(path));
+    // Determine the path to the root part of the language coach.
+    // e.g. /French.coach/reading/File.txt -> /French.coach
+    const pathParts = path.split('/');
+    const coachPartIndex = pathParts.findIndex((pathPart) =>
+      pathPart.endsWith('.coach'),
+    );
+    const coachPath = pathParts.slice(0, coachPartIndex + 1).join('/');
+    const invalidateOldData = $.getLanguageCoachPath(getState()) !== coachPath;
+    dispatch(A.viewLanguageCoach(coachPath, path, invalidateOldData));
   }, [path]);
 
   React.useEffect(() => {

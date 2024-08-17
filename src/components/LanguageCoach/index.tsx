@@ -5,6 +5,7 @@ import { Learned } from './Learned';
 import { HomePage } from './HomePage';
 import { MostUsed } from './MostUsed';
 import { LCHeader } from './LCHeader';
+import { Reading } from './Reading';
 import './index.css';
 
 export function LanguageCoach() {
@@ -41,7 +42,6 @@ export function LanguageCoach() {
               return;
             }
             fileSystemTextReceived = true;
-            console.log('Loading from dropbox');
             const data = JSON.parse(text.text);
             dispatch(A.loadLanguageData(data));
           } catch (error) {
@@ -62,7 +62,7 @@ export function LanguageCoach() {
   }, [dataOrNull]);
 
   if (!dataOrNull) {
-    return 'Loading Language Coach data';
+    return <div className="centered">Loading Language Coach data…</div>;
   }
   return (
     <DataSync key={path} data={dataOrNull}>
@@ -83,6 +83,8 @@ function Sections() {
       return <MostUsed />;
     case 'learned':
       return <Learned />;
+    case 'reading':
+      return <Reading />;
     default:
       throw new UnhandledCaseError(section, 'Unhandled view');
   }
@@ -118,7 +120,6 @@ function DataSync(props: {
     fileSystem,
     fullPath,
   ];
-  console.log(`!!! invalidations`, invalidations);
 
   React.useEffect(() => {
     if (firstLoad.current) {

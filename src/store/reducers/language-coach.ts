@@ -1,10 +1,16 @@
 import * as T from 'src/@types';
 import { combineReducers } from 'redux';
 
+/**
+ * This is the path to the language coach, which may be different from the current file.
+ *
+ * /French.coach/reading/Blog.txt?section=reading
+ * ^^^^^^^^^^^^^
+ */
 function path(state = '', action: T.Action): string {
   switch (action.type) {
     case 'view-language-coach':
-      return action.path;
+      return action.coachPath;
     default:
       return state;
   }
@@ -204,12 +210,9 @@ function dataOrNullReducer(
     return dataReducer(undefined, action);
   }
   if (!state) {
-    // The state has not been initialized, as there is no language data available.
     return null;
   }
-  if (action.type === 'view-language-coach' || !state) {
-    // The language coach is being viewed for the first time, invalidate any previous
-    // language data.
+  if (action.type === 'view-language-coach' && action.invalidateOldData) {
     return null;
   }
 

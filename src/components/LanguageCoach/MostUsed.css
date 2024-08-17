@@ -47,11 +47,6 @@
 .lcMostUsedStemsRow.selected {
   outline: 1px solid var(--accent-color);
   border-radius: 3px;
-}
-
-.lcMostUsedStemsRow.selected {
-  outline: 1px solid var(--accent-color);
-  border-radius: 3px;
   background-color: var(--accent-color);
   color: #fff;
 }

@@ -130,7 +130,7 @@ code {
 
 .centered {
   position: absolute;
-  inset: 0;
+  inset: var(--header-height) 0 0 0;
   display: flex;
   justify-content: center;
   align-items: center;

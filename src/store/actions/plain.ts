@@ -68,8 +68,17 @@ export function viewListFiles(fileSystemName: T.FileSystemName, path: string) {
   return { type: 'view-list-files' as const, fileSystemName, path };
 }
 
-export function viewLanguageCoach(path: string) {
-  return { type: 'view-language-coach' as const, path };
+export function viewLanguageCoach(
+  coachPath: string,
+  path: string,
+  invalidateOldData = false,
+) {
+  return {
+    type: 'view-language-coach' as const,
+    coachPath,
+    path,
+    invalidateOldData,
+  };
 }
 
 export function setLanguageCoachSection(section: T.LanguageCoachSection) {

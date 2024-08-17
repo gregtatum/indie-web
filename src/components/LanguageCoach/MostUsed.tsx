@@ -1,97 +1,14 @@
 import * as React from 'react';
 import './MostUsed.css';
 import { Stem } from 'src/@types';
-import { type Hunspell, loadModule } from 'hunspell-asm';
 import { Hooks, $$, A } from 'src';
-import { isElementInViewport } from 'src/utils';
-
-function segmentSentence(text: string, locale = 'es'): string[] {
-  if (Intl.Segmenter) {
-    const sentences = [];
-    const segmenter = new Intl.Segmenter(locale, { granularity: 'sentence' });
-    for (const { segment } of segmenter.segment(text)) {
-      sentences.push(segment);
-    }
-    return sentences;
-  }
-  // Use a regular expression to split text into sentences on periods, question marks,
-  // exclamation points, and newlines.
-  const sentenceRegex = /[.!?]\s*|\n+/;
-  return text.split(sentenceRegex);
-}
-
-function segmentWords(text: string, locale = 'es'): string[] {
-  const words = [];
-
-  if (Intl.Segmenter) {
-    const segmenter = new Intl.Segmenter(locale, { granularity: 'word' });
-    for (const { segment, isWordLike } of segmenter.segment(text)) {
-      if (isWordLike) {
-        words.push(segment);
-      }
-    }
-  } else {
-    const regex = /\p{Alphabetic}+/gu;
-    for (const [segment] of text.matchAll(regex)) {
-      words.push(segment);
-    }
-  }
-  return words;
-}
-
-// const sampleText = [
-//   'Que trata de la condición y ejercicio del famoso hidalgo don Quijote de',
-//   'la Mancha Que trata de la primera salida que de su tierra hizo el',
-//   'ingenioso don Quijote Donde se cuenta la graciosa manera que tuvo don',
-//   'Quijote en armarse caballero',
-// ];
-
-function computeStems(hunspell: Hunspell, text: string, locale = 'es'): Stem[] {
-  const stemsByStem: Map<string, Stem> = new Map();
-  for (const sentence of segmentSentence(text, locale)) {
-    for (const word of segmentWords(sentence, locale)) {
-      const stemmedWord = hunspell?.stem(word)[0] ?? word;
-      let stem = stemsByStem.get(stemmedWord);
-      if (!stem) {
-        stem = {
-          stem: stemmedWord,
-          frequency: 0,
-          tokens: [],
-          sentences: [],
-        };
-        stemsByStem.set(stemmedWord, stem);
-      }
-      if (!stem.tokens.includes(word)) {
-        stem.tokens.push(word);
-      }
-      const trimmedSentence = sentence.trim();
-      if (!stem.sentences.includes(trimmedSentence)) {
-        stem.sentences.push(trimmedSentence);
-      }
-      stem.frequency++;
-    }
-  }
-  const stems = [...stemsByStem.values()];
-  return stems.sort((a, b) => b.frequency - a.frequency);
-}
-
-function boldWords(sentence: string, tokens: string[]) {
-  const splitToken = '\uE000'; // This is a "private use" token.
-  for (const token of tokens) {
-    sentence = sentence.replaceAll(token, splitToken + token + splitToken);
-  }
-  const parts = sentence.split(splitToken);
-  const results = [];
-  for (let i = 0; i < parts.length; i += 2) {
-    results.push(<span key={i}>{parts[i]}</span>);
-    results.push(<b key={i + 1}>{parts[i + 1]}</b>);
-  }
-  return results;
-}
+import { boldWords, computeStems } from 'src/logic/language-tools';
+import { useHunspell, useStemNavigation } from './hooks';
 
 export function MostUsed() {
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const stemsContainer = React.useRef<HTMLDivElement | null>(null);
+  useStemNavigation(stemsContainer);
 
   const dispatch = Hooks.useDispatch();
   const stems = $$.getUnknownStems();
@@ -100,99 +17,14 @@ export function MostUsed() {
   const selectedSentences = $$.getSelectedSentences();
 
   const [text, setText] = React.useState<string>('');
-  const [hunspell, setHunspell] = React.useState<Hunspell | undefined>();
+  const hunspell = useHunspell();
   const [showLearnMore, setShowLearnMore] = React.useState<boolean>(false);
-
-  React.useEffect(() => {
-    // TODO - Implement proper async behavior here and error handling.
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    (async () => {
-      const affResponse = await fetch(`dictionaries/${languageCode}/index.aff`);
-      const dicResponse = await fetch(`dictionaries/${languageCode}/index.dic`);
-      const affBuffer = new Uint8Array(await affResponse.arrayBuffer());
-      const dicBuffer = new Uint8Array(await dicResponse.arrayBuffer());
-
-      const hunspellFactory = await loadModule();
-
-      const affFile = hunspellFactory.mountBuffer(
-        affBuffer,
-        `${languageCode}.aff`,
-      );
-      const dictFile = hunspellFactory.mountBuffer(
-        dicBuffer,
-        `${languageCode}.dic`,
-      );
-
-      console.log(`Hunspell loaded for "${languageCode}".`);
-      setHunspell(hunspellFactory.create(affFile, dictFile));
-    })().catch((error) => console.error(error));
-  }, [languageCode]);
 
   React.useEffect(() => {
     if (text && hunspell) {
       dispatch(A.stemFrequencyAnalysis(computeStems(hunspell, text)));
     }
   }, [text, hunspell]);
-
-  Hooks.useListener(stemsContainer, 'keydown', [], (event) => {
-    let stemIndex;
-    const keyboardEvent = event as KeyboardEvent;
-
-    switch (keyboardEvent.key) {
-      case 'ArrowDown':
-      case 'ArrowUp':
-      case 'ArrowLeft':
-      case 'ArrowRight':
-        // Prevent scrolling.
-        event.preventDefault();
-        break;
-      default:
-    }
-
-    switch (keyboardEvent.key) {
-      case 'j':
-      case 'ArrowDown':
-        stemIndex = dispatch(A.selectNextStem(1));
-        break;
-      case 'k':
-      case 'ArrowUp':
-        stemIndex = dispatch(A.selectNextStem(-1));
-        break;
-      case 'i':
-        dispatch(A.ignoreSelectedStem());
-        break;
-      case 'l':
-        dispatch(A.learnSelectedStem());
-        break;
-      case 'ArrowLeft':
-        dispatch(A.nextSentence(-1));
-        break;
-      case 'ArrowRight':
-        dispatch(A.nextSentence(1));
-        break;
-      case 'z':
-        if (
-          (keyboardEvent.ctrlKey || keyboardEvent.metaKey) &&
-          !keyboardEvent.shiftKey
-        ) {
-          dispatch(A.applyUndo());
-        }
-        break;
-      default:
-      // Do nothing.
-    }
-    if (stemIndex !== undefined) {
-      const selector = `[data-stem-index="${stemIndex}"]`;
-      const element = document.querySelector(selector);
-      if (!element) {
-        throw new Error(`Could not find stem element from ${selector}`);
-      }
-
-      if (!isElementInViewport(element)) {
-        element.scrollIntoView();
-      }
-    }
-  });
 
   return (
     <div className="lcMostUsed AppScroll">
