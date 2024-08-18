@@ -8,6 +8,12 @@
 
   --lc-header-height: 56px;
 
+  --lc-content-width: 700px;
+  --lc-line-height: 1.4;
+  --lc-margin-big: 50px;
+  --lc-margin-medium: 25px;
+  --lc-margin-small: 10px;
+
   height: 100%;
   width: 100%;
   position: relative;

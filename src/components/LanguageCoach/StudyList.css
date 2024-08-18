@@ -2,13 +2,13 @@
   display: flex;
   flex-direction: column;
   align-items: start;
-  max-width: 700px;
+  max-width: var(--lc-content-width);
   padding: 0 10px;
-  margin: 0 auto;
+  margin: var(--lc-margin-big) auto;
 }
 
 .lcStudyListTop p {
-  line-height: 1.4;
+  line-height: var(--lc-line-height);
 }
 
 .lcStudyListTop code {
@@ -20,7 +20,7 @@
 }
 
 .lcStudyListTextArea {
-  margin-bottom: 12px;
+  margin-bottom: var(--lc-margin-medium);
   /* Only allow the textarea to grow vertically */
   width: 100% !important;
   box-sizing: border-box;
@@ -38,17 +38,30 @@
   grid-template-columns: 70px 0.7fr 1fr 100px 2fr;
   gap: 20px;
   padding: 4px 0;
-}
 
-.lcStudyListStemsRow:hover {
-  background-color: #6a72fb14;
-}
+  &:hover {
+    background-color: #6a72fb14;
+  }
 
-.lcStudyListStemsRow.selected {
-  outline: 1px solid var(--accent-color);
-  border-radius: 3px;
-  background-color: var(--accent-color);
-  color: #fff;
+  &.selected {
+    outline: 1px solid var(--accent-color);
+    border-radius: 3px;
+    background-color: var(--accent-color);
+    color: #fff;
+
+    & .lcStudyListButton {
+      & {
+        outline: 2px solid #fff;
+        background-color: var(--accent-color);
+        color: #fff;
+      }
+
+      &:hover, &:focus {
+        background-color: #fff;
+        color: rgba(var(--accent-color-rgb), 0.9);
+      }
+    }
+  }
 }
 
 .lcStudyListStartButton {
@@ -70,17 +83,6 @@
   transition: none;
 }
 
-.lcStudyListStemsRow.selected .lcStudyListButton {
-  border: 2px solid #fff;
-  background-color: var(--accent-color);
-  color: #fff;
-}
-
-.lcStudyListStemsRow.selected .lcStudyListButton:hover {
-  background-color: #fff;
-  color: rgba(var(--accent-color-rgb), 0.9);
-}
-
 .lcStudyListStemsHeader {
   background-color: #eee;
   color: #888;
@@ -99,4 +101,8 @@
 
 p.lcStudyListCodes {
   line-height: 2.2;
+}
+
+.lcStudyListAddButton {
+  font-size: 1em;
 }

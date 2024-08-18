@@ -22,7 +22,7 @@
 
 .lcHomepageParagraph {
   font-size: 1.1em;
-  line-height: 1.5;
+  line-height: var(--lc-line-height);
   margin-bottom: 2em;
   color: #555;
 }

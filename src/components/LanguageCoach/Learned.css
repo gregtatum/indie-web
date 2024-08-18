@@ -11,20 +11,21 @@
 }
 
 .learned > * {
-  max-width: 700px;
+  max-width: var(--lc-content-width);
   width: 100%;
 }
 
 .learnedContents p {
-  line-height: 1.4;
+  line-height: var(--lc-line-height);
   align-self: start;
-}
-
-.learned > p {
-  margin: 20px 0;
 }
 
 .learnedList {
   width: 100%;
   flex: 1;
+}
+
+.learnedIntro {
+  margin-top: var(--lc-margin-big);
+  line-height: var(--lc-line-height);
 }

@@ -27,16 +27,28 @@
   --light-border: #ddd;
 }
 
+/* animation: fadein 500ms; */
 @keyframes fadein {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
+/* animation: fadeindelay 500ms; */
 @keyframes fadeindelay {
   0% { opacity: 0; }
   30% { opacity: 0; }
   100%   { opacity: 1; }
 }
+
+/*
+  --slidedown-px: -20px;
+  animation: slidedown 500ms;
+*/
+@keyframes slidedown {
+  from { opacity: 0; transform: translateY(var(--slidedown-px)) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
 
 html,
 body,

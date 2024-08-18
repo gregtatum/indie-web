@@ -207,6 +207,7 @@ function RenderedReading() {
   const dispatch = Hooks.useDispatch();
   const language = $$.getLanguageCode();
   const container = React.useRef<null | HTMLDivElement>(null);
+  const [showHelp, setShowHelp] = React.useState<boolean>(false);
 
   const unknownStems = $$.getUnknownStems();
   const selectedStemIndex = $$.getSelectedStemIndex();
@@ -257,17 +258,75 @@ function RenderedReading() {
 
   return (
     <>
+      {showHelp ? (
+        <div className="lcReadingTop">
+          <p>
+            A study list is generated whenever you add reading material. This
+            makes it easy to prioritize your language learning by learning the
+            most common words in some text. For instance, if you are reading a
+            blog post about a winery, the terms for wine making will probably
+            show up on the top of the list. Even after a short time studying the
+            words, it can be easy to then ready the content.
+          </p>
+          <h2>Keyboard Shortcuts</h2>
+          <p>
+            You can build up your known words very quickly using keyboard
+            shortcuts with the study list. Marking a word as learned adds it to
+            your vocab list so that you can see your progress on your language
+            learning journey. Marking a word as ignored hides the word. This is
+            useful for invented words, or proper nouns.
+          </p>
+          <p className="lcStudyListCodes">
+            <code>k</code>, <code>↑</code> - Move the selected row up.
+            <br />
+            <code>j</code>, <code>↓</code> - Move the selected row down.
+            <br />
+            <code>l</code> - Mark a word as learned.
+            <br />
+            <code>i</code> - Mark a word as ignored.
+            <br />
+            <code>ctrl + z</code> - Undo the action.
+            <br />
+            <code>←</code>, <code>→</code> - Change the selected sentence
+            <br />
+          </p>
+          <h2>Word Roots</h2>
+          <p>
+            Words are grouped by their word roots, which may remove part of the
+            word, such as the verb ending or the pluralization. This way
+            variations of words are grouped around the same root.
+          </p>
+          <p>
+            <button
+              type="button"
+              className="inline-button"
+              onClick={() => setShowHelp(false)}
+            >
+              Hide help
+            </button>
+          </p>
+        </div>
+      ) : null}
       <div className="lcReadingContainer" ref={container}>
         <div className="lcReadingLeft">
           <div className="lcReadingStickyHeader">
             {hideEditor ? (
-              <button
-                className="button"
-                type="button"
-                onClick={() => dispatch(A.hideEditor(false))}
-              >
-                Edit
-              </button>
+              <div className="lcReadingStickyHeaderRow">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => void setShowHelp((prevValue) => !prevValue)}
+                >
+                  Help
+                </button>
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => dispatch(A.hideEditor(false))}
+                >
+                  Edit
+                </button>
+              </div>
             ) : null}
           </div>
           <h1>{title}</h1>

@@ -6,12 +6,12 @@
   display: flex;
   flex-direction: column;
   align-items: start;
-  max-width: 700px;
+  max-width: var(--lc-content-width);
   padding: 0 10px;
-  margin: 50px auto;
+  margin: var(--lc-margin-big) auto;
 
   & p {
-    line-height: 1.4;
+    line-height: var(--lc-line-height);
   }
 
   & label {
@@ -23,7 +23,7 @@
 }
 
 .lcReadingListFiles {
-  max-width: 700px;
+  max-width: var(--lc-content-width);
   margin: var(--margin-bottom) auto;
   border: 1px solid var(--light-border);
   border-radius: 5px;
@@ -82,6 +82,12 @@
 }
 
 .lcReadingStickyHeaderRow {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.lcReadingStickyHeaderRow {
   background: #fff;
   padding: 7px;
   padding-inline-end: 0;
@@ -95,7 +101,7 @@
 .lcReadingContainer {
   --reading-padding: 32px;
   max-width: 1000px;
-  line-height: 1.5;
+  line-height: var(--lc-line-height);
   font-size: 16px;
 }
 
@@ -214,4 +220,15 @@
 
 .lcReadingSelectedSentence {
   background: rgba(var(--accent-color-rgb), 0.2);
+}
+
+.lcReadingTop {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  max-width: var(--lc-content-width);
+  padding: 0 10px;
+  margin: 30px auto;
+  --slidedown-px: -20px;
+  animation: slidedown 500ms;
 }

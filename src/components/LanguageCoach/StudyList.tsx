@@ -114,9 +114,9 @@ export function StudyList() {
             }
             stemsContainer.current?.focus();
           }}
-          className="button mostUsedStartButton"
+          className="lcButton lcStudyListAddButton"
         >
-          Get the Word List
+          Get the study List
         </button>
       </div>
       <div className="lcStudyListStems" tabIndex={0} ref={stemsContainer}>
