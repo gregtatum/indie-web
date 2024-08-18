@@ -15,6 +15,7 @@ import { Splitter } from '../Splitter';
 import { useStemNavigation, useStems } from './hooks';
 import { applyClassToWords } from 'src/logic/language-tools';
 import * as Router from 'react-router-dom';
+import { EditorView } from 'codemirror';
 
 export function Reading() {
   const coachPath = $$.getLanguageCoachPath();
@@ -95,10 +96,6 @@ function Add() {
       .then(() => dispatch(A.listFiles(readingPath)))
       .then(
         () => {
-          console.log(
-            `!!! navigate`,
-            `${fsName}/language-coach${savePath}?section=reading`,
-          );
           navigate(`${fsName}/language-coach${savePath}?section=reading`);
         },
         (error) => {
@@ -152,6 +149,9 @@ export function ViewReadingFile() {
   const error = $$.getDownloadFileErrors().get(path);
   const hideEditor = $$.getHideEditor();
   const swipeDiv = React.useRef(null);
+  const hideEditorRef = React.useRef<boolean>(hideEditor);
+  const fileSystem = $$.getCurrentFS();
+
   useNextPrevSwipe(swipeDiv);
 
   React.useEffect(() => {
@@ -192,7 +192,14 @@ export function ViewReadingFile() {
   return (
     <Splitter
       className="splitterSplit"
-      start={<TextArea path={path} textFile={textFile} />}
+      start={
+        <TextArea
+          path={path}
+          textFile={textFile}
+          editorExtensions={[EditorView.lineWrapping]}
+          autoSave={true}
+        />
+      }
       end={<RenderedReading />}
       persistLocalStorage="lcReadingSplitterOffset"
     />
@@ -201,22 +208,17 @@ export function ViewReadingFile() {
 
 function RenderedReading() {
   const text = $$.getActiveFileText();
-  const title = getPathFileNameNoExt($$.getPath());
-  const hideEditor = $$.getHideEditor();
-  const areStemsActive = $$.getAreStemsActive();
-  const dispatch = Hooks.useDispatch();
-  const language = $$.getLanguageCode();
-  const container = React.useRef<null | HTMLDivElement>(null);
-  const [showHelp, setShowHelp] = React.useState<boolean>(false);
-
+  const languageCode = $$.getLanguageCode();
   const unknownStems = $$.getUnknownStems();
   const selectedStemIndex = $$.getSelectedStemIndex();
-  const selectedStem =
-    selectedStemIndex === null || !unknownStems
-      ? null
-      : unknownStems[selectedStemIndex];
-
+  const hideEditor = $$.getHideEditor();
+  const areStemsActive = $$.getAreStemsActive();
+  const language = $$.getLanguageCode();
   const selectedSentence = $$.getSelectedSentence();
+
+  const dispatch = Hooks.useDispatch();
+  const container = React.useRef<null | HTMLDivElement>(null);
+  const [showHelp, setShowHelp] = React.useState<boolean>(false);
   const segmenter = React.useMemo(
     () => new Intl.Segmenter(language, { granularity: 'sentence' }),
     [],
@@ -244,6 +246,12 @@ function RenderedReading() {
     return paragraphs;
   }, [text]);
 
+  const title = getPathFileNameNoExt($$.getPath());
+  const selectedStem =
+    selectedStemIndex === null || !unknownStems
+      ? null
+      : unknownStems[selectedStemIndex];
+
   React.useEffect(() => {
     if (!selectedSentence || !container.current) {
       return;
@@ -258,55 +266,7 @@ function RenderedReading() {
 
   return (
     <>
-      {showHelp ? (
-        <div className="lcReadingTop">
-          <p>
-            A study list is generated whenever you add reading material. This
-            makes it easy to prioritize your language learning by learning the
-            most common words in some text. For instance, if you are reading a
-            blog post about a winery, the terms for wine making will probably
-            show up on the top of the list. Even after a short time studying the
-            words, it can be easy to then ready the content.
-          </p>
-          <h2>Keyboard Shortcuts</h2>
-          <p>
-            You can build up your known words very quickly using keyboard
-            shortcuts with the study list. Marking a word as learned adds it to
-            your vocab list so that you can see your progress on your language
-            learning journey. Marking a word as ignored hides the word. This is
-            useful for invented words, or proper nouns.
-          </p>
-          <p className="lcStudyListCodes">
-            <code>k</code>, <code>↑</code> - Move the selected row up.
-            <br />
-            <code>j</code>, <code>↓</code> - Move the selected row down.
-            <br />
-            <code>l</code> - Mark a word as learned.
-            <br />
-            <code>i</code> - Mark a word as ignored.
-            <br />
-            <code>ctrl + z</code> - Undo the action.
-            <br />
-            <code>←</code>, <code>→</code> - Change the selected sentence
-            <br />
-          </p>
-          <h2>Word Roots</h2>
-          <p>
-            Words are grouped by their word roots, which may remove part of the
-            word, such as the verb ending or the pluralization. This way
-            variations of words are grouped around the same root.
-          </p>
-          <p>
-            <button
-              type="button"
-              className="inline-button"
-              onClick={() => setShowHelp(false)}
-            >
-              Hide help
-            </button>
-          </p>
-        </div>
-      ) : null}
+      <Help showHelp={showHelp} setShowHelp={setShowHelp} />
       <div className="lcReadingContainer" ref={container}>
         <div className="lcReadingLeft">
           <div className="lcReadingStickyHeader">
@@ -330,28 +290,45 @@ function RenderedReading() {
             ) : null}
           </div>
           <h1>{title}</h1>
-          {paragraphs.map((paragraph) => {
-            if (!selectedStem || !areStemsActive || !selectedSentence) {
-              return <p key={paragraph}>{paragraph}</p>;
-            }
-            const nodes = [];
+          <div lang={languageCode}>
+            {paragraphs.map((paragraph, i) => {
+              const key = i + paragraph;
 
-            for (const { segment } of segmenter.segment(paragraph)) {
-              let node: React.ReactNode = applyClassToWords(
-                segment,
-                selectedStem.tokens,
-                'lcReadingHovered',
-              );
-              if (segment.includes(selectedSentence)) {
-                node = (
-                  <span className="lcReadingSelectedSentence">{node} </span>
+              paragraph = paragraph.trim();
+              if (
+                paragraph.startsWith('http://') ||
+                paragraph.startsWith('https://')
+              ) {
+                return (
+                  <p key={key}>
+                    <a href={paragraph}>{paragraph}</a>
+                  </p>
                 );
               }
-              nodes.push(node);
-            }
+              if (!selectedStem || !areStemsActive || !selectedSentence) {
+                return <p key={key}>{paragraph}</p>;
+              }
+              const nodes = [];
 
-            return <p key={paragraph}>{nodes}</p>;
-          })}
+              for (const { segment } of segmenter.segment(paragraph)) {
+                let node: React.ReactNode = applyClassToWords(
+                  segment,
+                  selectedStem.tokens,
+                  'lcReadingHovered',
+                );
+                if (segment.includes(selectedSentence)) {
+                  node = (
+                    <span key={key} className="lcReadingSelectedSentence">
+                      {node}{' '}
+                    </span>
+                  );
+                }
+                nodes.push(node);
+              }
+
+              return <p key={key}>{nodes}</p>;
+            })}
+          </div>
         </div>
         {hideEditor ? <Stems /> : null}
       </div>
@@ -383,16 +360,14 @@ function Stems() {
       <div className="lcReadingStemsScroll">
         {unknownStems
           ? unknownStems.map((stem, stemIndex) => (
-              <>
-                <StemRow
-                  stem={stem}
-                  key={stemIndex}
-                  stemIndex={stemIndex}
-                  selectedStemIndex={selectedStemIndex}
-                  stemsContainer={stemsContainer}
-                  languageCode={languageCode}
-                />
-              </>
+              <StemRow
+                stem={stem}
+                key={stem.stem + stemIndex}
+                stemIndex={stemIndex}
+                selectedStemIndex={selectedStemIndex}
+                stemsContainer={stemsContainer}
+                languageCode={languageCode}
+              />
             ))
           : null}
       </div>
@@ -454,6 +429,67 @@ function StemRow({
           ignore
         </button>
       </div>
+    </div>
+  );
+}
+
+interface HelpProps {
+  showHelp: boolean;
+  setShowHelp: (showHelp: boolean) => unknown;
+}
+
+function Help({ showHelp, setShowHelp }: HelpProps) {
+  if (!showHelp) {
+    return null;
+  }
+
+  return (
+    <div className="lcReadingTop">
+      <p>
+        A study list is generated whenever you add reading material. This makes
+        it easy to prioritize your language learning by learning the most common
+        words in some text. For instance, if you are reading a blog post about a
+        winery, the terms for wine making will probably show up on the top of
+        the list. Even after a short time studying the words, it can be easy to
+        then ready the content.
+      </p>
+      <h2>Keyboard Shortcuts</h2>
+      <p>
+        You can build up your known words very quickly using keyboard shortcuts
+        with the study list. Marking a word as learned adds it to your vocab
+        list so that you can see your progress on your language learning
+        journey. Marking a word as ignored hides the word. This is useful for
+        invented words, or proper nouns.
+      </p>
+      <p className="lcStudyListCodes">
+        <code>k</code>, <code>↑</code> - Move the selected row up.
+        <br />
+        <code>j</code>, <code>↓</code> - Move the selected row down.
+        <br />
+        <code>l</code> - Mark a word as learned.
+        <br />
+        <code>i</code> - Mark a word as ignored.
+        <br />
+        <code>ctrl + z</code> - Undo the action.
+        <br />
+        <code>←</code>, <code>→</code> - Change the selected sentence
+        <br />
+      </p>
+      <h2>Word Roots</h2>
+      <p>
+        Words are grouped by their word roots, which may remove part of the
+        word, such as the verb ending or the pluralization. This way variations
+        of words are grouped around the same root.
+      </p>
+      <p>
+        <button
+          type="button"
+          className="inline-button"
+          onClick={() => setShowHelp(false)}
+        >
+          Hide help
+        </button>
+      </p>
     </div>
   );
 }

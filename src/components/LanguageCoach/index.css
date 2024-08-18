@@ -14,6 +14,13 @@
   --lc-margin-medium: 25px;
   --lc-margin-small: 10px;
 
+  /**
+   * The sticky header needs to be moved up a bit to not be over the title text.
+   * This only applies to the reading material page.
+   */
+  --lc-sticky-header-adjust: 16px;
+
+
   height: 100%;
   width: 100%;
   position: relative;

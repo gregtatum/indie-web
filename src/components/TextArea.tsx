@@ -31,6 +31,7 @@ export function TextArea(props: {
   textFile: T.DownloadedTextFile;
   language?: any;
   editorExtensions?: EditorStateConfig['extensions'];
+  autoSave?: boolean;
 }) {
   const isDragging = $$.getIsDraggingSplitter();
   const modifiedText = $$.getModifiedText();
@@ -38,6 +39,10 @@ export function TextArea(props: {
   const codeMirrorRef = React.useRef<null | HTMLDivElement>(null);
   const editorStateConfig = React.useRef<null | EditorStateConfig>(null);
   const [editor, setEditor] = React.useState<null | EditorView>(null);
+
+  // Retain a ref for the editor for when the component is cleaned up.
+  const editorRef = React.useRef<null | EditorView>(editor);
+  editorRef.current = editor;
 
   const dispatch = Hooks.useDispatch();
   function onChange([newText, path]: [string, string]) {
@@ -57,6 +62,19 @@ export function TextArea(props: {
     // Return true so that no other event handlers fire.
     return true;
   };
+
+  // Handle auto-saving on close.
+  const { autoSave } = props;
+  React.useEffect(() => {
+    return () => {
+      const editor = editorRef.current;
+      if (autoSave && editor) {
+        const text = editor.state.doc.toString();
+        // The error is handled in the action.
+        void dispatch(A.saveTextFile(props.path, text));
+      }
+    };
+  }, [autoSave]);
 
   React.useEffect(() => {
     if (!codeMirrorRef.current) {

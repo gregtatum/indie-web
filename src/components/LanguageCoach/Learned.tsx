@@ -18,13 +18,13 @@ export function Learned() {
         </p>
       </div>
       <h2>Learned Words</h2>
-      <TextArea
+      <WordList
         words={learnedStems}
         selectWords={$.getLearnedStems}
         updateWords={A.updateLearnedWords}
       />
       <h2>Ignored Words</h2>
-      <TextArea
+      <WordList
         words={ignoredStems}
         selectWords={$.getIgnoredStems}
         updateWords={A.updateIgnoredWords}
@@ -33,13 +33,13 @@ export function Learned() {
   );
 }
 
-interface TextAreaProps {
+interface WordListProps {
   words: string[];
   selectWords: (state: T.State) => Set<string>;
   updateWords: (stems: Set<string>) => T.Action;
 }
 
-function TextArea(props: TextAreaProps) {
+function WordList(props: WordListProps) {
   const languageCode = $$.getLanguageCode();
   const { words, selectWords, updateWords } = props;
   const { dispatch, getState } = Hooks.useStore();

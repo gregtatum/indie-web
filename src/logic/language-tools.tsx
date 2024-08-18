@@ -49,7 +49,12 @@ export function computeStems(
   locale = 'es',
 ): Stem[] {
   const stemsByStem: Map<string, Stem> = new Map();
-  for (const sentence of segmentSentence(text, locale)) {
+  for (let sentence of segmentSentence(text, locale)) {
+    sentence = sentence.trim();
+    if (sentence.startsWith('http://') || sentence.startsWith('https://')) {
+      // Don't stem URLs.
+      continue;
+    }
     for (const word of segmentWords(sentence, locale)) {
       const stemmedWord = (hunspell?.stem(word)[0] ?? word).toLowerCase();
       let stem = stemsByStem.get(stemmedWord);
@@ -102,10 +107,13 @@ export function applyClassToWords(
   const parts = sentence.split(splitToken);
   const results = [];
   for (let i = 0; i < parts.length; i += 2) {
-    results.push(<span key={i}>{parts[i]}</span>);
+    const key1 = sentence + i;
+    const key2 = sentence + (i + 1);
+
+    results.push(<span key={key1}>{parts[i]}</span>);
     if (parts[i + 1]) {
       results.push(
-        <span key={i + 1} className={className}>
+        <span key={key2} className={className}>
           {parts[i + 1]}
         </span>,
       );
