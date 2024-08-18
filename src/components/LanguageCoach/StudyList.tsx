@@ -37,7 +37,7 @@ export function StudyList() {
   }, [text, hunspell]);
 
   return (
-    <div className="lcStudyList AppScroll">
+    <div className="lcStudyList">
       <div className="lcStudyListTop">
         <p>
           Paste text from a book, article, or podcast transcript into the box to

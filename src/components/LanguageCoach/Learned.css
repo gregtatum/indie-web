@@ -1,31 +1,15 @@
-.learned {
-  --bottom-padding: 20px;
-  height: calc(
-    100% - var(--header-height) - var(--bottom-padding) - var(--lc-header-height)
-  );
-  position: absolute;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.learned > * {
+.lcLearned {
   max-width: var(--lc-content-width);
-  width: 100%;
-}
-
-.learnedContents p {
+  margin: var(--lc-margin-big) auto;
   line-height: var(--lc-line-height);
-  align-self: start;
 }
 
-.learnedList {
+.lcLearnedIntro {
+  /* This is only to match the margin collapse behavior of other panels. */
+  display: flex;
+}
+
+.lcLearnedTextArea {
   width: 100%;
-  flex: 1;
-}
-
-.learnedIntro {
-  margin-top: var(--lc-margin-big);
-  line-height: var(--lc-line-height);
+  height: 75vh;
 }

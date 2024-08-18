@@ -211,6 +211,13 @@ export function updateLearnedWords(words: Set<string>) {
   };
 }
 
+export function updateIgnoredWords(words: Set<string>) {
+  return {
+    type: 'update-ignored-words' as const,
+    words,
+  };
+}
+
 export function loadLanguageData(languageData: T.LanguageDataV1) {
   return {
     type: 'load-language-data' as const,

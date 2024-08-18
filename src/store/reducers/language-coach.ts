@@ -71,6 +71,10 @@ function ignoredStems(
       stems.delete(stem);
       return stems;
     }
+    case 'update-ignored-words': {
+      const { words } = action;
+      return words;
+    }
     default:
       return state;
   }

@@ -114,6 +114,16 @@ export const getSortedLearnedStems = createSelector(
   },
 );
 
+export const getSortedIgnoredStems = createSelector(
+  getIgnoredStems,
+  getLanguageCode,
+  (stemsSet, languageCode): string[] => {
+    const stems = [...stemsSet];
+    stems.sort((a, b) => a.localeCompare(b, languageCode));
+    return stems;
+  },
+);
+
 export const getSelectedSentence = createSelector(
   getSelectedSentences,
   getSelectedStemIndex,
