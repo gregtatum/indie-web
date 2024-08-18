@@ -1,7 +1,12 @@
 import * as React from 'react';
 import './Reading.css';
 import { A, $$, Hooks, T } from 'src';
-import { dropboxErrorMessage, getPathFileNameNoExt, pathJoin } from 'src/utils';
+import {
+  dropboxErrorMessage,
+  getPathFileNameNoExt,
+  isElementInViewport,
+  pathJoin,
+} from 'src/utils';
 import { File, ListFilesSkeleton } from '../ListFiles';
 import { useRetainScroll } from 'src/hooks';
 import { NextPrevLinks, useNextPrevSwipe } from '../NextPrev';
@@ -22,9 +27,9 @@ export function Reading() {
         <ReadingList />
       </div>
     );
-  } else {
-    return <ViewReadingFile />;
   }
+
+  return <ViewReadingFile />;
 }
 
 function ReadingList() {
@@ -200,6 +205,8 @@ function RenderedReading() {
   const hideEditor = $$.getHideEditor();
   const areStemsActive = $$.getAreStemsActive();
   const dispatch = Hooks.useDispatch();
+  const language = $$.getLanguageCode();
+  const container = React.useRef<null | HTMLDivElement>(null);
 
   const unknownStems = $$.getUnknownStems();
   const selectedStemIndex = $$.getSelectedStemIndex();
@@ -207,6 +214,12 @@ function RenderedReading() {
     selectedStemIndex === null || !unknownStems
       ? null
       : unknownStems[selectedStemIndex];
+
+  const selectedSentence = $$.getSelectedSentence();
+  const segmenter = React.useMemo(
+    () => new Intl.Segmenter(language, { granularity: 'sentence' }),
+    [],
+  );
 
   const paragraphs = React.useMemo(() => {
     const paragraphs: string[] = [];
@@ -230,9 +243,21 @@ function RenderedReading() {
     return paragraphs;
   }, [text]);
 
+  React.useEffect(() => {
+    if (!selectedSentence || !container.current) {
+      return;
+    }
+    const element = container.current.querySelector(
+      '.lcReadingSelectedSentence',
+    );
+    if (element && !isElementInViewport(element)) {
+      element.scrollIntoView();
+    }
+  }, [selectedSentence]);
+
   return (
     <>
-      <div className="lcReadingContainer">
+      <div className="lcReadingContainer" ref={container}>
         <div className="lcReadingLeft">
           <div className="lcReadingStickyHeader">
             {hideEditor ? (
@@ -247,18 +272,26 @@ function RenderedReading() {
           </div>
           <h1>{title}</h1>
           {paragraphs.map((paragraph) => {
-            if (!selectedStem || !areStemsActive) {
+            if (!selectedStem || !areStemsActive || !selectedSentence) {
               return <p key={paragraph}>{paragraph}</p>;
             }
-            return (
-              <p key={paragraph}>
-                {applyClassToWords(
-                  paragraph,
-                  selectedStem.tokens,
-                  'lcReadingHovered',
-                )}
-              </p>
-            );
+            const nodes = [];
+
+            for (const { segment } of segmenter.segment(paragraph)) {
+              let node: React.ReactNode = applyClassToWords(
+                segment,
+                selectedStem.tokens,
+                'lcReadingHovered',
+              );
+              if (segment.includes(selectedSentence)) {
+                node = (
+                  <span className="lcReadingSelectedSentence">{node} </span>
+                );
+              }
+              nodes.push(node);
+            }
+
+            return <p key={paragraph}>{nodes}</p>;
           })}
         </div>
         {hideEditor ? <Stems /> : null}

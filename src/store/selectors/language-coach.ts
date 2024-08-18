@@ -113,3 +113,18 @@ export const getSortedLearnedStems = createSelector(
     return stems;
   },
 );
+
+export const getSelectedSentence = createSelector(
+  getSelectedSentences,
+  getSelectedStemIndex,
+  getUnknownStems,
+  (selectedSentences, selectedStemIndex, unknownStems): string | null => {
+    if (selectedStemIndex === null || !unknownStems) {
+      return null;
+    }
+    const selectedStem = unknownStems[selectedStemIndex];
+
+    const selectedSentenceIndex = selectedSentences.get(selectedStem.stem) ?? 0;
+    return selectedStem.sentences[selectedSentenceIndex]?.trim() ?? null;
+  },
+);

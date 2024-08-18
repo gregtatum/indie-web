@@ -211,3 +211,7 @@
 .lcReadingAddButton {
   font-size: 1.0em;
 }
+
+.lcReadingSelectedSentence {
+  background: rgba(var(--accent-color-rgb), 0.2);
+}
