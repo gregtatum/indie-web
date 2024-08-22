@@ -88,6 +88,47 @@ describe('offline db', () => {
     idbfs.close();
   });
 
+  it('will only create one file when added multiple times', async () => {
+    const idbfs = await openIDBFS('test-db');
+    const paths = ['/song.chopro', '/song.chopro'];
+    for (const path of paths) {
+      await idbfs.saveText(
+        createFileMetadata(path),
+        'overwrite',
+        'This is a song.',
+      );
+    }
+
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      └── song.chopro
+      "
+    `);
+    idbfs.close();
+  });
+
+  it('will only create one file when added multiple times', async () => {
+    const idbfs = await openIDBFS('test-db');
+    await idbfs.createFolder('/French.coach');
+    await idbfs.createFolder('/Spanish.coach');
+    const paths = ['/French.coach/words.json', '/Spanish.coach/words.json'];
+    for (const path of paths) {
+      await idbfs.saveText(createFileMetadata(path), 'overwrite', '{}');
+    }
+
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      ├── French.coach
+      │   └── words.json
+      └── Spanish.coach
+          └── words.json
+      "
+    `);
+    idbfs.close();
+  });
+
   it('can create files inside of a directory', async () => {
     const idbfs = await openIDBFS('test-db');
 

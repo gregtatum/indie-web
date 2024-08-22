@@ -231,8 +231,15 @@ export function isAppSettingScrollTop(): boolean {
   return isSettingScrollTop;
 }
 
+/**
+ * Similar to dirname, pops off the filename from a path.
+ *
+ * /foo/bar/baz.txt -> /foo/bar
+ * /foo/bar/baz     -> /foo/bar
+ * /foo             -> /
+ */
 export function getDirName(path: string): string {
-  return path.split('/').slice(0, -1).join('/');
+  return path.split('/').slice(0, -1).join('/') || '/';
 }
 
 // List taken from: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
