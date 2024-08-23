@@ -231,17 +231,6 @@ export function isAppSettingScrollTop(): boolean {
   return isSettingScrollTop;
 }
 
-/**
- * Similar to dirname, pops off the filename from a path.
- *
- * /foo/bar/baz.txt -> /foo/bar
- * /foo/bar/baz     -> /foo/bar
- * /foo             -> /
- */
-export function getDirName(path: string): string {
-  return path.split('/').slice(0, -1).join('/') || '/';
-}
-
 // List taken from: https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types
 export const imageExtensions = new Set([
   'apng',
@@ -287,7 +276,7 @@ export function getUrlForFile(fsName: string, path: string): string | null {
 /**
  * getPathFolder('/foo/bar/baz.html') === '/foo/bar'
  */
-export function getPathFolder(path: string): string {
+export function getDirName(path: string): string {
   const parts = path.split('/');
   parts.pop();
   const folder = parts.join('/');

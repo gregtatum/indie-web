@@ -6,12 +6,7 @@ import {
   SaveMode,
 } from 'src/logic/file-system';
 import { T } from 'src';
-import {
-  getDirName,
-  getPathFileName,
-  getPathFolder,
-  updatePathRoot,
-} from 'src/utils';
+import { getPathFileName, getDirName, updatePathRoot } from 'src/utils';
 
 export const BROWSER_FILES_DB_NAME = 'browser-files';
 
@@ -142,58 +137,104 @@ export class IDBFS extends FileSystemCache {
     return createFolderMetadata(listingRow.path);
   }
 
+  /**
+   * It's better to get a transaction over both the files and folder listing as
+   * they are related. Not every operation will use both, but it's simpler and
+   * safer this way..
+   */
+  #getReadWriteTX() {
+    const transaction = this.#db.transaction(
+      ['files', 'folderListings'],
+      'readwrite',
+    );
+    transaction.done.catch((error) => {
+      if (error?.name === 'AbortError') {
+        // Ignore abort events, as this can be done intentionally.
+        return undefined;
+      }
+      /* istanbul ignore next */
+      return Promise.reject(error);
+    });
+    return transaction;
+  }
+
   async addFolderListing(
     pathOrMetadata: string | T.FolderMetadata,
     files: T.FolderListing,
     // We may be recursively adding folder listings.
-    tx?: idb.IDBPTransaction<T.IDBFSSchema, ['folderListings'], 'readwrite'>,
+    tx = this.#getReadWriteTX(),
   ): Promise<T.FolderListingRow> {
-    const metadata = getFolderMetadata(pathOrMetadata);
-    const { path } = metadata;
-    log('addFolderListing', path, files);
+    try {
+      const metadata = getFolderMetadata(pathOrMetadata);
+      const { path } = metadata;
+      log('addFolderListing', path, files);
 
-    // Insert the folder listing.
-    if (!tx) {
-      tx = this.#db.transaction('folderListings', 'readwrite');
-    }
-    const folderListingsStore = tx.objectStore('folderListings');
-    const row: T.FolderListingRow = {
-      storedAt: new Date(),
-      path,
-      files,
-    };
-    log('addFolderListing', path, files);
-    await folderListingsStore.put(row);
+      const folderListingsStore = tx.objectStore('folderListings');
+      const filesStore = tx.objectStore('files');
 
-    if (path !== '/') {
-      // Recursively construct the folder listings.
-      const parentPath = getDirName(path);
-      const parent = await folderListingsStore.get(parentPath);
-      if (parent) {
-        // The parent exists, add the folder to it.
-        const fileInParent = parent.files.find(
-          (file) => file.path === parentPath,
-        );
-        if (fileInParent) {
-          if (fileInParent.type !== 'folder') {
-            tx.abort();
-            throw new Error(
-              'The file in the parent was not of type folder: ' +
-                fileInParent.path,
-            );
+      // Insert the folder listing.
+      const row: T.FolderListingRow = {
+        storedAt: new Date(),
+        path,
+        files,
+      };
+      log('addFolderListing', path, files);
+      await folderListingsStore.put(row);
+
+      if (path !== '/') {
+        // Recursively construct the folder listings.
+        const parentPath = getDirName(path);
+        if (await filesStore.get(parentPath)) {
+          tx.abort();
+          throw new Error('A parent folder was actually a file: ' + parentPath);
+        }
+        const parent = await folderListingsStore.get(parentPath);
+        if (parent) {
+          // The parent exists, add the folder to it.
+          const fileInParent = parent.files.find(
+            (file) => file.path === parentPath,
+          );
+          if (fileInParent) {
+            /* istanbul ignore next */
+            if (fileInParent.type !== 'folder') {
+              tx.abort();
+              throw new Error(
+                'The file in the parent was not of type folder: ' +
+                  fileInParent.path,
+              );
+            }
+          } else {
+            // Adding the folder.
+            parent.files.push(createFolderMetadata(path));
+            await folderListingsStore.put(parent);
           }
         } else {
-          // Adding the folder.
-          parent.files.push(createFolderMetadata(path));
-          await folderListingsStore.put(parent);
+          // The parent folder does not exist, create it with this folder.
+          await this.addFolderListing(parentPath, [metadata], tx);
         }
-      } else {
-        // The parent folder does not exist, create it with this folder.
-        await this.addFolderListing(parentPath, [metadata], tx);
       }
+      await tx.done;
+      return row;
+    } catch (error) {
+      setTimeout(() => {
+        // For some reason this causes an immediate DOMException, and can't be
+        // caught. I'd prefer to throw a real error here.
+        try {
+          tx.abort();
+        } catch {}
+      }, 0);
+      throw error;
     }
-    await tx.done;
-    return row;
+  }
+
+  /**
+   * Check if a file exists.
+   */
+  async fileExists(path: string): Promise<boolean> {
+    if (!path) {
+      path = '/';
+    }
+    return Boolean(await this.#db.get('files', path));
   }
 
   async loadBlob(path: string): Promise<T.BlobFile> {
@@ -209,21 +250,21 @@ export class IDBFS extends FileSystemCache {
         const blob = new Blob([text], { type: 'text/plain' });
         return { blob, metadata };
       }
-
-      const { blob, metadata } = row;
-      return { blob, metadata };
+      /* istanbul ignore next  */
+      return { blob: row.blob, metadata: row.metadata };
     }
     return Promise.reject(IDBError.notFound('No file found at ' + path));
   }
 
   compressFolder() {
+    /* istanbul ignore next */
     return Promise.reject(
       new Error('This is not current supported by the IndexedDB file system.'),
     );
   }
 
   async getFileCount(): Promise<number> {
-    const tx = this.#db.transaction('files', 'readwrite');
+    const tx = this.#getReadWriteTX();
     const store = tx.objectStore('files');
     const count = await store.count();
     await tx.done;
@@ -231,7 +272,7 @@ export class IDBFS extends FileSystemCache {
   }
 
   async #getFileStoreIfNeedsUpdating(metadata: T.FileMetadata) {
-    const tx = this.#db.transaction('files', 'readwrite');
+    const tx = this.#getReadWriteTX();
     const store = tx.objectStore('files');
     const offline = await store.get(metadata.path);
     if (offline && offline.metadata.hash === metadata.hash) {
@@ -251,6 +292,7 @@ export class IDBFS extends FileSystemCache {
     const metadata = await getFileMetadata(pathOrMetadata, blob);
     const store = await this.#getFileStoreIfNeedsUpdating(metadata);
     if (store) {
+      /* istanbul ignore else */
       if (process.env.NODE_ENV === 'test') {
         // Blob text doesn't work correctly in Node and Jest. Fake it by saving text.
         const text: string = await blob.text();
@@ -272,7 +314,7 @@ export class IDBFS extends FileSystemCache {
    * Updates the metadata in the `files` table.
    */
   async #updateFileMetadata(oldPath: string, metadata: T.FileMetadata) {
-    const tx = this.#db.transaction('files', 'readwrite');
+    const tx = this.#getReadWriteTX();
     const store = tx.objectStore('files');
     const oldFile = await store.get(oldPath);
     if (oldFile) {
@@ -302,16 +344,17 @@ export class IDBFS extends FileSystemCache {
     oldPath: string | null,
     metadata: T.FileMetadata,
   ) {
-    const tx = this.#db.transaction('folderListings', 'readwrite');
+    const tx = this.#getReadWriteTX();
     const folderListingsStore = tx.objectStore('folderListings');
-    const oldFolderPath = oldPath ? getPathFolder(oldPath) : null;
-    const newFolderPath = getPathFolder(metadata.path);
+    const oldFolderPath = oldPath ? getDirName(oldPath) : null;
+    const newFolderPath = getDirName(metadata.path);
     let folder = await folderListingsStore.get(newFolderPath);
 
     log('#updateFileInFolderListings', {
       folder,
       oldFolderPath,
       oldPath,
+      newFolderPath,
       metadata,
     });
 
@@ -335,19 +378,9 @@ export class IDBFS extends FileSystemCache {
     }
 
     if (folder) {
-      // Either add the file or update it.
-      const index = folder.files.findIndex((file) => file.path === oldPath);
-      if (index === -1) {
-        folder.files.push(metadata);
-      } else {
-        for (let i = 0; i < folder.files.length; i++) {
-          const file = folder.files[i];
-          if (file.path === oldPath) {
-            folder.files[i] = metadata;
-          }
-        }
-      }
-
+      folder.files = folder.files.filter((file) => file.path !== oldPath);
+      folder.files.push(metadata);
+      folder.files.sort((a, b) => a.name.localeCompare(b.name));
       await folderListingsStore.put(folder);
     } else {
       // Create the folder path if it does not exist.
@@ -361,7 +394,7 @@ export class IDBFS extends FileSystemCache {
    * Deletes a single file.
    */
   async #deleteFileFromFiles(path: string) {
-    const tx = this.#db.transaction('files', 'readwrite');
+    const tx = this.#getReadWriteTX();
     const files = tx.objectStore('files');
     await files.delete(path);
     await tx.done;
@@ -370,10 +403,12 @@ export class IDBFS extends FileSystemCache {
   /**
    * Updates the folder listing to remove a file.
    */
-  async #deleteFileFromFolderListing(path: string) {
-    const tx = this.#db.transaction('folderListings', 'readwrite');
+  async #deleteFileFromFolderListing(
+    path: string,
+    tx = this.#getReadWriteTX(),
+  ) {
     const folderListings = tx.objectStore('folderListings');
-    const folderPath = getPathFolder(path);
+    const folderPath = getDirName(path);
     const folder = await folderListings.get(folderPath);
     if (!folder) {
       log('#deleteFileFromFolderListing - no folder found', path);
@@ -388,59 +423,48 @@ export class IDBFS extends FileSystemCache {
   }
 
   /**
-   * Deletes a folder listing and any other listings referencing it.
+   * Delete a folder and all of its subfolders and files.
    */
-  async #deleteFolderListing(path: string) {
-    const tx = this.#db.transaction('folderListings', 'readwrite');
+  async #deleteFolder(path: string) {
+    const tx = this.#getReadWriteTX();
     const folderListings = tx.objectStore('folderListings');
-    const containingFolder = await folderListings.get(getPathFolder(path));
-    if (!containingFolder) {
-      log('#deleteFolderListing - no folder found', path);
-      return;
-    }
-
-    // Remove the folder from the listing.
-    containingFolder.files = containingFolder.files.filter(
-      (file) => file.path !== path,
-    );
-    await folderListings.put(containingFolder);
-
-    // Actually delete this listing.
-    await folderListings.delete(path);
-
-    let cursor = await folderListings.openKeyCursor();
-    if (cursor === null) {
-      log('#deleteFolderListing - Failed to get folder listing cursor');
-      return;
-    }
-
-    // Delete any subfolders.
-    do {
-      if (cursor.key.startsWith(path + '/')) {
-        log('#deleteFolderListing - delete ', cursor.key);
-        await cursor.delete();
-      }
-    } while ((cursor = await cursor.continue()));
-    await tx.done;
-  }
-
-  async #deleteFilesInFolder(folderPath: string) {
-    const tx = this.#db.transaction('files', 'readwrite');
     const files = tx.objectStore('files');
-
-    let cursor = await files.openCursor();
-    if (cursor === null) {
-      await tx.done;
-      return;
+    const folderListing = await folderListings.get(path);
+    if (!folderListing) {
+      throw new Error('Unable to find the folder for deletion: ' + path);
     }
 
-    // Go through every file.
-    do {
-      const { key } = cursor;
-      if (key === folderPath || key.startsWith(folderPath + '/')) {
-        await cursor.delete();
+    // Surface the folders and files that need deleting.
+    const foldersToDelete: string[] = [path];
+    const filesToDelete: string[] = [];
+    const listingsToCheck: T.FolderListingRow[] = [folderListing];
+
+    let listing;
+    while ((listing = listingsToCheck.pop())) {
+      for (const fileOrFolder of listing.files) {
+        if (fileOrFolder.type === 'folder') {
+          const folder = fileOrFolder;
+          const nextListing = await folderListings.get(folder.path);
+          if (nextListing) {
+            foldersToDelete.push(folder.path);
+            listingsToCheck.push(nextListing);
+          } else {
+            console.error('Could not find the folder listing', folder.path);
+          }
+        } else {
+          filesToDelete.push(fileOrFolder.path);
+        }
       }
-    } while ((cursor = await cursor.continue()));
+    }
+
+    for (const folderPath of foldersToDelete) {
+      await folderListings.delete(folderPath);
+    }
+    for (const filePath of filesToDelete) {
+      await files.delete(filePath);
+    }
+
+    await this.#deleteFileFromFolderListing(path, tx);
     await tx.done;
   }
 
@@ -452,8 +476,7 @@ export class IDBFS extends FileSystemCache {
       await this.#deleteFileFromFolderListing(path);
     } catch {
       // Try the folder next.
-      await this.#deleteFolderListing(path);
-      await this.#deleteFilesInFolder(path);
+      await this.#deleteFolder(path);
     }
   }
 
@@ -461,7 +484,7 @@ export class IDBFS extends FileSystemCache {
    * Updates a single folders's metadata in a fileListing.
    */
   async #updateFolderListing(oldPath: string, metadata: T.FolderMetadata) {
-    const tx = this.#db.transaction('folderListings', 'readwrite');
+    const tx = this.#getReadWriteTX();
     const folderListings = tx.objectStore('folderListings');
 
     function updatePathRoot(path: string, oldRoot: string, newRoot: string) {
@@ -469,7 +492,7 @@ export class IDBFS extends FileSystemCache {
     }
 
     // Update the containing folder listing.
-    const containingFolder = await folderListings.get(getPathFolder(oldPath));
+    const containingFolder = await folderListings.get(getDirName(oldPath));
     if (containingFolder) {
       for (const file of containingFolder.files) {
         if (file.path === oldPath) {
@@ -509,7 +532,7 @@ export class IDBFS extends FileSystemCache {
    * Update the metadata for any file that has it's containing folder moved.
    */
   async #updateFolderFiles(oldPath: string, metadata: T.FolderMetadata) {
-    const tx = this.#db.transaction('files', 'readwrite');
+    const tx = this.#getReadWriteTX();
     const files = tx.objectStore('files');
 
     let cursor = await files.openCursor();

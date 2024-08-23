@@ -4,7 +4,7 @@ import {
   ensureExists,
   getEnv,
   getPathFileNameNoExt,
-  getPathFolder,
+  getDirName,
   UnhandledCaseError,
 } from 'src/utils';
 import './RenderedSong.css';
@@ -36,7 +36,7 @@ function getSpotifyLink(
 
 export function RenderedSong() {
   const displayPath = $$.getActiveFileDisplayPath();
-  const folderPath = getPathFolder(displayPath);
+  const folderPath = getDirName(displayPath);
   const fileNameNoExt = getPathFileNameNoExt(displayPath);
 
   const renderedSongRef = React.useRef(null);

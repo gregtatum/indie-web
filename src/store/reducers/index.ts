@@ -3,7 +3,7 @@ import { combineReducers } from 'redux';
 import {
   getStringProp,
   getNumberProp,
-  getPathFolder,
+  getDirName,
   updatePathRoot,
 } from 'src/utils';
 import { FilesIndex } from 'src/logic/files-index';
@@ -122,7 +122,7 @@ function listFilesCache(
 
       // This is a file.
       const newState: T.ListFilesCache = new Map(state);
-      const folder = getPathFolder(metadata.path);
+      const folder = getDirName(metadata.path);
       const files = newState.get(folder);
       if (files) {
         for (let i = 0; i < files.length; i++) {
@@ -142,7 +142,7 @@ function listFilesCache(
       const { metadata } = action;
       const newState: T.ListFilesCache = new Map(state);
 
-      const containingFolder = getPathFolder(metadata.path);
+      const containingFolder = getDirName(metadata.path);
       const listing = state.get(containingFolder);
       if (listing) {
         // Filter out this folder or file.

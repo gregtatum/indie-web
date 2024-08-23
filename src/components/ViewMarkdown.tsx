@@ -7,7 +7,7 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
 import { downloadImage } from 'src/logic/download-image';
-import { getEnv, getPathFolder } from 'src/utils';
+import { getEnv, getDirName } from 'src/utils';
 import { EditorView } from 'codemirror';
 import TurndownService from 'turndown';
 
@@ -191,7 +191,7 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
     const doc = domParser.parseFromString(htmlText, 'text/html');
 
     // Download any images that are in the Markdown.
-    const folderPath = getPathFolder(displayPath);
+    const folderPath = getDirName(displayPath);
     for (const img of doc.querySelectorAll('img')) {
       // The src is the resolved URL, so will include the host name. This needs to be
       // transformed into a valid Dropbox path.
@@ -315,7 +315,7 @@ async function uploadFromFileList(
       return null;
     }
 
-    const folderPath = getPathFolder(displayPath);
+    const folderPath = getDirName(displayPath);
     const savedFilePath = await dispatch(
       A.saveAssetFile(
         folderPath,

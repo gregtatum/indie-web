@@ -48,21 +48,47 @@ describe('offline db', () => {
     idbfs: IDBFS,
     path = '/',
     indent = '',
+    // This is an object so it can be passed into the recursive calls.
+    fileCount = { value: 0 },
+    assertFileCounts = true,
   ): Promise<string> {
     let output = '';
     if (path === '/') {
       output += '\n.\n';
     }
-
     const files = await idbfs.listFiles(path);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+
+      // Output the art
       const art = i === files.length - 1 ? '└──' : '├──';
       output += `${indent}${art} ${file.name}\n`;
       if (file.type === 'folder') {
         const nextIndent = i + 1 === files.length ? '    ' : '│   ';
-        output += await getFileTree(idbfs, file.path, indent + nextIndent);
+        output += await getFileTree(
+          idbfs,
+          file.path,
+          indent + nextIndent,
+          fileCount,
+          false /* assertFileCounts */,
+        );
       }
+
+      // Validate the files exist, as the folder listing and the actual files should agree.
+      if (file.type === 'file') {
+        fileCount.value++;
+        if (!(await idbfs.fileExists(file.path))) {
+          throw new Error('Could not find file in the database: ' + file.path);
+        }
+      }
+    }
+
+    const actualFileCount = await idbfs.getFileCount();
+    if (assertFileCounts && fileCount.value !== actualFileCount) {
+      throw new Error(
+        `There were ${fileCount.value} files in the folder listings, ` +
+          `but ${actualFileCount} in the database.`,
+      );
     }
     return output;
   }
@@ -108,7 +134,7 @@ describe('offline db', () => {
     idbfs.close();
   });
 
-  it('will only create one file when added multiple times', async () => {
+  it('Can create files in subdirectories', async () => {
     const idbfs = await openIDBFS('test-db');
     await idbfs.createFolder('/French.coach');
     await idbfs.createFolder('/Spanish.coach');
@@ -173,34 +199,30 @@ describe('offline db', () => {
     idbfs.close();
   });
 
-  it('can add a folder listing', async () => {
+  it('can list an empty database', async () => {
     const idbfs = await openIDBFS('test-db');
-    const path = '/band/';
-    const error = await idbfs.listFiles(path).catch((error) => error);
-    expect(error.isNotFound()).toBe(true);
+    const files = await idbfs.listFiles('/');
+    expect(files).toEqual([]);
+  });
 
-    const files = [
-      createFileMetadata('/band/song 1.chopro'),
-      createFileMetadata('/band/song 2.chopro'),
-      createFileMetadata('/band/song 3.chopro'),
-      createFileMetadata('/band/song 4.chopro'),
-    ];
-
-    await idbfs.addFolderListing(path, files);
+  it('throws an error when adding a file over a folder', async () => {
+    const idbfs = await openIDBFS('test-db');
+    await idbfs.saveText('/campaign', 'overwrite', 'My cool campaign notes');
     expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
       "
       .
-      └── band
-          ├── song 1.chopro
-          ├── song 2.chopro
-          ├── song 3.chopro
-          └── song 4.chopro
+      └── campaign
       "
     `);
-
-    const response = await idbfs.listFiles(path);
-    expect(response).toEqual(files);
-    idbfs.close();
+    await expect(idbfs.createFolder('/campaign/subfolder')).rejects.toThrow(
+      'A parent folder was actually a file: /campaign',
+    );
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      └── campaign
+      "
+    `);
   });
 
   it('use the setupDBWithFiles', async () => {
@@ -239,6 +261,45 @@ describe('offline db', () => {
         createFileMetadata('/band/song 4.chopro'),
       ]);
     }
+    idbfs.close();
+  });
+
+  it('can move a file in a subfolder', async () => {
+    const { idbfs } = await setupDBWithFiles([
+      '/band/song 1.chopro',
+      '/band/song 2.chopro',
+      '/band/song 3.chopro',
+      '/band/song 4.chopro',
+    ]);
+
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      └── band
+          ├── song 1.chopro
+          ├── song 2.chopro
+          ├── song 3.chopro
+          └── song 4.chopro
+      "
+    `);
+
+    // Now move it by updating the metadata.
+    await idbfs.updateMetadata(
+      '/band/song 3.chopro',
+      createFileMetadata('/band/song 3 (renamed).chopro'),
+    );
+
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      └── band
+          ├── song 1.chopro
+          ├── song 2.chopro
+          ├── song 3 (renamed).chopro
+          └── song 4.chopro
+      "
+    `);
+
     idbfs.close();
   });
 
@@ -557,6 +618,42 @@ describe('offline db', () => {
       ]);
       expect(await fetchFileListing('/band/to-practice')).toEqual(undefined);
     }
+
+    idbfs.close();
+  });
+
+  it('can delete a subfolder', async () => {
+    const { idbfs } = await setupDBWithFiles([
+      'README.md',
+      '/band/song 1.chopro',
+      '/band/song 2.chopro',
+      '/band/song 3.chopro',
+      '/band/to-practice/practice 1.chopro',
+      '/band/to-practice/practice 2.chopro',
+    ]);
+
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      ├── README.md
+      └── band
+          ├── song 1.chopro
+          ├── song 2.chopro
+          ├── song 3.chopro
+          └── to-practice
+              ├── practice 1.chopro
+              └── practice 2.chopro
+      "
+    `);
+
+    await idbfs.delete('/band');
+
+    expect(await getFileTree(idbfs)).toMatchInlineSnapshot(`
+      "
+      .
+      └── README.md
+      "
+    `);
 
     idbfs.close();
   });

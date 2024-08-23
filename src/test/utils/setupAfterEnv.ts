@@ -19,10 +19,10 @@ beforeEach(function () {
   (global as any).Response = Response;
   (global as any).Blob = Blob;
 
-  document.body.querySelector('#menus')?.remove();
-  const menus = document.createElement('div');
-  menus.id = 'menus';
-  document.body.appendChild(menus);
+  document.body.querySelector('#overlayContainer')?.remove();
+  const overlayContainer = document.createElement('div');
+  overlayContainer.id = 'overlayContainer';
+  document.body.appendChild(overlayContainer);
 
   document.createRange = () => {
     const range = new Range();

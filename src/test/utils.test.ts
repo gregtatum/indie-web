@@ -2,7 +2,7 @@ import {
   canonicalizePath,
   getPathFileName,
   getPathFileNameNoExt,
-  getPathFolder,
+  getDirName,
   pathJoin,
 } from 'src/utils';
 
@@ -40,8 +40,8 @@ describe('paths', () => {
   });
 
   it('gets path file names', () => {
-    expect(getPathFolder('/Songs/Hey Jude.chopro')).toEqual('/Songs');
-    expect(getPathFolder('/Hey Jude.chopro')).toEqual('/');
+    expect(getDirName('/Songs/Hey Jude.chopro')).toEqual('/Songs');
+    expect(getDirName('/Hey Jude.chopro')).toEqual('/');
   });
 
   it('gets path file names with no extension', () => {
