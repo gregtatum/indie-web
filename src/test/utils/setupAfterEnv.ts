@@ -10,6 +10,26 @@ globalThis.structuredClone = structuredClone;
 
 const originalEnv = process.env;
 
+/**
+ * The secure digest is not available for some reason in Jest. Work around it
+ * by providing a simple insecure implementation.
+ */
+function simpleDigest256(_scheme: string, buffer: Uint8Array): ArrayBuffer {
+  const outputSize = 256;
+  const resultBuffer = new ArrayBuffer(outputSize);
+  const resultView = new Uint8Array(resultBuffer);
+
+  let hash = 0;
+  for (let i = 0; i < buffer.length; i++) {
+    const value = buffer[i];
+    hash = (hash * 31 + value) % 0xffffffff;
+    const index = i % outputSize;
+    resultView[index] = (resultView[index] + (hash & 0xff)) % 256;
+  }
+
+  return resultBuffer;
+}
+
 beforeEach(function () {
   jest.resetModules();
   global.indexedDB = new IDBFactory();
@@ -18,6 +38,7 @@ beforeEach(function () {
   (global as any).Request = Request;
   (global as any).Response = Response;
   (global as any).Blob = Blob;
+  (crypto as any).subtle = { digest: simpleDigest256 };
 
   document.body.querySelector('#overlayContainer')?.remove();
   const overlayContainer = document.createElement('div');
