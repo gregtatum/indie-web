@@ -248,7 +248,10 @@ function dataOrNullReducer(
   if (!state) {
     return null;
   }
-  if (action.type === 'view-language-coach' && action.invalidateOldData) {
+  if (
+    (action.type === 'view-language-coach' && action.invalidateOldData) ||
+    action.type === 'change-file-system'
+  ) {
     return null;
   }
 
