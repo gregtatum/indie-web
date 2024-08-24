@@ -9,9 +9,10 @@ import { Reading } from './Reading';
 import './index.css';
 
 export function LanguageCoach() {
-  const path = $$.getLanguageCoachPath();
+  const lcPath = $$.getLanguageCoachPath();
   const dataOrNull = $$.getLanguageCoachDataOrNull();
   const fileSystem = $$.getCurrentFS();
+  const fsName = $$.getCurrentFileSystemName();
   const dispatch = Hooks.useDispatch();
 
   React.useEffect(() => {
@@ -21,7 +22,7 @@ export function LanguageCoach() {
 
       // Attempt to pull it from the cache quickly.
       fileSystem.cache
-        ?.loadText(pathJoin(path, 'words.json'))
+        ?.loadText(pathJoin(lcPath, 'words.json'))
         .then((text) => {
           if (fileSystemTextReceived) {
             // The cache lost the race.
@@ -35,7 +36,7 @@ export function LanguageCoach() {
         .catch(console.error);
 
       // Kick off the potentially slower request that can go over the network.
-      fileSystem.loadText(pathJoin(path, 'words.json')).then(
+      fileSystem.loadText(pathJoin(lcPath, 'words.json')).then(
         (text) => {
           try {
             if (cachedHash === text.metadata.hash) {
@@ -65,8 +66,8 @@ export function LanguageCoach() {
     return <div className="centered">Loading Language Coach data…</div>;
   }
   return (
-    <DataSync key={path} data={dataOrNull}>
-      <div className="language-coach">
+    <DataSync key={lcPath} data={dataOrNull}>
+      <div className="language-coach" key={fsName + lcPath}>
         <LCHeader />
         <Sections />
       </div>
