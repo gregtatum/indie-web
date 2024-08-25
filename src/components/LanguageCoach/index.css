@@ -1,10 +1,7 @@
-.language-coach {
-  --accent-color: #6a72fb;
+:root {
+  --lc-accent-color: #6a72fb;
   /* For use with transparency. */
-  --accent-color-rgb: 84, 92, 251;
-
-  --outline-active: 2px solid #282ea6;
-  --outline-focus: 2px solid #282ea6aa;
+  --lc-accent-color-rgb: 84, 92, 251;
 
   --lc-header-height: 56px;
 
@@ -13,6 +10,13 @@
   --lc-margin-big: 50px;
   --lc-margin-medium: 25px;
   --lc-margin-small: 10px;
+}
+
+.language-coach {
+  --accent-color: var(--lc-accent-color);
+  --accent-color-rgb: var(--lc-accent-color-rgb);
+  --outline-active: 2px solid #282ea6;
+  --outline-focus: 2px solid #282ea6aa;
 
   /**
    * The sticky header needs to be moved up a bit to not be over the title text.
@@ -43,7 +47,7 @@ a.lcButton,
   padding: 0.7em 1.7em;
   border-radius: 3em;
   border: none;
-  background-color: var(--accent-color);
+  background-color: var(--lc-accent-color);
   color: #fff;
   cursor: pointer;
   transition: background 0.1s;

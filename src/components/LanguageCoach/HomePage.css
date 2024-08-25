@@ -12,6 +12,7 @@
   justify-content: center;
   margin: 1em;
   max-width: 600px;
+  line-height: var(--lc-line-height);
 }
 
 .lcHomepageHeader {
@@ -42,4 +43,32 @@ a.lcHomepageButton {
 
 .lcHomepageButton:hover {
   background-color: #545cfb;
+}
+
+.lcHomepageChatbotCredentials {
+  --slidedown-px: -20px;
+  animation: slidedown 500ms;
+
+  & label {
+    display: block;
+    color: var(--lc-accent-color);
+    font-weight: bold;
+    font-size: var(--font-size-normal);
+    margin-block: 6px;
+  }
+
+  & input {
+    margin-bottom: var(--lc-margin-medium);
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  & a.lcButton {
+    font-size: 13px;
+    padding: 3px 9px;
+    margin-inline: 7px;
+    position: relative;
+    top: -2px;
+  }
 }

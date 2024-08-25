@@ -104,6 +104,14 @@ export const getUnknownStems = createSelector(
   },
 );
 
+export const getLanguageDisplayName = createSelector(
+  getLanguageCode,
+  (languageCode): string => {
+    const dn = new Intl.DisplayNames(undefined, { type: 'language' });
+    return dn.of(languageCode) ?? languageCode;
+  },
+);
+
 export const getSortedLearnedStems = createSelector(
   getLearnedStems,
   getLanguageCode,

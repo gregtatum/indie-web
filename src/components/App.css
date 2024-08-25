@@ -117,6 +117,10 @@ button.icon-mask {
   opacity: 0.6;
 }
 
+.ͼ1 span.cm-placeholder {
+  color: #666 ;
+}
+
 .button-primary {
   border-color: var(--primary-color);
   background-color: var(--primary-color);

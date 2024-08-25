@@ -44,21 +44,21 @@
   }
 
   &.selected {
-    outline: 1px solid var(--accent-color);
+    outline: 1px solid var(--lc-accent-color);
     border-radius: 3px;
-    background-color: var(--accent-color);
+    background-color: var(--lc-accent-color);
     color: #fff;
 
     & .lcStudyListButton {
       & {
         outline: 2px solid #fff;
-        background-color: var(--accent-color);
+        background-color: var(--lc-accent-color);
         color: #fff;
       }
 
       &:hover, &:focus {
         background-color: #fff;
-        color: rgba(var(--accent-color-rgb), 0.9);
+        color: rgba(var(--lc-accent-color-rgb), 0.9);
       }
     }
   }

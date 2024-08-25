@@ -1,5 +1,6 @@
 import * as T from 'src/@types';
 import { Dropbox } from 'dropbox';
+import OpenAI from 'openai';
 import { createSelector } from 'reselect';
 import {
   ensureExists,
@@ -97,6 +98,10 @@ export function getSongKeySettings(state: State) {
 
 export function getIDBFSOrNull(state: State) {
   return state.idbfs;
+}
+
+export function getOpenAIApiKey(state: State) {
+  return state.openAIApiKey;
 }
 
 /**
@@ -603,4 +608,21 @@ export const getSearchFilteredFiles = createSelector(
         return a.path.localeCompare(b.path);
       });
   },
+);
+
+export const getOpenAIOrNull = createSelector(getOpenAIApiKey, (apiKey) => {
+  if (!apiKey) {
+    return null;
+  }
+
+  // An OAuth flow here would be nice.
+  // https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety
+  const dangerouslyAllowBrowser = true;
+
+  return new OpenAI({ apiKey, dangerouslyAllowBrowser });
+});
+
+export const getOpenAI = dangerousSelector(
+  getOpenAIOrNull,
+  'The OpenAI API is not initialized.',
 );

@@ -363,7 +363,7 @@ export function useAudio(
 }
 
 export function useListener<
-  E extends HTMLElement,
+  E extends HTMLElement | Document,
   Handler extends E['addEventListener'],
   Type extends Parameters<Handler>[0],
   Listener extends Parameters<Handler>[1],
@@ -374,7 +374,7 @@ export function useListener<
   deps: any[],
   callback: Listener,
   options?: Options,
-) {
+): void {
   const types: Type[] = Array.isArray(type) ? type : [type];
   React.useEffect(() => {
     if (!elementOrRef) {
@@ -399,7 +399,7 @@ export function useListener<
 
 export function useBoundingClientRect(
   element: React.RefObject<HTMLElement | null>,
-) {
+): DOMRect | null {
   const [rect, setRect] = React.useState<null | DOMRect>(null);
 
   React.useEffect(() => {
@@ -438,4 +438,107 @@ export function propToRef<T>(value: T | null): React.RefObject<T | null> {
     ref.current = value;
   }, [value]);
   return ref;
+}
+
+export function useSelectionChange(
+  elementRef: React.RefObject<HTMLElement | null>,
+  setSelection: (selection: Selection | null) => void,
+  doUseNode: (element: Node | null) => boolean = () => true,
+) {
+  const selectionRef = React.useRef<Selection | null>(null);
+
+  function getSelectionInDiv() {
+    const selection = window.getSelection();
+    const div = elementRef.current;
+    if (
+      selection &&
+      div &&
+      div.contains(selection.anchorNode) &&
+      doUseNode(selection.anchorNode)
+    ) {
+      return selection;
+    }
+    return null;
+  }
+
+  useListener(document, 'selectionchange', [], () => {
+    const selection = getSelectionInDiv();
+    if (selection) {
+      selectionRef.current = selection;
+    }
+  });
+
+  useListener(document, 'mouseup', [], () => {
+    const selection = selectionRef.current;
+    if (!selection) {
+      return;
+    }
+    selectionRef.current = null;
+
+    if (selection.toString()) {
+      setSelection(selection);
+    } else {
+      setSelection(null);
+    }
+  });
+
+  useListener(document, 'keydown', [], (event) => {
+    if ((event as KeyboardEvent).key !== 'Enter') {
+      return;
+    }
+    const selection = getSelectionInDiv();
+    if (!selection) {
+      return;
+    }
+
+    selectionRef.current = null;
+    if (selection.toString()) {
+      setSelection(selection);
+    } else {
+      setSelection(null);
+    }
+  });
+}
+
+/**
+ * Handle dismissing something by hitting escape.
+ */
+export function useEscape(dismiss: () => void, isOpen: boolean) {
+  const keyHandler = React.useRef<null | ((event: KeyboardEvent) => void)>(
+    null,
+  );
+  React.useEffect(() => {
+    if (!isOpen) {
+      return () => {};
+    }
+    keyHandler.current = (event) => {
+      if (event.key === 'Escape') {
+        dismiss();
+      }
+    };
+    document.addEventListener('keydown', keyHandler.current);
+    return () => {
+      if (keyHandler.current) {
+        document.removeEventListener('keydown', keyHandler.current);
+      }
+    };
+  }, [isOpen]);
+}
+
+import { createPortal } from 'react-dom';
+
+let overlayContainer: HTMLDivElement;
+
+/**
+ * When creating an overlay, such a menu or tooltip, place it in the overlayContainer, as
+ * the z-indexing is guaranteed to be correct.
+ */
+export function overlayPortal(child: React.ReactNode, key?: string) {
+  if (!overlayContainer) {
+    overlayContainer = ensureExists(
+      document.querySelector<HTMLDivElement>('#overlayContainer'),
+      'Could not find the overlayContainer',
+    );
+  }
+  return createPortal(child, overlayContainer, key);
 }

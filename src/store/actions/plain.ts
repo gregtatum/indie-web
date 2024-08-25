@@ -231,3 +231,11 @@ export function setAreStemsActive(isActive: boolean) {
     isActive,
   };
 }
+
+export function setOpenAIApiKey(apiKey: string) {
+  localStorage.setItem('openAIAPIKey', apiKey);
+  return {
+    type: 'set-open-ai-api-key' as const,
+    apiKey,
+  };
+}

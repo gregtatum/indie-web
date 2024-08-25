@@ -2,12 +2,12 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, T, $$, Hooks } from 'src';
 import { debounce, ensureExists, getEnv, imageExtensions } from 'src/utils';
-import { useRetainScroll } from '../hooks';
+import { overlayPortal, useRetainScroll } from '../hooks';
 import { isChordProExtension } from '../utils';
 import { getFileSystemDisplayName } from 'src/logic/app-logic';
 
 import './ListFiles.css';
-import { Menu, menuPortal } from './Menus';
+import { Menu } from './Menus';
 import { AddFileMenu } from './AddFileMenu';
 
 export function ListFiles() {
@@ -323,7 +323,7 @@ function FileMenu(props: { file: T.FileMetadata | T.FolderMetadata }) {
       >
         <span className="listFilesFileMenuIcon" />
       </button>
-      {menuPortal(
+      {overlayPortal(
         <Menu
           clickedElement={button}
           openEventDetail={openEventDetail}

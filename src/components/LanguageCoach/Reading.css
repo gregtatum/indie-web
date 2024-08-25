@@ -1,7 +1,3 @@
-.lcReading {
-  --margin-bottom: 20px;
-}
-
 .lcReadingAdd {
   display: flex;
   flex-direction: column;
@@ -15,7 +11,7 @@
   }
 
   & label {
-    color: var(--accent-color);
+    color: var(--lc-accent-color);
     font-weight: bold;
     font-size: var(--font-size-normal);
     margin-block: 6px;
@@ -24,14 +20,14 @@
 
 .lcReadingListFiles {
   max-width: var(--lc-content-width);
-  margin: var(--margin-bottom) auto;
+  margin: var(--lc-margin-medium) auto;
   border: 1px solid var(--light-border);
   border-radius: 5px;
   margin-block: 24px;
 }
 
 .lcReadingTextArea {
-  margin-bottom: var(--margin-bottom);
+  margin-bottom: var(--lc-margin-medium);
   /* Only allow the textarea to grow vertically */
   width: 100% !important;
   box-sizing: border-box;
@@ -42,7 +38,7 @@
 
 
 .lcReadingTitleInput {
-  margin-bottom: var(--margin-bottom);
+  margin-bottom: var(--lc-margin-medium);
   padding: 10px;
   width: 100%;
   box-sizing: border-box;
@@ -123,9 +119,9 @@
 
 .lcReadingStems {
   flex-shrink: 0;
-  border: var(--accent-color) 1px solid;
+  border: var(--lc-accent-color) 1px solid;
   border-left-width: 2px;
-  background: rgba(var(--accent-color-rgb), 0.1);
+  background: rgba(var(--lc-accent-color-rgb), 0.1);
   border-radius: 0 6px 6px 0;
   position: sticky;
   top: 0;
@@ -135,7 +131,7 @@
     text-align: center;
     color: #fff;
     margin: 0;
-    background: var(--accent-color);
+    background: var(--lc-accent-color);
     height: var(--header-height);
     padding: 0;
     display: flex;
@@ -159,9 +155,9 @@
 }
 
 .lcReadingHovered {
-  background-color: var(--accent-color);
+  background-color: var(--lc-accent-color);
   color: #fff;
-  outline: 2px solid var(--accent-color);
+  outline: 2px solid var(--lc-accent-color);
   border-radius: 2px;
   display: inline-block;
   transition: background 500ms;
@@ -173,15 +169,15 @@
   padding: 2px 10px;
 
   &.selected {
-    outline: 1px solid var(--accent-color);
+    outline: 1px solid var(--lc-accent-color);
     border-radius: 3px;
-    background-color: var(--accent-color);
+    background-color: var(--lc-accent-color);
     color: #fff;
   }
 
   .lcReadingStems:not(:focus) &.selected {
-    background-color: rgba(var(--accent-color-rgb), 0.2);
-    outline-color: rgba(var(--accent-color-rgb), 0.2);
+    background-color: rgba(var(--lc-accent-color-rgb), 0.2);
+    outline-color: rgba(var(--lc-accent-color-rgb), 0.2);
     color: #000;
   }
 }
@@ -194,10 +190,10 @@
   & > span {
     background-color: #fff;
     border-radius: 12px;
-    color: var(--accent-color);
+    color: var(--lc-accent-color);
     padding: 5px;
     font-size: 12px;
-    outline: 1px solid var(--accent-color);
+    outline: 1px solid var(--lc-accent-color);
     margin-left: 0.5em;
   }
 }
@@ -208,6 +204,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
+  gap: 3px;
 }
 
 .lcReadingButton {
@@ -224,7 +221,7 @@
 }
 
 .lcReadingSelectedSentence {
-  background: rgba(var(--accent-color-rgb), 0.2);
+  background: rgba(var(--lc-accent-color-rgb), 0.2);
 }
 
 .lcReadingTop {
@@ -236,4 +233,82 @@
   margin: 30px auto;
   --slidedown-px: -20px;
   animation: slidedown 500ms;
+}
+
+.lcReadingOverlay {
+  position: absolute;
+  /* Sync with the margin value in JS. */
+  width: calc(100vw - 20px);
+  max-width: 600px;
+  padding: 20px;
+  line-height: 1.4;
+  background-color: #fff;
+  border: 1px solid var(--button-border);
+  border-radius: 6px;
+  box-shadow: 0 0.3em 0.6em #0003;
+  --slidedown-px: -10px;
+  animation: slidedown 200ms;
+}
+
+.lcReadingTranslation {
+  border-bottom: 1px solid #aaa;
+  padding-bottom: 13px;
+  margin-bottom: 16px;
+}
+
+.lcReadingWord {
+  margin-top: 12px;
+}
+
+.lcReadingWordWord {
+  font-weight: bold;
+}
+
+.lcReadingWordGender {
+  color: #00abff;
+  font-style: italic;
+}
+
+.lcReadingWordPOS {
+  font-style: italic;
+  color: #ff7800;
+}
+
+.lcReadingDefinition {
+  color: #666;
+}
+
+.lcReadingCommentedParagraph {
+  color: #777;
+}
+
+.lcReadingWordSection {
+  display: flex;
+  flex-direction: row;
+}
+
+.lcReadingTooltipButtons {
+  flex-grow: 0;
+}
+
+.lcReadingWordSection {
+  flex-direction: row;
+}
+
+.lcReadingTooltipButtons {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.lcReadingWord {
+  flex: 1;
+}
+
+.lcReadingOverlay .lcReadingStemCount > span {
+  position: relative;
+  top: 8px;
+}
+
+.lcReadingOverlayUnknownWord:hover {
+  background: rgba(var(--lc-accent-color-rgb), 0.2);
 }

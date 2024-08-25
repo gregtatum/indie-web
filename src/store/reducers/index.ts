@@ -556,6 +556,18 @@ function idbfs(state: IDBFS | null = null, action: T.Action): IDBFS | null {
   }
 }
 
+function openAIApiKey(
+  state: string | null = localStorage.getItem('openAIAPIKey'),
+  action: T.Action,
+): string | null {
+  switch (action.type) {
+    case 'set-open-ai-api-key':
+      return action.apiKey;
+    default:
+      return state;
+  }
+}
+
 export const reducers = combineReducers({
   currentFileSystemName,
   downloadBlobCache,
@@ -577,6 +589,7 @@ export const reducers = combineReducers({
   shouldHideHeader,
   songKeySettings,
   view,
+  openAIApiKey,
 });
 
 function wrapReducer<S>(

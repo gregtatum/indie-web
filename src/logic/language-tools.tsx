@@ -49,6 +49,7 @@ export function computeStems(
   locale = 'es',
 ): Stem[] {
   const stemsByStem: Map<string, Stem> = new Map();
+  const isNumeric = /^\d+$/;
   for (let sentence of segmentSentence(text, locale)) {
     sentence = sentence.trim();
     if (sentence.startsWith('http://') || sentence.startsWith('https://')) {
@@ -56,6 +57,9 @@ export function computeStems(
       continue;
     }
     for (const word of segmentWords(sentence, locale)) {
+      if (word.match(isNumeric)) {
+        continue;
+      }
       const stemmedWord = (hunspell?.stem(word)[0] ?? word).toLowerCase();
       let stem = stemsByStem.get(stemmedWord);
       if (!stem) {
@@ -67,9 +71,27 @@ export function computeStems(
         };
         stemsByStem.set(stemmedWord, stem);
       }
-      if (!stem.tokens.includes(word)) {
+
+      const lowerCasedWord = word.toLowerCase();
+
+      if (lowerCasedWord === word) {
+        if (!stem.tokens.includes(word)) {
+          // Remove any other cased versions of this word, so there aren't duplicate
+          // casing varieties.
+          stem.tokens = stem.tokens.filter(
+            (token) => token.toLowerCase() !== lowerCasedWord,
+          );
+          // This word is lowercased.
+          stem.tokens.push(word);
+        }
+      } else if (
+        !stem.tokens.includes(word) &&
+        !stem.tokens.includes(lowerCasedWord)
+      ) {
+        // Only add the token if it's not present before.
         stem.tokens.push(word);
       }
+
       const trimmedSentence = sentence.trim();
       if (!stem.sentences.includes(trimmedSentence)) {
         stem.sentences.push(trimmedSentence);

@@ -11,7 +11,8 @@ import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
 import { SongKey } from 'src/logic/parse';
-import { Menu, menuPortal } from './Menus';
+import { Menu } from './Menus';
+import { overlayPortal } from 'src/hooks';
 
 function getSpotifyLink(
   { title, subtitle }: Record<string, string>,
@@ -271,7 +272,7 @@ function SongKeyMenu({ songKey }: SongKeyMenu) {
       >
         Key: {songKey.display}
       </button>
-      {menuPortal(
+      {overlayPortal(
         <Menu
           clickedElement={buttonRef}
           openEventDetail={openEventDetail}

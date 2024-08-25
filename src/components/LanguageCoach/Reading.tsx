@@ -8,18 +8,22 @@ import {
   pathJoin,
 } from 'src/utils';
 import { File, ListFilesSkeleton } from '../ListFiles';
-import { useRetainScroll } from 'src/hooks';
+import { overlayPortal, useRetainScroll } from 'src/hooks';
 import { NextPrevLinks, useNextPrevSwipe } from '../NextPrev';
 import { TextArea } from '../TextArea';
 import { Splitter } from '../Splitter';
-import { useStemNavigation, useStems } from './hooks';
+import { useHunspell, useStemNavigation, useStems } from './hooks';
 import { applyClassToWords } from 'src/logic/language-tools';
 import * as Router from 'react-router-dom';
 import { EditorView } from 'codemirror';
+import { TextSelectionTooltip } from '../TextSelectionTooltip';
+import { placeholder } from '@codemirror/view';
+import dedent from 'dedent';
 
 export function Reading() {
   const coachPath = $$.getLanguageCoachPath();
   const path = $$.getPath();
+  const fsName = $$.getCurrentFileSystemName();
 
   if (coachPath === path) {
     return (
@@ -30,7 +34,25 @@ export function Reading() {
     );
   }
 
-  return <ViewReadingFile />;
+  return <ViewReadingFile key={fsName + path} />;
+}
+
+interface Word {
+  word: string;
+  definition: string;
+  partOfSpeech: string;
+  gender?: string;
+  exampleArticle?: string;
+}
+
+interface Response {
+  translation: string;
+  unknownWords: Word[];
+}
+
+interface Query {
+  sentence: string;
+  unknownWords: string[];
 }
 
 function ReadingList() {
@@ -48,6 +70,10 @@ function ReadingList() {
 
   if (!files) {
     return <ListFilesSkeleton />;
+  }
+
+  if (files.length === 0) {
+    return null;
   }
 
   return (
@@ -96,6 +122,7 @@ function Add() {
       .then(() => dispatch(A.listFiles(readingPath)))
       .then(
         () => {
+          dispatch(A.hideEditor(false));
           navigate(`${fsName}/language-coach${savePath}?section=reading`);
         },
         (error) => {
@@ -149,8 +176,6 @@ export function ViewReadingFile() {
   const error = $$.getDownloadFileErrors().get(path);
   const hideEditor = $$.getHideEditor();
   const swipeDiv = React.useRef(null);
-  const hideEditorRef = React.useRef<boolean>(hideEditor);
-  const fileSystem = $$.getCurrentFS();
 
   useNextPrevSwipe(swipeDiv);
 
@@ -183,7 +208,7 @@ export function ViewReadingFile() {
 
   if (hideEditor) {
     return (
-      <div className="splitterSolo lcReadingSolo" ref={swipeDiv} key={path}>
+      <div className="splitterSolo lcReadingSolo" ref={swipeDiv}>
         <RenderedReading />
       </div>
     );
@@ -196,7 +221,12 @@ export function ViewReadingFile() {
         <TextArea
           path={path}
           textFile={textFile}
-          editorExtensions={[EditorView.lineWrapping]}
+          editorExtensions={[
+            EditorView.lineWrapping,
+            placeholder(
+              'Paste your reading here… Mark sentences with a # if they are in English.',
+            ),
+          ]}
           autoSave={true}
         />
       }
@@ -209,20 +239,157 @@ export function ViewReadingFile() {
 function RenderedReading() {
   const text = $$.getActiveFileText();
   const languageCode = $$.getLanguageCode();
+  const languageDisplayName = $$.getLanguageDisplayName();
   const unknownStems = $$.getUnknownStems();
   const selectedStemIndex = $$.getSelectedStemIndex();
   const hideEditor = $$.getHideEditor();
   const areStemsActive = $$.getAreStemsActive();
   const language = $$.getLanguageCode();
   const selectedSentence = $$.getSelectedSentence();
+  const learnedOrIgnored = $$.getLearnedAndIgnoredStems();
+  const openAI = $$.getOpenAIOrNull();
 
   const dispatch = Hooks.useDispatch();
   const container = React.useRef<null | HTMLDivElement>(null);
   const [showHelp, setShowHelp] = React.useState<boolean>(false);
-  const segmenter = React.useMemo(
+  const textDivRef = React.useRef<null | HTMLDivElement>(null);
+  const [selectionHolder, setSelectionHolder] = React.useState<{
+    selection: null | Selection;
+  }>({ selection: null });
+  const overlayRef = React.useRef<null | HTMLDivElement>(null);
+  const hunspell = useHunspell();
+  const sentenceSegmenter = React.useMemo(
     () => new Intl.Segmenter(language, { granularity: 'sentence' }),
     [],
   );
+  const wordSegmenter = React.useMemo(
+    () => new Intl.Segmenter(language, { granularity: 'word' }),
+    [],
+  );
+  const [aiResponse, setAiResponse] = React.useState<Response | null>(null);
+
+  // The `Selection` object is shared between `getSelection` calls, so put it in
+  // a "holder" object to properly trigger re-renders.
+  const setSelection = (selection: Selection | null) =>
+    setSelectionHolder({ selection });
+  const { selection } = selectionHolder;
+  const selectionText = selection?.toString();
+
+  Hooks.useSelectionChange(
+    textDivRef,
+    setSelection,
+    // Don't create selections on the paragraph.
+    (node) => !node?.parentElement?.closest('.lcReadingCommentedParagraph'),
+  );
+
+  React.useEffect(() => {
+    if (!selectionText) {
+      return;
+    }
+    setAiResponse(null);
+    if (!openAI || !hunspell) {
+      return;
+    }
+
+    const unknownWords: Map<string, string> = new Map();
+    const isNumber = /^\d+$/;
+    for (const { segment } of wordSegmenter.segment(selectionText)) {
+      const stemmedWord = (hunspell?.stem(segment)[0] ?? segment).toLowerCase();
+      if (
+        segment.trim() &&
+        !learnedOrIgnored.has(stemmedWord) &&
+        !segment.match(isNumber)
+      ) {
+        unknownWords.set(segment.toLowerCase(), segment);
+      }
+    }
+
+    const maxCodeUnits = 500;
+    let sentence = selectionText;
+    if (selectionText.length > maxCodeUnits) {
+      let lastIndex = 0;
+      for (const { index } of wordSegmenter.segment(selectionText)) {
+        if (index > maxCodeUnits) {
+          break;
+        }
+        lastIndex = index;
+      }
+      if (lastIndex === 0) {
+        // Send something if the index is 0.
+        lastIndex = maxCodeUnits;
+      }
+      sentence = selectionText.slice(0, lastIndex);
+    }
+
+    const query: Query = {
+      sentence,
+      unknownWords: [...unknownWords.values()].slice(0, 5),
+    };
+
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(`[openai] querying"`, query);
+    }
+
+    openAI.chat.completions
+      .create({
+        messages: [
+          {
+            role: 'system',
+            content: dedent`
+              You are a ${languageDisplayName} to English translation bot that responds only
+              in JSON with a Response. The user sends questions as a Query.
+
+              interface Word {
+                word: string,
+                definition: string,
+                partOfSpeech: string,
+                // If this is a gendered language, include the gender here.
+                gender?: string,
+                // If the word is a noun, include an example article in ${languageDisplayName}.
+                // For example in Spanish, "la", "las", "el". Adapt for the current language.
+                // The article should agree in gender and plural for the \`word\`
+                exampleArticle?: string,
+              }
+
+              interface Response {
+                translation: string,
+                unknownWords: Word[]
+              }
+
+              interface Query {
+                sentence: string,
+                unknownWords: string[]
+              }
+            `,
+          },
+          {
+            role: 'user',
+            content: JSON.stringify(query),
+          },
+        ],
+        model: 'gpt-4o-mini',
+      })
+      .then(
+        (response) => {
+          console.log(
+            '[openai] response',
+            response.choices[0].message.content,
+            response,
+          );
+          try {
+            const data: Response = JSON.parse(
+              response.choices[0].message.content!,
+            );
+            setAiResponse(data);
+          } catch (error) {
+            console.error(error);
+          }
+        },
+        (error) => {
+          console.log(` error`, error);
+        },
+      );
+  }, [selectionText, openAI, languageDisplayName, learnedOrIgnored]);
 
   const paragraphs = React.useMemo(() => {
     const paragraphs: string[] = [];
@@ -290,7 +457,7 @@ function RenderedReading() {
             ) : null}
           </div>
           <h1>{title}</h1>
-          <div lang={languageCode}>
+          <div lang={languageCode} ref={textDivRef}>
             {paragraphs.map((paragraph, i) => {
               const key = i + paragraph;
 
@@ -305,12 +472,21 @@ function RenderedReading() {
                   </p>
                 );
               }
+
+              if (paragraph.startsWith('#')) {
+                return (
+                  <p key={key} className="lcReadingCommentedParagraph">
+                    {paragraph.slice(1)}
+                  </p>
+                );
+              }
+
               if (!selectedStem || !areStemsActive || !selectedSentence) {
                 return <p key={key}>{paragraph}</p>;
               }
               const nodes = [];
 
-              for (const { segment } of segmenter.segment(paragraph)) {
+              for (const { segment } of sentenceSegmenter.segment(paragraph)) {
                 let node: React.ReactNode = applyClassToWords(
                   segment,
                   selectedStem.tokens,
@@ -331,7 +507,107 @@ function RenderedReading() {
           </div>
         </div>
         {hideEditor ? <Stems /> : null}
+        {selection?.toString()
+          ? overlayPortal(
+              <TextSelectionTooltip
+                selection={selection}
+                overlayRef={overlayRef}
+                dismiss={() => {
+                  setSelection(null);
+                }}
+              >
+                <div className="lcReadingOverlay" ref={overlayRef}>
+                  {aiResponse ? (
+                    <AIResponse
+                      response={aiResponse}
+                      unknownStems={unknownStems}
+                      hunspell={hunspell}
+                    />
+                  ) : (
+                    <>
+                      <b>Translating: </b>
+                      {selection.toString()}
+                    </>
+                  )}
+                </div>
+              </TextSelectionTooltip>,
+              selectionText,
+            )
+          : null}
       </div>
+    </>
+  );
+}
+
+function AIResponse(props: {
+  response: Response;
+  unknownStems: T.Stem[] | null;
+  hunspell: ReturnType<typeof useHunspell>;
+}) {
+  const { unknownStems, hunspell } = props;
+  const { translation, unknownWords } = props.response;
+  const dispatch = Hooks.useDispatch();
+
+  return (
+    <>
+      <div className="lcReadingTranslation">{translation}</div>
+      {unknownWords.map(
+        ({ word, definition, partOfSpeech, gender, exampleArticle }, i) => {
+          let buttons;
+          if (hunspell && unknownStems) {
+            const stem = unknownStems.find((unknown) =>
+              unknown.tokens.find((token) => token === word),
+            );
+            console.log(`!!! stem`, { stem, word, unknownStems });
+
+            if (stem) {
+              buttons = (
+                <>
+                  <div className="lcReadingStemCount">
+                    <span>{stem.frequency}</span>
+                  </div>
+                  <div className="lcReadingButtons">
+                    <button
+                      type="button"
+                      className="lcReadingButton button"
+                      onClick={() => dispatch(A.learnStem(stem.stem))}
+                    >
+                      learn
+                    </button>
+                    <button
+                      type="button"
+                      className="lcReadingButton button"
+                      onClick={() => dispatch(A.ignoreStem(stem.stem))}
+                    >
+                      ignore
+                    </button>
+                  </div>
+                </>
+              );
+            }
+          }
+          return (
+            <div key={word + i} className="lcReadingOverlayUnknownWord">
+              <div className="lcReadingWordSection">
+                <div className="lcReadingWord">
+                  {exampleArticle ? (
+                    <span className="lcReadingWordArticle">
+                      ({exampleArticle}){' '}
+                    </span>
+                  ) : null}
+                  <span className="lcReadingWordWord">{word} </span>
+                  <span className="lcReadingWordPOS">{partOfSpeech} </span>
+                  {gender ? (
+                    <span className="lcReadingWordGender">{gender} </span>
+                  ) : null}
+                </div>
+                <div className="lcReadingTooltipButtons">{buttons}</div>
+              </div>
+              <div className="lcReadingDefinition">{definition}</div>
+            </div>
+          );
+        },
+      )}
     </>
   );
 }

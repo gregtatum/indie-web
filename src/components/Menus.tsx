@@ -2,18 +2,7 @@ import * as React from 'react';
 import { ensureExists } from 'src/utils';
 
 import './Menus.css';
-import { createPortal } from 'react-dom';
-
-let menus: HTMLDivElement;
-export function menuPortal(child: React.ReactNode) {
-  if (!menus) {
-    menus = ensureExists(
-      document.querySelector<HTMLDivElement>('#menus'),
-      'Could not find the menus',
-    );
-  }
-  return createPortal(child, menus);
-}
+import { useEscape } from 'src/hooks';
 
 // The bottom and top border.
 const menuBorderHeight = 2;
@@ -24,34 +13,9 @@ const menuWidth = 175;
 const menuMargin = 10;
 
 /**
- * Handle leaving the menu by hitting escape.
+ * Logic for handling when a user clicks outside of the element.
  */
-function escapeLogic(dismiss: () => void, isOpen: boolean) {
-  const keyHandler = React.useRef<null | ((event: KeyboardEvent) => void)>(
-    null,
-  );
-  React.useEffect(() => {
-    if (!isOpen) {
-      return () => {};
-    }
-    keyHandler.current = (event) => {
-      if (event.key === 'Escape') {
-        dismiss();
-      }
-    };
-    document.addEventListener('keydown', keyHandler.current);
-    return () => {
-      if (keyHandler.current) {
-        document.removeEventListener('keydown', keyHandler.current);
-      }
-    };
-  }, [isOpen]);
-}
-
-/**
- * Logic for handling when a user clicks outside of the menu.
- */
-function clickOutLogic(
+function useDismissOnOutsideClick(
   elementRef: React.MutableRefObject<HTMLElement | null>,
   divRef: React.RefObject<HTMLDivElement>,
   dismiss: () => void,
@@ -118,8 +82,8 @@ export function Menu({
 
   const dismiss = () => void setCloseGeneration((n) => n + 1);
 
-  escapeLogic(dismiss, isOpen);
-  clickOutLogic(clickedElement, divRef, dismiss, isOpen);
+  useEscape(dismiss, isOpen);
+  useDismissOnOutsideClick(clickedElement, divRef, dismiss, isOpen);
 
   // Focus the menu if opened via keyboard.
   // eslint-disable-next-line consistent-return
@@ -201,8 +165,8 @@ export function Menu({
     React.useEffect(() => {
       const div = divRef.current;
       if (div) {
-        if (div.parentElement?.id !== 'menus') {
-          throw new Error('The <Menu> should be wrapped in menuPortal.');
+        if (div.parentElement?.id !== 'overlayContainer') {
+          throw new Error('The <Menu> should be wrapped in `overlayPortal`.');
         }
       }
     }, [divRef, isOpen]);

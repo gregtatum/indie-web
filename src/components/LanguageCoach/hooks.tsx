@@ -43,7 +43,13 @@ export function useStems(text: string): T.Stem[] | null {
   const [stems, setStems] = React.useState<T.Stem[] | null>(null);
   React.useEffect(() => {
     if (text && hunspell) {
-      setStems(computeStems(hunspell, text));
+      // Remove commented out lines.
+      const filteredText = text
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('#'))
+        .join('\n');
+
+      setStems(computeStems(hunspell, filteredText));
     }
   }, [text, hunspell]);
   return stems;

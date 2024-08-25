@@ -40,7 +40,9 @@
     "moduleDirectories": [
       "node_modules"
     ],
-    "transformIgnorePatterns": ["/node_modules/(?!${esModules})"],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!${esModules})"
+    ],
     "moduleNameMapper": {
       "\\.(css|less)$": "<rootDir>/src/test/__mocks__/style.ts",
       "^nanoid(/(.*)|$)": "nanoid$1"
@@ -104,7 +106,6 @@
     "workbox-webpack-plugin": "^7.0.0"
   },
   "dependencies": {
-    "hunspell-asm": "github:gregtatum/hunspell-asm#72494a846ea709815b0bebf037f59853912dd4a3",
     "@codemirror/commands": "^6.3.2",
     "@codemirror/lang-markdown": "^6.2.3",
     "@codemirror/language": "^6.9.3",
@@ -115,9 +116,12 @@
     "@types/node": "^20.10.5",
     "codemirror": "^6.0.1",
     "codemirror-lang-chordpro": "^0.0.6",
+    "dedent": "^1.5.3",
     "dropbox": "^10.34.0",
+    "hunspell-asm": "github:gregtatum/hunspell-asm#72494a846ea709815b0bebf037f59853912dd4a3",
     "idb": "^8.0.0",
     "marked": "^11.1.0",
+    "openai": "^4.56.0",
     "pdfjs-dist": "^4.0.269",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

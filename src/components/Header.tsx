@@ -4,7 +4,8 @@ import { $$, A, Hooks } from 'src';
 import { assertType, isAppSettingScrollTop } from 'src/utils';
 import { getBrowserName, getFileSystemDisplayName } from 'src/logic/app-logic';
 import './Header.css';
-import { Menu, MenuButton, menuPortal } from './Menus';
+import { Menu, MenuButton } from './Menus';
+import { overlayPortal } from 'src/hooks';
 
 export function Header() {
   const view = $$.getView();
@@ -207,16 +208,23 @@ function FileSystemSelection() {
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
   const [openGeneration, setOpenGeneration] = React.useState(0);
+  const navigate = Router.useNavigate();
   const buttons = React.useMemo<MenuButton[]>(
     () => [
       {
         key: 'browser',
-        onClick: () => void dispatch(A.changeFileSystem('browser')),
+        onClick: () => {
+          navigate('');
+          dispatch(A.changeFileSystem('browser'));
+        },
         children: getBrowserName(),
       },
       {
         key: 'dropbox',
-        onClick: () => void dispatch(A.changeFileSystem('dropbox')),
+        onClick: () => {
+          navigate('');
+          dispatch(A.changeFileSystem('dropbox'));
+        },
         children: 'Dropbox',
       },
     ],
@@ -237,7 +245,7 @@ function FileSystemSelection() {
       >
         {getFileSystemDisplayName(name)}
       </button>
-      {menuPortal(
+      {overlayPortal(
         <Menu
           clickedElement={button}
           openEventDetail={openEventDetail}

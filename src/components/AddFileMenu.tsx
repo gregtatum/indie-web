@@ -2,11 +2,11 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, T, $, $$ } from 'src';
 import { ensureExists, pathJoin } from 'src/utils';
-import { useStore } from '../hooks';
+import { overlayPortal, useStore } from '../hooks';
 import { UnhandledCaseError } from '../utils';
 import { FileSystem, FileSystemError } from 'src/logic/file-system';
 
-import { Menu, menuPortal } from './Menus';
+import { Menu } from './Menus';
 import './AddFileMenu.css';
 import { getLanguageByCode, languages } from '../logic/languages';
 
@@ -327,7 +327,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
   return (
     <>
       {component}
-      {menuPortal(
+      {overlayPortal(
         <Menu
           clickedElement={button}
           openEventDetail={openEventDetail}
@@ -411,6 +411,7 @@ async function createLanguageCoach(
     'overwrite',
     JSON.stringify(data),
   );
+  await fileSystem.createFolder(pathJoin(normalizedPath, 'reading'));
 
   return normalizedPath;
 }

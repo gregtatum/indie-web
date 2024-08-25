@@ -9,7 +9,7 @@
   background-color: #545cfb;
   color: #fff;
   z-index: 0;
-  box-shadow: 0 0 50px rgba(var(--accent-color-rgb), 0.2);
+  box-shadow: 0 0 50px rgba(var(--lc-accent-color-rgb), 0.2);
   gap: 10px;
   padding: 0 8px;
 }
@@ -31,7 +31,7 @@ a.lcHeaderLink {
   align-items: center;
 
   &.active {
-    color: var(--accent-color);
+    color: var(--lc-accent-color);
     line-height: 14px;
     
     &::before {
@@ -44,7 +44,7 @@ a.lcHeaderLink {
     }
 
     .lcHeaderBubble {
-      background-color: var(--accent-color);
+      background-color: var(--lc-accent-color);
       color: #fff;
     }
   }
@@ -55,7 +55,7 @@ a.lcHeaderLink {
   background-color: #fff;
   border-radius: 12px;
   margin-inline-start: 5px;
-  color: var(--accent-color);
+  color: var(--lc-accent-color);
   padding: 5px;
   font-size: 12px;
 }
