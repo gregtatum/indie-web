@@ -185,7 +185,6 @@ export class IDBFS extends FileSystemCache {
         // Recursively construct the folder listings.
         const parentPath = getDirName(path);
         if (await filesStore.get(parentPath)) {
-          tx.abort();
           throw new Error('A parent folder was actually a file: ' + parentPath);
         }
         const parent = await folderListingsStore.get(parentPath);
@@ -197,7 +196,6 @@ export class IDBFS extends FileSystemCache {
           if (fileInParent) {
             /* istanbul ignore next */
             if (fileInParent.type !== 'folder') {
-              tx.abort();
               throw new Error(
                 'The file in the parent was not of type folder: ' +
                   fileInParent.path,
@@ -216,13 +214,7 @@ export class IDBFS extends FileSystemCache {
       await tx.done;
       return row;
     } catch (error) {
-      setTimeout(() => {
-        // For some reason this causes an immediate DOMException, and can't be
-        // caught. I'd prefer to throw a real error here.
-        try {
-          tx.abort();
-        } catch {}
-      }, 0);
+      tx.abort();
       throw error;
     }
   }
