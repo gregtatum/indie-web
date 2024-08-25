@@ -91,7 +91,7 @@ export function TextSelectionTooltip(props: Props) {
   }, [overlayRef, overlayRect, selectionRect, isFirstRender]);
 
   useEscape(dismiss, true /* isOpen */);
-  useDismissOnOutsideClick(overlayRef, dismiss, true /* isOpen */);
+  // useDismissOnOutsideClick(overlayRef, dismiss, true /* isOpen */);
 
   if (process.env.NODE_ENV === 'development') {
     // Development assertion that this is used correctly.

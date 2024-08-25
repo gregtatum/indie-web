@@ -267,6 +267,7 @@ function RenderedReading() {
     [],
   );
   const [aiResponse, setAiResponse] = React.useState<Response | null>(null);
+  const aiResponseGeneration = React.useRef<number>(0);
 
   // The `Selection` object is shared between `getSelection` calls, so put it in
   // a "holder" object to properly trigger re-renders.
@@ -329,6 +330,9 @@ function RenderedReading() {
     if (process.env.NODE_ENV !== 'test') {
       console.log(`[openai] querying"`, query);
     }
+    // Responses can come back out of order.
+    aiResponseGeneration.current++;
+    const generation = aiResponseGeneration.current;
 
     openAI.chat.completions
       .create({
@@ -371,6 +375,10 @@ function RenderedReading() {
       })
       .then(
         (response) => {
+          if (generation !== aiResponseGeneration.current) {
+            console.log('[openai] response out of order, ignoring');
+            return;
+          }
           console.log(
             '[openai] response',
             response.choices[0].message.content,
