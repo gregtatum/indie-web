@@ -45,9 +45,15 @@
 }
 
 .headerSlideInContents {
-  padding: 0 var(--header-gap);
+  padding: 8px var(--header-gap);
   display: inline-flex;
   overflow: hidden;
+}
+
+.headerFloppyDiskImg {
+  width: 24px;
+  height: 24px;
+  margin-block: -5px;
 }
 
 .headerEnd {

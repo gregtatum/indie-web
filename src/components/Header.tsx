@@ -405,7 +405,9 @@ function SiteName(props: { isOpen: boolean }) {
     return (
       <div className="headerSiteName">
         <SlideIn isOpen={props.isOpen} skipAnimation={skipAnimation}>
-          <span>💾 </span>
+          <span>
+            <img src="/favicon-48x48.png" className="headerFloppyDiskImg" />{' '}
+          </span>
           <span className="headerSiteNameTitle">
             FloppyDisk<span className="headerSiteNameSuffix">.link</span>
           </span>
