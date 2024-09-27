@@ -266,6 +266,18 @@ export type SongKeySettings =
 
 export type FileSystemName = 'dropbox' | 'browser';
 
+export interface ReadingProgress {
+  paragraphsRead: number;
+  paragraphsTotal: number;
+  completedTimestamp: null | number;
+}
+
+export interface ReadingStatsV1 {
+  version: 1;
+  wordsRead: Array<{ timestamp: number; count: number }>;
+  progress: Record<string, ReadingProgress>;
+}
+
 export interface LanguageDataV1 {
   description: string;
   lastSaved: number;

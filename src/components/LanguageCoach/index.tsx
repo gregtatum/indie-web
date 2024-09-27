@@ -212,3 +212,137 @@ function DataSync(props: {
 
   return children;
 }
+
+function getInvalidations(data) {
+  const { language, learnedStems, ignoredStems } = data;
+  return [language, learnedStems, ignoredStems];
+}
+
+const fullPath = pathJoin($$.getLanguageCoachPath(), 'words.json');
+
+function WordsJsonSync(props: { children: any }) {
+  const lcPath = $$.getLanguageCoachPath();
+  const dataOrNull = $$.getLanguageCoachDataOrNull();
+  return (
+    <DataSync2 key={lcPath} data={dataOrNull}>
+      {props.children}
+    </DataSync2>
+  );
+}
+
+/**
+ * Syncs the data based off of a time out.
+ */
+function DataSync2<D>(props: {
+  key: string;
+  data: D | null;
+  getInvalidations: (data: D) => unknown[];
+  fullPath: string;
+  children: any;
+}) {
+  const { data, children } = props;
+
+  const dispatch = Hooks.useDispatch();
+
+  // These can be used in the effect freely to manage state in the effect.
+  const timeoutId = React.useRef<number>(-1);
+  const unloadHandler = React.useRef<null | (() => string)>();
+  const savePromise = React.useRef<Promise<unknown>>(Promise.resolve());
+  const unloadMessageGeneration = React.useRef<null | number>(null);
+  const firstLoad = React.useRef<boolean>(true);
+
+  const fileSystem = $$.getCurrentFS();
+
+  const { language, learnedStems, ignoredStems } = data;
+  const invalidations = [...getInvalidations(), fileSystem, fullPath];
+
+  React.useEffect(() => {
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
+    clearTimeout(timeoutId.current);
+
+    if (!unloadHandler.current) {
+      unloadHandler.current = () => {
+        unloadMessageGeneration.current = dispatch(
+          A.addMessage({
+            message: (
+              <>
+                Saving <code>{fullPath}</code>
+              </>
+            ),
+          }),
+        );
+        return 'There is a pending language coach save, are you sure you want to leave?';
+      };
+      window.addEventListener('beforeunload', unloadHandler.current);
+    }
+
+    async function saveLanguageCoatchData() {
+      try {
+        // If there is a previous save attempt, wait for it to be settled.
+        await savePromise.current.catch(() => {});
+
+        const serializedData: T.LanguageDataV1 = {
+          description: 'The data store for the language coach',
+          lastSaved: Date.now(),
+          language,
+          version: 1,
+          learnedStems: [...learnedStems],
+          ignoredStems: [...ignoredStems],
+        };
+
+        // Kick off the save.
+        savePromise.current = fileSystem.saveText(
+          fullPath,
+          'overwrite',
+          JSON.stringify(serializedData, null, 2),
+        );
+
+        await savePromise.current;
+
+        if (unloadMessageGeneration.current !== null) {
+          // We finished saving after a user tried to leave the page.
+          dispatch(
+            A.addMessage({
+              message: (
+                <>
+                  Finished saving <code>{fullPath}</code>. Feel free to close
+                  the tab.
+                </>
+              ),
+              generation: unloadMessageGeneration.current,
+            }),
+          );
+        }
+      } catch (error) {
+        // The save failed, notify the user.
+        console.error(error);
+        dispatch(
+          A.addMessage({
+            message: (
+              <>
+                Unable to save <code>{fullPath}</code>
+              </>
+            ),
+          }),
+        );
+      }
+
+      if (unloadHandler.current) {
+        window.removeEventListener('beforeunload', unloadHandler.current);
+        unloadHandler.current = null;
+      }
+      unloadMessageGeneration.current = null;
+    }
+
+    timeoutId.current = setTimeout(
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      saveLanguageCoatchData,
+      5000,
+    ) as unknown as number;
+  }, invalidations);
+
+  return children;
+}

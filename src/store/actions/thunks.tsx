@@ -10,7 +10,6 @@ import {
   getGeneration,
   getPathFileName,
   insertTextAtLine,
-  pathJoin,
 } from 'src/utils';
 import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'src/logic/files-index';
@@ -846,94 +845,5 @@ export function nextSentence(direction: -1 | 1, stemIndex?: number): Thunk {
     const stem = ensureExists($.getUnknownStems(getState()))[stemIndex];
 
     dispatch(PlainInternal.nextSentence(stem, direction));
-  };
-}
-
-let timeoutId: NodeJS.Timeout;
-let unloadHandler: null | (() => string);
-let savePromise: Promise<unknown> = Promise.resolve();
-let unloadMessageGeneration: null | number = null;
-
-export function languageCoachSaveTimer(): Thunk {
-  return (dispatch, getState) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-
-    if (!unloadHandler) {
-      unloadHandler = () => {
-        unloadMessageGeneration = dispatch(
-          addMessage({
-            message: (
-              <>
-                Saving <code>{fullPath}</code>
-              </>
-            ),
-          }),
-        );
-        return 'There is a pending language coach save, are you sure you want to leave?';
-      };
-      window.addEventListener('beforeunload', unloadHandler);
-    }
-
-    const fileSystem = $.getCurrentFS(getState());
-    const data = $.getLanguageCoachData(getState());
-    const path = $.getLanguageCoachPath(getState());
-    const fullPath = pathJoin(path, 'words.json');
-
-    async function saveLanguageCoatchData() {
-      try {
-        // If there is a previous save attempt, wait for it to be settled.
-        await savePromise.catch(() => {});
-
-        // Kick off the save.
-        savePromise = fileSystem.saveText(
-          fullPath,
-          'overwrite',
-          JSON.stringify(data),
-        );
-
-        await savePromise;
-
-        if (unloadMessageGeneration !== null) {
-          // We finished saving after a user tried to leave the page.
-          dispatch(
-            addMessage({
-              message: (
-                <>
-                  Finished saving <code>{fullPath}</code>. Feel free to close
-                  the tab.
-                </>
-              ),
-              generation: unloadMessageGeneration,
-            }),
-          );
-        }
-      } catch (error) {
-        // The save failed, notify the user.
-        console.error(error);
-        dispatch(
-          addMessage({
-            message: (
-              <>
-                Unable to save <code>{fullPath}</code>
-              </>
-            ),
-          }),
-        );
-      }
-
-      if (unloadHandler) {
-        window.removeEventListener('beforeunload', unloadHandler);
-        unloadHandler = null;
-      }
-      unloadMessageGeneration = null;
-    }
-
-    timeoutId = setTimeout(
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      saveLanguageCoatchData,
-      5000,
-    );
   };
 }
