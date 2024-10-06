@@ -339,13 +339,14 @@ function Path({
       <div className="headerPath headerPathFull" key={'full' + path}>
         <SiteName isOpen={!hideSiteName && !(songTitle ?? fileName)} />
         <FileSystemSelection key="fileSystem" />
-        <span>»</span>
-        {breadcrumbs}
-        <span>»</span>
-        {songTitle ?? fileName ? (
-          <span title={fileName}>{songTitle ?? fileName}</span>
-        ) : null}
-        {title ? <span>{title}</span> : null}
+        <div className="headerPathBreadcrumbs">
+          {breadcrumbs}
+          <span>»</span>
+          {songTitle ?? fileName ? (
+            <span title={fileName}>{songTitle ?? fileName}</span>
+          ) : null}
+          {title ? <span>{title}</span> : null}
+        </div>
       </div>
       <div className="headerPath headerPathMobile" key={'mobile' + path}>
         <Router.Link
