@@ -566,7 +566,6 @@ function AIResponse(props: {
             const stem = unknownStems.find((unknown) =>
               unknown.tokens.find((token) => token === word),
             );
-            console.log(`!!! stem`, { stem, word, unknownStems });
 
             if (stem) {
               buttons = (

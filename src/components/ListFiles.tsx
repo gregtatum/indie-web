@@ -19,6 +19,13 @@ export function ListFiles() {
   const error = $$.getListFilesErrors().get(path);
   const parsedSearch = $$.getParsedSearch();
   const fileSystemName = $$.getCurrentFileSystemName();
+  const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
+
+  const parts = path.split('/');
+  parts.pop();
+  // The first part is always an empty string.
+  const backPath = parts.join('/');
+  Hooks.useUploadOnFileDrop(filesBackRef, backPath);
 
   React.useEffect(() => {
     if (path === '/') {
@@ -67,13 +74,14 @@ export function ListFiles() {
 
   let parent = null;
   if (path !== '/') {
-    const parts = path.split('/');
-    parts.pop();
+    const url = backPath === '/' ? `${fileSystemName}/folder${backPath}` : '/';
+
     parent = (
       <Router.Link
         className="listFilesBack"
-        to={`${fileSystemName}/folder${parts.join('/')}`}
+        to={url}
         aria-label="Back"
+        ref={filesBackRef}
       >
         ←
       </Router.Link>
@@ -89,11 +97,7 @@ export function ListFiles() {
         </div>
         <div className="listFilesList">
           {files.map((file) => {
-            return (
-              <div key={file.id} className="listFilesFile">
-                <File file={file} />
-              </div>
-            );
+            return <File key={file.id} file={file} />;
           })}
           <AddFileMenu path={path} />
         </div>
@@ -123,13 +127,17 @@ interface FileProps {
 export function File(props: FileProps) {
   const renameFile = $$.getRenameFile();
   const fsName = $$.getCurrentFileSystemName();
-
+  const divRef = React.useRef<null | HTMLDivElement>(null);
   const { name, path, type } = props.file;
   const isFolder = type === 'folder';
   const nameParts = name.split('.');
   const extension =
     nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
   let displayName: React.ReactNode = name;
+
+  if (isFolder) {
+    Hooks.useUploadOnFileDrop(divRef, path);
+  }
 
   if (extension) {
     if (props.hideExtension) {
@@ -201,24 +209,35 @@ export function File(props: FileProps) {
 
   if (link) {
     return (
-      <>
-        <Router.Link className="listFilesFileLink" to={link}>
+      <div className="listFilesFile" ref={divRef}>
+        <Router.Link
+          className="listFilesFileLink"
+          to={link}
+          // Drag/drop events can read this:
+          data-file-path={path}
+        >
           <span className="listFilesIcon">{icon}</span>
           {fileDisplayName}
         </Router.Link>
         <FileMenu file={props.file} />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <div className="listFilesFileEmpty">
+    <div className="listFilesFile" ref={divRef}>
+      <a
+        href=""
+        className="listFilesFileEmpty"
+        // Drag/drop events can read this:
+        data-file-path={path}
+        onClick={(event) => void event.preventDefault()}
+      >
         <span className="listFilesIcon">{icon}</span>
         {fileDisplayName}
-      </div>
+      </a>
       <FileMenu file={props.file} />
-    </>
+    </div>
   );
 }
 

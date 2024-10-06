@@ -4,11 +4,13 @@ import * as Router from 'react-router-dom';
 import { Selector } from 'src/@types';
 import {
   ensureExists,
+  getPathFileName,
   getPathFileNameNoExt,
+  htmlElementOrNull,
   pathJoin,
   setScrollTop,
 } from 'src/utils';
-import { T, $ } from 'src';
+import { T, $, A } from 'src';
 import { FileSystemError } from 'src/logic/file-system';
 
 export function useStore(): T.Store {
@@ -89,7 +91,7 @@ export function useRetainScroll() {
 
 export function useFileDrop(
   targetRef: React.RefObject<HTMLElement | null>,
-  onDropCallback: (files: FileList, element: HTMLElement) => any,
+  onDropCallback: (event: DragEvent) => unknown,
 ): boolean {
   const [dragging, setDraggingState] = React.useState(false);
 
@@ -125,11 +127,7 @@ export function useFileDrop(
       event.preventDefault();
       event.stopPropagation();
       setDragging(false);
-
-      const files = event.dataTransfer?.files;
-      if (files && event.target) {
-        onDropCallback(files, event.target as any);
-      }
+      onDropCallback(event);
     };
 
     const element = targetRef.current;
@@ -541,4 +539,44 @@ export function overlayPortal(child: React.ReactNode, key?: string) {
     );
   }
   return createPortal(child, overlayContainer, key);
+}
+
+export function useUploadOnFileDrop(
+  divRef: React.RefObject<HTMLElement | null>,
+  folderPath: string,
+) {
+  const dispatch = useDispatch();
+  useFileDrop(divRef, (event) => {
+    const { dataTransfer } = event;
+    if (!dataTransfer) {
+      return;
+    }
+
+    const { files } = dataTransfer;
+
+    if (files?.length) {
+      // This is infallible, as it reports errors with messages.
+      void dispatch(A.uploadFilesWithMessages(folderPath, dataTransfer.files));
+      return;
+    }
+
+    // A DOM element was dragged and dropped. Parse the DOM to see if it was a
+    // file link. If it was it will have a [data-file-path].
+    const html = dataTransfer.getData('text/html');
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const fileElement = htmlElementOrNull(
+      doc.querySelector('[data-file-path]'),
+    );
+
+    const fromPath = fileElement?.dataset.filePath;
+    if (!fromPath) {
+      return;
+    }
+
+    const toPath = pathJoin(folderPath, getPathFileName(fromPath));
+
+    // This is infallible, as it reports errors with messages.
+    void dispatch(A.moveFile(fromPath, toPath));
+  });
 }

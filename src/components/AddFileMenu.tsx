@@ -188,66 +188,12 @@ export function AddFileMenu(props: AddFileMenuProps) {
         fileInput.setAttribute('multiple', 'true');
         document.body.appendChild(fileInput);
 
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
-        fileInput.addEventListener('change', async () => {
+        fileInput.addEventListener('change', () => {
           const { files } = fileInput;
           if (!files) {
             return;
           }
-          for (const file of files) {
-            const path = pathJoin(props.path, file.name);
-            const messageGeneration = dispatch(
-              A.addMessage({
-                message: (
-                  <>
-                    Adding <code>{file.name}</code>
-                  </>
-                ),
-              }),
-            );
-
-            try {
-              await fileSystem.saveBlob(path, 'add', file);
-              dispatch(
-                A.addMessage({
-                  message: (
-                    <>
-                      Added <code>{file.name}</code>
-                    </>
-                  ),
-                  generation: messageGeneration,
-                  timeout: true,
-                }),
-              );
-              dispatch(A.listFiles(props.path)).catch((error) => {
-                console.error(error);
-                dispatch(
-                  A.addMessage({
-                    message: (
-                      <>
-                        Error listing files <code>{props.path}</code>
-                      </>
-                    ),
-                    timeout: true,
-                    generation: messageGeneration,
-                  }),
-                );
-              });
-            } catch (error) {
-              console.error(error);
-              dispatch(
-                A.addMessage({
-                  message: (
-                    <>
-                      Error saving <code>{path}</code>
-                    </>
-                  ),
-                  timeout: true,
-                  generation: messageGeneration,
-                }),
-              );
-            }
-          }
+          void dispatch(A.uploadFilesWithMessages(props.path, files));
         });
         fileInput.click();
         fileInput.remove();

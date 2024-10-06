@@ -6,6 +6,7 @@ import {
   getPathFileNameNoExt,
   getDirName,
   UnhandledCaseError,
+  htmlElementOrNull,
 } from 'src/utils';
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
@@ -352,10 +353,13 @@ function uploadFileHook(
 ) {
   const dispatch = Hooks.useDispatch();
 
-  Hooks.useFileDrop(renderedSongRef, async (fileList, target) => {
-    const closest = target.closest('[data-line-index]') as HTMLElement;
+  Hooks.useFileDrop(renderedSongRef, async (event) => {
+    const target = htmlElementOrNull(event.target);
+    const closest = htmlElementOrNull(target?.closest('[data-line-index]'));
     const lineIndex = Number(closest?.dataset.lineIndex ?? 0);
-    for (const file of fileList) {
+    const files = event.dataTransfer?.files ?? [];
+
+    for (const file of files) {
       const [type, _subtype] = file.type.split('/');
       let makeTag;
       switch (type) {

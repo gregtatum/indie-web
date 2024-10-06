@@ -241,6 +241,7 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
 export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const fileSystem = $.getCurrentFS(getState());
+    const fileSystemName = $.getCurrentFileSystemName(getState());
 
     const messageGeneration = dispatch(
       addMessage({
@@ -282,7 +283,7 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
         }),
       );
       console.error(error);
-      throw new Error('Unable to save the file with Dropbox.');
+      throw new Error(`Unable to save the file with ${fileSystemName}.`);
     }
   };
 }
@@ -294,6 +295,7 @@ export function moveFile(
   return async (dispatch, getState) => {
     toPath = canonicalizePath(toPath);
     const fileSystem = $.getCurrentFS(getState());
+    const fileSystemName = $.getCurrentFileSystemName(getState());
     const name = getPathFileName(toPath);
 
     dispatch(PlainInternal.moveFileRequested(fromPath));
@@ -323,6 +325,9 @@ export function moveFile(
           timeout: true,
         }),
       );
+
+      void dispatch(listFiles(getDirName(fromPath)));
+      void dispatch(listFiles(getDirName(toPath)));
     } catch (error) {
       dispatch(
         addMessage({
@@ -335,7 +340,7 @@ export function moveFile(
         }),
       );
       console.error(error);
-      throw new Error('Unable to save the file with Dropbox.');
+      throw new Error(`Unable to save the file with ${fileSystemName}.`);
     }
   };
 }
@@ -935,5 +940,73 @@ export function languageCoachSaveTimer(): Thunk {
       saveLanguageCoatchData,
       5000,
     );
+  };
+}
+
+/**
+ * Upload files into a folder. This function is infallible, and errors will be reported
+ * with messages.
+ */
+export function uploadFilesWithMessages(
+  folderPath: string,
+  files: FileList,
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const fileSystem = $.getCurrentFS(getState());
+
+    for (const file of files) {
+      const path = pathJoin(folderPath, file.name);
+      const messageGeneration = dispatch(
+        addMessage({
+          message: (
+            <>
+              Adding <code>{file.name}</code>
+            </>
+          ),
+        }),
+      );
+
+      try {
+        await fileSystem.saveBlob(path, 'add', file);
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Added <code>{file.name}</code>
+              </>
+            ),
+            generation: messageGeneration,
+            timeout: true,
+          }),
+        );
+        dispatch(listFiles(folderPath)).catch((error) => {
+          console.error(error);
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Error listing files <code>{folderPath}</code>
+                </>
+              ),
+              timeout: true,
+              generation: messageGeneration,
+            }),
+          );
+        });
+      } catch (error) {
+        console.error(error);
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Error saving <code>{path}</code>
+              </>
+            ),
+            timeout: true,
+            generation: messageGeneration,
+          }),
+        );
+      }
+    }
   };
 }

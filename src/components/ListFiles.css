@@ -59,16 +59,36 @@
 .listFilesFile {
   display: flex;
   border-bottom: 1px solid #ddd;
+  position: relative;
+
+  /* Create an inset pseudo element so the outline isn't cut off. */
+  &.dragging {
+    outline: none;
+
+    &::after {
+      content: "";
+      inset: 2px;
+      position: absolute;
+      border: 2px solid var(--primary-color-hover);
+      border-radius: 5px;
+      pointer-events: none;
+    }
+  }
+
 }
 
 a.listFilesFileLink,
-.listFilesFileEmpty {
+a.listFilesFileEmpty {
   padding: 8px;
   display: flex;
   text-decoration: none;
   color: #000;
   align-items: center;
   flex: 1;
+}
+
+a.listFilesFileEmpty {
+  cursor: default;
 }
 
 .listFilesFile a:hover {

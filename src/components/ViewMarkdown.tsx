@@ -7,7 +7,7 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
 import { downloadImage } from 'src/logic/download-image';
-import { getEnv, getDirName } from 'src/utils';
+import { getEnv, getDirName, htmlElementOrNull } from 'src/utils';
 import { EditorView } from 'codemirror';
 import TurndownService from 'turndown';
 
@@ -348,12 +348,22 @@ function uploadFileHook(
   displayPath: string,
 ) {
   const { dispatch, getState } = Hooks.useStore();
-  Hooks.useFileDrop(markdownRef, async (fileList, target) => {
+  Hooks.useFileDrop(markdownRef, async (event) => {
     // As far as I can tell, there is no way to use `marked` to map from the rendered HTML
     // back to the source text. To work around this, try to find a line index to insert
     // the attachment into the markdown.
     const lines = $.getActiveFileText(getState()).split('\n');
-    let searchNode: HTMLElement | null = target;
+    const target = htmlElementOrNull(event.target);
+    if (!target) {
+      return;
+    }
+
+    const fileList = event.dataTransfer?.files;
+    if (!fileList) {
+      return;
+    }
+
+    let searchNode = target;
     let lineIndex = -1;
     while (searchNode) {
       const searchTerm = searchNode?.innerText.trim();

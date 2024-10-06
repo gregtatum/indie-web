@@ -454,3 +454,16 @@ export function isElementInViewport(element: Element): boolean {
     rect.right <= (window.innerWidth || document.documentElement.clientWidth)
   );
 }
+
+/**
+ * Convert EventTargets or raw Elements into HTMLElements to get access to the
+ * prototype methods of HTMLElement.
+ */
+export function htmlElementOrNull(
+  value: Node | Element | HTMLElement | EventTarget | null | undefined,
+): HTMLElement | null {
+  if (value instanceof HTMLElement) {
+    return value;
+  }
+  return null;
+}
