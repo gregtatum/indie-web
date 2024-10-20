@@ -1,3 +1,4 @@
+import dedent from 'dedent';
 import {
   parseChord,
   parseChordPro,
@@ -508,11 +509,11 @@ describe('ultimateGuitarToChordPro', () => {
   });
 
   it('can handle pipe characters', () => {
-    const characters = [
-      '[Intro]',
-      '| C G/B | Am7 G/B |',
-      '| C G/B | Am7 G/B |',
-    ].join('\n');
+    const characters = dedent`
+      [Intro]
+      | C G/B | Am7 G/B |
+      | C G/B | Am7 G/B |
+    `;
     expect(ultimateGuitarToChordPro(characters)).toMatchInlineSnapshot(`
       "Intro:
       | [C] [G/B] | [Am7] [G/B] |
@@ -521,11 +522,10 @@ describe('ultimateGuitarToChordPro', () => {
   });
 
   it('can handle pipe characters followed by verse', () => {
-    const characters = [
-      //
-      '| C G/B | Am7 D/F# |',
-      'Mmm...',
-    ].join('\n');
+    const characters = dedent`
+      | C G/B | Am7 D/F# |
+      Mmm...
+    `;
 
     expect(ultimateGuitarToChordPro(characters)).toMatchInlineSnapshot(`
       "| [C] [G/B] | [Am7] [D/F#] |

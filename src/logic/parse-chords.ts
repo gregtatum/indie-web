@@ -765,7 +765,6 @@ export function ultimateGuitarToChordPro(text: string) {
   }
 
   const isChordLines = getIsChordLines(lines);
-  console.log(`!!! isChordLines`, isChordLines);
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];

@@ -109,11 +109,6 @@ export function ViewChopro() {
                     selection: { anchor },
                     effects: EditorView.scrollIntoView(anchor),
                   });
-
-                  // console.log(`!!! ultimateGuitarToChordPro(text);`, {
-                  //   converted: ultimateGuitarToChordPro(text),
-                  //   original: text,
-                  // });
                 }
               },
             }),
