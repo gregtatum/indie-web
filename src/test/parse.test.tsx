@@ -3,6 +3,8 @@ import {
   parseChordPro,
   parseAttributes,
   Parser,
+  ultimateGuitarToChordPro,
+  getChordLineRatio,
 } from '../logic/parse-chords';
 import { stripIndent } from 'common-tags';
 
@@ -457,6 +459,77 @@ describe('parseChordPro', () => {
           },
         ],
       }
+    `);
+  });
+});
+
+const file = `Song: I Put a Spell on You
+
+Band: Creedence Clearwater Revival
+
+
+
+[Intro]
+
+Em     Em
+
+
+
+[Verse 1]
+
+        Em              Am
+
+I put a spell on you
+
+               Em      Em
+
+Because you're mine
+
+`;
+
+describe('ultimateGuitarToChordPro', () => {
+  it('can parse ultimate guitar', () => {
+    expect(ultimateGuitarToChordPro(file)).toMatchInlineSnapshot(`
+      "Song: I Put a Spell on You
+      Band: Creedence Clearwater Revival
+
+      Intro:
+      [Em]     [Em]
+
+      Verse 1:
+      I put a [Em]spell on you  [Am]
+      Because you're [Em]mine  [Em]
+      "
+    `);
+  });
+
+  it('can compute a chord line ratio', () => {
+    expect(Math.round(getChordLineRatio(file) * 100)).toEqual(13);
+  });
+
+  it('can handle pipe characters', () => {
+    const characters = [
+      '[Intro]',
+      '| C G/B | Am7 G/B |',
+      '| C G/B | Am7 G/B |',
+    ].join('\n');
+    expect(ultimateGuitarToChordPro(characters)).toMatchInlineSnapshot(`
+      "Intro:
+      | [C] [G/B] | [Am7] [G/B] |
+      | [C] [G/B] | [Am7] [G/B] |"
+    `);
+  });
+
+  fit('can handle pipe characters followed by verse', () => {
+    const characters = [
+      //
+      '| C G/B | Am7 D/F# |',
+      'Mmm...',
+    ].join('\n');
+
+    expect(ultimateGuitarToChordPro(characters)).toMatchInlineSnapshot(`
+      "| [C] [G/B] | [Am7] [D/F#] |
+      Mmm..."
     `);
   });
 });

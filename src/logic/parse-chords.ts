@@ -481,7 +481,12 @@ export function parseChordPro(text: string): T.ParsedChordPro {
       let hasChords = false;
       let hasText = false;
       for (const span of spans) {
-        if (span.type === 'text' && span.text.trim()) {
+        if (
+          span.type === 'text' &&
+          span.text.trim() &&
+          // Ignore pipe characters as pure positioning.
+          span.text.trim() !== '|'
+        ) {
           hasText = true;
         }
         if (span.type === 'chord') {
@@ -700,4 +705,132 @@ function transpose(
   halfSteps: number,
 ) {
   return scaleToChord[(halfStepScale[note] + halfSteps) % 12];
+}
+
+/**
+ * In order to detect Ultimate Guitar files, we need to count how many lines contain
+ * just chords.
+ */
+export function getChordLineRatio(text: string) {
+  const lines = text.split('\n');
+  const isChordLines = getIsChordLines(lines);
+  let chordLinesCount = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (isChordLines[i] && lines[i].trim()) {
+      chordLinesCount++;
+    }
+  }
+  return chordLinesCount / isChordLines.length;
+}
+
+function getIsChordLines(lines: string[]) {
+  const allChords = new Set();
+
+  for (const key of Object.keys(halfStepScale)) {
+    allChords.add(key);
+    allChords.add(key + 'm');
+    for (const extension of extensions) {
+      allChords.add(key + extension);
+      allChords.add(key + 'm' + extension);
+    }
+  }
+
+  return lines.map((line) =>
+    line
+      .replaceAll('|', '') // The pipes are frequently used for spacing
+      .replaceAll('/', ' ') // Slash chords can just be treated as 2 chords.
+      .split(/[ \t]+/)
+      .every((text) => !text.trim() || allChords.has(text)),
+  );
+}
+
+export function ultimateGuitarToChordPro(text: string) {
+  let lines = text.split('\n');
+
+  // When copying chords in UltimateGuitar from Firefox, the lines are double spaced.
+  // Fix that here.
+  const removedLines: boolean[] = [];
+  for (const remainder of [0, 1]) {
+    if (
+      lines.every((line, index) => {
+        if (index % 2 === remainder) {
+          return true;
+        }
+        return line.trim() === '';
+      })
+    ) {
+      lines = lines.filter((_line, index) => index % 2 === remainder);
+      break;
+    }
+  }
+
+  const isChordLines = getIsChordLines(lines);
+  console.log(`!!! isChordLines`, isChordLines);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      // [Intro] -> Intro:
+      lines[i] = line.slice(1, line.length - 1) + ':';
+      continue;
+    }
+
+    if (!trimmed) {
+      // This is a blank line.
+      continue;
+    }
+
+    const isChordLine = isChordLines[i];
+    if (!isChordLine) {
+      continue;
+    }
+    const nextLine = lines[i + 1];
+    const parts = line.match(/(\s+|\S+)/g);
+    if (!parts) {
+      continue;
+    }
+
+    if (
+      isChordLines[i + 1] ||
+      !nextLine ||
+      // If there are positional components, do not embed the chords below.
+      line.includes('|')
+    ) {
+      // This part only has chords, don't place it into the line below it.
+      let newLine = '';
+      for (const part of parts) {
+        if (part.trim()) {
+          if (part === '|') {
+            newLine += part;
+          } else {
+            newLine += `[${part}]`;
+          }
+        } else {
+          newLine += part;
+        }
+        lines[i] = newLine;
+      }
+      continue;
+    }
+
+    // Embed the chords into the next line line into the next.
+    let newLine = nextLine.padEnd(line.length, ' ');
+    let index = 0;
+    for (const part of parts) {
+      if (part.trim()) {
+        // Embed the chord
+        const chord = `[${part}]`;
+        newLine = newLine.slice(0, index) + chord + newLine.slice(index);
+        index += chord.length;
+      } else {
+        // Whitespace
+        index += part.length;
+      }
+    }
+    lines[i] = newLine.trimEnd();
+    removedLines[i + 1] = true;
+  }
+  return lines.filter((line, index) => !removedLines[index]).join('\n');
 }
