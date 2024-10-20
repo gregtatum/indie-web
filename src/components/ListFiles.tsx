@@ -74,7 +74,7 @@ export function ListFiles() {
 
   let parent = null;
   if (path !== '/') {
-    const url = backPath === '/' ? `${fileSystemName}/folder${backPath}` : '/';
+    const url = backPath === '/' ? '/' : `${fileSystemName}/folder${backPath}`;
 
     parent = (
       <Router.Link
