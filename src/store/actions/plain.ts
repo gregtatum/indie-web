@@ -4,7 +4,7 @@ import {
   BROWSER_FILES_DB_NAME,
   IDBFS,
 } from 'src/logic/file-system/indexeddb-fs';
-import { SongKey } from 'src/logic/parse';
+import { SongKey } from 'src/logic/parse-chords';
 
 export function removeDropboxAccessToken() {
   localStorage.clear();

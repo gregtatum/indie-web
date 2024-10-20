@@ -1,6 +1,6 @@
 import type * as idb from 'idb';
 import * as Dropbox from 'dropbox';
-import { SongKey } from 'src/logic/parse';
+import { SongKey } from 'src/logic/parse-chords';
 
 // prettier-ignore
 export type Note =

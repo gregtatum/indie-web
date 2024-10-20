@@ -11,7 +11,7 @@ import {
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
-import { SongKey } from 'src/logic/parse';
+import { SongKey } from 'src/logic/parse-chords';
 import { Menu } from './Menus';
 import { overlayPortal } from 'src/hooks';
 

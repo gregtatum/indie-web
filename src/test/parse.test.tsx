@@ -3,7 +3,7 @@ import {
   parseChordPro,
   parseAttributes,
   Parser,
-} from '../logic/parse';
+} from '../logic/parse-chords';
 import { stripIndent } from 'common-tags';
 
 describe('parser', () => {
