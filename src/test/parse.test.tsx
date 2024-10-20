@@ -520,7 +520,7 @@ describe('ultimateGuitarToChordPro', () => {
     `);
   });
 
-  fit('can handle pipe characters followed by verse', () => {
+  it('can handle pipe characters followed by verse', () => {
     const characters = [
       //
       '| C G/B | Am7 D/F# |',
