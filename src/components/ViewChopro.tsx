@@ -89,9 +89,11 @@ export function ViewChopro() {
                   return;
                 }
 
+                // Skip the conversion if it's just HTML.
+                const hasHtmlPaste = clipboardData.getData('text/html');
                 const text = clipboardData.getData('text/plain');
 
-                if (getChordLineRatio(text) > 0.15) {
+                if (hasHtmlPaste && getChordLineRatio(text) > 0.15) {
                   // Treat this as an ultimate guitar file.
                   event.preventDefault();
                   const insert = ultimateGuitarToChordPro(text);
@@ -109,6 +111,17 @@ export function ViewChopro() {
                     selection: { anchor },
                     effects: EditorView.scrollIntoView(anchor),
                   });
+
+                  const modifier = window.navigator.platform
+                    .toLowerCase()
+                    .includes('mac')
+                    ? 'cmd'
+                    : 'ctrl';
+                  dispatch(
+                    A.addMessage({
+                      message: `Converted from Ultimate Guitar tab to ChordPro. Paste with ${modifier}+shift+v to avoid this conversion.`,
+                    }),
+                  );
                 }
               },
             }),
