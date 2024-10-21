@@ -120,6 +120,7 @@ export function ViewChopro() {
                   dispatch(
                     A.addMessage({
                       message: `Converted from Ultimate Guitar tab to ChordPro. Paste with ${modifier}+shift+v to avoid this conversion.`,
+                      timeout: true,
                     }),
                   );
                 }
