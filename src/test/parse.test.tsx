@@ -498,8 +498,8 @@ describe('ultimateGuitarToChordPro', () => {
       [Em]     [Em]
 
       Verse 1:
-      I put a [Em]spell on you  [Am]
-      Because you're [Em]mine  [Em]
+      I put a [Em]spell on you    [Am]
+      Because you're [Em]mine    [Em]
       "
     `);
   });
@@ -531,5 +531,15 @@ describe('ultimateGuitarToChordPro', () => {
       "| [C] [G/B] | [Am7] [D/F#] |
       Mmm..."
     `);
+  });
+
+  it('aligns chords', () => {
+    const text = dedent`
+      A   Bm  Cm    D    E    Fm
+      One two three four five six.
+    `;
+    expect(ultimateGuitarToChordPro(text)).toMatchInlineSnapshot(
+      `"[A]One [Bm]two [Cm]three [D]four [E]five [Fm]six."`,
+    );
   });
 });

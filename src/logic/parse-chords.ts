@@ -823,10 +823,8 @@ export function ultimateGuitarToChordPro(text: string) {
         const chord = `[${part}]`;
         newLine = newLine.slice(0, index) + chord + newLine.slice(index);
         index += chord.length;
-      } else {
-        // Whitespace
-        index += part.length;
       }
+      index += part.length;
     }
     lines[i] = newLine.trimEnd();
     removedLines[i + 1] = true;
