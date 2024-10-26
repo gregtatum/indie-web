@@ -42,7 +42,7 @@ Tuning {
   kw<"E/5"> | kw<"B/4"> | kw<"G/4"> | kw<"D/4"> | kw<"A/3"> | kw<"E/3">
 }
 
-separator<ch, content> { "" | content (ch content)* }
+trailingSeparator<ch, content> { "" | content (ch content?)* }
 separatorNonEmpty<ch, content> { content (ch content)* }
 
 // "tabstave notation=true tablature=false"
@@ -95,7 +95,7 @@ RepeatBegin { "=|:" }
 RepeatEnd { "=:|" }
 DoubleRepeat { "=::" }
 EndBar { "=|=" }
-BarSign {
+BarLine {
   SingleBar |
   DoubleBar |
   RepeatBegin |
@@ -105,7 +105,8 @@ BarSign {
 }
 
 Octave { "/" Number }
-FretNumber { number }
+Bend { kw<"b"> Number }
+FretNumber { number (Bend | (Bend Bend))? }
 Rest { "##" | ("#" number "#") }
 Note { NoteLetter NoteSuffix? }
 OctaveGroup {
@@ -121,7 +122,7 @@ Bar {
 }
 
 NotesSection {
-  kw<"notes"> separator<BarSign, Bar>
+  kw<"notes"> trailingSeparator<BarLine, Bar>
 }
 
 @tokens {

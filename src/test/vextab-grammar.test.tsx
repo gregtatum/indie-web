@@ -130,8 +130,7 @@ describe('vextab', () => {
   });
 
   it('can handle bars', () => {
-    expect(parseAndGetText('notes 4-5-6/3 ## =|: 5-4-2/3 2/2 =:|'))
-      .toMatchInlineSnapshot(`
+    expect(parseAndGetText('notes 5-4-2/3 2/2 =:|')).toMatchInlineSnapshot(`
       "Program(
         NotesSection(
           notes
@@ -144,10 +143,60 @@ describe('vextab', () => {
                 Number
               )
             )
-            Rest
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
           )
-          BarSign(
-            RepeatBegin
+          BarLine(
+            RepeatEnd
+          )
+        )
+      )
+      "
+    `);
+  });
+
+  it('can handle bends', () => {
+    const text = dedent`
+      tabstave
+      notes 4-5-6b7/3 10/4 | 5-4-2/3 2/2
+
+      tabstave
+      notes 6-7b9b7/3 7/4 | 9-8-7-6/2
+    `;
+    expect(parseAndGetText(text)).toMatchInlineSnapshot(`
+      "Program(
+        TabStave(
+          tabstave
+        )
+        NotesSection(
+          notes
+          Bar(
+            OctaveGroup(
+              FretNumber
+              FretNumber
+              FretNumber(
+                Bend(
+                  b
+                  Number
+                )
+              )
+              Octave(
+                Number
+              )
+            )
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+          )
+          BarLine(
+            SingleBar
           )
           Bar(
             OctaveGroup(
@@ -165,10 +214,50 @@ describe('vextab', () => {
               )
             )
           )
-          BarSign(
-            RepeatEnd
+        )
+        TabStave(
+          tabstave
+        )
+        NotesSection(
+          notes
+          Bar(
+            OctaveGroup(
+              FretNumber
+              FretNumber(
+                Bend(
+                  b
+                  Number
+                )
+                Bend(
+                  b
+                  Number
+                )
+              )
+              Octave(
+                Number
+              )
+            )
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
           )
-          ⚠
+          BarLine(
+            SingleBar
+          )
+          Bar(
+            OctaveGroup(
+              FretNumber
+              FretNumber
+              FretNumber
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+          )
         )
       )
       "
