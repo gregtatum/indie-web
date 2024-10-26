@@ -109,20 +109,38 @@ Bend { kw<"b"> Number }
 FretNumber { number (Bend | (Bend Bend))? }
 Rest { "##" | ("#" number "#") }
 Note { NoteLetter NoteSuffix? }
+
+GuitarTechniques {
+  HammerOn { kw<"h"> }
+  | PullOff { kw<"p"> }
+  | Taps { kw<"t"> }
+  | Slides  { kw<"s"> }
+}
+
 OctaveGroup {
   separatorNonEmpty<
-    "-",
+    ("-" | GuitarTechniques),
     Note | FretNumber
   >
   Octave
 }
 
 Bar {
-  (OctaveGroup | Rest)+
+  (
+    Rest
+    | (GuitarTechniques? Chord)
+    | (GuitarTechniques? OctaveGroup)
+  )+
 }
 
 NotesSection {
   kw<"notes"> trailingSeparator<BarLine, Bar>
+}
+
+// notes (8/2.7b9b7/3) (5b6/2.5b6/3) 7/4 |
+
+Chord {
+  "(" separatorNonEmpty<".", (Note | FretNumber) Octave> ")"
 }
 
 @tokens {
