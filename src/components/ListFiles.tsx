@@ -154,6 +154,7 @@ export function File(props: FileProps) {
     }
   }
   const isChordPro = !isFolder && isChordProExtension(extension);
+  const isVexTab = !isFolder && extension === 'vextab';
   const isPDF = !isFolder && extension === 'pdf';
   const isImage = !isFolder && imageExtensions.has(extension);
   const isMarkdown = !isFolder && extension === 'md';
@@ -162,7 +163,7 @@ export function File(props: FileProps) {
   let icon = '📄';
   if (isFolder) {
     icon = '📁';
-  } else if (isChordPro) {
+  } else if (isChordPro || isVexTab) {
     icon = '🎵';
   }
 
@@ -173,6 +174,10 @@ export function File(props: FileProps) {
 
   if (isChordPro) {
     link = `/${fsName}/file${path}`;
+  }
+
+  if (isVexTab) {
+    link = `/${fsName}/vextab${path}`;
   }
 
   if (isPDF) {

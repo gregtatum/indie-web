@@ -9,11 +9,19 @@ import { FileSystem, FileSystemError } from 'src/logic/file-system';
 import { Menu } from './Menus';
 import './AddFileMenu.css';
 import { getLanguageByCode, languages } from '../logic/languages';
+import dedent from 'dedent';
 
 const order =
   process.env.SITE === 'floppydisk'
-    ? ['Folder', 'Markdown', 'ChordPro', 'Language Coach', 'Upload File']
-    : ['ChordPro', 'Folder', 'Upload File'];
+    ? [
+        'Folder',
+        'Markdown',
+        'ChordPro',
+        'VexTab',
+        'Language Coach',
+        'Upload File',
+      ]
+    : ['ChordPro', 'VexTab', 'Folder', 'Upload File'];
 
 type FileDetails =
   | {
@@ -180,6 +188,15 @@ export function AddFileMenu(props: AddFileMenuProps) {
         isSubmitting: false,
       });
     },
+    VexTab() {
+      setFileDetails({
+        slug: 'vextab',
+        extension: 'vextab',
+        getDefaultContents: vextabDefaultContents,
+        type: 'text',
+        isSubmitting: false,
+      });
+    },
     'Upload File': () => {
       // Wrap this in a raF because the menu wasn't closing otherwise.
       requestAnimationFrame(() => {
@@ -289,6 +306,19 @@ export function AddFileMenu(props: AddFileMenuProps) {
   );
 }
 
+function vextabDefaultContents() {
+  return dedent`
+    options space=20
+    tabstave notation=true key=A time=4/4
+
+    notes :q =|: (5/2.5/3.7/4) :8 7-5h6/3 ^3^ 5h6-7/5 ^3^ :q 7V/4 |
+    notes :8 t12p7/4 s5s3/4 :8 3s:16:5-7/5 :h p5/4
+    text :w, |#segno, ,|, :hd, , #tr
+
+    options space=25
+  `;
+}
+
 function choproDefaultContents(fileName: string): string {
   const title = fileName.replace(/\.chopro$/, '');
   let contents = `{title: ${title}}\n{subtitle: Unknown}`;
@@ -316,6 +346,9 @@ function getSubmitButtonValue(fileDetails: FileDetails): string {
       }
       if (slug === 'file') {
         return 'Add ChordPro File';
+      }
+      if (slug === 'vextab') {
+        return 'Add Vextab File';
       }
       throw new Error('Unknown file type.');
     }

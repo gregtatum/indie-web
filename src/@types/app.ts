@@ -61,6 +61,7 @@ export interface ParsedChordPro {
 
 export type View =
   | 'view-file'
+  | 'view-vextab'
   | 'view-pdf'
   | 'view-image'
   | 'view-markdown'

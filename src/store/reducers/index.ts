@@ -332,6 +332,7 @@ function path(state = '/', action: T.Action): string {
     case 'view-list-files':
     case 'view-language-coach':
     case 'view-file':
+    case 'view-vextab':
     case 'view-pdf':
     case 'view-image':
     case 'view-markdown':
@@ -385,6 +386,8 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'view-file';
     case 'view-language-coach':
       return 'language-coach';
+    case 'view-vextab':
+      return 'view-vextab';
     case 'view-pdf':
       return 'view-pdf';
     case 'view-image':

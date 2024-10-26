@@ -98,6 +98,10 @@ export function viewFile(path: string) {
   return { type: 'view-file' as const, path };
 }
 
+export function viewVexTab(path: string) {
+  return { type: 'view-vextab' as const, path };
+}
+
 export function viewPDF(path: string) {
   return { type: 'view-pdf' as const, path };
 }

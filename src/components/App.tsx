@@ -7,6 +7,7 @@ import { LinkDropbox } from './LinkDropbox';
 import { Header } from './Header';
 import { ListFiles } from './ListFiles';
 import { ViewChopro } from './ViewChopro';
+import { ViewVextab } from './ViewVextab';
 import { ViewPDF } from './ViewPDF';
 import { ViewImage } from './ViewImage';
 import { ViewMarkdown } from './ViewMarkdown';
@@ -89,6 +90,16 @@ function ViewChoproRouter() {
   return null;
 }
 
+function ViewVextabRouter() {
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const dispatch = Hooks.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewVexTab(path));
+  }, [path]);
+  return null;
+}
+
 function ViewPDFRouter() {
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
@@ -163,6 +174,9 @@ export function AppRoutes() {
         <Router.Route path="/:fs/file" element={<ViewChoproRouter />}>
           <Router.Route path="*" element={<ViewChoproRouter />} />
         </Router.Route>
+        <Router.Route path="/:fs/vextab" element={<ViewVextabRouter />}>
+          <Router.Route path="*" element={<ViewVextabRouter />} />
+        </Router.Route>
         <Router.Route path="/:fs/pdf" element={<ViewPDFRouter />}>
           <Router.Route path="*" element={<ViewPDFRouter />} />
         </Router.Route>
@@ -206,6 +220,8 @@ function Views() {
       return <ListFiles key={key} />;
     case 'view-file':
       return <ViewChopro key={key} />;
+    case 'view-vextab':
+      return <ViewVextab key={key} />;
     case 'view-pdf':
       return <ViewPDF key={key} />;
     case 'view-image':

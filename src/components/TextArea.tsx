@@ -17,6 +17,7 @@ import {
 import {
   syntaxHighlighting,
   defaultHighlightStyle,
+  ensureSyntaxTree,
 } from '@codemirror/language';
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
@@ -46,6 +47,16 @@ export function TextArea(props: {
 
   const dispatch = Hooks.useDispatch();
   function onChange([newText, path]: [string, string]) {
+    // Debug the syntax tree:
+
+    // const editor = editorRef.current;
+    // if (editor) {
+    //   const tree = ensureSyntaxTree(editor.state, 1000);
+    //   if (tree) {
+    //     console.log(tree.toString());
+    //   }
+    // }
+
     dispatch(A.modifyActiveFile(newText, path, false));
   }
   const flush = React.useRef<(() => void) | null>(null);

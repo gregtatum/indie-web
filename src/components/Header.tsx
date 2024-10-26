@@ -97,6 +97,7 @@ export function Header() {
       );
       break;
     case 'view-file':
+    case 'view-vextab':
     case 'view-pdf':
     case 'view-image':
     case 'view-markdown':

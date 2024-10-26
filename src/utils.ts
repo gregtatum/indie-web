@@ -267,6 +267,9 @@ export function getUrlForFile(fsName: string, path: string): string | null {
   if (isChordProExtension(extension)) {
     return fsName + '/file' + path;
   }
+  if (extension === 'vextab' || extension === 'vexflow') {
+    return fsName + '/vextab' + path;
+  }
   if (extension && imageExtensions.has(extension)) {
     return fsName + '/image' + path;
   }

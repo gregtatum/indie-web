@@ -231,6 +231,7 @@ export function LinkDropbox(props: { children: any }) {
     case null:
     case 'list-files':
     case 'view-file':
+    case 'view-vextab':
     case 'view-pdf':
     case 'view-image':
     case 'view-markdown':
