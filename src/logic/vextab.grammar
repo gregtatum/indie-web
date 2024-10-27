@@ -6,7 +6,7 @@
 @top Program { expression* }
 
 expression {
-  TabStave | NotesSection | Options
+  TabStave | NotesSection | Options | TextSection
 }
 
 Boolean { kw<"true"> | kw<"false"> }
@@ -104,32 +104,62 @@ BarLine {
   EndBar
 }
 
+@precedence {
+  duration @left,
+  technique @left
+}
+
 Octave { "/" Number }
 Bend { kw<"b"> Number }
 FretNumber { number (Bend | (Bend Bend))? }
 Rest { "##" | ("#" number "#") }
 Note { NoteLetter NoteSuffix? }
 
-GuitarTechniques {
-  HammerOn { kw<"h"> }
-  | PullOff { kw<"p"> }
-  | Taps { kw<"t"> }
-  | Slides  { kw<"s"> }
+GuitarTechnique {
+  !technique (
+    HammerOn { kw<"h"> }
+    | PullOff { kw<"p"> }
+    | Tap { kw<"t"> }
+    | Slide  { kw<"s"> }
+  )
 }
 
 OctaveGroup {
   separatorNonEmpty<
-    ("-" | GuitarTechniques),
-    Note | FretNumber
+    ("-" | GuitarTechnique),
+    (Note | FretNumber) Annotation?
   >
   Octave
+}
+
+Whole { kw<"w"> }
+Half { kw<"h"> }
+Quarter { kw<"q"> }
+
+NoteDuration {
+  ":"
+  !duration (
+    Whole
+     | Half
+     | Quarter
+     | "8"
+     | "16"
+     | "32"
+  )
+  kw<"d">?
+}
+
+Triplet {
+  "^" Number "^"
 }
 
 Bar {
   (
     Rest
-    | (GuitarTechniques? Chord)
-    | (GuitarTechniques? OctaveGroup)
+    | Triplet
+    | NoteDuration
+    | (GuitarTechnique? Chord)
+    | (GuitarTechnique? OctaveGroup)
   )+
 }
 
@@ -137,10 +167,22 @@ NotesSection {
   kw<"notes"> trailingSeparator<BarLine, Bar>
 }
 
+// text :h,G Minor,A Major
+
+// TODO - This needs @local tokens, but I don't know how to make them work.
+TextSection {
+  kw<"text"> trailingSeparator<",", identifier | number>
+}
+
 // notes (8/2.7b9b7/3) (5b6/2.5b6/3) 7/4 |
 
 Chord {
   "(" separatorNonEmpty<".", (Note | FretNumber) Octave> ")"
+}
+
+// TODO - This needs @local tokens, but I couldn't get it to work.
+Annotation {
+  "$" ((identifier | "." | "!" | "?" | ",")* "$")*
 }
 
 @tokens {

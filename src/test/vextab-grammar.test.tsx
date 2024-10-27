@@ -14,16 +14,18 @@ function parseAndGetText(string: string) {
     }
   };
 
-  function textValue(nodeRef: SyntaxNodeRef) {
-    return string.slice(nodeRef.from, nodeRef.to);
-  }
-
   cursor.iterate(
     // Enter
     (nodeRef) => {
-      if (nodeRef.type.name === '⚠') {
-        console.error('⚠', JSON.stringify(textValue(nodeRef)));
-      }
+      // The grammer isn't 100% correct, and this is useful while running tests:
+
+      // function textValue(nodeRef: SyntaxNodeRef) {
+      //   return string.slice(nodeRef.from, nodeRef.to);
+      // }
+
+      // if (nodeRef.type.name === '⚠') {
+      // console.error('⚠', JSON.stringify(textValue(nodeRef)));
+      // }
       prevEnteredNode = nodeRef.node;
       applyIndent();
       text += `${nodeRef.type.name}(\n`;
@@ -417,8 +419,8 @@ describe('vextab', () => {
         NotesSection(
           notes
           Bar(
-            GuitarTechniques(
-              Taps(
+            GuitarTechnique(
+              Tap(
                 t
               )
             )
@@ -432,8 +434,8 @@ describe('vextab', () => {
                 Number
               )
             )
-            GuitarTechniques(
-              Slides(
+            GuitarTechnique(
+              Slide(
                 s
               )
             )
@@ -463,6 +465,148 @@ describe('vextab', () => {
               Octave(
                 Number
               )
+            )
+          )
+        )
+      )
+      "
+    `);
+  });
+
+  it('can do note durations', () => {
+    const text = 'notes :8 5s7s8/5 ^3^ :q (5/2.6/3)h(7/3) :8d 5/4 :16 5/5';
+    expect(parseAndGetText(text)).toMatchInlineSnapshot(`
+      "Program(
+        NotesSection(
+          notes
+          Bar(
+            NoteDuration
+            OctaveGroup(
+              FretNumber
+              GuitarTechnique(
+                Slide(
+                  s
+                )
+              )
+              FretNumber
+              GuitarTechnique(
+                Slide(
+                  s
+                )
+              )
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+            Triplet(
+              Number
+            )
+            NoteDuration(
+              Quarter(
+                q
+              )
+            )
+            Chord(
+              FretNumber
+              Octave(
+                Number
+              )
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+            GuitarTechnique(
+              HammerOn(
+                h
+              )
+            )
+            Chord(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+            NoteDuration(
+              d
+            )
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+            NoteDuration
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+          )
+        )
+      )
+      "
+    `);
+  });
+  it('can handle annotatinos', () => {
+    const text = 'notes :q 5/5  5/4 5/3 ^3^ $Fi,Ga,Ro!$ :h 4/4 $.top.$ $Blah!$';
+    expect(parseAndGetText(text)).toMatchInlineSnapshot(`
+      "Program(
+        NotesSection(
+          notes
+          Bar(
+            NoteDuration(
+              Quarter(
+                q
+              )
+            )
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+            Triplet(
+              Number
+            )
+            OctaveGroup(
+              FretNumber(
+                ⚠
+              )
+              Annotation
+              ⚠
+            )
+            NoteDuration(
+              Half(
+                h
+              )
+            )
+            OctaveGroup(
+              FretNumber
+              Octave(
+                Number
+              )
+            )
+            OctaveGroup(
+              FretNumber(
+                ⚠
+              )
+              Annotation
+              ⚠
             )
           )
         )
