@@ -6,7 +6,6 @@ import {
   ensureExists,
   getDirName,
   getPathFileName,
-  getPathFileNameNoExt,
   getUrlForFile,
   UnhandledCaseError,
 } from 'src/utils';

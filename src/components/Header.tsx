@@ -286,7 +286,7 @@ function SaveFileButton() {
 function Path({
   path,
   title,
-  hideSiteName,
+  hideSiteName = false,
 }: {
   path: string;
   title?: any;
@@ -338,7 +338,7 @@ function Path({
   return (
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
-        <SiteName isOpen={false} />
+        <SiteName isOpen={hideSiteName} />
         <FileSystemSelection key="fileSystem" />
         <div className="headerPathBreadcrumbs">
           {breadcrumbs}

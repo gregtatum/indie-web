@@ -17,7 +17,6 @@ import {
 import {
   syntaxHighlighting,
   defaultHighlightStyle,
-  ensureSyntaxTree,
 } from '@codemirror/language';
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';

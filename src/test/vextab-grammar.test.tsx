@@ -1,4 +1,3 @@
-import { SyntaxNodeRef } from '@lezer/common';
 import dedent from 'dedent';
 import { VexTab } from 'src/logic/vextab-grammar';
 
