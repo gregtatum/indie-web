@@ -40,10 +40,10 @@ export class FilesIndex {
 
     // The FilesIndex is loaded asynchronously, we may already be viewing
     // a file. Ensure the directives are synchronized.
-    const activeFileParsed = $.getActiveFileParsedOrNull(state);
+    const chordPro = $.getActiveChordProOrNull(state);
     const activeFile = $.getActiveFileOrNull(state);
-    if (activeFileParsed && activeFile) {
-      this.synchronizeFile(activeFile.metadata, activeFileParsed.directives);
+    if (chordPro && activeFile) {
+      this.synchronizeFile(activeFile.metadata, chordPro.directives);
     }
   }
 
@@ -185,7 +185,7 @@ export class FilesIndex {
         const { path, file } = action;
         let directives: T.Directives | undefined;
         if (isChordProFilePath(path)) {
-          directives = $.getActiveFileParsedTransformed(state).directives;
+          directives = $.getActiveChordProTransformed(state).directives;
         }
         this.synchronizeFile(file.metadata, directives);
         break;

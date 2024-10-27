@@ -13,6 +13,7 @@ export const parser = LRParser.deserialize({
   tokenData: "(W~RmXY!|YZ!|]^!|pq!|qr#_st#dtu#qxy#vyz#{|}$Q}!O$V!O!P$[!P!Q$a!Q!R$f!R!S$n!S!T$f!T!U%W!U!Y$f!Y!Z%p!Z![$f![!]%z!_!`&P!a!b'[!b!c'a!c!}'n#Q#R'|#R#S'n#T#o'n#p#q(R~#RS$a~XY!|YZ!|]^!|pq!|~#dO$w~~#iP$i~st#l~#qO$h~~#vO$v~~#{O$o~~$QO$t~~$VO$y~~$[O$z~~$aO$s~~$fO$f~T$kP$eT!Q![$fV$sR$eT!Q!W$f!W!X$|!X![$fV%TP$mQ$eT!Q![$fV%]R$eT!Q!S$f!S!T%f!T![$fV%mP$nQ$eT!Q![$fV%wP$lQ$eT!Q![$f~&PO$k~V&UQ$dP![!]&[#p#q&oU&_Q![!]&e#p#q&jU&jO%PUU&oO%OUU&rR![!]&{!_!`'Q#p#q'VU'QO$}UU'VO%QUU'[O$|U~'aO$x~~'fP$q~!b!c'i~'nO$r~~'sR$c~!c!}'n#R#S'n#T#o'n~(RO$j~~(WO${~",
   tokenizers: [0, 1, 2],
   topRules: {"Program":[0,1]},
+  // @ts-expect-error generated
   specialized: [{term: 157, get: (value) => spec_identifier[value] || -1}],
   tokenPrec: 0
 })

@@ -292,7 +292,7 @@ function Path({
   title?: any;
   hideSiteName?: boolean;
 }) {
-  const songTitle = $$.getActiveFileSongTitleOrNull();
+  const fileTitle = $$.getActiveFileTitle();
   const fsName = $$.getCurrentFileSystemName();
   const breadcrumbs = [];
   let pathGrow = '';
@@ -338,13 +338,13 @@ function Path({
   return (
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
-        <SiteName isOpen={!hideSiteName && !(songTitle ?? fileName)} />
+        <SiteName isOpen={false} />
         <FileSystemSelection key="fileSystem" />
         <div className="headerPathBreadcrumbs">
           {breadcrumbs}
           <span>»</span>
-          {songTitle ?? fileName ? (
-            <span title={fileName}>{songTitle ?? fileName}</span>
+          {fileTitle ?? fileName ? (
+            <span title={fileName}>{fileTitle ?? fileName}</span>
           ) : null}
           {title ? <span>{title}</span> : null}
         </div>

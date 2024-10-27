@@ -351,10 +351,13 @@ export function downloadBlobForUser(fileName: string, blob: Blob): void {
   a.remove();
 }
 
-export function isChordProFilePath(path: string) {
+export function getExtension(path: string): string {
   const parts = path.split('.');
-  const extension = parts[parts.length - 1].toLocaleLowerCase();
-  return isChordProExtension(extension);
+  return parts[parts.length - 1].toLocaleLowerCase();
+}
+
+export function isChordProFilePath(path: string) {
+  return isChordProExtension(getExtension(path));
 }
 
 export function isChordProExtension(extension: string | undefined) {
@@ -367,6 +370,14 @@ export function isChordProExtension(extension: string | undefined) {
     extension === 'chord' ||
     extension === 'pro'
   );
+}
+
+export function isVexTabExtension(extension: string | undefined) {
+  return extension === 'vextab' || extension === 'vexflow';
+}
+
+export function isVexTabFilePath(path: string) {
+  return isVexTabExtension(getExtension(path));
 }
 
 /**

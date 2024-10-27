@@ -7,6 +7,7 @@ import {
   getDirName,
   UnhandledCaseError,
   htmlElementOrNull,
+  isVexTabFilePath,
 } from 'src/utils';
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
@@ -16,7 +17,8 @@ import { Menu } from './Menus';
 import { overlayPortal } from 'src/hooks';
 
 function getSpotifyLink(
-  { title, subtitle }: Record<string, string>,
+  title: string | void | null,
+  subtitle: string | void | null,
   fileName: string,
 ) {
   let search: string = '';
@@ -44,7 +46,9 @@ export function RenderedSong() {
   const renderedSongRef = React.useRef(null);
   const path = $$.getPath();
   const hideEditor = $$.getHideEditor();
-  const { directives, lines } = $$.getActiveFileParsedTransformed();
+  const songTitle = $$.getActiveFileTitle();
+  const songSubTitle = $$.getActiveSongSubTitle();
+  const chordPro = $$.getActiveChordProOrNull();
   const dispatch = Hooks.useDispatch();
   uploadFileHook(renderedSongRef, path, folderPath);
 
@@ -74,9 +78,9 @@ export function RenderedSong() {
       <div className="renderedSongHeader">
         <div className="renderedSongHeaderTitle">
           <h1>
-            {directives.title ?? fileNameNoExt}{' '}
+            {songTitle}{' '}
             <a
-              href={getSpotifyLink(directives, fileNameNoExt)}
+              href={getSpotifyLink(songTitle, songSubTitle, fileNameNoExt)}
               className="button renderedSongHeaderSpotify"
               target="_blank"
               rel="noreferrer"
@@ -84,91 +88,10 @@ export function RenderedSong() {
               Spotify
             </a>
           </h1>
-          {directives.subtitle ? <h2>{directives.subtitle}</h2> : null}
+          {songSubTitle ? <h2>{songSubTitle}</h2> : null}
         </div>
       </div>
-      {lines.map((line) => {
-        const lineKey = getLineTypeKey(line);
-        switch (line.type) {
-          case 'line': {
-            return (
-              <div
-                className={`renderedSongLine renderedSongLine-${line.content}`}
-                data-testid="renderedSongLine"
-                data-line-index={line.lineIndex}
-                key={lineKey}
-              >
-                {line.spans.map((span, spanIndex) => {
-                  return span.type === 'text' ? (
-                    <span
-                      className="renderedSongLineText"
-                      key={`${span.text}-${spanIndex}`}
-                    >
-                      {span.text}
-                    </span>
-                  ) : (
-                    <span
-                      className="renderedSongLineChord"
-                      key={`${span.chord.text}-${spanIndex}`}
-                    >
-                      <span className="renderedSongLineChordText">
-                        {span.chord.chordText}
-                      </span>
-                      <span className="renderedSongLineChordExtras">
-                        {span.chord.extras}
-                      </span>
-                    </span>
-                  );
-                })}
-              </div>
-            );
-          }
-          case 'section':
-            return (
-              <h3 className="renderedSongSection" key={lineKey}>
-                {line.text}
-              </h3>
-            );
-          case 'space':
-            return <div className="renderedSongSpace" key={lineKey} />;
-          case 'image':
-            return (
-              <MediaImage line={line} folderPath={folderPath} key={lineKey} />
-            );
-          case 'audio':
-            return (
-              <MediaAudio line={line} folderPath={folderPath} key={lineKey} />
-            );
-          case 'video':
-            return (
-              <MediaVideo line={line} folderPath={folderPath} key={lineKey} />
-            );
-          case 'link':
-            return (
-              <a
-                href={line.href}
-                target="_blank"
-                rel="noreferrer"
-                key={lineKey}
-              >
-                {line.href}
-              </a>
-            );
-          case 'comment': {
-            let className = 'renderedSongComment';
-            if (line.italic) {
-              className += ' renderedSongItalic';
-            }
-            return (
-              <div className={className} key={lineKey}>
-                {line.text}
-              </div>
-            );
-          }
-          default:
-            throw new UnhandledCaseError(line, 'LineType');
-        }
-      })}
+      {chordPro ? <ChordPro chordPro={chordPro} /> : <VexTab />}
       <div className="renderedSongEndPadding" />
     </div>
   );
@@ -176,10 +99,11 @@ export function RenderedSong() {
 
 function RenderedSongKey() {
   const path = $$.getPath();
-  const songKey = $$.getActiveFileSongKey();
-  const songKeyRaw = $$.getActiveFileSongKeyRaw();
+  const songKey = $$.getActiveSongKey();
+  const songKeyRaw = $$.getActiveSongKeyRaw();
   const songKeySettings = $$.getActiveSongKeySettings();
   const dispatch = Hooks.useDispatch();
+  const isVexTab = isVexTabFilePath(path);
 
   if (!songKey) {
     if (!songKeyRaw) {
@@ -224,7 +148,12 @@ function RenderedSongKey() {
       return (
         <div className="renderedSongStickyHeaderRow">
           <label htmlFor="select-transpose">Transpose: </label>
-          <select id="select-transpose" onChange={onChange} value={adjustedKey}>
+          <select
+            disabled={isVexTab}
+            id="select-transpose"
+            onChange={onChange}
+            value={adjustedKey}
+          >
             <option>C</option>
             <option>Db</option>
             <option>D</option>
@@ -242,7 +171,7 @@ function RenderedSongKey() {
       );
     }
     case undefined: {
-      return <SongKeyMenu songKey={songKey} />;
+      return <SongKeyMenu songKey={songKey} isVexTab={isVexTab} />;
     }
     default:
       throw new UnhandledCaseError(songKeyType, 'Unhandled song key setting');
@@ -251,9 +180,10 @@ function RenderedSongKey() {
 
 interface SongKeyMenu {
   songKey: SongKey;
+  isVexTab: boolean;
 }
 
-function SongKeyMenu({ songKey }: SongKeyMenu) {
+function SongKeyMenu({ songKey, isVexTab }: SongKeyMenu) {
   const dispatch = Hooks.useDispatch();
   const path = $$.getPath();
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -265,6 +195,7 @@ function SongKeyMenu({ songKey }: SongKeyMenu) {
       <button
         type="button"
         className="renderedSongKey"
+        disabled={isVexTab}
         ref={buttonRef}
         onClick={(event) => {
           setOpenGeneration((generation) => generation + 1);
@@ -406,4 +337,105 @@ function uploadFileHook(
       );
     }
   });
+}
+
+interface ChordProProps {
+  chordPro: T.ParsedChordPro;
+}
+
+function ChordPro({ chordPro }: ChordProProps) {
+  const { lines } = chordPro;
+  const displayPath = $$.getActiveFileDisplayPath();
+  const folderPath = getDirName(displayPath);
+
+  return (
+    <>
+      {lines.map((line) => {
+        const lineKey = getLineTypeKey(line);
+        switch (line.type) {
+          case 'line': {
+            return (
+              <div
+                className={`renderedSongLine renderedSongLine-${line.content}`}
+                data-testid="renderedSongLine"
+                data-line-index={line.lineIndex}
+                key={lineKey}
+              >
+                {line.spans.map((span, spanIndex) => {
+                  return span.type === 'text' ? (
+                    <span
+                      className="renderedSongLineText"
+                      key={`${span.text}-${spanIndex}`}
+                    >
+                      {span.text}
+                    </span>
+                  ) : (
+                    <span
+                      className="renderedSongLineChord"
+                      key={`${span.chord.text}-${spanIndex}`}
+                    >
+                      <span className="renderedSongLineChordText">
+                        {span.chord.chordText}
+                      </span>
+                      <span className="renderedSongLineChordExtras">
+                        {span.chord.extras}
+                      </span>
+                    </span>
+                  );
+                })}
+              </div>
+            );
+          }
+          case 'section':
+            return (
+              <h3 className="renderedSongSection" key={lineKey}>
+                {line.text}
+              </h3>
+            );
+          case 'space':
+            return <div className="renderedSongSpace" key={lineKey} />;
+          case 'image':
+            return (
+              <MediaImage line={line} folderPath={folderPath} key={lineKey} />
+            );
+          case 'audio':
+            return (
+              <MediaAudio line={line} folderPath={folderPath} key={lineKey} />
+            );
+          case 'video':
+            return (
+              <MediaVideo line={line} folderPath={folderPath} key={lineKey} />
+            );
+          case 'link':
+            return (
+              <a
+                href={line.href}
+                target="_blank"
+                rel="noreferrer"
+                key={lineKey}
+              >
+                {line.href}
+              </a>
+            );
+          case 'comment': {
+            let className = 'renderedSongComment';
+            if (line.italic) {
+              className += ' renderedSongItalic';
+            }
+            return (
+              <div className={className} key={lineKey}>
+                {line.text}
+              </div>
+            );
+          }
+          default:
+            throw new UnhandledCaseError(line, 'LineType');
+        }
+      })}
+    </>
+  );
+}
+
+function VexTab() {
+  return 'TODO';
 }

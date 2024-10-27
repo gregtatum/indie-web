@@ -19,22 +19,10 @@ export function ViewChopro() {
   const path = $$.getPath();
   const textFile = $$.getDownloadFileCache().get(path);
   const error = $$.getDownloadFileErrors().get(path);
-  const songTitle = $$.getActiveFileSongTitleOrNull();
   const hideEditor = $$.getHideEditor();
   const swipeDiv = React.useRef(null);
   useNextPrevSwipe(swipeDiv);
-
-  React.useEffect(() => {
-    if (songTitle) {
-      document.title = songTitle;
-    } else {
-      if (path.startsWith('/')) {
-        document.title = path.slice(1);
-      } else {
-        document.title = path;
-      }
-    }
-  }, [path, songTitle]);
+  Hooks.useFileAsDocumentTitle();
 
   React.useEffect(() => {
     if (textFile === undefined) {

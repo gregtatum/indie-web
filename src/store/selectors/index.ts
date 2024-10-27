@@ -5,6 +5,8 @@ import { createSelector } from 'reselect';
 import {
   ensureExists,
   getDirName,
+  getPathFileName,
+  getPathFileNameNoExt,
   getUrlForFile,
   UnhandledCaseError,
 } from 'src/utils';
@@ -245,7 +247,7 @@ export const getActiveFileText = dangerousSelector(
   'Active file was not downloaded while getting text.',
 );
 
-export const getActiveFileParsedOrNull = createSelector(
+export const getActiveChordProOrNull = createSelector(
   getActiveFileTextOrNull,
   (text) => {
     if (text === null) {
@@ -322,33 +324,14 @@ export const getActiveImage = dangerousSelector(
   'Active file was not downloaded while processing file.',
 );
 
-export const getActiveFileSongKeyRaw = createSelector(
-  getActiveFileParsedOrNull,
-  (activeFile): string | null => {
-    if (typeof activeFile?.directives.key === 'string') {
-      return activeFile?.directives.key;
+export const getActiveSongKeyRaw = createSelector(
+  getActiveChordProOrNull,
+  (chordPro): string | null => {
+    if (typeof chordPro?.directives.key === 'string') {
+      return chordPro?.directives.key;
     }
     return null;
   },
-);
-
-export const getActiveFileSongTitleOrNull = createSelector(
-  getActiveFileParsedOrNull,
-  (parsedFile): string | null => {
-    if (!parsedFile) {
-      return null;
-    }
-    const { directives } = parsedFile;
-    if (typeof directives.title === 'string') {
-      return directives.title;
-    }
-    return null;
-  },
-);
-
-export const getActiveFileSongTitle = dangerousSelector(
-  getActiveFileSongTitleOrNull,
-  'Active file was not downloaded when getting song title.',
 );
 
 export const getActiveFileDisplayPath = createSelector(
@@ -393,8 +376,8 @@ export const getActiveSongKeySettings = createSelector(
   },
 );
 
-export const getActiveFileSongKey = createSelector(
-  getActiveFileSongKeyRaw,
+export const getActiveSongKey = createSelector(
+  getActiveSongKeyRaw,
   getActiveSongKeySettings,
   (text, settings): SongKey | null => {
     if (settings?.type === 'transpose') {
@@ -405,9 +388,9 @@ export const getActiveFileSongKey = createSelector(
   },
 );
 
-export const getActiveFileParsedTransformedOrNull = createSelector(
-  getActiveFileParsedOrNull,
-  getActiveFileSongKey,
+export const getActiveChordProTransformedOrNull = createSelector(
+  getActiveChordProOrNull,
+  getActiveSongKey,
   (parsed, songKey) => {
     if (!parsed) {
       return null;
@@ -422,9 +405,25 @@ export const getActiveFileParsedTransformedOrNull = createSelector(
   },
 );
 
-export const getActiveFileParsedTransformed = dangerousSelector(
-  getActiveFileParsedTransformedOrNull,
-  'Active file was not downloaded while parsing file.',
+export const getActiveChordProTransformed = dangerousSelector(
+  getActiveChordProTransformedOrNull,
+  'ChordPro file was not downloaded while parsing file.',
+);
+
+export const getActiveFileTitle = createSelector(
+  getActiveFileDisplayPath,
+  getActiveChordProTransformedOrNull,
+  (displayPath, choproSong): string => {
+    if (choproSong?.directives.title) {
+      return choproSong.directives.title;
+    }
+    return getPathFileName(displayPath);
+  },
+);
+
+export const getActiveSongSubTitle = createSelector(
+  getActiveChordProTransformedOrNull,
+  (choproSong): string | null => choproSong?.directives.subtitle ?? null,
 );
 
 export function canGoFullScreen(state: State) {

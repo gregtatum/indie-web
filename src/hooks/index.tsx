@@ -10,7 +10,7 @@ import {
   pathJoin,
   setScrollTop,
 } from 'src/utils';
-import { T, $, A } from 'src';
+import { T, $, $$, A } from 'src';
 import { FileSystemError } from 'src/logic/file-system';
 
 export function useStore(): T.Store {
@@ -579,4 +579,11 @@ export function useUploadOnFileDrop(
     // This is infallible, as it reports errors with messages.
     void dispatch(A.moveFile(fromPath, toPath));
   });
+}
+
+export function useFileAsDocumentTitle() {
+  const title = $$.getActiveFileTitle();
+  React.useEffect(() => {
+    document.title = title;
+  }, [title]);
 }

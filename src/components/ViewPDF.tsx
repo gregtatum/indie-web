@@ -17,17 +17,8 @@ export function ViewPDF() {
   const path = $$.getPath();
   const blob = $$.getDownloadBlobCache().get(path);
   const error = $$.getDownloadFileErrors().get(path);
-  const songTitle = $$.getActiveFileSongTitleOrNull();
 
-  React.useEffect(() => {
-    if (songTitle) {
-      document.title = songTitle;
-    } else {
-      const parts = path.split('/');
-      const file = parts[parts.length - 1];
-      document.title = file.replace(/\.pdf$/, '');
-    }
-  }, [path, songTitle]);
+  Hooks.useFileAsDocumentTitle();
 
   React.useEffect(() => {
     if (!blob) {

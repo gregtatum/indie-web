@@ -179,9 +179,7 @@ export function ViewReadingFile() {
 
   useNextPrevSwipe(swipeDiv);
 
-  React.useEffect(() => {
-    document.title = getPathFileNameNoExt(path);
-  }, [path]);
+  Hooks.useFileAsDocumentTitle();
 
   React.useEffect(() => {
     if (textFile === undefined) {
