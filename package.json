@@ -3,61 +3,16 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "./bin/build.sh",
-    "check-updates": "npx npm-check-updates",
-    "start-ts": "tsc --noEmit --watch",
-    "start-webpack": "NODE_ENV=development SITE=browserchords ./bin/server.js",
-    "start-webpack-floppy": "NODE_ENV=development SITE=floppydisk ./bin/server.js",
-    "start": "run-p start-ts start-webpack",
-    "start-floppy": "run-p start-ts start-webpack-floppy",
-    "lint": "eslint '*/**/*.{js,ts,tsx}'",
-    "bundle-size": "./bin/bundle-size.sh",
-    "ts": "tsc --noEmit",
-    "test": "env NODE_ENV=test jest",
-    "test-coverage": "env NODE_ENV=test jest --coverage && echo 'View coverage report at: ./coverage/lcov-report/'",
-    "test-all": "run-s lint ts test"
+    "start": "task start",
+    "build:": "task build"
   },
   "alias": {
-    "src": "./src"
+    "frontend": "./src/frontend"
   },
   "author": "Greg Tatum",
   "browserslist": [
     "since 2019-01"
   ],
-  "jest": {
-    "prettierPath": "./node_modules/prettier-2/index.js",
-    "collectCoverageFrom": [
-      "src/**/*.{js,jsx,ts,tsx}",
-      "!**/node_modules/**"
-    ],
-    "testEnvironment": "./src/test/utils/fix-jsdom.ts",
-    "moduleFileExtensions": [
-      "js",
-      "jsx",
-      "ts",
-      "tsx"
-    ],
-    "moduleDirectories": [
-      "node_modules"
-    ],
-    "transformIgnorePatterns": [
-      "/node_modules/(?!${esModules})"
-    ],
-    "moduleNameMapper": {
-      "\\.(css|less)$": "<rootDir>/src/test/__mocks__/style.ts",
-      "^nanoid(/(.*)|$)": "nanoid$1"
-    },
-    "roots": [
-      "src/test"
-    ],
-    "setupFiles": [
-      "./src/test/utils/setupFiles.ts"
-    ],
-    "setupFilesAfterEnv": [
-      "./src/test/utils/setupAfterEnv.ts"
-    ],
-    "verbose": true
-  },
   "devDependencies": {
     "@babel/core": "^7.23.6",
     "@babel/preset-env": "^7.23.6",
@@ -85,6 +40,7 @@
     "dotenv": "^16.3.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.8.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-prettier": "^5.1.1",
     "eslint-plugin-react": "^7.33.2",
@@ -94,10 +50,14 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "node-polyfill-webpack-plugin": "^3.0.0",
+    "nodemon": "^3.1.9",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.1.1",
     "prettier-2": "npm:prettier@^2",
     "style-loader": "^3.3.3",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths-jest": "^0.0.1",
     "typescript": "^5.2.0",
     "webpack": "^5.89.0",
     "webpack-bundle-analyzer": "^4.10.1",

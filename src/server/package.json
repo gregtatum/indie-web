@@ -1,0 +1,10 @@
+{
+  "name": "indie-web-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Greg Tatum",
+  "type": "module",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
