@@ -294,3 +294,5 @@ export type LanguageCoachSection =
   | 'study-list'
   | 'learned'
   | 'reading';
+
+export type SaveMode = 'overwrite' | 'add' | 'update';

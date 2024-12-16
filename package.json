@@ -10,6 +10,8 @@
     "start-webpack-floppy": "NODE_ENV=development SITE=floppydisk ./bin/server.js",
     "start": "run-p start-ts start-webpack",
     "start-floppy": "run-p start-ts start-webpack-floppy",
+    "start-server": "ts-node server",
+    "start-server-prod": "ts-node server",
     "lint": "eslint '*/**/*.{js,ts,tsx}'",
     "bundle-size": "./bin/bundle-size.sh",
     "ts": "tsc --noEmit",

@@ -1,10 +1,6 @@
 import * as idb from 'idb';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  FileSystemCache,
-  FileSystemError,
-  SaveMode,
-} from 'src/logic/file-system';
+import { FileSystemCache, FileSystemError } from 'src/logic/file-system';
 import { T } from 'src';
 import { getPathFileName, getDirName, updatePathRoot } from 'src/utils';
 
@@ -276,7 +272,7 @@ export class IDBFS extends FileSystemCache {
 
   async saveBlob(
     pathOrMetadata: string | T.FileMetadata,
-    _mode: SaveMode,
+    _mode: T.SaveMode,
     blob: Blob,
   ): Promise<T.FileMetadata> {
     const oldPath =

@@ -1,20 +1,18 @@
 import { T } from 'src';
 
-export type SaveMode = 'overwrite' | 'add' | 'update';
-
 export abstract class FileSystem {
   // Await on this during initialization.
   cachePromise?: Promise<void>;
 
   abstract saveBlob(
     pathOrMetadata: string | T.FileMetadata,
-    mode: SaveMode,
+    mode: T.SaveMode,
     contents: Blob,
   ): Promise<T.FileMetadata>;
 
   saveText(
     pathOrMetadata: string | T.FileMetadata,
-    mode: SaveMode,
+    mode: T.SaveMode,
     text: string,
   ): Promise<T.FileMetadata> {
     return this.saveBlob(
