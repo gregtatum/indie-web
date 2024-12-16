@@ -1,0 +1,106 @@
+version: '3'
+
+tasks:
+  build:
+    desc: |
+      Build the project for distribution. The site must be specified.
+      SITE=floppydisk task build
+      SITE=browserchords task build
+    cmds:
+      - rm -rf dist
+      - NODE_ENV=production webpack
+
+  check-updates:
+    desc: Check for package updates
+    cmds:
+      - npx npm-check-updates
+
+  start:
+    desc: Start one of the Indie Web projects.
+    cmds:
+      - |
+        options=("Floppy Disk" "Browser Chords")
+        echo "Select an option:"
+        select choice in "${options[@]}"; do
+          case $choice in
+            "Floppy Disk")
+              task start-floppy
+              break
+              ;;
+            "Browser Chords")
+              task start-chords
+              break
+              ;;
+          esac
+        done
+
+  start-ts:
+    desc: Start TypeScript in watch mode
+    cmds:
+      - tsc --noEmit --watch --project src/tsconfig.json
+
+  start-webpack-chords:
+    desc: Start Webpack server for browserchords
+    cmds:
+      - NODE_ENV=development SITE=browserchords ./webpack.server.js
+
+  start-webpack-floppy:
+    desc: Start Webpack server for floppydisk
+    cmds:
+      - NODE_ENV=development SITE=floppydisk ./webpack.server.js
+
+  start-chords:
+    desc: Start TypeScript watch and Webpack server
+    cmds:
+      - task: start-ts
+      - task --parallel start-ts start-webpack-floppy
+
+  start-floppy:
+    desc: Start TypeScript watch and Webpack server for floppydisk
+    cmds:
+      - task --parallel start-ts start-webpack-floppy
+
+  start-server:
+    desc: Start the server in development mode
+    cmds:
+      - ts-node server
+
+  start-server-prod:
+    desc: Start the server in production mode
+    cmds:
+      - ts-node server
+
+  lint:
+    desc: Run ESLint linter
+    cmds:
+      - eslint '*/**/*.{js,ts,tsx}'
+
+  bundle-size:
+    desc: Calculate the bundle size
+    cmds:
+      - echo "Bundling webpack"
+      - NODE_ENV=production webpack --json > stats.json
+      - ./node_modules/.bin/webpack-bundle-analyzer stats.json
+
+  ts:
+    desc: TypeScript compilation check
+    cmds:
+      - tsc --noEmit --project src/tsconfig.json
+
+  test:
+    desc: Run tests
+    cmds:
+      - env NODE_ENV=test jest
+
+  test-coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - "env NODE_ENV=test jest --coverage"
+      - "echo 'View coverage report at: ./coverage/lcov-report/'"
+
+  test-all:
+    desc: Run lint, TypeScript check, and tests
+    cmds:
+      - task: lint
+      - task: ts
+      - task: test

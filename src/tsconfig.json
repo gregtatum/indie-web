@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "jsx": "react",
+    "module": "commonjs",
+    "strict": true,
+    "baseUrl": "./",
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "frontend/*": ["./frontend/*"],
+      "server/*": ["./server/*"],
+      "shared/*": ["./shared/*"],
+    }
+  },
+  "include": ["./"]
+}
