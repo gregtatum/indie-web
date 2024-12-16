@@ -15,6 +15,7 @@ import { MediaAudio, MediaImage, MediaVideo } from './Media';
 import { SongKey } from 'src/logic/parse-chords';
 import { Menu } from './Menus';
 import { overlayPortal } from 'src/hooks';
+import { Vex } from 'vexflow';
 
 function getSpotifyLink(
   title: string | void | null,
@@ -91,7 +92,7 @@ export function RenderedSong() {
           {songSubTitle ? <h2>{songSubTitle}</h2> : null}
         </div>
       </div>
-      {chordPro ? <ChordPro chordPro={chordPro} /> : <VexTab />}
+      {chordPro ? <ChordPro chordPro={chordPro} /> : <VexTabDisplay />}
       <div className="renderedSongEndPadding" />
     </div>
   );
@@ -436,6 +437,34 @@ function ChordPro({ chordPro }: ChordProProps) {
   );
 }
 
-function VexTab() {
-  return 'TODO';
+function VexTabDisplay() {
+  const text = $$.getActiveFileText();
+  const mountRef = React.useRef<null | HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const div = mountRef.current;
+    if (!div) {
+      return;
+    }
+    let node;
+    while ((node = div.lastChild)) {
+      node.remove();
+    }
+    const vf = new Vex.Flow.Factory({
+      renderer: { elementId: 'vexFlowElement' },
+    });
+    const score = vf.EasyScore();
+    const system = vf.System();
+
+    system
+      .addStave({
+        voices: [score.voice(score.notes('C#5/q, B4, A4, G#4'))],
+      })
+      .addClef('treble')
+      .addTimeSignature('4/4');
+
+    vf.draw();
+  }, [text]);
+
+  return <div className="vexTab" id="vexFlowElement" ref={mountRef}></div>;
 }

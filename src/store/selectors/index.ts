@@ -19,6 +19,7 @@ import { parseSearchString } from 'src/logic/search';
 import { marked } from 'marked';
 import { DropboxFS } from 'src/logic/file-system/dropbox-fs';
 import { FileSystem } from 'src/logic/file-system';
+import { isVexTabFilePath } from '../../utils';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -247,8 +248,12 @@ export const getActiveFileText = dangerousSelector(
 );
 
 export const getActiveChordProOrNull = createSelector(
+  getPath,
   getActiveFileTextOrNull,
-  (text) => {
+  (path, text) => {
+    if (isVexTabFilePath(path)) {
+      return null;
+    }
     if (text === null) {
       return null;
     }
