@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable"],
+  },
+  "include": ["**/*", "./@types/globals.d.ts",],
+}

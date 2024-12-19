@@ -1,0 +1,85 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build the project for distribution
+    cmds:
+      - rm -rf dist
+      - NODE_ENV=production webpack
+
+  check-updates:
+    desc: Check for package updates
+    cmds:
+      - npx npm-check-updates
+
+  start-ts:
+    desc: Start TypeScript in watch mode
+    cmds:
+      - tsc --noEmit --watch
+
+  start-webpack-chords:
+    desc: Start Webpack server for browserchords
+    cmds:
+      - NODE_ENV=development SITE=browserchords ./webpack.server.js
+
+  start-webpack-floppy:
+    desc: Start Webpack server for floppydisk
+    cmds:
+      - NODE_ENV=development SITE=floppydisk ./webpack.server.js
+
+  start-chords:
+    desc: Start TypeScript watch and Webpack server
+    cmds:
+      - task: start-ts
+      - task: start-webpack-chords
+
+  start-floppy:
+    desc: Start TypeScript watch and Webpack server for floppydisk
+    cmds:
+      - task: start-ts
+      - task: start-webpack-floppy
+
+  start-server:
+    desc: Start the server in development mode
+    cmds:
+      - ts-node server
+
+  start-server-prod:
+    desc: Start the server in production mode
+    cmds:
+      - ts-node server
+
+  lint:
+    desc: Run ESLint linter
+    cmds:
+      - eslint '*/**/*.{js,ts,tsx}'
+
+  bundle-size:
+    desc: Calculate the bundle size
+    cmds:
+      - echo "Bundling webpack"
+      - NODE_ENV=production webpack --json > stats.json
+      - ./node_modules/.bin/webpack-bundle-analyzer stats.json
+
+  ts:
+    desc: TypeScript compilation check
+    cmds:
+      - tsc --noEmit
+
+  test:
+    desc: Run tests
+    cmds:
+      - env NODE_ENV=test jest
+
+  test-coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - "env NODE_ENV=test jest --coverage"
+      - "echo 'View coverage report at: ./coverage/lcov-report/'"
+
+  test-all:
+    desc: Run lint, TypeScript check, and tests
+    cmds:
+      - task: lint
+      - task: ts
+      - task: test
