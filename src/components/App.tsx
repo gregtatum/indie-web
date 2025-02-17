@@ -19,6 +19,7 @@ import { useFilesIndex } from 'src/logic/files-index';
 import './App.css';
 import { toFileSystemName } from 'src/logic/app-logic';
 import { LanguageCoach } from './LanguageCoach';
+import { Plex } from './Plex';
 
 function ListFilesRouter() {
   const currentFileSystemName = $$.getCurrentFileSystemName();
@@ -76,6 +77,17 @@ function LanguageCoachRouter() {
     dispatch(A.setLanguageCoachSection(section, coachPath, path));
   }, [section, path]);
 
+  return null;
+}
+
+function ViewPlexMusicRouter() {
+  console.log(`!!! ViewPlexMusicRouter`);
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const dispatch = Hooks.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewPlexMusic(path));
+  }, [path]);
   return null;
 }
 
@@ -163,6 +175,9 @@ export function AppRoutes() {
         <Router.Route path="/:fs/file" element={<ViewChoproRouter />}>
           <Router.Route path="*" element={<ViewChoproRouter />} />
         </Router.Route>
+        <Router.Route path="/:fs/plex" element={<ViewPlexMusicRouter />}>
+          <Router.Route path="*" element={<ViewPlexMusicRouter />} />
+        </Router.Route>
         <Router.Route path="/:fs/pdf" element={<ViewPDFRouter />}>
           <Router.Route path="*" element={<ViewPDFRouter />} />
         </Router.Route>
@@ -218,6 +233,8 @@ function Views() {
       return <Privacy key={key} />;
     case 'language-coach':
       return <LanguageCoach key={key} />;
+    case 'view-plex-music':
+      return <Plex key={key} />;
     default:
       throw new UnhandledCaseError(view, 'view');
   }

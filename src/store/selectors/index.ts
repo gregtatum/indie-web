@@ -442,6 +442,7 @@ export function canGoFullScreen(state: State) {
     case 'settings':
     case 'privacy':
     case 'language-coach':
+    case 'view-plex-music':
       return false;
     default:
       throw new UnhandledCaseError(view, 'view');

@@ -335,6 +335,7 @@ function path(state = '/', action: T.Action): string {
     case 'view-pdf':
     case 'view-image':
     case 'view-markdown':
+    case 'view-plex-music':
       return action.path;
     case 'change-file-system':
       return '/';
@@ -393,6 +394,8 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'view-markdown';
     case 'view-settings':
       return 'settings';
+    case 'view-plex-music':
+      return 'view-plex-music';
     case 'view-privacy':
       return 'privacy';
     default:

@@ -12,7 +12,14 @@ import { getLanguageByCode, languages } from '../logic/languages';
 
 const order =
   process.env.SITE === 'floppydisk'
-    ? ['Folder', 'Markdown', 'ChordPro', 'Language Coach', 'Upload File']
+    ? [
+        'Folder',
+        'Markdown',
+        'ChordPro',
+        'Plex Music',
+        'Language Coach',
+        'Upload File',
+      ]
     : ['ChordPro', 'Folder', 'Upload File'];
 
 type FileDetails =
@@ -27,6 +34,11 @@ type FileDetails =
       isSubmitting: boolean;
       extension: string;
       type: 'language-coach';
+    }
+  | {
+      isSubmitting: boolean;
+      type: 'plex';
+      extension: 'plex';
     }
   | {
       isSubmitting: boolean;
@@ -146,6 +158,31 @@ export function AddFileMenu(props: AddFileMenuProps) {
           });
         break;
       }
+      case 'plex': {
+        const initialData = {};
+        fileSystem.saveText(path, 'add', JSON.stringify(initialData)).then(
+          (fileMetadata) => {
+            // The directory listing is now stale, fetch it again.
+            void dispatch(A.listFiles(props.path));
+            if ($.getHideEditor(getState())) {
+              dispatch(A.hideEditor(false));
+            }
+            navigate(pathJoin(fsName, 'plex', fileMetadata.path));
+          },
+          (error: FileSystemError) => {
+            let err = error.toString();
+            if (error.status() === 409) {
+              err = 'That file already exists, please choose a different name.';
+            }
+            setError(err);
+            setFileDetails({
+              ...fileDetails,
+              isSubmitting: false,
+            });
+          },
+        );
+        break;
+      }
       case 'upload-file': {
         // Do nothing.
         break;
@@ -203,6 +240,13 @@ export function AddFileMenu(props: AddFileMenuProps) {
       setFileDetails({
         type: 'language-coach',
         extension: 'coach',
+        isSubmitting: false,
+      });
+    },
+    'Plex Music': () => {
+      setFileDetails({
+        type: 'plex',
+        extension: 'plex',
         isSubmitting: false,
       });
     },
@@ -326,6 +370,11 @@ function getSubmitButtonValue(fileDetails: FileDetails): string {
       return fileDetails.isSubmitting
         ? 'Adding Language Coach…'
         : 'Add Language';
+    }
+    case 'plex': {
+      return fileDetails.isSubmitting
+        ? 'Adding A Plex Server…'
+        : 'Add Plex Server';
     }
     case 'upload-file':
       throw new Error('Upload file does not have a submit button.');

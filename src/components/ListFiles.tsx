@@ -158,6 +158,7 @@ export function File(props: FileProps) {
   const isImage = !isFolder && imageExtensions.has(extension);
   const isMarkdown = !isFolder && extension === 'md';
   const isLanguageCoach = isFolder && extension === 'coach';
+  const isPlex = !isFolder && extension === 'plex';
 
   let icon = '📄';
   if (isFolder) {
@@ -191,6 +192,11 @@ export function File(props: FileProps) {
   if (isLanguageCoach) {
     link = `/${fsName}/language-coach${path}`;
     icon = '🧳';
+  }
+
+  if (isPlex) {
+    link = `/${fsName}/plex${path}`;
+    icon = '🎧';
   }
 
   if (props.linkOverride) {

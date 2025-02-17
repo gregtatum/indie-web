@@ -122,6 +122,10 @@ export function viewPrivacy() {
   return { type: 'view-privacy' as const };
 }
 
+export function viewPlexMusic(path: string) {
+  return { type: 'view-plex-music' as const, path };
+}
+
 export function dismissMessage(generation: number) {
   return {
     type: 'dismiss-message' as const,

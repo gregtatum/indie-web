@@ -233,6 +233,7 @@ export function LinkDropbox(props: { children: any }) {
     case 'view-file':
     case 'view-pdf':
     case 'view-image':
+    case 'view-plex-music':
     case 'view-markdown':
     case 'language-coach':
       break;

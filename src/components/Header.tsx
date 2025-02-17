@@ -101,6 +101,7 @@ export function Header() {
     case 'view-image':
     case 'view-markdown':
     case 'language-coach':
+    case 'view-plex-music':
       isOpen = false;
       title = <Path key={key} path={path} />;
       break;

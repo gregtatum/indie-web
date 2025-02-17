@@ -63,6 +63,7 @@ export type View =
   | 'view-file'
   | 'view-pdf'
   | 'view-image'
+  | 'view-plex-music'
   | 'view-markdown'
   | 'list-files'
   | 'settings'
