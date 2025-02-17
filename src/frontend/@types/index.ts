@@ -30,7 +30,7 @@ export type Selector<Returns> = (state: State) => Returns;
  * set of Actions, and enforce the constraint that the first parameter must be
  * the same as the return value.
  *
- * See src/reducers for practical examples of how this is used.
+ * See src/frontend/reducers for practical examples of how this is used.
  */
 export type Reducer<S> = (state: S, action: Action) => S;
 

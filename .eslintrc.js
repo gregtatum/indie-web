@@ -147,7 +147,7 @@ module.exports = {
       },
     },
     {
-      files: ['src/test/**/*.js'],
+      files: ['src/frontend/test/**/*.js'],
       env: {
         jest: true,
       },

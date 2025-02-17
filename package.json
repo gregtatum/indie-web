@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {},
   "alias": {
-    "src": "./src"
+    "frontend": "./src/frontend"
   },
   "author": "Greg Tatum",
   "browserslist": [
@@ -13,10 +13,10 @@
   "jest": {
     "prettierPath": "./node_modules/prettier-2/index.js",
     "collectCoverageFrom": [
-      "src/**/*.{js,jsx,ts,tsx}",
+      "src/frontend/**/*.{js,jsx,ts,tsx}",
       "!**/node_modules/**"
     ],
-    "testEnvironment": "./src/test/utils/fix-jsdom.ts",
+    "testEnvironment": "./src/frontend/test/utils/fix-jsdom.ts",
     "moduleFileExtensions": [
       "js",
       "jsx",
@@ -30,17 +30,17 @@
       "/node_modules/(?!${esModules})"
     ],
     "moduleNameMapper": {
-      "\\.(css|less)$": "<rootDir>/src/test/__mocks__/style.ts",
+      "\\.(css|less)$": "<rootDir>/src/frontend/test/__mocks__/style.ts",
       "^nanoid(/(.*)|$)": "nanoid$1"
     },
     "roots": [
-      "src/test"
+      "src/frontend/test"
     ],
     "setupFiles": [
-      "./src/test/utils/setupFiles.ts"
+      "./src/frontend/test/utils/setupFiles.ts"
     ],
     "setupFilesAfterEnv": [
-      "./src/test/utils/setupAfterEnv.ts"
+      "./src/frontend/test/utils/setupAfterEnv.ts"
     ],
     "verbose": true
   },

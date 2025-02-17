@@ -16,14 +16,16 @@ if (process.env.SITE === 'floppydisk') {
  * @type {import("webpack").Configuration}
  */
 const config = {
-  entry: './src/index.tsx',
+  entry: './src/frontend/index.tsx',
   devtool: 'source-map',
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx'],
     alias: {
-      crypto: path.resolve(__dirname, 'src/logic/empty-mock'),
-      util: path.resolve(__dirname, 'src/logic/empty-mock'),
+      frontend: path.resolve(__dirname, 'src/frontend'),
+      shared: path.resolve(__dirname, 'src/shared'),
+      server: path.resolve(__dirname, 'src/server'),
     },
+    fallback: { crypto: false, util: false },
   },
   output: {
     path: path.join(__dirname, 'dist'),
@@ -49,7 +51,7 @@ const config = {
   plugins: [
     new HtmlWebpackPlugin({
       title: process.env.SITE_DISPLAY_NAME,
-      template: 'src/index.html',
+      template: 'src/frontend/index.html',
       minify: false,
     }),
     new CopyWebpackPlugin({

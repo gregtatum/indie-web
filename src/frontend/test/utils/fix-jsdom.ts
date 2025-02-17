@@ -9,7 +9,7 @@ export default class FixJSDOMEnvironment extends JSDOMEnvironment {
 
     if (this.global.structuredClone as any) {
       // In package.json change:
-      // - "testEnvironment": "./src/test/utils/fix-jsdom.ts",
+      // - "testEnvironment": "./src/frontend/test/utils/fix-jsdom.ts",
       // + "testEnvironment": "jsdom",
 
       throw new Error(

@@ -29,7 +29,7 @@ const DEFAULT_MESSAGE_DELAY = 3000;
  * These will all be collected on the global `T` export in `src`.
  */
 export type PlainActions =
-  // See PlainActions in src/@types/index.ts for details on this next line.
+  // See PlainActions in src/frontent/@types/index.ts for details on this next line.
   T.Values<{
     [FnName in keyof typeof PlainInternal]: ReturnType<
       (typeof PlainInternal)[FnName]
