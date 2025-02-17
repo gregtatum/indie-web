@@ -10,7 +10,7 @@ import {
   crosshairCursor,
   highlightActiveLine,
   keymap,
-  Command,
+  type Command,
   ViewUpdate,
   scrollPastEnd,
 } from '@codemirror/view';
@@ -21,10 +21,10 @@ import {
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 
-import { EditorView } from 'codemirror';
+import { EditorView } from '@codemirror/view';
 
 import './TextArea.css';
-import { EditorState, EditorStateConfig } from '@codemirror/state';
+import { EditorState, type EditorStateConfig } from '@codemirror/state';
 
 export function TextArea(props: {
   path: string;

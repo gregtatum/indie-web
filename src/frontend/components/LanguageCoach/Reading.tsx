@@ -15,9 +15,8 @@ import { Splitter } from '../Splitter';
 import { useHunspell, useStemNavigation, useStems } from './hooks';
 import { applyClassToWords } from 'frontend/logic/language-tools';
 import * as Router from 'react-router-dom';
-import { EditorView } from 'codemirror';
 import { TextSelectionTooltip } from '../TextSelectionTooltip';
-import { placeholder } from '@codemirror/view';
+import { EditorView, placeholder } from '@codemirror/view';
 import dedent from 'dedent';
 
 export function Reading() {

@@ -4,16 +4,16 @@
     "jsx": "react",
     "module": "commonjs",
     "strict": true,
-    "baseUrl": "./src",
+    "baseUrl": "./",
     "noEmit": true,
     "allowJs": true,
     "checkJs": true,
-    "lib": ["esnext"],
+    "allowSyntheticDefaultImports": true,
     "paths": {
       "frontend/*": ["./frontend/*"],
       "server/*": ["./server/*"],
       "shared/*": ["./shared/*"],
     }
   },
-  "include": ["./src"]
+  "include": ["./"]
 }

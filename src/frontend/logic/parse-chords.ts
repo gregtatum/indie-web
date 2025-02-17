@@ -611,7 +611,7 @@ export function transposeParsedSong(
       const newChordText =
         transpose(
           scaleToChord,
-          // TODO - Sort out the type issues here.
+          // @ts-expect-error - Sort out the type issues here.
           baseNote,
           halfSteps,
         ) + chordText.slice(baseNote.length);

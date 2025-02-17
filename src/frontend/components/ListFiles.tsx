@@ -1,9 +1,14 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, T, $$, Hooks } from 'frontend';
-import { debounce, ensureExists, getEnv, imageExtensions } from 'frontend/utils';
+import {
+  debounce,
+  ensureExists,
+  getEnv,
+  imageExtensions,
+  isChordProExtension,
+} from 'frontend/utils';
 import { overlayPortal, useRetainScroll } from '../hooks';
-import { isChordProExtension } from '../utils';
 import { getFileSystemDisplayName } from 'frontend/logic/app-logic';
 
 import './ListFiles.css';

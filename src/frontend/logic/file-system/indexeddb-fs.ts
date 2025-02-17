@@ -1,7 +1,7 @@
 import * as idb from 'idb';
-import { v4 as uuidv4 } from 'uuid';
+import * as uuid from 'uuid';
 import { FileSystemCache, FileSystemError } from 'frontend/logic/file-system';
-import { T } from 'frontend';
+import { type T } from 'frontend';
 import { getPathFileName, getDirName, updatePathRoot } from 'frontend/utils';
 
 export const BROWSER_FILES_DB_NAME = 'browser-files';
@@ -233,7 +233,7 @@ export class IDBFS extends FileSystemCache {
     log('getFile', path, { metadata: row?.metadata });
     if (row) {
       if (process.env.NODE_ENV === 'test') {
-        // Blob text doesn't work correctly in Node and Jest. Fake it.
+        // @ts-expect-error - Blob text doesn't work correctly in Node and Jest. Fake it.
         const { text, metadata } = row;
         const blob = new Blob([text], { type: 'text/plain' });
         return { blob, metadata };
@@ -598,10 +598,10 @@ async function createFileMetadata(
     type: 'file',
     name: getPathFileName(path),
     path: path,
-    id: uuidv4(),
+    id: uuid.v4(),
     clientModified: now,
     serverModified: now,
-    rev: uuidv4(),
+    rev: uuid.v4(),
     size: blob.size,
     isDownloadable: true,
     hash,
@@ -629,7 +629,7 @@ function createFolderMetadata(path: string): T.FolderMetadata {
     type: 'folder',
     name: getPathFileName(path),
     path: path,
-    id: uuidv4(),
+    id: uuid.v4(),
   };
 }
 

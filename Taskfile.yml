@@ -12,6 +12,25 @@ tasks:
     cmds:
       - npx npm-check-updates
 
+  start:
+    desc: Start one of the Indie Web projects.
+    cmds:
+      - |
+        options=("Floppy Disk" "Browser Chords")
+        echo "Select an option:"
+        select choice in "${options[@]}"; do
+          case $choice in
+            "Floppy Disk")
+              task start-floppy
+              break
+              ;;
+            "Browser Chords")
+              task start-chords
+              break
+              ;;
+          esac
+        done
+
   start-ts:
     desc: Start TypeScript in watch mode
     cmds:
@@ -64,7 +83,7 @@ tasks:
   ts:
     desc: TypeScript compilation check
     cmds:
-      - tsc --noEmit
+      - tsc --noEmit --project src/tsconfig.json
 
   test:
     desc: Run tests

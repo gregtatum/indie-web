@@ -1,4 +1,3 @@
-// @ts-expect-error - Not sure why this is breaking.
 import fetchMock from 'fetch-mock-jest';
 import { Headers, Request, Response } from 'node-fetch';
 import { resetTestGeneration } from './fixtures';
@@ -33,7 +32,7 @@ function simpleDigest256(_scheme: string, buffer: Uint8Array): ArrayBuffer {
 beforeEach(function () {
   jest.resetModules();
   global.indexedDB = new IDBFactory();
-  global.fetch = fetchMock.sandbox();
+  (global as any).fetch = fetchMock.sandbox();
   (global as any).Headers = Headers;
   (global as any).Request = Request;
   (global as any).Response = Response;

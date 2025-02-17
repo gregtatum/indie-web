@@ -29,7 +29,7 @@ export class NodeFSServer {
         };
         res.json(file);
       } catch (error) {
-        res.status(500).send(error.message);
+        handleUnexpectedError(res, error);
       }
     });
 
@@ -54,7 +54,7 @@ export class NodeFSServer {
           contents: buffer.toString('base64'),
         });
       } catch (error) {
-        res.status(500).send(error.message);
+        handleUnexpectedError(res, error);
       }
     });
 
@@ -91,7 +91,7 @@ export class NodeFSServer {
         );
         res.json(listings);
       } catch (error) {
-        res.status(500).send(error.message);
+        handleUnexpectedError(res, error);
       }
     });
 
@@ -123,7 +123,7 @@ export class NodeFSServer {
           });
         }
       } catch (error) {
-        res.status(500).send(error.message);
+        handleUnexpectedError(res, error);
       }
     });
 
@@ -139,7 +139,7 @@ export class NodeFSServer {
           id: stats.ino.toString(),
         });
       } catch (error) {
-        res.status(500).send(error.message);
+        handleUnexpectedError(res, error);
       }
     });
 
@@ -154,7 +154,7 @@ export class NodeFSServer {
         }
         res.sendStatus(200);
       } catch (error) {
-        res.status(500).send(error.message);
+        handleUnexpectedError(res, error);
       }
     });
   }
@@ -196,7 +196,7 @@ export class NodeFSClient extends FileSystem {
   }
 
   async loadBlob(filePath: string): Promise<T.BlobFile> {
-    const { metadata, contents } = await this.fetch('/loadBlob', { filePath });
+    const { metadata, contents } = await this.fetch<any>('/loadBlob', { filePath });
     return {
       metadata,
       blob: new Blob([Uint8Array.from(atob(contents), (c) => c.charCodeAt(0))]),
@@ -224,3 +224,20 @@ export class NodeFSClient extends FileSystem {
 }
 
 new NodeFSServer();
+
+function handleUnexpectedError(res: Response, error: unknown) {
+  const message = errorToString(error);
+  console.error(error);
+  res.status(500).send(message);
+}
+
+function errorToString(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  const message = error?.toString?.();
+  if (message && message !== '[object Object]') {
+    return message;
+  }
+  return 'An unknown error occured.';
+}

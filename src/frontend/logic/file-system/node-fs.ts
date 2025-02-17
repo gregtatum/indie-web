@@ -30,7 +30,10 @@ export class NodeFSClient extends FileSystem {
   }
 
   async loadBlob(filePath: string): Promise<T.BlobFile> {
-    const { metadata, contents } = await this.fetch('/loadBlob', { filePath });
+    // TODO Fix the types here.
+    const { metadata, contents } = await this.fetch<any>('/loadBlob', {
+      filePath,
+    });
     return {
       metadata,
       blob: new Blob([Uint8Array.from(atob(contents), (c) => c.charCodeAt(0))]),

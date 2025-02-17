@@ -8,7 +8,7 @@ import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
 import { downloadImage } from 'frontend/logic/download-image';
 import { getEnv, getDirName, htmlElementOrNull } from 'frontend/utils';
-import { EditorView } from 'codemirror';
+import { EditorView } from '@codemirror/view';
 import TurndownService from 'turndown';
 
 export function ViewMarkdown() {

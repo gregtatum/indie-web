@@ -7,7 +7,7 @@ import { useNextPrevSwipe, NextPrevLinks } from './NextPrev';
 import { Splitter } from './Splitter';
 // @ts-expect-error This is untyped.
 import { ChordPro } from 'codemirror-lang-chordpro';
-import { EditorView } from 'codemirror';
+import { EditorView } from '@codemirror/view';
 import {
   getChordLineRatio,
   ultimateGuitarToChordPro,

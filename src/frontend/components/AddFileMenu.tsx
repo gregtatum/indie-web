@@ -1,9 +1,8 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, T, $, $$ } from 'frontend';
-import { ensureExists, pathJoin } from 'frontend/utils';
+import { ensureExists, pathJoin, UnhandledCaseError } from 'frontend/utils';
 import { overlayPortal, useStore } from '../hooks';
-import { UnhandledCaseError } from '../utils';
 import { FileSystem, FileSystemError } from 'frontend/logic/file-system';
 
 import { Menu } from './Menus';
