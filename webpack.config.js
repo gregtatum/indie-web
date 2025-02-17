@@ -8,8 +8,12 @@ const path = require('path');
 
 if (process.env.SITE === 'floppydisk') {
   require('dotenv').config({ path: './.env.floppydisk' });
-} else {
+} else if (process.env.SITE === 'browserchords') {
   require('dotenv').config({ path: './.env.browserchords' });
+} else {
+  throw new Error(
+    'The SITE environment must be set to either "floppydisk" or "browserchords"',
+  );
 }
 
 /**

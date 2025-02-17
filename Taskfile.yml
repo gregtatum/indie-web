@@ -2,7 +2,10 @@ version: '3'
 
 tasks:
   build:
-    desc: Build the project for distribution
+    desc: |
+      Build the project for distribution. The site must be specified.
+      SITE=floppydisk task build
+      SITE=browserchords task build
     cmds:
       - rm -rf dist
       - NODE_ENV=production webpack
@@ -34,7 +37,7 @@ tasks:
   start-ts:
     desc: Start TypeScript in watch mode
     cmds:
-      - tsc --noEmit --watch
+      - tsc --noEmit --watch --project src/tsconfig.json
 
   start-webpack-chords:
     desc: Start Webpack server for browserchords
@@ -50,13 +53,12 @@ tasks:
     desc: Start TypeScript watch and Webpack server
     cmds:
       - task: start-ts
-      - task: start-webpack-chords
+      - task --parallel start-ts start-webpack-floppy
 
   start-floppy:
     desc: Start TypeScript watch and Webpack server for floppydisk
     cmds:
-      - task: start-ts
-      - task: start-webpack-floppy
+      - task --parallel start-ts start-webpack-floppy
 
   start-server:
     desc: Start the server in development mode
