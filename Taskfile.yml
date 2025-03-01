@@ -62,13 +62,10 @@ tasks:
 
   start-server:
     desc: Start the server in development mode
+    dir: src/server
     cmds:
-      - node src/server/index.ts
-
-  start-server-prod:
-    desc: Start the server in production mode
-    cmds:
-      - node src/server
+      - '[ -d "node_modules" ] || npm install'
+      - npm start
 
   lint:
     desc: Run ESLint linter
@@ -85,7 +82,9 @@ tasks:
   ts:
     desc: TypeScript compilation check
     cmds:
-      - tsc --noEmit --project src/tsconfig.json
+      - tsc --noEmit --project src/frontend/tsconfig.json
+      - tsc --noEmit --project src/server/tsconfig.json
+      - tsc --noEmit --project src/shared/tsconfig.json
 
   test:
     desc: Run tests

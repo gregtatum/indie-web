@@ -4,6 +4,9 @@
   "main": "index.ts",
   "author": "Greg Tatum",
   "type": "module",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning ."
+  },
   "dependencies": {
     "express": "^4.21.2"
   }

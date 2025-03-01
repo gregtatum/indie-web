@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   targets: '>5%',
   presets: [
     '@babel/preset-env',

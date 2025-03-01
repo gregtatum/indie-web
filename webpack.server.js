@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-const webpack = require('webpack');
-const WebpackDevServer = require('webpack-dev-server');
-const config = require('./webpack.config');
+import webpack from 'webpack';
+import WebpackDevServer from 'webpack-dev-server';
+import { config } from './webpack.config.js';
+
 const port = process.env.SITE === 'floppydisk' ? 2345 : 1234;
 const host = 'localhost';
 

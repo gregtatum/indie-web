@@ -9,6 +9,7 @@
     "allowJs": true,
     "checkJs": true,
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
     "paths": {
       "frontend/*": ["./frontend/*"],
       "server/*": ["./server/*"],

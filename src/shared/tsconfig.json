@@ -4,7 +4,7 @@
     "target": "esnext",
     "module": "nodenext",
     "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
+    // "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
   "include": ["**/*"],
