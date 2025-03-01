@@ -60,15 +60,25 @@ tasks:
     cmds:
       - task --parallel start-ts start-webpack-floppy
 
+  build-server:
+    desc: build the server file
+    dir: src/server
+    cmds:
+      - rm -rf dist
+      - mkdir -p dist
+      - >
+        ../../node_modules/.bin/babel index.ts
+        --out-dir dist
+
   start-server:
     desc: Start the server in development mode
     cmds:
-      - ts-node server
+      - node src/server/index.ts
 
   start-server-prod:
     desc: Start the server in production mode
     cmds:
-      - ts-node server
+      - node src/server
 
   lint:
     desc: Run ESLint linter

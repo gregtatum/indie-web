@@ -1,7 +1,7 @@
 {
   "name": "indie-web-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.ts",
   "author": "Greg Tatum",
   "type": "module",
   "dependencies": {

@@ -1,1 +1,5 @@
-export * as T from 'server/@types';
+import { NodeFSServer } from './fs-server.ts';
+
+export * as T from './@types/index.ts';
+
+new NodeFSServer();
