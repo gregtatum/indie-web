@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   // Sets the path to the prettier node module used to update inline snapshots.
   // Prettier 3 will be supported in Jest v30.0.0.
   prettierPath: './node_modules/prettier-2/index.js',
