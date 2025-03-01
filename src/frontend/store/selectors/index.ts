@@ -298,7 +298,7 @@ export const getActivePDFOrNull = createSelector(
     if (!blob) {
       return null;
     }
-    return pdfjs.getDocument((await blob.arrayBuffer()) as Uint8Array).promise;
+    return pdfjs.getDocument(await blob.arrayBuffer()).promise;
   },
 );
 
