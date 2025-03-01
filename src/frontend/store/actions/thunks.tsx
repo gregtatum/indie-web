@@ -935,11 +935,7 @@ export function languageCoachSaveTimer(): Thunk {
       unloadMessageGeneration = null;
     }
 
-    timeoutId = setTimeout(
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      saveLanguageCoatchData,
-      5000,
-    );
+    timeoutId = setTimeout(saveLanguageCoatchData, 5000);
   };
 }
 

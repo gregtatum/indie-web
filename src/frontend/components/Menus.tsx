@@ -86,7 +86,6 @@ export function Menu({
   useDismissOnOutsideClick(clickedElement, divRef, dismiss, isOpen);
 
   // Focus the menu if opened via keyboard.
-  // eslint-disable-next-line consistent-return
   React.useEffect(() => {
     // Was this opened by keyboard?
     if (openEventDetail === 0) {

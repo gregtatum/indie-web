@@ -204,7 +204,6 @@ function DataSync(props: {
     }
 
     timeoutId.current = setTimeout(
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       saveLanguageCoatchData,
       5000,
     ) as unknown as number;

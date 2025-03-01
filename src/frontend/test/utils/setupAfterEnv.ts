@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 import fetchMockJest = require('fetch-mock-jest');
 import { Headers, Request, Response } from 'node-fetch';
 import { resetTestGeneration } from './fixtures';

@@ -8,7 +8,7 @@ type AudioProps = {
 
 let _playerId = 0;
 let _activePlayerId = -1;
-let _makePreviousPlayerInactive: Function | void;
+let _makePreviousPlayerInactive: (() => void) | void;
 
 export function MediaAudio(props: AudioProps) {
   const { folderPath, line } = props;
@@ -210,7 +210,6 @@ function AudioWaveform(props: WaveformProps) {
     performance.mark('Chords: start effect');
 
     // The metadata must be loaded in order to draw the wave form.
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     audio.addEventListener('loadedmetadata', async () => {
       performance.mark('Chords: loadedmetadata');
       const audioContext = new AudioContext();

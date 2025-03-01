@@ -68,7 +68,6 @@ export function LinkDropbox(props: { children: any }) {
       console.log('Refresh token is out of date, fetching a new one.');
       setAuthState('refreshing');
       fetch(
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         'https://www.dropbox.com/oauth2/token' +
           '?' +
           new URLSearchParams({
@@ -106,7 +105,7 @@ export function LinkDropbox(props: { children: any }) {
                 );
                 setAuthState('auth-failed');
               }
-            } catch (_err) {
+            } catch {
               console.error('Could not parse response', text);
               setAuthError('Dropbox returned strange data.');
               setAuthState('auth-failed');
@@ -163,7 +162,6 @@ export function LinkDropbox(props: { children: any }) {
     //     -d client_id=<APP_KEY>
 
     fetch(
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       'https://www.dropbox.com/oauth2/token' +
         '?' +
         new URLSearchParams({
@@ -209,7 +207,7 @@ export function LinkDropbox(props: { children: any }) {
               );
               setAuthState('auth-failed');
             }
-          } catch (_err) {
+          } catch {
             console.error('Could not parse lambda response', text);
             setAuthState('auth-failed');
           }
@@ -427,7 +425,6 @@ export function DropboxLogin(props: { children: any }) {
       console.log('Refresh token is out of date, fetching a new one.');
       setAuthState('refreshing');
       fetch(
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         'https://www.dropbox.com/oauth2/token' +
           '?' +
           new URLSearchParams({
@@ -465,7 +462,7 @@ export function DropboxLogin(props: { children: any }) {
                 );
                 setAuthState('auth-failed');
               }
-            } catch (_err) {
+            } catch {
               console.error('Could not parse response', text);
               setAuthError('Dropbox returned strange data.');
               setAuthState('auth-failed');
@@ -522,7 +519,6 @@ export function DropboxLogin(props: { children: any }) {
     //     -d client_id=<APP_KEY>
 
     fetch(
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       'https://www.dropbox.com/oauth2/token' +
         '?' +
         new URLSearchParams({
@@ -568,7 +564,7 @@ export function DropboxLogin(props: { children: any }) {
               );
               setAuthState('auth-failed');
             }
-          } catch (_err) {
+          } catch {
             console.error('Could not parse lambda response', text);
             setAuthState('auth-failed');
           }

@@ -4,7 +4,6 @@
  */
 export class UnhandledCaseError extends Error {
   constructor(value: never, typeName: string) {
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     super(`There was an unhandled case for "${typeName}": ${value}`);
     this.name = 'UnhandledCaseError';
   }
@@ -48,7 +47,6 @@ export function maybeMockGoogleAnalytics() {
   if (process.env.NODE_ENV === 'development') {
     (window as any).ga = (event: any, ...payload: any[]) => {
       const style = 'color: #FF6D00; font-weight: bold';
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       console.log(`[analytics] %c"${event}"`, style, ...payload);
     };
   } else if (process.env.NODE_ENV !== 'production') {
@@ -369,11 +367,9 @@ export function isChordProExtension(extension: string | undefined) {
 /**
  * A type aware version of Object.entries.
  */
-export function typedObjectEntries<
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  T extends Object,
-  K extends keyof T,
->(obj: T): [K, T[K]][] {
+export function typedObjectEntries<T extends object, K extends keyof T>(
+  obj: T,
+): [K, T[K]][] {
   return Object.entries(obj as any) as any;
 }
 
@@ -381,10 +377,7 @@ export function typedObjectEntries<
  * Convert some value into a record to bypass some of TS's constraints
  * on interface access.
  */
-export function asRecord<
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  T extends Object,
->(obj: T): Record<string, unknown> {
+export function asRecord<T extends object>(obj: T): Record<string, unknown> {
   return obj as any;
 }
 
@@ -392,11 +385,9 @@ export function asRecord<
  * Convert some value into a record to bypass some of TS's constraints
  * on interface access, but retain the typ
  */
-export function asTypedRecord<
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  T extends Object,
-  K extends keyof T,
->(obj: T): Record<K, T[K]> {
+export function asTypedRecord<T extends object, K extends keyof T>(
+  obj: T,
+): Record<K, T[K]> {
   return obj as any;
 }
 

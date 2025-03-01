@@ -111,7 +111,6 @@ function initServiceWorker() {
   ) {
     return;
   }
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   window.addEventListener('load', async () => {
     try {
       const registration =

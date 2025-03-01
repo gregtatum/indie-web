@@ -107,7 +107,6 @@ let _authorizeUrl: string | null = null;
 function getDropboxAuthorizeUrl(codeChallenge: string) {
   if (!_authorizeUrl) {
     _authorizeUrl =
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       'https://www.dropbox.com/oauth2/authorize?' +
       new URLSearchParams({
         response_type: `code`,

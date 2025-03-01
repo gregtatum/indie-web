@@ -168,8 +168,6 @@ export class DropboxFS extends FileSystem {
       console.error('Failed to update folder listing in IDBFS', error);
     });
 
-    this.cache?.saveBlob;
-
     return metadata;
   }
 
