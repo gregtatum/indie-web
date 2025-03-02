@@ -1,184 +1,126 @@
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import express, { type Request, type Response } from 'express';
+import { ApiRoute, ClientError, RequestConflict } from './utils.ts';
 import { type T } from './index.ts';
+import { resolve, join } from 'node:path';
+import { promises as fs } from 'node:fs';
 
-export class NodeFSServer {
-  app = express();
+interface ListFilesRequest {
+  path: string;
+}
 
-  constructor() {
-    this.app.use(express.json());
+/**
+ * The mount path should not have
+ */
+export function setupFsServer(mountPath: string) {
+  const route = new ApiRoute();
 
-    this.app.post('/saveBlob', async (req: Request, res: Response) => {
-      const { filePath, contents } = req.body;
+  if (mountPath[mountPath.length - 1] === '/') {
+    throw new Error('The mount path should not end in a trailing slash.');
+  }
+
+  /**
+   * List files that are within the mounted file store.
+   */
+  route.get('/list-files', async (request): Promise<T.FolderListing> => {
+    let { path } = request.query;
+    if (!path || typeof path !== 'string') {
+      throw new ClientError('The path for the file listing was not sent.');
+    }
+    if (path.startsWith('/')) {
+      // Convert an absolute path to a relative one.
+      path = '.' + path;
+    }
+    const listFilesRequest: ListFilesRequest = { path };
+
+    let resolvedPath = resolve(mountPath, listFilesRequest.path);
+    if (resolvedPath + '/' === mountPath) {
+      // Add the trailing slash if it's missing.
+      resolvedPath = mountPath;
+    }
+
+    if (!resolvedPath.startsWith(mountPath)) {
+      console.error('Resolved path:', resolvedPath);
+      throw new ClientError(
+        'Invalid path: Access outside of the mount is not allowed.',
+      );
+    }
+
+    if (!isFolder(resolvedPath)) {
+      throw new RequestConflict(
+        'The requested path was not a folder: ' + resolvedPath,
+      );
+    }
+
+    // Since the folder exists, any errors listing the files will be a server error.
+    // "stat"ing the indiviual files is assumed to be fallible, and won't totally fail
+    // the request.
+    const entries = await fs.readdir(resolvedPath, { withFileTypes: true });
+    const listing: T.FolderListing = [];
+
+    for (const entry of entries) {
+      const entryPath = join(resolvedPath, entry.name);
       try {
-        await fs.mkdir(path.dirname(filePath), { recursive: true });
-        await fs.writeFile(filePath, Buffer.from(contents, 'base64'));
-        const stats = await fs.stat(filePath);
-        const file: T.FileMetadata = {
-          type: 'file',
-          name: path.basename(filePath),
-          path: filePath,
-          id: stats.ino.toString(),
-          clientModified: new Date().toISOString(),
-          serverModified: stats.mtime.toISOString(),
-          rev: stats.ino.toString(),
-          size: stats.size,
-          isDownloadable: true,
-          hash: '',
-        };
-        res.json(file);
-      } catch (error) {
-        handleUnexpectedError(res, error);
-      }
-    });
+        const stats = await fs.stat(entryPath);
 
-    this.app.post('/loadBlob', async (req: Request, res: Response) => {
-      const { filePath } = req.body;
-      try {
-        const buffer = await fs.readFile(filePath);
-        const stats = await fs.stat(filePath);
-        res.json({
-          metadata: {
-            type: 'file',
-            name: path.basename(filePath),
-            path: filePath,
-            id: stats.ino.toString(),
-            clientModified: stats.ctime.toISOString(),
-            serverModified: stats.mtime.toISOString(),
-            rev: stats.ino.toString(),
-            size: stats.size,
-            isDownloadable: true,
-            hash: '',
-          },
-          contents: buffer.toString('base64'),
-        });
-      } catch (error) {
-        handleUnexpectedError(res, error);
-      }
-    });
+        // Slice off the mount path, but retain the final '/'.
+        // const mountPath = '/mount/path/'
+        // const entryPath = '/mount/path/foobar'
+        // const clientPath = '/foobar'
+        const clientPath = entryPath.slice(mountPath.length - 1);
 
-    this.app.post('/listFiles', async (req: Request, res: Response) => {
-      const { dirPath } = req.body;
-      try {
-        const entries = await fs.readdir(dirPath, { withFileTypes: true });
-        const listings = await Promise.all(
-          entries.map(async (entry) => {
-            const entryPath = path.join(dirPath, entry.name);
-            const stats = await fs.stat(entryPath);
-            if (entry.isDirectory()) {
-              return {
-                type: 'folder',
-                name: entry.name,
-                path: entryPath,
-                id: stats.ino.toString(),
-              };
-            } else {
-              return {
-                type: 'file',
-                name: entry.name,
-                path: entryPath,
-                id: stats.ino.toString(),
-                clientModified: stats.ctime.toISOString(),
-                serverModified: stats.mtime.toISOString(),
-                rev: stats.ino.toString(),
-                size: stats.size,
-                isDownloadable: true,
-                hash: '',
-              };
-            }
-          }),
-        );
-        res.json(listings);
-      } catch (error) {
-        handleUnexpectedError(res, error);
-      }
-    });
+        // The ID is used by Dropbox for some smarter tracking of individual files
+        // as they are moved. We don't have this, so just set it to the path.
+        const id = `id:${entryPath}`;
 
-    this.app.post('/move', async (req: Request, res: Response) => {
-      const { fromPath, toPath } = req.body;
-      try {
-        await fs.mkdir(path.dirname(toPath), { recursive: true });
-        await fs.rename(fromPath, toPath);
-        const stats = await fs.stat(toPath);
-        if (stats.isDirectory()) {
-          res.json({
+        if (entry.isDirectory()) {
+          listing.push({
             type: 'folder',
-            name: path.basename(toPath),
-            path: toPath,
-            id: stats.ino.toString(),
+            name: entry.name,
+            path: clientPath,
+            id,
           });
         } else {
-          res.json({
+          // Dropbox has revision tracking. Instead for our case, just do the last
+          // modified time to simulate this feature.
+          const rev = `rev:${stats.mtime.getTime()}`;
+
+          listing.push({
             type: 'file',
-            name: path.basename(toPath),
-            path: toPath,
-            id: stats.ino.toString(),
-            clientModified: stats.ctime.toISOString(),
-            serverModified: stats.mtime.toISOString(),
-            rev: stats.ino.toString(),
+            name: entry.name,
+            path: clientPath,
+            id,
+            clientModified: stats.mtime.toISOString(),
+            serverModified: stats.ctime.toISOString(),
+            rev,
             size: stats.size,
             isDownloadable: true,
-            hash: '',
+            hash: '', // Currently unimplemented.
           });
         }
       } catch (error) {
-        handleUnexpectedError(res, error);
+        console.error('Unable to read a file, ignoring it', error);
       }
-    });
+    }
 
-    this.app.post('/createFolder', async (req: Request, res: Response) => {
-      const { folderPath } = req.body;
-      try {
-        await fs.mkdir(folderPath, { recursive: true });
-        const stats = await fs.stat(folderPath);
-        res.json({
-          type: 'folder',
-          name: path.basename(folderPath),
-          path: folderPath,
-          id: stats.ino.toString(),
-        });
-      } catch (error) {
-        handleUnexpectedError(res, error);
-      }
-    });
+    return listing;
+  });
 
-    this.app.post('/delete', async (req: Request, res: Response) => {
-      const { targetPath } = req.body;
-      try {
-        const stats = await fs.stat(targetPath);
-        if (stats.isDirectory()) {
-          await fs.rmdir(targetPath, { recursive: true });
-        } else {
-          await fs.unlink(targetPath);
-        }
-        res.sendStatus(200);
-      } catch (error) {
-        handleUnexpectedError(res, error);
-      }
-    });
-  }
-
-  start(port: number): void {
-    this.app.listen(port, () => {
-      console.log(`NodeFSServer is running on port ${port}`);
-    });
-  }
+  return route.router;
 }
 
-function handleUnexpectedError(res: Response, error: unknown) {
-  const message = errorToString(error);
-  console.error(error);
-  res.status(500).send(message);
-}
-
-function errorToString(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
+export async function isFolder(path: string): Promise<boolean> {
+  try {
+    const stats = await fs.stat(path);
+    return stats.isDirectory();
+  } catch (error) {
+    if (
+      error &&
+      'code' &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
+      return false;
+    }
+    throw error;
   }
-  const message = error?.toString?.();
-  if (message && message !== '[object Object]') {
-    return message;
-  }
-  return 'An unknown error occured.';
 }
