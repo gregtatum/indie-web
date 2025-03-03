@@ -580,3 +580,29 @@ export function useUploadOnFileDrop(
     void dispatch(A.moveFile(fromPath, toPath));
   });
 }
+
+/**
+ * A simple component for displaying an error message.
+ */
+export function useError() {
+  const [errorMessage, setError] = React.useState<null | string>(null);
+
+  let error = null;
+  if (errorMessage) {
+    error = (
+      <div className="error">
+        {errorMessage}
+        <button
+          type="button"
+          className="errorDismiss"
+          onClick={() => {
+            setError(null);
+          }}
+        >
+          &times;
+        </button>
+      </div>
+    );
+  }
+  return { error, setError };
+}

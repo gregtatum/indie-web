@@ -57,6 +57,74 @@ function dropboxOauth(
   }
 }
 
+function getFileStoreServers(): T.FileStoreServer[] {
+  const serversString = window.localStorage.getItem('fileStoreServers');
+  if (!serversString) {
+    return [];
+  }
+
+  let serversUnknown: unknown;
+  try {
+    serversUnknown = JSON.parse(serversString);
+  } catch (error) {
+    console.error(
+      'Could not parse the file store server data from localStorage',
+      error,
+    );
+    return [];
+  }
+
+  const servers: T.FileStoreServer[] = [];
+  if (Array.isArray(serversUnknown)) {
+    for (const serverUnknown of serversUnknown) {
+      const url = getStringProp(serverUnknown, 'url');
+      const name = getStringProp(serverUnknown, 'name');
+      if (url && name) {
+        servers.push({ url, name });
+      }
+    }
+  }
+  return servers;
+}
+
+function fileStoreServers(
+  state: T.FileStoreServer[] = getFileStoreServers(),
+  action: T.Action,
+): T.FileStoreServer[] {
+  switch (action.type) {
+    case 'add-file-store-server': {
+      const servers = [...state, action.server];
+      window.localStorage.setItem('fileStoreServers', JSON.stringify(servers));
+      return servers;
+    }
+    case 'remove-file-store-server': {
+      const servers = state.filter(
+        (server) =>
+          server.url !== action.server.url &&
+          server.name !== action.server.name,
+      );
+      window.localStorage.setItem('fileStoreServers', JSON.stringify(servers));
+      return servers;
+    }
+    case 'update-file-store-server': {
+      // Ensure the ordering of the updated server stays the same.
+      const servers: T.FileStoreServer[] = [];
+      const { oldServer, newServer } = action;
+      for (const server of state) {
+        if (server.name === oldServer.name && server.url === oldServer.url) {
+          servers.push(newServer);
+        } else {
+          servers.push(server);
+        }
+      }
+      window.localStorage.setItem('fileStoreServers', JSON.stringify(servers));
+      return servers;
+    }
+    default:
+      return state;
+  }
+}
+
 function listFileErrors(
   state: Map<string, string> = new Map(),
   action: T.Action,
@@ -393,6 +461,8 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'view-markdown';
     case 'view-settings':
       return 'settings';
+    case 'view-file-storage':
+      return 'file-storage';
     case 'view-privacy':
       return 'privacy';
     default:
@@ -575,6 +645,7 @@ export const reducers = combineReducers({
   downloadFileErrors,
   dropboxOauth,
   filesIndex,
+  fileStoreServers,
   hideEditor,
   idbfs,
   isDraggingSplitter,

@@ -458,3 +458,11 @@ export function htmlElementOrNull(
   }
   return null;
 }
+
+/**
+ * Ternaries in React components can be awkward. Instead this function makes it a bit
+ * cleaner.
+ */
+export function ifExists<T>(value: any, lambda: () => T) {
+  return value ? lambda() : null;
+}

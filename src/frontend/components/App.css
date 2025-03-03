@@ -268,3 +268,37 @@ code {
     padding: 0;
   }
 }
+
+/**
+ * A re-usable error bar component.
+ */
+.error {
+  background: #ffbfbf;
+  padding: 15px;
+  border-radius: 3px;
+  border: 1px solid #f00;
+  margin-bottom: 10px;
+  width: 100%;
+  font-size: var(--font-size-normal);
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+
+  & button {
+    background: none;
+    border: none;
+    color: #721c24;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 10px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    margin: -10px 0px;
+
+    &:hover {
+      color: #491217;
+    }
+  }
+}

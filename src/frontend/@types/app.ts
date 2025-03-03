@@ -71,6 +71,7 @@ export type View =
   | 'view-image'
   | 'view-markdown'
   | 'list-files'
+  | 'file-storage'
   | 'settings'
   | 'privacy'
   | 'language-coach';
@@ -85,6 +86,11 @@ export interface DropboxOauth {
   refreshToken: string;
   // Timestamp in milliseconds
   expires: number;
+}
+
+export interface FileStoreServer {
+  url: string;
+  name: string;
 }
 
 export interface FolderListingRow {

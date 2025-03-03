@@ -36,6 +36,10 @@ export function getDropboxOauth(state: State) {
   return state.dropboxOauth;
 }
 
+export function getFileStoreServers(state: State) {
+  return state.fileStoreServers;
+}
+
 export function getListFilesCache(state: State) {
   return state.listFilesCache;
 }
@@ -440,6 +444,7 @@ export function canGoFullScreen(state: State) {
       return document.fullscreenEnabled;
     case 'list-files':
     case 'settings':
+    case 'file-storage':
     case 'privacy':
     case 'language-coach':
       return false;

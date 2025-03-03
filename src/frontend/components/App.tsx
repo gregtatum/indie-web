@@ -16,9 +16,11 @@ import { ensureNever, UnhandledCaseError } from 'frontend/utils';
 import { Settings, Privacy } from './Page';
 import { useFilesIndex } from 'frontend/logic/files-index';
 
-import './App.css';
 import { toFileSystemName } from 'frontend/logic/app-logic';
 import { LanguageCoach } from './LanguageCoach';
+import { FileStorage } from './FileStorage';
+
+import './App.css';
 
 function ListFilesRouter() {
   const currentFileSystemName = $$.getCurrentFileSystemName();
@@ -127,6 +129,14 @@ function SettingsRouter() {
   return null;
 }
 
+function FileStorageRouter() {
+  const dispatch = Hooks.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewFileStorage());
+  });
+  return null;
+}
+
 function PrivacyRouter() {
   const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
@@ -150,6 +160,7 @@ export function AppRoutes() {
       <Router.Routes>
         <Router.Route path="/" element={<ListFilesRouter />} />
         <Router.Route path="settings" element={<SettingsRouter />} />
+        <Router.Route path="add-file-storage" element={<FileStorageRouter />} />
         <Router.Route path="privacy" element={<PrivacyRouter />} />
         <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
@@ -214,6 +225,8 @@ function Views() {
       return <ViewMarkdown key={key} />;
     case 'settings':
       return <Settings key={key} />;
+    case 'file-storage':
+      return <FileStorage key={key} />;
     case 'privacy':
       return <Privacy key={key} />;
     case 'language-coach':

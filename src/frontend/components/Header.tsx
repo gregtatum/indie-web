@@ -88,6 +88,17 @@ export function Header() {
         <Path path="/" key={key} title="⚙️ Settings" hideSiteName={true} />
       );
       break;
+    case 'file-storage':
+      isOpen = true;
+      title = (
+        <Path
+          path="/"
+          key={key}
+          title="Manage File Storage"
+          hideSiteName={true}
+        />
+      );
+      break;
     case 'privacy':
       isOpen = true;
       title = (
@@ -229,6 +240,13 @@ function FileSystemSelection() {
           dispatch(A.changeFileSystem('dropbox'));
         },
         children: 'Dropbox',
+      },
+      {
+        key: 'fs-server',
+        onClick: () => {
+          navigate('/add-file-storage');
+        },
+        children: 'Add File Storage',
       },
     ],
     [],

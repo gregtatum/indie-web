@@ -39,6 +39,21 @@ export function removeBrowserFiles() {
   return { type: 'remove-browser-files' as const };
 }
 
+export function addFileStoreServer(server: T.FileStoreServer) {
+  return { type: 'add-file-store-server' as const, server };
+}
+
+export function removeFileStoreServer(server: T.FileStoreServer) {
+  return { type: 'remove-file-store-server' as const, server };
+}
+
+export function updateFileStoreServer(
+  oldServer: T.FileStoreServer,
+  newServer: T.FileStoreServer,
+) {
+  return { type: 'update-file-store-server' as const, oldServer, newServer };
+}
+
 export function draggingSplitter(isDragging: boolean) {
   return { type: 'dragging-splitter' as const, isDragging };
 }
@@ -116,6 +131,10 @@ export function viewLinkDropbox() {
 
 export function viewSettings() {
   return { type: 'view-settings' as const };
+}
+
+export function viewFileStorage() {
+  return { type: 'view-file-storage' as const };
 }
 
 export function viewPrivacy() {

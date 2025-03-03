@@ -227,6 +227,7 @@ export function LinkDropbox(props: { children: any }) {
     case 'privacy':
       return props.children;
     case null:
+    case 'file-storage':
     case 'list-files':
     case 'view-file':
     case 'view-pdf':
