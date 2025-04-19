@@ -19,6 +19,7 @@ import { marked } from 'marked';
 import { DropboxFS } from 'frontend/logic/file-store/dropbox-fs';
 import { FileStore } from 'frontend/logic/file-store';
 import { ServerFS } from 'frontend/logic/file-store/server-fs';
+import * as AppLogic from 'frontend/logic/app-logic';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -93,6 +94,14 @@ export function getCurrentFileStoreName(state: State) {
   return state.currentFileStoreName;
 }
 
+/**
+ * The file store slug is either the server id or the current file store name, like
+ * "dropbox".
+ */
+export function getCurrentFileStoreSlug(state: State) {
+  return state.serverId ?? state.currentFileStoreName;
+}
+
 export function getRenameFile(state: State) {
   return state.renameFile;
 }
@@ -115,6 +124,13 @@ export function getIDBFSOrNull(state: State) {
 
 export function getOpenAIApiKey(state: State) {
   return state.openAIApiKey;
+}
+
+export function getFileStoreDisplayName(state: State): string {
+  return AppLogic.getFileStoreDisplayName(
+    getCurrentFileStoreName(state),
+    getCurrentServerOrNull(state),
+  );
 }
 
 /**
@@ -495,7 +511,7 @@ type NextPrevSong = Partial<{
 
 export const getNextPrevSong = createSelector(
   getPath,
-  getCurrentFileStoreName,
+  getCurrentFileStoreSlug,
   getListFilesCache,
   (path, fsName, listFilesCache): NextPrevSong => {
     const results: NextPrevSong = {};

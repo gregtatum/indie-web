@@ -6,13 +6,15 @@
   "type": "module",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning .",
-    "start-dev": "nodemon --disable-warning=ExperimentalWarning ."
+    "start-dev": "nodemon --exec 'node --disable-warning=ExperimentalWarning . ' --watch . -V --ext 'js,json,ts'"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.2"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.3",
     "@types/cors": "^2.8.17",
     "nodemon": "^3.1.9"
   }

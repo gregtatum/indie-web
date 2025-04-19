@@ -48,7 +48,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
   const fileStore = $$.getCurrentFS();
-  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const { dispatch, getState } = useStore();
   const input = React.useRef<HTMLInputElement | null>(null);
   const navigate = Router.useNavigate();
@@ -97,7 +97,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
             if ($.getHideEditor(getState())) {
               dispatch(A.hideEditor(false));
             }
-            navigate(pathJoin(fsName, slug, fileMetadata.path));
+            navigate(pathJoin(fsSlug, slug, fileMetadata.path));
           },
           (error: FileStoreError) => {
             let err = error.toString();
@@ -118,7 +118,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
           (folderMetadata) => {
             // The directory listing is now stale, fetch it again.
             void dispatch(A.listFiles(props.path));
-            navigate(pathJoin(fsName, 'folder', folderMetadata.path));
+            navigate(pathJoin(fsSlug, 'folder', folderMetadata.path));
           },
           (error) => {
             setError(error.toString());
@@ -134,7 +134,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
         createLanguageCoach(path, fileStore, languageCode)
           .then((normalizedPath) => {
             void dispatch(A.listFiles(props.path));
-            navigate(pathJoin(fsName, 'language-coach', normalizedPath));
+            navigate(pathJoin(fsSlug, 'language-coach', normalizedPath));
           })
           .catch((error) => {
             setError(error.toString());

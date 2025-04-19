@@ -12,7 +12,7 @@ export function LanguageCoach() {
   const lcPath = $$.getLanguageCoachPath();
   const dataOrNull = $$.getLanguageCoachDataOrNull();
   const fileStore = $$.getCurrentFS();
-  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const dispatch = Hooks.useDispatch();
 
   React.useEffect(() => {
@@ -67,7 +67,7 @@ export function LanguageCoach() {
   }
   return (
     <DataSync key={lcPath} data={dataOrNull}>
-      <div className="language-coach" key={fsName + lcPath}>
+      <div className="language-coach" key={fsSlug + lcPath}>
         <LCHeader />
         <Sections />
       </div>

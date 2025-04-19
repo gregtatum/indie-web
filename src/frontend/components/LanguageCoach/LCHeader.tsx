@@ -7,16 +7,16 @@ import './LCHeader.css';
 export function LCHeader() {
   const view = $$.getLanguageCoachSection();
   const learnedWords = $$.getLearnedStems();
-  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const coachPath = $$.getLanguageCoachPath();
   const lastReadingPath = $$.getLastReadingPath();
-  const pathPrefix = `${fsName}/language-coach${coachPath}`;
+  const pathPrefix = `${fsSlug}/language-coach${coachPath}`;
   const section = $$.getLanguageCoachSection();
 
   // Go back to the last read book.
   let lastReadingPrefix;
   if (lastReadingPath && section !== 'reading') {
-    lastReadingPrefix = `${fsName}/language-coach${lastReadingPath}`;
+    lastReadingPrefix = `${fsSlug}/language-coach${lastReadingPath}`;
   }
 
   function getActiveClass(v: T.LanguageCoachSection): string {

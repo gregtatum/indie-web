@@ -79,8 +79,17 @@ export function modifyActiveFile(
   };
 }
 
-export function viewListFiles(fileStoreName: T.FileStoreName, path: string) {
-  return { type: 'view-list-files' as const, fileStoreName, path };
+export function viewListFiles(
+  fileStoreName: T.FileStoreName,
+  fileStoreServer: T.FileStoreServer | null,
+  path: string,
+) {
+  return {
+    type: 'view-list-files' as const,
+    fileStoreName,
+    fileStoreServer,
+    path,
+  };
 }
 
 export function viewLanguageCoach(

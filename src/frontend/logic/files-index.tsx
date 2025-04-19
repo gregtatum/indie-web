@@ -23,6 +23,9 @@ export class FilesIndex {
 
   data: T.IndexJSON;
 
+  // This is not working well, disable for now.
+  static enabled = false;
+
   #fileStore: FileStore;
   #saveTimeout: ReturnType<typeof setTimeout> | null = null;
   #saveGeneration = 0;
@@ -51,6 +54,9 @@ export class FilesIndex {
     metadata: T.FileMetadata | T.FolderMetadata,
     directives?: T.Directives | undefined,
   ) {
+    if (!FilesIndex.enabled) {
+      return;
+    }
     if (metadata.type === 'folder') {
       return;
     }
@@ -132,6 +138,9 @@ export class FilesIndex {
   }
 
   scheduleSave() {
+    if (!FilesIndex.enabled) {
+      return;
+    }
     if (this.#saveTimeout) {
       clearTimeout(this.#saveTimeout);
     }
@@ -218,12 +227,12 @@ export function useFilesIndex(): void {
   const dispatch = Hooks.useDispatch();
   const fileStore = $$.getCurrentFSOrNull();
   React.useEffect(() => {
-    if (fileStore) {
+    if (fileStore && FilesIndex.enabled) {
       // TODO - This can still respond with a 401 not authorized.
       // Only load the files index when Dropbox is actually authorized.
       dispatch(A.loadFilesIndex()).catch((error) => console.error(error));
     }
-  }, [fileStore]);
+  }, [fileStore, FilesIndex.enabled]);
 }
 
 function determineLastReadRev(

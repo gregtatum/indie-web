@@ -24,7 +24,8 @@ export function ListFiles() {
   const files = $$.getSearchFilteredFiles();
   const error = $$.getListFilesErrors().get(path);
   const parsedSearch = $$.getParsedSearch();
-  const fileStoreName = $$.getCurrentFileStoreName();
+  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
 
   const parts = path.split('/');
@@ -68,8 +69,7 @@ export function ListFiles() {
       return (
         <div className="appViewError">
           <p>
-            Unable to list the {getFileStoreDisplayName(fileStoreName, server)}{' '}
-            files.
+            Unable to list the {getFileStoreDisplayName(fsName, server)} files.
           </p>
           {error}
         </div>
@@ -81,7 +81,7 @@ export function ListFiles() {
 
   let parent = null;
   if (path !== '/') {
-    const url = backPath === '/' ? '/' : `${fileStoreName}/folder${backPath}`;
+    const url = backPath === '/' ? '/' : `${fsSlug}/folder${backPath}`;
 
     parent = (
       <Router.Link
@@ -133,7 +133,7 @@ interface FileProps {
 
 export function File(props: FileProps) {
   const renameFile = $$.getRenameFile();
-  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const divRef = React.useRef<null | HTMLDivElement>(null);
   const { name, path, type } = props.file;
   const isFolder = type === 'folder';
@@ -175,28 +175,28 @@ export function File(props: FileProps) {
 
   let link = null;
   if (isFolder) {
-    link = `/${fsName}/folder${path}`;
+    link = `/${fsSlug}/folder${path}`;
   }
 
   if (isChordPro) {
-    link = `/${fsName}/file${path}`;
+    link = `/${fsSlug}/file${path}`;
   }
 
   if (isPDF) {
-    link = `/${fsName}/pdf${path}`;
+    link = `/${fsSlug}/pdf${path}`;
   }
 
   if (isImage) {
-    link = `/${fsName}/image${path}`;
+    link = `/${fsSlug}/image${path}`;
   }
 
   if (isMarkdown) {
-    link = `/${fsName}/md${path}`;
+    link = `/${fsSlug}/md${path}`;
     icon = '📕';
   }
 
   if (isLanguageCoach) {
-    link = `/${fsName}/language-coach${path}`;
+    link = `/${fsSlug}/language-coach${path}`;
     icon = '🧳';
   }
 

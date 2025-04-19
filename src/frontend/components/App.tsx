@@ -24,14 +24,31 @@ import './App.css';
 
 function ListFilesRouter() {
   const currentFileStoreName = $$.getCurrentFileStoreName();
+  const currentServer = $$.getCurrentServerOrNull();
+  const servers = $$.getServers();
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
   const { fs } = params;
   const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
-    const fileStoreName = toFileStoreName(fs) ?? currentFileStoreName;
-    dispatch(A.viewListFiles(fileStoreName, path));
-  }, [fs, path, currentFileStoreName]);
+    if (fs) {
+      let fileStoreName = toFileStoreName(fs);
+      let server: T.FileStoreServer | null = null;
+      if (!fileStoreName) {
+        server = servers.find((server) => server.id === fs) ?? null;
+        if (server) {
+          fileStoreName = 'server';
+        }
+      }
+      if (!fileStoreName) {
+        fileStoreName = currentFileStoreName;
+        server = currentServer;
+      }
+      dispatch(A.viewListFiles(fileStoreName, server, path));
+    } else {
+      dispatch(A.viewListFiles(currentFileStoreName, currentServer, path));
+    }
+  }, [fs, path, currentFileStoreName, currentServer]);
   return null;
 }
 

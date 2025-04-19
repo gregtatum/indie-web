@@ -2,6 +2,9 @@ import { ApiRoute, ClientError, RequestConflict } from './utils.ts';
 import { type T } from './index.ts';
 import { resolve, join } from 'node:path';
 import { promises as fs } from 'node:fs';
+import { writeFile, mkdir, readFile, rename } from 'node:fs/promises';
+import archiver from 'archiver';
+import { finished } from 'stream/promises';
 
 interface ListFilesRequest {
   path: string;
@@ -106,6 +109,193 @@ export function setupFsServer(mountPath: string) {
     }
 
     return listing;
+  });
+
+  route.post('/save-blob', async (request): Promise<T.FileMetadata> => {
+    const { path, contents } = request.body;
+    if (typeof path !== 'string' || typeof contents !== 'string') {
+      throw new ClientError('Missing path or contents in save-blob request.');
+    }
+
+    const resolvedPath = resolve(mountPath, '.' + path);
+    if (!resolvedPath.startsWith(mountPath)) {
+      throw new ClientError(
+        'Invalid path: Access outside of mount not allowed.',
+      );
+    }
+
+    await mkdir(join(resolvedPath, '..'), { recursive: true });
+    const buffer = Buffer.from(contents, 'base64');
+    await writeFile(resolvedPath, buffer);
+
+    const stats = await fs.stat(resolvedPath);
+    return {
+      type: 'file',
+      name: join(path).split('/').pop() || '',
+      path,
+      id: `id:${resolvedPath}`,
+      clientModified: stats.mtime.toISOString(),
+      serverModified: stats.ctime.toISOString(),
+      rev: `rev:${stats.mtime.getTime()}`,
+      size: stats.size,
+      isDownloadable: true,
+      hash: '',
+    };
+  });
+
+  route.post(
+    '/load-blob',
+    async (
+      request,
+    ): Promise<{ metadata: T.FileMetadata; contents: string }> => {
+      const { path } = request.body;
+      if (typeof path !== 'string') {
+        throw new ClientError('Missing path in load-blob request.');
+      }
+
+      const resolvedPath = resolve(mountPath, '.' + path);
+      if (!resolvedPath.startsWith(mountPath)) {
+        throw new ClientError(
+          'Invalid path: Access outside of mount not allowed.',
+        );
+      }
+
+      const buffer = await readFile(resolvedPath);
+      const stats = await fs.stat(resolvedPath);
+
+      const metadata: T.FileMetadata = {
+        type: 'file',
+        name: join(path).split('/').pop() || '',
+        path,
+        id: `id:${resolvedPath}`,
+        clientModified: stats.mtime.toISOString(),
+        serverModified: stats.ctime.toISOString(),
+        rev: `rev:${stats.mtime.getTime()}`,
+        size: stats.size,
+        isDownloadable: true,
+        hash: '',
+      };
+
+      return {
+        metadata,
+        contents: buffer.toString('base64'),
+      };
+    },
+  );
+
+  route.post(
+    '/move',
+    async (request): Promise<T.FileMetadata | T.FolderMetadata> => {
+      const { fromPath, toPath } = request.body;
+      if (typeof fromPath !== 'string' || typeof toPath !== 'string') {
+        throw new ClientError('Missing fromPath or toPath in move request.');
+      }
+
+      const fromResolved = resolve(mountPath, '.' + fromPath);
+      const toResolved = resolve(mountPath, '.' + toPath);
+
+      if (
+        !fromResolved.startsWith(mountPath) ||
+        !toResolved.startsWith(mountPath)
+      ) {
+        throw new ClientError(
+          'Invalid path: Access outside of mount not allowed.',
+        );
+      }
+
+      await rename(fromResolved, toResolved);
+
+      const stats = await fs.stat(toResolved);
+      const id = `id:${toResolved}`;
+      const name = toPath.split('/').pop() || '';
+
+      return stats.isDirectory()
+        ? { type: 'folder', name, path: toPath, id }
+        : {
+            type: 'file',
+            name,
+            path: toPath,
+            id,
+            clientModified: stats.mtime.toISOString(),
+            serverModified: stats.ctime.toISOString(),
+            rev: `rev:${stats.mtime.getTime()}`,
+            size: stats.size,
+            isDownloadable: true,
+            hash: '',
+          };
+    },
+  );
+
+  route.post('/create-folder', async (request): Promise<T.FolderMetadata> => {
+    const { folderPath } = request.body;
+    if (typeof folderPath !== 'string') {
+      throw new ClientError('Missing folderPath in create-folder request.');
+    }
+
+    const resolvedPath = resolve(mountPath, '.' + folderPath);
+    if (!resolvedPath.startsWith(mountPath)) {
+      throw new ClientError(
+        'Invalid path: Access outside of mount not allowed.',
+      );
+    }
+
+    await mkdir(resolvedPath, { recursive: true });
+
+    return {
+      type: 'folder',
+      name: folderPath.split('/').pop() || '',
+      path: folderPath,
+      id: `id:${resolvedPath}`,
+    };
+  });
+
+  route.addBlobRoute('POST', '/compress-folder', async (req, res) => {
+    const { path } = req.body;
+    if (typeof path !== 'string') {
+      res.status(400).json({ error: 'Missing path' });
+      return;
+    }
+
+    const resolvedPath = resolve(mountPath, '.' + path);
+    if (!resolvedPath.startsWith(mountPath)) {
+      res.status(403).json({ error: 'Path outside of mount is not allowed.' });
+      return;
+    }
+
+    try {
+      console.log(`!!! a`);
+      const stats = await fs.stat(resolvedPath);
+      if (!stats.isDirectory()) {
+        res.status(400).json({ error: 'Provided path is not a folder.' });
+        return;
+      }
+
+      const archive = archiver('zip', { zlib: { level: 9 } });
+
+      archive.on('warning', (err) => {
+        console.warn('Archive warning:', err);
+      });
+
+      archive.on('error', (err) => {
+        console.error('Archive error:', err);
+        res.status(500).end();
+      });
+
+      console.log(`!!! b`);
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${path.split('/').pop() || 'archive'}.zip"`,
+      );
+      archive.pipe(res);
+      archive.directory(resolvedPath, false);
+      archive.finalize();
+
+      await finished(res);
+    } catch (err) {
+      console.error('Compression failed:', err);
+      res.status(500).json({ error: 'Failed to compress folder.' });
+    }
   });
 
   return route.router;

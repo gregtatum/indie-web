@@ -132,7 +132,7 @@ export class ApiRoute {
           res.json(result);
         } catch (error) {
           if (error instanceof RouteError) {
-            res.status(error.status).send(error.message);
+            res.type('text/plain').status(error.status).send(error.message);
             console.log(
               `${colors.FgMagenta}[400err ]${colors.Reset} "${error.message}"`,
             );
@@ -142,6 +142,69 @@ export class ApiRoute {
             console.log(`${colors.FgMagenta}[500err ]${colors.Reset}`, path);
             console.error(error);
             res
+              .type('text/plain')
+              .status(500)
+              .send(
+                'Uh oh, looks like the server couldn’t figure out your request.',
+              );
+          }
+        }
+        next();
+      },
+    );
+    return fn;
+  }
+
+  /**
+   * Add a route that doesn't return JSON.
+   */
+  addBlobRoute(
+    method: string,
+    path: string | RegExp,
+    fn: RouteHandler<void>,
+  ): RouteHandler<void> {
+    this.routes.push(path);
+    this.router.all(
+      path,
+      async (
+        req: Express.Request,
+        res: Express.Response,
+        next: Express.NextFunction,
+      ) => {
+        if (req.method !== method) {
+          if (req.method === 'OPTIONS') {
+            // Sometimes the browser will ask if this command is available before
+            // performing. This is the CORS pre-flight check.
+            res.header(
+              'Access-Control-Allow-Methods',
+              'POST, GET, OPTIONS, DELETE',
+            );
+            res.send();
+            return;
+          }
+          next();
+          return;
+        }
+        try {
+          console.log(`!!! before fn`);
+          await fn(req as Express.Request, res as Express.Response);
+          console.log(`!!! after fn`);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`${colors.FgGreen}[200ok  ]${colors.Reset} blog}`);
+          }
+        } catch (error) {
+          if (error instanceof RouteError) {
+            res.type('text/plain').status(error.status).send(error.message);
+            console.log(
+              `${colors.FgMagenta}[400err ]${colors.Reset} "${error.message}"`,
+            );
+          } else {
+            // When there is an internal error, don't surface the error message to the end
+            // user, as it could contain sensitive information.
+            console.log(`${colors.FgMagenta}[500err ]${colors.Reset}`, path);
+            console.error(error);
+            res
+              .type('text/plain')
               .status(500)
               .send(
                 'Uh oh, looks like the server couldn’t figure out your request.',

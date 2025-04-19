@@ -53,12 +53,15 @@ export async function init(): Promise<void> {
 
   const store = createStore();
 
+  validateFileStoreSelection(store);
+
   // Expose the $$ as a global for the webconsole.
   const $$ = {};
   for (const [name, fn] of Object.entries($)) {
     ($$ as any)[name] = () => (fn as any)(store.getState());
   }
 
+  // Expose a bunch of useful features to the window object for use in DevTools.
   Object.assign(window as any, {
     store,
     dispatch: store.dispatch,
@@ -120,4 +123,31 @@ function initServiceWorker() {
       console.log('Service worker registration failed:', error);
     }
   });
+}
+
+/**
+ * Since the file stores come from localStorage, do some extra validation after
+ * the initial state load.
+ */
+function validateFileStoreSelection({ getState, dispatch }: T.Store) {
+  const serverId = $.getServerId(getState());
+  const fileStoreName = $.getCurrentFileStoreName(getState());
+  if (fileStoreName === 'server') {
+    const servers = $.getServers(getState());
+    if (servers.find((server) => server.id === serverId)) {
+      return;
+    }
+    dispatch(A.changeFileStore('browser'));
+    if (serverId) {
+      alert(
+        'An invalid file store server was found, switching to browser storage' +
+          serverId,
+      );
+    }
+    return;
+  }
+  if (serverId) {
+    console.error('A dangling serverId was found.');
+    dispatch(A.changeFileStore(fileStoreName));
+  }
 }

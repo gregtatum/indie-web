@@ -97,6 +97,7 @@ export function serverId(
   action: T.Action,
 ): string | null {
   switch (action.type) {
+    case 'view-list-files':
     case 'change-file-system': {
       const { fileStoreServer } = action;
       if (fileStoreServer) {

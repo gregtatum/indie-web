@@ -241,7 +241,7 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
 export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const fileStore = $.getCurrentFS(getState());
-    const fileStoreName = $.getCurrentFileStoreName(getState());
+    const fileStoreDisplayName = $.getFileStoreDisplayName(getState());
 
     const messageGeneration = dispatch(
       addMessage({
@@ -283,7 +283,7 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
         }),
       );
       console.error(error);
-      throw new Error(`Unable to save the file with ${fileStoreName}.`);
+      throw new Error(`Unable to save the file with ${fileStoreDisplayName}.`);
     }
   };
 }
@@ -295,7 +295,7 @@ export function moveFile(
   return async (dispatch, getState) => {
     toPath = canonicalizePath(toPath);
     const fileStore = $.getCurrentFS(getState());
-    const fileStoreName = $.getCurrentFileStoreName(getState());
+    const fileStoreDisplayName = $.getFileStoreDisplayName(getState());
     const name = getPathFileName(toPath);
 
     dispatch(PlainInternal.moveFileRequested(fromPath));
@@ -340,7 +340,7 @@ export function moveFile(
         }),
       );
       console.error(error);
-      throw new Error(`Unable to save the file with ${fileStoreName}.`);
+      throw new Error(`Unable to save the file with ${fileStoreDisplayName}.`);
     }
   };
 }
@@ -405,11 +405,11 @@ const hasFailureMap = new Map<string, boolean>();
 export function createInitialFiles(): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const fileStore = $.getCurrentFS(getState());
-    const fileStoreName = $.getCurrentFileStoreName(getState());
-    let hasFailure = hasFailureMap.get(fileStoreName);
+    const fsSlug = $.getCurrentFileStoreSlug(getState());
+    let hasFailure = hasFailureMap.get(fsSlug);
     const setFailure = (error: any) => {
       hasFailure = true;
-      hasFailureMap.set(fileStoreName, true);
+      hasFailureMap.set(fsSlug, true);
       console.error(error);
     };
     if (hasFailure) {

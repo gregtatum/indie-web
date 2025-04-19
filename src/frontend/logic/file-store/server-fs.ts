@@ -12,7 +12,7 @@ export class ServerFS extends FileStore {
     this.apiBaseUrl = apiBaseUrl + 'fs-server';
   }
 
-  async fetch<T>(endpoint: string, body: Record<string, any>): Promise<T> {
+  async fetchJSON<T>(endpoint: string, body: Record<string, any>): Promise<T> {
     const response = await fetch(`${this.apiBaseUrl}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -20,6 +20,16 @@ export class ServerFS extends FileStore {
     });
     if (!response.ok) throw new Error(await response.text());
     return response.json();
+  }
+
+  async fetchBlob(endpoint: string, body: Record<string, any>): Promise<Blob> {
+    const response = await fetch(`${this.apiBaseUrl}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(await response.text());
+    return response.blob();
   }
 
   async saveBlob(
@@ -30,11 +40,11 @@ export class ServerFS extends FileStore {
     const path =
       typeof pathOrMetadata === 'string' ? pathOrMetadata : pathOrMetadata.path;
     const base64Contents = await contents.text().then((text) => btoa(text));
-    return this.fetch('/save-blob', { path, contents: base64Contents });
+    return this.fetchJSON('/save-blob', { path, contents: base64Contents });
   }
 
   async loadBlob(path: string): Promise<T.BlobFile> {
-    const { metadata, contents } = await this.fetch<any>('/load-blob', {
+    const { metadata, contents } = await this.fetchJSON<any>('/load-blob', {
       path,
     });
     return {
@@ -44,25 +54,25 @@ export class ServerFS extends FileStore {
   }
 
   async listFiles(path: string): Promise<T.FolderListing> {
-    return this.fetch('/list-files', { path });
+    return this.fetchJSON('/list-files', { path });
   }
 
   async move(
     fromPath: string,
     toPath: string,
   ): Promise<T.FileMetadata | T.FolderMetadata> {
-    return this.fetch('/move', { fromPath, toPath });
+    return this.fetchJSON('/move', { fromPath, toPath });
   }
 
   async createFolder(folderPath: string): Promise<T.FolderMetadata> {
-    return this.fetch('/create-folder', { folderPath });
+    return this.fetchJSON('/create-folder', { folderPath });
   }
 
   async delete(targetPath: string): Promise<void> {
-    await this.fetch('/delete', { targetPath });
+    await this.fetchJSON('/delete', { targetPath });
   }
 
-  compressFolder(_path: string): Promise<Blob> {
-    throw new Error('Not implemented.');
+  async compressFolder(path: string): Promise<Blob> {
+    return this.fetchBlob('/compress-folder', { path });
   }
 }

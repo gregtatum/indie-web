@@ -22,7 +22,7 @@ type AuthState = 'no-auth' | 'await-auth' | 'auth-failed' | 'refreshing';
 export function LinkDropbox(props: { children: any }) {
   const isDropboxInitiallyExpired = $$.getIsDropboxInitiallyExpired();
   const oauth = $$.getDropboxOauth();
-  const fileStoreName = $$.getCurrentFileStoreName();
+  const fsName = $$.getCurrentFileStoreName();
   const view = $$.getView();
 
   const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
@@ -239,7 +239,7 @@ export function LinkDropbox(props: { children: any }) {
       ensureNever(view);
   }
 
-  if (fileStoreName !== 'dropbox') {
+  if (fsName !== 'dropbox') {
     return props.children;
   }
 

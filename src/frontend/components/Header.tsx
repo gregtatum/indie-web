@@ -217,7 +217,7 @@ function SettingsButton() {
 }
 
 function FileStoreSelection() {
-  const name = $$.getCurrentFileStoreName();
+  const fileStoreDisplayName = $$.getFileStoreDisplayName();
   const server = $$.getCurrentServerOrNull();
   const fileStoreServers = $$.getServers();
   const dispatch = Hooks.useDispatch();
@@ -274,7 +274,7 @@ function FileStoreSelection() {
           setOpenEventDetail(event.detail);
         }}
       >
-        {getFileStoreDisplayName(name, server)}
+        {fileStoreDisplayName}
       </button>
       {overlayPortal(
         <Menu
@@ -323,7 +323,7 @@ function Path({
   hideSiteName?: boolean;
 }) {
   const songTitle = $$.getActiveFileSongTitleOrNull();
-  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const breadcrumbs = [];
   let pathGrow = '';
   const parts = path.split('/');
@@ -347,7 +347,7 @@ function Path({
         <span key={pathGrow + '»'}>»</span>,
         <Router.Link
           key={pathGrow}
-          to={`/${fsName}/language-coach${pathGrow}?section=${section}`}
+          to={`/${fsSlug}/language-coach${pathGrow}?section=${section}`}
         >
           {part}
         </Router.Link>,
@@ -357,7 +357,7 @@ function Path({
 
     breadcrumbs.push(
       <span key={pathGrow + '»'}>»</span>,
-      <Router.Link key={pathGrow} to={`/${fsName}/folder${pathGrow}`}>
+      <Router.Link key={pathGrow} to={`/${fsSlug}/folder${pathGrow}`}>
         {part}
       </Router.Link>,
     );
@@ -381,7 +381,7 @@ function Path({
       </div>
       <div className="headerPath headerPathMobile" key={'mobile' + path}>
         <Router.Link
-          to={`/${fsName}/folder${backParts.join('/')}`}
+          to={`/${fsSlug}/folder${backParts.join('/')}`}
           className="headerPathBack"
           aria-label="back"
         ></Router.Link>

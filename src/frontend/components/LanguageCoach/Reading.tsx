@@ -22,7 +22,7 @@ import dedent from 'dedent';
 export function Reading() {
   const coachPath = $$.getLanguageCoachPath();
   const path = $$.getPath();
-  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
 
   if (coachPath === path) {
     return (
@@ -33,7 +33,7 @@ export function Reading() {
     );
   }
 
-  return <ViewReadingFile key={fsName + path} />;
+  return <ViewReadingFile key={fsSlug + path} />;
 }
 
 interface Word {
@@ -55,7 +55,7 @@ interface Query {
 }
 
 function ReadingList() {
-  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const listFilesCache = $$.getListFilesCache();
   const readingPath = pathJoin($$.getLanguageCoachPath(), 'reading');
   const files = listFilesCache.get(readingPath);
@@ -83,7 +83,7 @@ function ReadingList() {
             <File
               file={file}
               hideExtension={true}
-              linkOverride={`${fsName}/language-coach${file.path}?section=reading`}
+              linkOverride={`${fsSlug}/language-coach${file.path}?section=reading`}
             />
           </div>
         );
@@ -95,7 +95,7 @@ function ReadingList() {
 function Add() {
   const dispatch = Hooks.useDispatch();
   const fileStore = $$.getCurrentFS();
-  const fsName = $$.getCurrentFileStoreName();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const path = $$.getLanguageCoachPath();
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -122,7 +122,7 @@ function Add() {
       .then(
         () => {
           dispatch(A.hideEditor(false));
-          navigate(`${fsName}/language-coach${savePath}?section=reading`);
+          navigate(`${fsSlug}/language-coach${savePath}?section=reading`);
         },
         (error) => {
           console.error(error);
