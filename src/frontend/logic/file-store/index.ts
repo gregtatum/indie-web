@@ -1,6 +1,6 @@
 import { T } from 'frontend';
 
-export abstract class FileSystem {
+export abstract class FileStore {
   // Await on this during initialization.
   cachePromise?: Promise<void>;
 
@@ -46,17 +46,17 @@ export abstract class FileSystem {
 
   abstract delete(path: string): Promise<void>;
 
-  cache?: FileSystemCache;
+  cache?: FileStoreCache;
 }
 
-export abstract class FileSystemCache extends FileSystem {
+export abstract class FileStoreCache extends FileStore {
   abstract addFolderListing(
     path: string,
     files: T.FolderListing,
   ): Promise<T.FolderListingRow>;
 }
 
-export abstract class FileSystemError<T = any> {
+export abstract class FileStoreError<T = any> {
   error: T;
   constructor(error: T) {
     this.error = error;

@@ -1,12 +1,12 @@
 import * as idb from 'idb';
 import * as uuid from 'uuid';
-import { FileSystemCache, FileSystemError } from 'frontend/logic/file-system';
+import { FileStoreCache, FileStoreError } from 'frontend/logic/file-store';
 import { type T } from 'frontend';
 import { getPathFileName, getDirName, updatePathRoot } from 'frontend/utils';
 
 export const BROWSER_FILES_DB_NAME = 'browser-files';
 
-export class IDBError extends FileSystemError {
+export class IDBError extends FileStoreError {
   #missing = false;
 
   toString() {
@@ -105,7 +105,7 @@ export async function openIDBFS(name: string): Promise<IDBFS> {
   return idbfs;
 }
 
-export class IDBFS extends FileSystemCache {
+export class IDBFS extends FileStoreCache {
   #db: idb.IDBPDatabase<T.IDBFSSchema>;
   open = true;
   constructor(db: idb.IDBPDatabase<T.IDBFSSchema>) {

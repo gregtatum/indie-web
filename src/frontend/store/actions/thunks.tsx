@@ -14,8 +14,8 @@ import {
 } from 'frontend/utils';
 import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
-import { FileSystemError } from 'frontend/logic/file-system';
-import { IDBError } from 'frontend/logic/file-system/indexeddb-fs';
+import { FileStoreError } from 'frontend/logic/file-store';
+import { IDBError } from 'frontend/logic/file-store/indexeddb-fs';
 
 /**
  * This file contains all of the thunk actions, that contain extra logic,
@@ -123,13 +123,13 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
       // Dropbox doesn't like the root `/`.
       dropboxPath = '';
     }
-    const fileSystem = $.getCurrentFS(getState());
+    const fileStore = $.getCurrentFS(getState());
 
     dispatch(PlainInternal.listFilesRequested(path));
 
-    if (fileSystem.cache) {
+    if (fileStore.cache) {
       try {
-        const offlineListing = await fileSystem.cache.listFiles(path);
+        const offlineListing = await fileStore.cache.listFiles(path);
         if (offlineListing) {
           dispatch(PlainInternal.listFilesReceived(path, offlineListing));
         }
@@ -139,7 +139,7 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
     }
 
     try {
-      const files = await fileSystem.listFiles(dropboxPath);
+      const files = await fileStore.listFiles(dropboxPath);
       dispatch(PlainInternal.listFilesReceived(path, files));
     } catch (response) {
       dispatch(PlainInternal.listFilesError(path, String(response)));
@@ -166,11 +166,11 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
     };
 
     let cachedFile: T.TextFile | undefined;
-    const fileSystem = $.getCurrentFS(getState());
+    const fileStore = $.getCurrentFS(getState());
 
-    if (fileSystem.cache) {
+    if (fileStore.cache) {
       try {
-        cachedFile = await fileSystem.cache.loadText(path);
+        cachedFile = await fileStore.cache.loadText(path);
         handleFile(cachedFile);
       } catch (error) {
         (error as IDBError)?.cacheLog();
@@ -179,7 +179,7 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
 
     // Kick off the request, even if an offline version was found.
     try {
-      const { text, metadata } = await fileSystem.loadText(path);
+      const { text, metadata } = await fileStore.loadText(path);
       // The file blob was left off of this type.
       if (cachedFile?.metadata.hash === metadata.hash) {
         // The files are the same.
@@ -194,7 +194,7 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
       dispatch(
         PlainInternal.downloadFileError(
           path,
-          (error as FileSystemError).toString(),
+          (error as FileStoreError).toString(),
         ),
       );
     }
@@ -219,17 +219,17 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
       }
     };
 
-    const fileSystem = $.getCurrentFS(getState());
-    if (fileSystem.cache) {
+    const fileStore = $.getCurrentFS(getState());
+    if (fileStore.cache) {
       try {
-        handleBlob(await fileSystem.cache.loadBlob(path));
+        handleBlob(await fileStore.cache.loadBlob(path));
       } catch (error) {
         console.error('Error with indexeddb', error);
       }
     }
 
     try {
-      handleBlob(await fileSystem.loadBlob(path));
+      handleBlob(await fileStore.loadBlob(path));
     } catch (error) {
       dispatch(
         PlainInternal.downloadFileError(path, dropboxErrorMessage(error)),
@@ -240,8 +240,8 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
 
 export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    const fileSystem = $.getCurrentFS(getState());
-    const fileSystemName = $.getCurrentFileSystemName(getState());
+    const fileStore = $.getCurrentFS(getState());
+    const fileStoreName = $.getCurrentFileStoreName(getState());
 
     const messageGeneration = dispatch(
       addMessage({
@@ -253,7 +253,7 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
       }),
     );
     try {
-      const metadata = await fileSystem.saveText(path, 'overwrite', text);
+      const metadata = await fileStore.saveText(path, 'overwrite', text);
       dispatch(
         PlainInternal.downloadFileReceived(path, {
           metadata,
@@ -283,7 +283,7 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
         }),
       );
       console.error(error);
-      throw new Error(`Unable to save the file with ${fileSystemName}.`);
+      throw new Error(`Unable to save the file with ${fileStoreName}.`);
     }
   };
 }
@@ -294,8 +294,8 @@ export function moveFile(
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     toPath = canonicalizePath(toPath);
-    const fileSystem = $.getCurrentFS(getState());
-    const fileSystemName = $.getCurrentFileSystemName(getState());
+    const fileStore = $.getCurrentFS(getState());
+    const fileStoreName = $.getCurrentFileStoreName(getState());
     const name = getPathFileName(toPath);
 
     dispatch(PlainInternal.moveFileRequested(fromPath));
@@ -310,7 +310,7 @@ export function moveFile(
     );
 
     try {
-      const metadata = await fileSystem.move(fromPath, toPath);
+      const metadata = await fileStore.move(fromPath, toPath);
 
       dispatch(PlainInternal.moveFileDone(fromPath, metadata));
 
@@ -340,7 +340,7 @@ export function moveFile(
         }),
       );
       console.error(error);
-      throw new Error(`Unable to save the file with ${fileSystemName}.`);
+      throw new Error(`Unable to save the file with ${fileStoreName}.`);
     }
   };
 }
@@ -404,12 +404,12 @@ export function forceExpiration(): Thunk {
 const hasFailureMap = new Map<string, boolean>();
 export function createInitialFiles(): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    const fileSystem = $.getCurrentFS(getState());
-    const fileSystemName = $.getCurrentFileSystemName(getState());
-    let hasFailure = hasFailureMap.get(fileSystemName);
+    const fileStore = $.getCurrentFS(getState());
+    const fileStoreName = $.getCurrentFileStoreName(getState());
+    let hasFailure = hasFailureMap.get(fileStoreName);
     const setFailure = (error: any) => {
       hasFailure = true;
-      hasFailureMap.set(fileSystemName, true);
+      hasFailureMap.set(fileStoreName, true);
       console.error(error);
     };
     if (hasFailure) {
@@ -438,10 +438,10 @@ export function createInitialFiles(): Thunk<Promise<void>> {
 
       // Upload it Dropbox.
       try {
-        await fileSystem.saveText('/' + file, 'add', contents);
-        const files = await fileSystem.listFiles('/');
+        await fileStore.saveText('/' + file, 'add', contents);
+        const files = await fileStore.listFiles('/');
         if (files.length === 0) {
-          setFailure(new Error('Failed to create files in the FileSystem'));
+          setFailure(new Error('Failed to create files in the file store'));
         }
       } catch (error) {
         setFailure(error);
@@ -631,14 +631,14 @@ export function loadFilesIndex(
       );
     }
 
-    const fileSystem = $.getCurrentFS(getState());
+    const fileStore = $.getCurrentFS(getState());
 
     async function attemptRecreateFile(
       message: string,
     ): Promise<FilesIndex | null> {
       if (!isSecondAttempt && confirm(message)) {
         try {
-          await fileSystem.delete(FilesIndex.path);
+          await fileStore.delete(FilesIndex.path);
         } catch (error) {
           dispatchError(
             error,
@@ -655,11 +655,11 @@ export function loadFilesIndex(
 
     let text: string;
     try {
-      const response = await fileSystem.loadText(FilesIndex.path);
+      const response = await fileStore.loadText(FilesIndex.path);
       text = response.text;
     } catch (error: any) {
-      if ((error as FileSystemError)?.isNotFound()) {
-        const filesIndex = new FilesIndex(fileSystem, getState());
+      if ((error as FileStoreError)?.isNotFound()) {
+        const filesIndex = new FilesIndex(fileStore, getState());
         dispatch(PlainInternal.fileIndexReceived(filesIndex));
         return filesIndex;
       }
@@ -693,7 +693,7 @@ export function loadFilesIndex(
       );
     }
     const filesIndex = new FilesIndex(
-      fileSystem,
+      fileStore,
       getState(),
       // For some reason type narrowing `T.IndexJSON | null` to `T.IndexJSON` is
       // not working here.
@@ -715,13 +715,13 @@ export function saveAssetFile(
   contents: Blob,
 ): Thunk<Promise<string | null>> {
   return async (dispatch, getState) => {
-    const fileSystem = $.getCurrentFS(getState());
+    const fileStore = $.getCurrentFS(getState());
     let path = `${folder}/assets/${fileName}`;
 
     // See if there is a root asset folder, as this is the preferred place to put assets.
     const rootFolder = folder.split('/')[1];
     if (rootFolder) {
-      const files = await fileSystem.listFiles('/' + rootFolder);
+      const files = await fileStore.listFiles('/' + rootFolder);
       if (
         files.find((file) => file.name === 'assets' && file.type === 'folder')
       ) {
@@ -739,7 +739,7 @@ export function saveAssetFile(
       }),
     );
     try {
-      const metadata = await fileSystem.saveBlob(path, 'add', contents);
+      const metadata = await fileStore.saveBlob(path, 'add', contents);
 
       dispatch(
         addMessage({
@@ -763,7 +763,7 @@ export function saveAssetFile(
           message: (
             <>
               Unable to save <code>{path}</code>.{' '}
-              {(error as FileSystemError)?.toString()}
+              {(error as FileStoreError)?.toString()}
             </>
           ),
           generation: messageGeneration,
@@ -881,7 +881,7 @@ export function languageCoachSaveTimer(): Thunk {
       window.addEventListener('beforeunload', unloadHandler);
     }
 
-    const fileSystem = $.getCurrentFS(getState());
+    const fileStore = $.getCurrentFS(getState());
     const data = $.getLanguageCoachData(getState());
     const path = $.getLanguageCoachPath(getState());
     const fullPath = pathJoin(path, 'words.json');
@@ -892,7 +892,7 @@ export function languageCoachSaveTimer(): Thunk {
         await savePromise.catch(() => {});
 
         // Kick off the save.
-        savePromise = fileSystem.saveText(
+        savePromise = fileStore.saveText(
           fullPath,
           'overwrite',
           JSON.stringify(data),
@@ -948,7 +948,7 @@ export function uploadFilesWithMessages(
   files: FileList,
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    const fileSystem = $.getCurrentFS(getState());
+    const fileStore = $.getCurrentFS(getState());
 
     for (const file of files) {
       const path = pathJoin(folderPath, file.name);
@@ -963,7 +963,7 @@ export function uploadFilesWithMessages(
       );
 
       try {
-        await fileSystem.saveBlob(path, 'add', file);
+        await fileStore.saveBlob(path, 'add', file);
         dispatch(
           addMessage({
             message: (

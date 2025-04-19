@@ -6,7 +6,7 @@ import {
   isChordProFilePath,
   typedObjectEntries,
 } from 'frontend/utils';
-import { FileSystem } from './file-system';
+import { FileStore } from './file-store';
 
 export const INDEX_JSON_VERSION = 1;
 
@@ -23,14 +23,14 @@ export class FilesIndex {
 
   data: T.IndexJSON;
 
-  #fileSystem: FileSystem;
+  #fileStore: FileStore;
   #saveTimeout: ReturnType<typeof setTimeout> | null = null;
   #saveGeneration = 0;
   #pendingSaves: Record<T.FileMetadata['id'], T.IndexedFile> = {};
   #pendingSaveRequest: Promise<void> | null = null;
 
-  constructor(fileSystem: FileSystem, state: T.State, data?: T.IndexJSON) {
-    this.#fileSystem = fileSystem;
+  constructor(fileStore: FileStore, state: T.State, data?: T.IndexJSON) {
+    this.#fileStore = fileStore;
     if (data) {
       this.data = data;
     } else {
@@ -151,7 +151,7 @@ export class FilesIndex {
   }
 
   async #saveImpl() {
-    await this.#fileSystem.saveText(
+    await this.#fileStore.saveText(
       FilesIndex.path,
       'overwrite',
       JSON.stringify(this.data, null, '\t'),
@@ -216,14 +216,14 @@ export function tryUpgradeIndexJSON(json: any): T.IndexJSON | null {
  */
 export function useFilesIndex(): void {
   const dispatch = Hooks.useDispatch();
-  const fileSystem = $$.getCurrentFSOrNull();
+  const fileStore = $$.getCurrentFSOrNull();
   React.useEffect(() => {
-    if (fileSystem) {
+    if (fileStore) {
       // TODO - This can still respond with a 401 not authorized.
       // Only load the files index when Dropbox is actually authorized.
       dispatch(A.loadFilesIndex()).catch((error) => console.error(error));
     }
-  }, [fileSystem]);
+  }, [fileStore]);
 }
 
 function determineLastReadRev(

@@ -4,7 +4,7 @@ import { $$, A, Hooks } from 'frontend';
 import { assertType, isAppSettingScrollTop } from 'frontend/utils';
 import {
   getBrowserName,
-  getFileSystemDisplayName,
+  getFileStoreDisplayName,
 } from 'frontend/logic/app-logic';
 import './Header.css';
 import { Menu, MenuButton } from './Menus';
@@ -131,7 +131,7 @@ export function Header() {
       assertType<'list-files' | null>(view);
       title = (
         <div className="headerTitle" key={key}>
-          <FileSystemSelection />
+          <FileStoreSelection />
         </div>
       );
       break;
@@ -216,8 +216,8 @@ function SettingsButton() {
   );
 }
 
-function FileSystemSelection() {
-  const name = $$.getCurrentFileSystemName();
+function FileStoreSelection() {
+  const name = $$.getCurrentFileStoreName();
   const fileStoreServers = $$.getFileStoreServers();
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
@@ -230,7 +230,7 @@ function FileSystemSelection() {
         key: 'browser',
         onClick: () => {
           navigate('');
-          dispatch(A.changeFileSystem('browser'));
+          dispatch(A.changeFileStore('browser'));
         },
         children: getBrowserName(),
       },
@@ -238,7 +238,7 @@ function FileSystemSelection() {
         key: 'dropbox',
         onClick: () => {
           navigate('');
-          dispatch(A.changeFileSystem('dropbox'));
+          dispatch(A.changeFileStore('dropbox'));
         },
         children: 'Dropbox',
       },
@@ -246,7 +246,7 @@ function FileSystemSelection() {
         key: `fs-server-${server.url}-${server.name}`,
         onClick: () => {
           navigate('');
-          dispatch(A.changeFileSystem('file-store-server', server));
+          dispatch(A.changeFileStore('file-store-server', server));
         },
         children: name,
       })),
@@ -265,7 +265,7 @@ function FileSystemSelection() {
     <>
       <button
         type="button"
-        className="headerFileSystemSelection"
+        className="headerFileStoreSelection"
         ref={button}
         title="Change the file system source"
         onClick={(event) => {
@@ -273,7 +273,7 @@ function FileSystemSelection() {
           setOpenEventDetail(event.detail);
         }}
       >
-        {getFileSystemDisplayName(name)}
+        {getFileStoreDisplayName(name)}
       </button>
       {overlayPortal(
         <Menu
@@ -322,7 +322,7 @@ function Path({
   hideSiteName?: boolean;
 }) {
   const songTitle = $$.getActiveFileSongTitleOrNull();
-  const fsName = $$.getCurrentFileSystemName();
+  const fsName = $$.getCurrentFileStoreName();
   const breadcrumbs = [];
   let pathGrow = '';
   const parts = path.split('/');
@@ -368,7 +368,7 @@ function Path({
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
         <SiteName isOpen={!hideSiteName && !(songTitle ?? fileName)} />
-        <FileSystemSelection key="fileSystem" />
+        <FileStoreSelection key="fileStore" />
         <div className="headerPathBreadcrumbs">
           {breadcrumbs}
           <span>»</span>

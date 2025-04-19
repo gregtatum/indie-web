@@ -5,7 +5,7 @@ import {
   createFolderMetadata,
 } from './utils/fixtures';
 import { PlainInternal } from 'frontend/store/actions';
-import { IDBFS, openIDBFS } from 'frontend/logic/file-system/indexeddb-fs';
+import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 
 describe('offline db', () => {
   // Ignore "Dropbox wasn't available" errors.
@@ -13,7 +13,7 @@ describe('offline db', () => {
     const consoleError = console.error.bind(console);
     jest.spyOn(console, 'error').mockImplementation((message) => {
       if (
-        String(message) !== 'Error: The current FileSystem is not available.'
+        String(message) !== 'Error: The current file store is not available.'
       ) {
         consoleError(message);
       }

@@ -171,7 +171,7 @@ interface RenderedMarkdownProps {
 }
 
 function RenderedMarkdown({ view }: RenderedMarkdownProps) {
-  const fileSystem = $$.getCurrentFS();
+  const fileStore = $$.getCurrentFS();
   const hideEditor = $$.getHideEditor();
   const htmlText = $$.getActiveFileMarkdown();
   const containerRef = React.useRef(null);
@@ -218,7 +218,7 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
       // The img src will need to be replaced with the downloaded file.
       img.removeAttribute('frontend');
 
-      downloadImage(fileSystem, folderPath, src)
+      downloadImage(fileStore, folderPath, src)
         .then((objectURL) => {
           img.src = objectURL;
         })
@@ -242,7 +242,7 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
       }
       div.append(node);
     }
-  }, [htmlText, view, displayPath, fileSystem]);
+  }, [htmlText, view, displayPath]);
 
   return (
     <div

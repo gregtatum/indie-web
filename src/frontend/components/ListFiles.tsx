@@ -9,7 +9,7 @@ import {
   isChordProExtension,
 } from 'frontend/utils';
 import { overlayPortal, useRetainScroll } from '../hooks';
-import { getFileSystemDisplayName } from 'frontend/logic/app-logic';
+import { getFileStoreDisplayName } from 'frontend/logic/app-logic';
 
 import './ListFiles.css';
 import { Menu } from './Menus';
@@ -23,7 +23,7 @@ export function ListFiles() {
   const files = $$.getSearchFilteredFiles();
   const error = $$.getListFilesErrors().get(path);
   const parsedSearch = $$.getParsedSearch();
-  const fileSystemName = $$.getCurrentFileSystemName();
+  const fileStoreName = $$.getCurrentFileStoreName();
   const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
 
   const parts = path.split('/');
@@ -67,7 +67,7 @@ export function ListFiles() {
       return (
         <div className="appViewError">
           <p>
-            Unable to list the {getFileSystemDisplayName(fileSystemName)} files.
+            Unable to list the {getFileStoreDisplayName(fileStoreName)} files.
           </p>
           {error}
         </div>
@@ -79,7 +79,7 @@ export function ListFiles() {
 
   let parent = null;
   if (path !== '/') {
-    const url = backPath === '/' ? '/' : `${fileSystemName}/folder${backPath}`;
+    const url = backPath === '/' ? '/' : `${fileStoreName}/folder${backPath}`;
 
     parent = (
       <Router.Link
@@ -131,7 +131,7 @@ interface FileProps {
 
 export function File(props: FileProps) {
   const renameFile = $$.getRenameFile();
-  const fsName = $$.getCurrentFileSystemName();
+  const fsName = $$.getCurrentFileStoreName();
   const divRef = React.useRef<null | HTMLDivElement>(null);
   const { name, path, type } = props.file;
   const isFolder = type === 'folder';

@@ -112,7 +112,7 @@
   left: 9px;
 }
 
-.headerFileSystemSelection {
+.headerFileStoreSelection {
   ---text-color: #004195;
   border: 0;
   background: transparent;
@@ -127,7 +127,7 @@
 }
 
 /* The down arrow */
-.headerFileSystemSelection::after {
+.headerFileStoreSelection::after {
   content: "";
   border: solid var(---text-color);
   border-width: 0 2px 2px 0;
@@ -139,16 +139,16 @@
   right: -0.3em;
 }
 
-.headerFileSystemSelection:hover {
+.headerFileStoreSelection:hover {
   outline: 2px solid #0040ff88;
   background: #0040ff11;
 }
 
-.headerFileSystemSelection:active {
+.headerFileStoreSelection:active {
   outline: 2px solid #0040ff;
 }
 
-.headerFileSystemSelection:focus {
+.headerFileStoreSelection:focus {
   outline: 2px solid #0040ffaa;
 }
 

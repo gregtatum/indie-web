@@ -8,7 +8,7 @@ import { A } from 'frontend';
 describe('LinkDropbox', () => {
   it('can render', async () => {
     const store = createStore();
-    store.dispatch(A.changeFileSystem('dropbox'));
+    store.dispatch(A.changeFileStore('dropbox'));
     const { container } = render(
       <Provider store={store as any}>
         <App />

@@ -43,7 +43,7 @@ describe('App', () => {
   }
   function setup(options?: SetupOptions) {
     const store = createStore();
-    store.dispatch(A.changeFileSystem('dropbox'));
+    store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
     const listFiles = mockDropboxListFolder([
       { type: 'folder', path: '/My Cool Band' },

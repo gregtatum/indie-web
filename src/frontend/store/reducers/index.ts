@@ -7,8 +7,8 @@ import {
   updatePathRoot,
 } from 'frontend/utils';
 import { FilesIndex } from 'frontend/logic/files-index';
-import { IDBFS } from 'frontend/logic/file-system/indexeddb-fs';
-import { toFileSystemName } from 'frontend/logic/app-logic';
+import { IDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import { toFileStoreName } from 'frontend/logic/app-logic';
 import { languageCoachReducer } from './language-coach';
 
 function getDropboxOauth(): T.DropboxOauth | null {
@@ -525,22 +525,22 @@ function shouldHideHeader(state: boolean = false, action: T.Action): boolean {
  */
 function getSavedFSName() {
   return (
-    toFileSystemName(window.localStorage.getItem('fileSystemName')) ?? 'browser'
+    toFileStoreName(window.localStorage.getItem('fileStoreName')) ?? 'browser'
   );
 }
 
-function currentFileSystemName(
-  state: T.FileSystemName = getSavedFSName(),
+function currentFileStoreName(
+  state: T.FileStoreName = getSavedFSName(),
   action: T.Action,
-): T.FileSystemName {
+): T.FileStoreName {
   switch (action.type) {
     case 'change-file-system': {
-      const { fileSystemName } = action;
-      window.localStorage.setItem('fileSystemName', fileSystemName);
-      return fileSystemName;
+      const { fileStoreName } = action;
+      window.localStorage.setItem('fileStoreName', fileStoreName);
+      return fileStoreName;
     }
     case 'view-list-files':
-      return action.fileSystemName;
+      return action.fileStoreName;
     default:
       return state;
   }
@@ -639,7 +639,7 @@ function openAIApiKey(
 }
 
 export const reducers = combineReducers({
-  currentFileSystemName,
+  currentFileStoreName,
   downloadBlobCache,
   downloadFileCache,
   downloadFileErrors,

@@ -11,20 +11,20 @@ import './index.css';
 export function LanguageCoach() {
   const lcPath = $$.getLanguageCoachPath();
   const dataOrNull = $$.getLanguageCoachDataOrNull();
-  const fileSystem = $$.getCurrentFS();
-  const fsName = $$.getCurrentFileSystemName();
+  const fileStore = $$.getCurrentFS();
+  const fsName = $$.getCurrentFileStoreName();
   const dispatch = Hooks.useDispatch();
 
   React.useEffect(() => {
     if (!dataOrNull) {
       let cachedHash = '';
-      let fileSystemTextReceived = false;
+      let fileStoreTextReceived = false;
 
       // Attempt to pull it from the cache quickly.
-      fileSystem.cache
+      fileStore.cache
         ?.loadText(pathJoin(lcPath, 'words.json'))
         .then((text) => {
-          if (fileSystemTextReceived) {
+          if (fileStoreTextReceived) {
             // The cache lost the race.
             return;
           }
@@ -36,13 +36,13 @@ export function LanguageCoach() {
         .catch(console.error);
 
       // Kick off the potentially slower request that can go over the network.
-      fileSystem.loadText(pathJoin(lcPath, 'words.json')).then(
+      fileStore.loadText(pathJoin(lcPath, 'words.json')).then(
         (text) => {
           try {
             if (cachedHash === text.metadata.hash) {
               return;
             }
-            fileSystemTextReceived = true;
+            fileStoreTextReceived = true;
             const data = JSON.parse(text.text);
             dispatch(A.loadLanguageData(data));
           } catch (error) {
@@ -110,7 +110,7 @@ function DataSync(props: {
   const unloadMessageGeneration = React.useRef<null | number>(null);
   const firstLoad = React.useRef<boolean>(true);
 
-  const fileSystem = $$.getCurrentFS();
+  const fileStore = $$.getCurrentFS();
   const fullPath = pathJoin($$.getLanguageCoachPath(), 'words.json');
 
   const { language, learnedStems, ignoredStems } = data;
@@ -118,7 +118,7 @@ function DataSync(props: {
     language,
     learnedStems,
     ignoredStems,
-    fileSystem,
+    fileStore,
     fullPath,
   ];
 
@@ -160,7 +160,7 @@ function DataSync(props: {
         };
 
         // Kick off the save.
-        savePromise.current = fileSystem.saveText(
+        savePromise.current = fileStore.saveText(
           fullPath,
           'overwrite',
           JSON.stringify(serializedData, null, 2),

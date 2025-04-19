@@ -22,7 +22,7 @@ import dedent from 'dedent';
 export function Reading() {
   const coachPath = $$.getLanguageCoachPath();
   const path = $$.getPath();
-  const fsName = $$.getCurrentFileSystemName();
+  const fsName = $$.getCurrentFileStoreName();
 
   if (coachPath === path) {
     return (
@@ -55,7 +55,7 @@ interface Query {
 }
 
 function ReadingList() {
-  const fsName = $$.getCurrentFileSystemName();
+  const fsName = $$.getCurrentFileStoreName();
   const listFilesCache = $$.getListFilesCache();
   const readingPath = pathJoin($$.getLanguageCoachPath(), 'reading');
   const files = listFilesCache.get(readingPath);
@@ -94,8 +94,8 @@ function ReadingList() {
 
 function Add() {
   const dispatch = Hooks.useDispatch();
-  const fileSystem = $$.getCurrentFS();
-  const fsName = $$.getCurrentFileSystemName();
+  const fileStore = $$.getCurrentFS();
+  const fsName = $$.getCurrentFileStoreName();
   const path = $$.getLanguageCoachPath();
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -116,7 +116,7 @@ function Add() {
     const readingPath = pathJoin(path, 'reading');
     const savePath = pathJoin(readingPath, `${title}.txt`);
 
-    fileSystem
+    fileStore
       .saveText(savePath, 'add', '')
       .then(() => dispatch(A.listFiles(readingPath)))
       .then(

@@ -1,9 +1,9 @@
 import { T } from 'frontend';
-import { IDB_CACHE_NAME } from 'frontend/logic/file-system/dropbox-fs';
+import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import {
   BROWSER_FILES_DB_NAME,
   IDBFS,
-} from 'frontend/logic/file-system/indexeddb-fs';
+} from 'frontend/logic/file-store/indexeddb-fs';
 import { SongKey } from 'frontend/logic/parse-chords';
 
 export function removeDropboxAccessToken() {
@@ -79,8 +79,8 @@ export function modifyActiveFile(
   };
 }
 
-export function viewListFiles(fileSystemName: T.FileSystemName, path: string) {
-  return { type: 'view-list-files' as const, fileSystemName, path };
+export function viewListFiles(fileStoreName: T.FileStoreName, path: string) {
+  return { type: 'view-list-files' as const, fileStoreName, path };
 }
 
 export function viewLanguageCoach(
@@ -187,13 +187,13 @@ export function removeKeySettings(path: string) {
   return { type: 'remove-key-settings' as const, path };
 }
 
-export function changeFileSystem(
-  fileSystemName: T.FileSystemName,
+export function changeFileStore(
+  fileStoreName: T.FileStoreName,
   fileStoreServer?: T.FileStoreServer,
 ) {
   return {
     type: 'change-file-system' as const,
-    fileSystemName,
+    fileStoreName,
     fileStoreServer,
   };
 }

@@ -1,6 +1,6 @@
 import { pathJoin } from 'frontend/utils';
-import { FileSystem } from 'frontend/logic/file-system';
-import { IDBError } from './file-system/indexeddb-fs';
+import { FileStore } from 'frontend/logic/file-store';
+import { IDBError } from './file-store/indexeddb-fs';
 
 export const imageCache: Record<string, string> = Object.create(null);
 
@@ -8,7 +8,7 @@ export const imageCache: Record<string, string> = Object.create(null);
  * Downloads an image from Dropbox and returns the objectURL.
  */
 export async function downloadImage(
-  fileSystem: FileSystem,
+  fileStore: FileStore,
   folderPath: string,
   unresolvedSrc: string,
 ): Promise<string> {
@@ -25,9 +25,9 @@ export async function downloadImage(
   }
 
   try {
-    if (fileSystem.cache) {
+    if (fileStore.cache) {
       try {
-        const file = await fileSystem.cache.loadBlob(src);
+        const file = await fileStore.cache.loadBlob(src);
         const objectURL = (imageCache[src] = URL.createObjectURL(file.blob));
         return objectURL;
       } catch (error) {
@@ -35,7 +35,7 @@ export async function downloadImage(
       }
     }
 
-    const { blob } = await fileSystem.loadBlob(src);
+    const { blob } = await fileStore.loadBlob(src);
     const objectURL = (imageCache[src] = URL.createObjectURL(blob));
     return objectURL;
   } catch (error) {

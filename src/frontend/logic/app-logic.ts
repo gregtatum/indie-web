@@ -20,8 +20,8 @@ export function getBrowserName() {
   return browserName;
 }
 
-export function getFileSystemDisplayName(fileSystem: T.FileSystemName): string {
-  switch (fileSystem) {
+export function getFileStoreDisplayName(fileStore: T.FileStoreName): string {
+  switch (fileStore) {
     case 'dropbox':
       return 'Dropbox';
     case 'browser':
@@ -29,13 +29,13 @@ export function getFileSystemDisplayName(fileSystem: T.FileSystemName): string {
     case 'file-store-server':
       throw new Error('The file store server should use the name property.');
     default:
-      throw new UnhandledCaseError(fileSystem, 'FileSystemName');
+      throw new UnhandledCaseError(fileStore, 'FileStoreName');
   }
 }
 
-export function toFileSystemName(text: unknown): T.FileSystemName | null {
+export function toFileStoreName(text: unknown): T.FileStoreName | null {
   // Type trickery to ensure we handle all of the cases.
-  const name = text as T.FileSystemName;
+  const name = text as T.FileStoreName;
   switch (name) {
     case 'dropbox':
       return 'dropbox';

@@ -1,11 +1,11 @@
 import { Dropbox, files } from 'dropbox';
-import { FileSystemError, FileSystem } from 'frontend/logic/file-system';
+import { FileStoreError, FileStore } from 'frontend/logic/file-store';
 import { T } from 'frontend';
 import { openIDBFS } from './indexeddb-fs';
 
 export const IDB_CACHE_NAME = 'dropbox-fs-cache';
 
-export class DropboxError extends FileSystemError {
+export class DropboxError extends FileStoreError {
   toString() {
     if (this.error?.status >= 500 && this.error?.status < 600) {
       return 'Dropbox seems to be down at the moment. See https://status.dropbox.com/';
@@ -43,7 +43,7 @@ function toPath(pathOrMetadata: string | T.FileMetadata) {
     : pathOrMetadata.path;
 }
 
-export class DropboxFS extends FileSystem {
+export class DropboxFS extends FileStore {
   #dropbox: Dropbox;
   cachePromise?: Promise<void>;
 

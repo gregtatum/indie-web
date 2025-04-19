@@ -16,22 +16,22 @@ import { ensureNever, UnhandledCaseError } from 'frontend/utils';
 import { Settings, Privacy } from './Page';
 import { useFilesIndex } from 'frontend/logic/files-index';
 
-import { toFileSystemName } from 'frontend/logic/app-logic';
+import { toFileStoreName } from 'frontend/logic/app-logic';
 import { LanguageCoach } from './LanguageCoach';
 import { FileStorage } from './FileStorage';
 
 import './App.css';
 
 function ListFilesRouter() {
-  const currentFileSystemName = $$.getCurrentFileSystemName();
+  const currentFileStoreName = $$.getCurrentFileStoreName();
   const params = Router.useParams();
   const path = '/' + (params['*'] ?? '');
   const { fs } = params;
   const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
-    const fileSystemName = toFileSystemName(fs) ?? currentFileSystemName;
-    dispatch(A.viewListFiles(fileSystemName, path));
-  }, [fs, path, currentFileSystemName]);
+    const fileStoreName = toFileStoreName(fs) ?? currentFileStoreName;
+    dispatch(A.viewListFiles(fileStoreName, path));
+  }, [fs, path, currentFileStoreName]);
   return null;
 }
 

@@ -39,7 +39,7 @@ exports[`LinkDropbox can render 1`] = `
         class="headerTitle"
       >
         <button
-          class="headerFileSystemSelection"
+          class="headerFileStoreSelection"
           title="Change the file system source"
           type="button"
         >

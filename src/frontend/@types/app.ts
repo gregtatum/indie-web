@@ -144,7 +144,7 @@ export interface ClickedSongKeyMenu {
   openedByKeyboard: boolean;
 }
 
-export interface ClickedFileSystemMenu {
+export interface ClickedFileStoreMenu {
   element: HTMLElement;
   openedByKeyboard: boolean;
 }
@@ -224,7 +224,7 @@ export type SongKeySettings =
   | { type: 'capo'; capo: number }
   | { type: 'transpose'; songKey: SongKey };
 
-export type FileSystemName = 'dropbox' | 'browser' | 'file-store-server';
+export type FileStoreName = 'dropbox' | 'browser' | 'file-store-server';
 
 export interface LanguageDataV1 {
   description: string;

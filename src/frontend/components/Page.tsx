@@ -3,7 +3,7 @@ import * as Router from 'react-router-dom';
 import { getEnv } from 'frontend/utils';
 import { UnlinkDropbox } from './LinkDropbox';
 import { Hooks, A, $$ } from 'frontend';
-import { getFileSystemDisplayName } from 'frontend/logic/app-logic';
+import { getFileStoreDisplayName } from 'frontend/logic/app-logic';
 import './Page.css';
 
 export function Settings() {
@@ -36,7 +36,7 @@ function DeleteBrowserFiles() {
 
   return (
     <>
-      <h2>Delete {getFileSystemDisplayName('browser')}</h2>
+      <h2>Delete {getFileStoreDisplayName('browser')}</h2>
       {idbfs ? (
         <>
           <p>

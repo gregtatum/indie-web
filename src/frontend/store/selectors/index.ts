@@ -16,8 +16,8 @@ import {
 import type * as PDFJS from 'pdfjs-dist';
 import { parseSearchString } from 'frontend/logic/search';
 import { marked } from 'marked';
-import { DropboxFS } from 'frontend/logic/file-system/dropbox-fs';
-import { FileSystem } from 'frontend/logic/file-system';
+import { DropboxFS } from 'frontend/logic/file-store/dropbox-fs';
+import { FileStore } from 'frontend/logic/file-store';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -84,8 +84,8 @@ export function shouldHideHeader(state: State) {
   return state.shouldHideHeader;
 }
 
-export function getCurrentFileSystemName(state: State) {
-  return state.currentFileSystemName;
+export function getCurrentFileStoreName(state: State) {
+  return state.currentFileStoreName;
 }
 
 export function getRenameFile(state: State) {
@@ -181,10 +181,10 @@ export const getIsDropboxInitiallyExpired = createSelector(
 );
 
 export const getCurrentFSOrNull = createSelector(
-  getCurrentFileSystemName,
+  getCurrentFileStoreName,
   getDropboxFSOrNull,
   getIDBFSOrNull,
-  (fsName, dropbox, idbfs): FileSystem | null => {
+  (fsName, dropbox, idbfs): FileStore | null => {
     switch (fsName) {
       case 'dropbox': {
         return dropbox;
@@ -193,14 +193,14 @@ export const getCurrentFSOrNull = createSelector(
         return idbfs;
       }
       default:
-        throw new UnhandledCaseError(fsName, 'FileSystemName');
+        throw new UnhandledCaseError(fsName, 'FileStoreName');
     }
   },
 );
 
 export const getCurrentFS = dangerousSelector(
   getCurrentFSOrNull,
-  'The current FileSystem is not available.',
+  'The current file store is not available.',
 );
 
 export const getActiveFileOrNull = createSelector(
@@ -465,7 +465,7 @@ type NextPrevSong = Partial<{
 
 export const getNextPrevSong = createSelector(
   getPath,
-  getCurrentFileSystemName,
+  getCurrentFileStoreName,
   getListFilesCache,
   (path, fsName, listFilesCache): NextPrevSong => {
     const results: NextPrevSong = {};

@@ -3,7 +3,7 @@ import * as Router from 'react-router-dom';
 import { A, T, $, $$ } from 'frontend';
 import { ensureExists, pathJoin, UnhandledCaseError } from 'frontend/utils';
 import { overlayPortal, useStore } from '../hooks';
-import { FileSystem, FileSystemError } from 'frontend/logic/file-system';
+import { FileStore, FileStoreError } from 'frontend/logic/file-store';
 
 import { Menu } from './Menus';
 import './AddFileMenu.css';
@@ -47,8 +47,8 @@ export function AddFileMenu(props: AddFileMenuProps) {
   const [languageCode, setLanguageCode] = React.useState<string>('es');
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
-  const fileSystem = $$.getCurrentFS();
-  const fsName = $$.getCurrentFileSystemName();
+  const fileStore = $$.getCurrentFS();
+  const fsName = $$.getCurrentFileStoreName();
   const { dispatch, getState } = useStore();
   const input = React.useRef<HTMLInputElement | null>(null);
   const navigate = Router.useNavigate();
@@ -90,7 +90,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
     switch (fileDetails.type) {
       case 'text': {
         const { getDefaultContents, slug } = fileDetails;
-        fileSystem.saveText(path, 'add', getDefaultContents(fileName)).then(
+        fileStore.saveText(path, 'add', getDefaultContents(fileName)).then(
           (fileMetadata) => {
             // The directory listing is now stale, fetch it again.
             void dispatch(A.listFiles(props.path));
@@ -99,7 +99,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
             }
             navigate(pathJoin(fsName, slug, fileMetadata.path));
           },
-          (error: FileSystemError) => {
+          (error: FileStoreError) => {
             let err = error.toString();
             if (error.status() === 409) {
               err = 'That file already exists, please choose a different name.';
@@ -114,7 +114,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
         break;
       }
       case 'folder': {
-        fileSystem.createFolder(path).then(
+        fileStore.createFolder(path).then(
           (folderMetadata) => {
             // The directory listing is now stale, fetch it again.
             void dispatch(A.listFiles(props.path));
@@ -131,7 +131,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
         break;
       }
       case 'language-coach': {
-        createLanguageCoach(path, fileSystem, languageCode)
+        createLanguageCoach(path, fileStore, languageCode)
           .then((normalizedPath) => {
             void dispatch(A.listFiles(props.path));
             navigate(pathJoin(fsName, 'language-coach', normalizedPath));
@@ -335,13 +335,13 @@ function getSubmitButtonValue(fileDetails: FileDetails): string {
 
 async function createLanguageCoach(
   path: string,
-  fileSystem: FileSystem,
+  fileStore: FileStore,
   languageCode: string,
 ): Promise<string> {
   if (!path.endsWith('.coach')) {
     throw new Error('The Language Coach must end in .coach');
   }
-  const folderMetadata = await fileSystem.createFolder(path);
+  const folderMetadata = await fileStore.createFolder(path);
   const normalizedPath = folderMetadata.path;
   const data: T.LanguageDataV1 = {
     description: 'The data store for the language coach',
@@ -351,12 +351,12 @@ async function createLanguageCoach(
     learnedStems: [],
     ignoredStems: [],
   };
-  await fileSystem.saveText(
+  await fileStore.saveText(
     pathJoin(normalizedPath, 'words.json'),
     'overwrite',
     JSON.stringify(data),
   );
-  await fileSystem.createFolder(pathJoin(normalizedPath, 'reading'));
+  await fileStore.createFolder(pathJoin(normalizedPath, 'reading'));
 
   return normalizedPath;
 }

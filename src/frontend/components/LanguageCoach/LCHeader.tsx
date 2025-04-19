@@ -7,7 +7,7 @@ import './LCHeader.css';
 export function LCHeader() {
   const view = $$.getLanguageCoachSection();
   const learnedWords = $$.getLearnedStems();
-  const fsName = $$.getCurrentFileSystemName();
+  const fsName = $$.getCurrentFileStoreName();
   const coachPath = $$.getLanguageCoachPath();
   const lastReadingPath = $$.getLastReadingPath();
   const pathPrefix = `${fsName}/language-coach${coachPath}`;

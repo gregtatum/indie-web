@@ -41,7 +41,7 @@ describe('<ViewMarkdown>', () => {
 
   function setup() {
     const store = createStore();
-    store.dispatch(A.changeFileSystem('dropbox'));
+    store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
     const listFiles = mockDropboxListFolder([
       { type: 'folder', path: '/My Cool Notes' },

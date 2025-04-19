@@ -11,7 +11,7 @@ import {
   setScrollTop,
 } from 'frontend/utils';
 import { T, $, A } from 'frontend';
-import { FileSystemError } from 'frontend/logic/file-system';
+import { FileStoreError } from 'frontend/logic/file-store';
 
 export function useStore(): T.Store {
   return Redux.useStore() as T.Store;
@@ -162,7 +162,7 @@ export function useMedia(
   mediaRef: AudioRef | VideoRef,
   getEmptyMediaUrl: () => string,
 ) {
-  const fileSystem = Redux.useSelector($.getCurrentFS);
+  const fileStore = Redux.useSelector($.getCurrentFS);
   const [is404, setIs404] = React.useState<boolean>(false);
   const [src, setSrc] = React.useState<string>(getEmptyMediaUrl());
   const srcRef = React.useRef(src);
@@ -189,7 +189,7 @@ export function useMedia(
     // Download the file from Dropbox.
     void (async () => {
       try {
-        let { blob } = await fileSystem.loadBlob(path);
+        let { blob } = await fileStore.loadBlob(path);
         if (!mediaRef.current) {
           return;
         }
@@ -218,7 +218,7 @@ export function useMedia(
         URL.revokeObjectURL(url);
       }
     };
-  }, [fileSystem, path, isPlayRequested]);
+  }, [fileStore, path, isPlayRequested]);
 
   function play(
     event: React.SyntheticEvent<HTMLAudioElement | HTMLVideoElement>,
@@ -240,7 +240,7 @@ export function useAudio(
   line: { type: 'audio'; lineIndex: number; src: string; mimetype: string },
 ) {
   const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
-  const fileSystem = Redux.useSelector($.getCurrentFS);
+  const fileStore = Redux.useSelector($.getCurrentFS);
   const [is404, setIs404] = React.useState<boolean>(false);
   const [duration, setDuration] = React.useState<string>('0:00');
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -313,7 +313,7 @@ export function useAudio(
     // Download the file from Dropbox.
     void (async () => {
       try {
-        let { blob } = await fileSystem.loadBlob(path);
+        let { blob } = await fileStore.loadBlob(path);
 
         if (blob.type === 'application/octet-stream') {
           // The mimetype was not properly sent.
@@ -334,7 +334,7 @@ export function useAudio(
       } catch (error) {
         console.error(
           'Media load error:',
-          (error as FileSystemError).toString(),
+          (error as FileStoreError).toString(),
         );
         setIs404(true);
       }

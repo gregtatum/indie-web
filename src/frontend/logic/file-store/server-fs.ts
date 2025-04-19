@@ -1,6 +1,7 @@
 import { type T } from 'frontend';
+import { FileStore } from 'frontend/logic/file-store';
 
-export class ServerFS extends FileSystem {
+export class ServerFS extends FileStore {
   apiBaseUrl: string;
 
   constructor(apiBaseUrl: string) {
@@ -56,5 +57,9 @@ export class ServerFS extends FileSystem {
 
   async delete(targetPath: string): Promise<void> {
     await this.fetch('/delete', { targetPath });
+  }
+
+  compressFolder(_path: string): Promise<Blob> {
+    throw new Error('Not implemented.');
   }
 }

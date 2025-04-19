@@ -3,8 +3,8 @@ import { type files } from 'dropbox';
 import { ensureExists, UnhandledCaseError } from '../../utils';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { createStore } from 'frontend/store/create-store';
-import { fixupMetadata } from 'frontend/logic/file-system/dropbox-fs';
-import { openIDBFS } from 'frontend/logic/file-system/indexeddb-fs';
+import { fixupMetadata } from 'frontend/logic/file-store/dropbox-fs';
+import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 
 export function createFileMetadata(path: string, id?: string): T.FileMetadata {
   const parts = path.split('/');

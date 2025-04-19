@@ -11,7 +11,7 @@ import * as $ from 'frontend/store/selectors/index';
 import {
   BROWSER_FILES_DB_NAME,
   openIDBFS,
-} from './logic/file-system/indexeddb-fs';
+} from './logic/file-store/indexeddb-fs';
 
 export * as A from 'frontend/store/actions';
 export * as $ from 'frontend/store/selectors/index';
