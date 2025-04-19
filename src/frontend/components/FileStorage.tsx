@@ -3,9 +3,10 @@ import * as React from 'react';
 import './FileStorage.css';
 import dedent from 'dedent';
 import { $, $$, A, T, Hooks } from 'frontend';
+import { sluggify } from 'frontend/utils';
 
 export function FileStorage() {
-  const fileStoreServers = $$.getFileStoreServers();
+  const fileStoreServers = $$.getServers();
   const { dispatch, getState } = Hooks.useStore();
   const nameRef = React.useRef<null | HTMLInputElement>(null);
   const urlRef = React.useRef<null | HTMLInputElement>(null);
@@ -14,7 +15,7 @@ export function FileStorage() {
   function addFileServer(event: Event) {
     event.preventDefault();
     setError(null);
-    const servers = $.getFileStoreServers(getState());
+    const servers = $.getServers(getState());
     const name = nameRef.current?.value;
     const url = urlRef.current?.value;
     const server = validateFileStoreServer(name, url, servers, setError);
@@ -98,7 +99,7 @@ function FileStorageList({ fileStoreServers }: FileStorageListProps) {
       return;
     }
     const [nameInput, urlInput] = form.querySelectorAll('input');
-    const otherServers = $.getFileStoreServers(getState()).filter(
+    const otherServers = $.getServers(getState()).filter(
       (server) =>
         server.name !== oldServer.name && server.url !== oldServer.url,
     );
@@ -130,20 +131,20 @@ function FileStorageList({ fileStoreServers }: FileStorageListProps) {
     <>
       {error}
       <div className="file-storage-list">
-        {fileStoreServers.map(({ name, url }) => (
+        {fileStoreServers.map((server) => (
           <form
-            key={name + url}
-            onSubmit={(event) => update(event.nativeEvent, { name, url })}
+            key={server.id}
+            onSubmit={(event) => update(event.nativeEvent, server)}
           >
             <input
               type="text"
-              defaultValue={name}
-              onBlur={(event) => update(event.nativeEvent, { name, url })}
+              defaultValue={server.name}
+              onBlur={(event) => update(event.nativeEvent, server)}
             ></input>
             <input
               type="text"
-              defaultValue={url}
-              onBlur={(event) => update(event.nativeEvent, { name, url })}
+              defaultValue={server.url}
+              onBlur={(event) => update(event.nativeEvent, server)}
             ></input>
             <input type="submit" style={{ display: 'none' }}></input>
             <button
@@ -154,7 +155,7 @@ function FileStorageList({ fileStoreServers }: FileStorageListProps) {
                     'Are you sure you want to remove this file store server?',
                   )
                 ) {
-                  dispatch(A.removeFileStoreServer({ name, url }));
+                  dispatch(A.removeFileStoreServer(server));
                 }
               }}
             >
@@ -183,6 +184,8 @@ function validateFileStoreServer(
     return null;
   }
 
+  const id = sluggify(name);
+
   // Validate the URL.
   try {
     new URL(url);
@@ -201,8 +204,8 @@ function validateFileStoreServer(
     return null;
   }
 
-  if (servers.some((server) => server.name === name)) {
-    setError(`Another server already has the name "${name}"`);
+  if (servers.some((server) => server.id === id)) {
+    setError(`Another server already has that name "${name}" or slug "${id}"`);
     return null;
   }
   const existingURL = servers.find((server) => server.url === url);
@@ -211,5 +214,5 @@ function validateFileStoreServer(
     return null;
   }
 
-  return { name, url };
+  return { name, url, id };
 }

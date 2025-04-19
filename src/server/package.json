@@ -5,9 +5,15 @@
   "author": "Greg Tatum",
   "type": "module",
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning ."
+    "start": "node --disable-warning=ExperimentalWarning .",
+    "start-dev": "nodemon --disable-warning=ExperimentalWarning ."
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "nodemon": "^3.1.9"
   }
 }

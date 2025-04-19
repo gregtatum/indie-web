@@ -40,18 +40,18 @@ export function removeBrowserFiles() {
 }
 
 export function addFileStoreServer(server: T.FileStoreServer) {
-  return { type: 'add-file-store-server' as const, server };
+  return { type: 'add-server' as const, server };
 }
 
 export function removeFileStoreServer(server: T.FileStoreServer) {
-  return { type: 'remove-file-store-server' as const, server };
+  return { type: 'remove-server' as const, server };
 }
 
 export function updateFileStoreServer(
   oldServer: T.FileStoreServer,
   newServer: T.FileStoreServer,
 ) {
-  return { type: 'update-file-store-server' as const, oldServer, newServer };
+  return { type: 'update-server' as const, oldServer, newServer };
 }
 
 export function draggingSplitter(isDragging: boolean) {

@@ -17,12 +17,16 @@ export function setupFsServer(mountPath: string) {
     throw new Error('The mount path should not end in a trailing slash.');
   }
 
+  route.get('/', async (): Promise<{ routes: string[] }> => {
+    return { routes: route.routes.map((r) => r.toString()) };
+  });
+
   /**
    * List files that are within the mounted file store.
    */
-  route.get('/list-files', async (request): Promise<T.FolderListing> => {
-    let { path } = request.query;
-    if (!path || typeof path !== 'string') {
+  route.post('/list-files', async (request): Promise<T.FolderListing> => {
+    let path = request.body?.path;
+    if (typeof path !== 'string') {
       throw new ClientError('The path for the file listing was not sent.');
     }
     if (path.startsWith('/')) {
@@ -65,7 +69,7 @@ export function setupFsServer(mountPath: string) {
         // const mountPath = '/mount/path/'
         // const entryPath = '/mount/path/foobar'
         // const clientPath = '/foobar'
-        const clientPath = entryPath.slice(mountPath.length - 1);
+        const clientPath = entryPath.slice(mountPath.length);
 
         // The ID is used by Dropbox for some smarter tracking of individual files
         // as they are moved. We don't have this, so just set it to the path.

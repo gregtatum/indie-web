@@ -1,5 +1,5 @@
 import { T } from 'frontend';
-import { UnhandledCaseError, ensureNever } from '../utils';
+import { UnhandledCaseError, ensureExists, ensureNever } from '../utils';
 
 let browserName: string;
 export function getBrowserName() {
@@ -20,14 +20,20 @@ export function getBrowserName() {
   return browserName;
 }
 
-export function getFileStoreDisplayName(fileStore: T.FileStoreName): string {
+export function getFileStoreDisplayName(
+  fileStore: T.FileStoreName,
+  server: T.FileStoreServer | null,
+): string {
   switch (fileStore) {
     case 'dropbox':
       return 'Dropbox';
     case 'browser':
       return getBrowserName();
-    case 'file-store-server':
-      throw new Error('The file store server should use the name property.');
+    case 'server':
+      return ensureExists(
+        server,
+        'Expected the server to exist when viewing a file store server',
+      ).name;
     default:
       throw new UnhandledCaseError(fileStore, 'FileStoreName');
   }
@@ -41,8 +47,8 @@ export function toFileStoreName(text: unknown): T.FileStoreName | null {
       return 'dropbox';
     case 'browser':
       return 'browser';
-    case 'file-store-server':
-      return 'file-store-server';
+    case 'server':
+      return 'server';
     default: {
       ensureNever(name);
       return null;

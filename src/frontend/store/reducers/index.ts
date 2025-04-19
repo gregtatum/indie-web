@@ -5,6 +5,7 @@ import {
   getNumberProp,
   getDirName,
   updatePathRoot,
+  sluggify,
 } from 'frontend/utils';
 import { FilesIndex } from 'frontend/logic/files-index';
 import { IDBFS } from 'frontend/logic/file-store/indexeddb-fs';
@@ -57,7 +58,7 @@ function dropboxOauth(
   }
 }
 
-function getFileStoreServers(): T.FileStoreServer[] {
+function getServers(): T.FileStoreServer[] {
   const serversString = window.localStorage.getItem('fileStoreServers');
   if (!serversString) {
     return [];
@@ -79,25 +80,49 @@ function getFileStoreServers(): T.FileStoreServer[] {
     for (const serverUnknown of serversUnknown) {
       const url = getStringProp(serverUnknown, 'url');
       const name = getStringProp(serverUnknown, 'name');
+      let id = getStringProp(serverUnknown, 'id');
       if (url && name) {
-        servers.push({ url, name });
+        if (!id) {
+          id = sluggify(name);
+        }
+        servers.push({ url, name, id });
       }
     }
   }
   return servers;
 }
 
-function fileStoreServers(
-  state: T.FileStoreServer[] = getFileStoreServers(),
+export function serverId(
+  state: string | null = window.localStorage.getItem('fileStoreServer') ?? null,
+  action: T.Action,
+): string | null {
+  switch (action.type) {
+    case 'change-file-system': {
+      const { fileStoreServer } = action;
+      if (fileStoreServer) {
+        window.localStorage.setItem('fileStoreServer', fileStoreServer.id);
+      } else {
+        window.localStorage.removeItem('fileStoreServer');
+      }
+      return action.fileStoreServer?.id ?? null;
+    }
+    default:
+      return state;
+  }
+}
+
+function servers(
+  state: T.FileStoreServer[] = getServers(),
   action: T.Action,
 ): T.FileStoreServer[] {
   switch (action.type) {
-    case 'add-file-store-server': {
-      const servers = [...state, action.server];
+    case 'add-server': {
+      const { server } = action;
+      const servers = [...state, server];
       window.localStorage.setItem('fileStoreServers', JSON.stringify(servers));
       return servers;
     }
-    case 'remove-file-store-server': {
+    case 'remove-server': {
       const servers = state.filter(
         (server) =>
           server.url !== action.server.url &&
@@ -106,7 +131,7 @@ function fileStoreServers(
       window.localStorage.setItem('fileStoreServers', JSON.stringify(servers));
       return servers;
     }
-    case 'update-file-store-server': {
+    case 'update-server': {
       // Ensure the ordering of the updated server stays the same.
       const servers: T.FileStoreServer[] = [];
       const { oldServer, newServer } = action;
@@ -645,7 +670,8 @@ export const reducers = combineReducers({
   downloadFileErrors,
   dropboxOauth,
   filesIndex,
-  fileStoreServers,
+  serverId,
+  servers,
   hideEditor,
   idbfs,
   isDraggingSplitter,

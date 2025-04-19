@@ -65,7 +65,7 @@ tasks:
     dir: src/server
     cmds:
       - '[ -d "node_modules" ] || npm install'
-      - npm start
+      - npm run start-dev
 
   lint:
     desc: Run ESLint linter

@@ -218,7 +218,8 @@ function SettingsButton() {
 
 function FileStoreSelection() {
   const name = $$.getCurrentFileStoreName();
-  const fileStoreServers = $$.getFileStoreServers();
+  const server = $$.getCurrentServerOrNull();
+  const fileStoreServers = $$.getServers();
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
@@ -246,9 +247,9 @@ function FileStoreSelection() {
         key: `fs-server-${server.url}-${server.name}`,
         onClick: () => {
           navigate('');
-          dispatch(A.changeFileStore('file-store-server', server));
+          dispatch(A.changeFileStore('server', server));
         },
-        children: name,
+        children: server.name,
       })),
       {
         key: 'add-fs-server',
@@ -273,7 +274,7 @@ function FileStoreSelection() {
           setOpenEventDetail(event.detail);
         }}
       >
-        {getFileStoreDisplayName(name)}
+        {getFileStoreDisplayName(name, server)}
       </button>
       {overlayPortal(
         <Menu

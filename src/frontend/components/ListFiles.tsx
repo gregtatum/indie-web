@@ -18,6 +18,7 @@ import { AddFileMenu } from './AddFileMenu';
 export function ListFiles() {
   useRetainScroll();
   const path = $$.getPath();
+  const server = $$.getCurrentServerOrNull();
   const activeFileDisplayPath = $$.getActiveFileDisplayPath();
   const dispatch = Hooks.useDispatch();
   const files = $$.getSearchFilteredFiles();
@@ -67,7 +68,8 @@ export function ListFiles() {
       return (
         <div className="appViewError">
           <p>
-            Unable to list the {getFileStoreDisplayName(fileStoreName)} files.
+            Unable to list the {getFileStoreDisplayName(fileStoreName, server)}{' '}
+            files.
           </p>
           {error}
         </div>

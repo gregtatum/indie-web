@@ -18,6 +18,7 @@ import { parseSearchString } from 'frontend/logic/search';
 import { marked } from 'marked';
 import { DropboxFS } from 'frontend/logic/file-store/dropbox-fs';
 import { FileStore } from 'frontend/logic/file-store';
+import { ServerFS } from 'frontend/logic/file-store/server-fs';
 
 type State = T.State;
 const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
@@ -36,8 +37,12 @@ export function getDropboxOauth(state: State) {
   return state.dropboxOauth;
 }
 
-export function getFileStoreServers(state: State) {
-  return state.fileStoreServers;
+export function getServers(state: State) {
+  return state.servers;
+}
+
+export function getServerId(state: State) {
+  return state.serverId;
 }
 
 export function getListFilesCache(state: State) {
@@ -180,17 +185,42 @@ export const getIsDropboxInitiallyExpired = createSelector(
   },
 );
 
+export const getCurrentServerOrNull = createSelector(
+  getServers,
+  getServerId,
+  (servers, serverId) => {
+    if (!serverId) {
+      return null;
+    }
+    return servers.find((server) => server.id === serverId) ?? null;
+  },
+);
+
+export const getServerFSOrNull = createSelector(
+  getCurrentServerOrNull,
+  (server) => {
+    if (!server) {
+      return null;
+    }
+    return new ServerFS(server.url);
+  },
+);
+
 export const getCurrentFSOrNull = createSelector(
   getCurrentFileStoreName,
   getDropboxFSOrNull,
   getIDBFSOrNull,
-  (fsName, dropbox, idbfs): FileStore | null => {
+  getServerFSOrNull,
+  (fsName, dropbox, idbfs, server): FileStore | null => {
     switch (fsName) {
       case 'dropbox': {
         return dropbox;
       }
       case 'browser': {
         return idbfs;
+      }
+      case 'server': {
+        return server;
       }
       default:
         throw new UnhandledCaseError(fsName, 'FileStoreName');

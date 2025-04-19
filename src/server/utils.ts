@@ -42,6 +42,11 @@ export class ApiRoute {
   router: Express.Router;
 
   /**
+   * The list of route names.
+   */
+  routes: Array<string | RegExp> = [];
+
+  /**
    * Define a route for a GET request.
    */
   get = this.#define.bind(this, 'GET');
@@ -90,6 +95,7 @@ export class ApiRoute {
     path: string | RegExp,
     fn: RouteHandler<T>,
   ): RouteHandler<T> {
+    this.routes.push(path);
     this.router.all(
       path,
       async (

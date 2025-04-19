@@ -91,6 +91,8 @@ export interface DropboxOauth {
 export interface FileStoreServer {
   url: string;
   name: string;
+  // Unique kebab case name.
+  id: string;
 }
 
 export interface FolderListingRow {
@@ -224,7 +226,7 @@ export type SongKeySettings =
   | { type: 'capo'; capo: number }
   | { type: 'transpose'; songKey: SongKey };
 
-export type FileStoreName = 'dropbox' | 'browser' | 'file-store-server';
+export type FileStoreName = 'dropbox' | 'browser' | 'server';
 
 export interface LanguageDataV1 {
   description: string;

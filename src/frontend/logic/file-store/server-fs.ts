@@ -6,7 +6,10 @@ export class ServerFS extends FileStore {
 
   constructor(apiBaseUrl: string) {
     super();
-    this.apiBaseUrl = apiBaseUrl;
+    if (!apiBaseUrl.endsWith('/')) {
+      apiBaseUrl += '/';
+    }
+    this.apiBaseUrl = apiBaseUrl + 'fs-server';
   }
 
   async fetch<T>(endpoint: string, body: Record<string, any>): Promise<T> {
@@ -24,15 +27,15 @@ export class ServerFS extends FileStore {
     mode: T.SaveMode,
     contents: Blob,
   ): Promise<T.FileMetadata> {
-    const filePath =
+    const path =
       typeof pathOrMetadata === 'string' ? pathOrMetadata : pathOrMetadata.path;
     const base64Contents = await contents.text().then((text) => btoa(text));
-    return this.fetch('/saveBlob', { filePath, contents: base64Contents });
+    return this.fetch('/save-blob', { path, contents: base64Contents });
   }
 
-  async loadBlob(filePath: string): Promise<T.BlobFile> {
-    const { metadata, contents } = await this.fetch<any>('/loadBlob', {
-      filePath,
+  async loadBlob(path: string): Promise<T.BlobFile> {
+    const { metadata, contents } = await this.fetch<any>('/load-blob', {
+      path,
     });
     return {
       metadata,
@@ -40,8 +43,8 @@ export class ServerFS extends FileStore {
     };
   }
 
-  async listFiles(dirPath: string): Promise<T.FolderListing> {
-    return this.fetch('/listFiles', { dirPath });
+  async listFiles(path: string): Promise<T.FolderListing> {
+    return this.fetch('/list-files', { path });
   }
 
   async move(
@@ -52,7 +55,7 @@ export class ServerFS extends FileStore {
   }
 
   async createFolder(folderPath: string): Promise<T.FolderMetadata> {
-    return this.fetch('/createFolder', { folderPath });
+    return this.fetch('/create-folder', { folderPath });
   }
 
   async delete(targetPath: string): Promise<void> {

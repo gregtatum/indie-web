@@ -466,3 +466,13 @@ export function htmlElementOrNull(
 export function ifExists<T>(value: any, lambda: () => T) {
   return value ? lambda() : null;
 }
+
+export function sluggify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFKD') // Decompose accented characters
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumerics with dashes
+    .replace(/^-+|-+$/g, '') // Trim leading/trailing dashes
+    .replace(/-{2,}/g, '-'); // Collapse multiple dashes
+}
