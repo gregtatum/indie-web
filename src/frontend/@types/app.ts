@@ -224,7 +224,7 @@ export type SongKeySettings =
   | { type: 'capo'; capo: number }
   | { type: 'transpose'; songKey: SongKey };
 
-export type FileSystemName = 'dropbox' | 'browser';
+export type FileSystemName = 'dropbox' | 'browser' | 'file-store-server';
 
 export interface LanguageDataV1 {
   description: string;

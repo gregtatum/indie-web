@@ -26,6 +26,8 @@ export function getFileSystemDisplayName(fileSystem: T.FileSystemName): string {
       return 'Dropbox';
     case 'browser':
       return getBrowserName();
+    case 'file-store-server':
+      throw new Error('The file store server should use the name property.');
     default:
       throw new UnhandledCaseError(fileSystem, 'FileSystemName');
   }
@@ -39,6 +41,8 @@ export function toFileSystemName(text: unknown): T.FileSystemName | null {
       return 'dropbox';
     case 'browser':
       return 'browser';
+    case 'file-store-server':
+      return 'file-store-server';
     default: {
       ensureNever(name);
       return null;

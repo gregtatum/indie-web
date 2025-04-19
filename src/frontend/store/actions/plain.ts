@@ -187,8 +187,15 @@ export function removeKeySettings(path: string) {
   return { type: 'remove-key-settings' as const, path };
 }
 
-export function changeFileSystem(fileSystemName: T.FileSystemName) {
-  return { type: 'change-file-system' as const, fileSystemName };
+export function changeFileSystem(
+  fileSystemName: T.FileSystemName,
+  fileStoreServer?: T.FileStoreServer,
+) {
+  return {
+    type: 'change-file-system' as const,
+    fileSystemName,
+    fileStoreServer,
+  };
 }
 
 export function connectIDBFS(idbfs: IDBFS) {

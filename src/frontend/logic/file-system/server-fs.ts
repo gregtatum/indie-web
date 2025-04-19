@@ -1,6 +1,6 @@
 import { type T } from 'frontend';
 
-export class NodeFSClient extends FileSystem {
+export class ServerFS extends FileSystem {
   apiBaseUrl: string;
 
   constructor(apiBaseUrl: string) {

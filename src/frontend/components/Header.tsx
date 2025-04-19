@@ -218,6 +218,7 @@ function SettingsButton() {
 
 function FileSystemSelection() {
   const name = $$.getCurrentFileSystemName();
+  const fileStoreServers = $$.getFileStoreServers();
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
@@ -241,8 +242,16 @@ function FileSystemSelection() {
         },
         children: 'Dropbox',
       },
+      ...fileStoreServers.map((server) => ({
+        key: `fs-server-${server.url}-${server.name}`,
+        onClick: () => {
+          navigate('');
+          dispatch(A.changeFileSystem('file-store-server', server));
+        },
+        children: name,
+      })),
       {
-        key: 'fs-server',
+        key: 'add-fs-server',
         onClick: () => {
           navigate('/add-file-storage');
         },
