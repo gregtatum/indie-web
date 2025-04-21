@@ -11,6 +11,8 @@ import { writeFile, mkdir, rename } from 'node:fs/promises';
 import archiver from 'archiver';
 import { finished } from 'stream/promises';
 
+const ignoredFiles = new Set(['.DS_Store']);
+
 interface ListFilesRequest {
   path: string;
 }
@@ -58,6 +60,9 @@ export function fileStoreRoute(mountPath: string) {
     const listing: T.FolderListing = [];
 
     for (const entry of entries) {
+      if (ignoredFiles.has(entry.name)) {
+        continue;
+      }
       const entryPath = join(resolvedPath, entry.name);
       try {
         // Slice off the mount path, but retain the final '/'.

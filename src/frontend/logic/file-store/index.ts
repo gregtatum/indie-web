@@ -56,6 +56,10 @@ export abstract class FileStoreCache extends FileStore {
   ): Promise<T.FolderListingRow>;
 }
 
+/**
+ * A shared error type that all FileStore implementors can throw with to provide
+ * a consistent interface.
+ */
 export abstract class FileStoreError<T = any> {
   error: T;
   constructor(error: T) {

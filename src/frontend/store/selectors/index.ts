@@ -594,7 +594,12 @@ export const getSearchFilteredFiles = createSelector(
     }
 
     if (!parsedSearch) {
-      return listFiles;
+      return [...listFiles].sort((a, b) => {
+        if (a.type !== b.type) {
+          return a.type === 'folder' ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
     }
 
     if (!filesIndex) {
@@ -660,7 +665,10 @@ export const getSearchFilteredFiles = createSelector(
     return results
       .map((fileIndex) => fileIndex.metadata)
       .sort((a, b) => {
-        return a.path.localeCompare(b.path);
+        if (a.type !== b.type) {
+          return a.type === 'folder' ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
       });
   },
 );

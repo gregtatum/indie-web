@@ -6,6 +6,15 @@ import { getPathFileName, getDirName, updatePathRoot } from 'frontend/utils';
 
 export const BROWSER_FILES_DB_NAME = 'browser-files';
 
+/**
+ * This files implements a browser-based file system abstraction layer called IDBFS,
+ * implementing the FileStoreCache API. It can be used either as a cache for network-based
+ * file system, or it can be used for storage in its own right.
+ */
+
+/**
+ * Implement the FileStoreError for consistent error types.
+ */
 export class IDBError extends FileStoreError {
   #missing = false;
 
@@ -47,6 +56,9 @@ function log(key: string, ...args: any[]) {
   }
 }
 
+/**
+ * Manage the life cycle of the IndexedDB instance.
+ */
 export async function openIDBFS(name: string): Promise<IDBFS> {
   let idbfs: IDBFS | null = null;
 
@@ -105,6 +117,9 @@ export async function openIDBFS(name: string): Promise<IDBFS> {
   return idbfs;
 }
 
+/**
+ * An IndexedDB backed FileStoreCache.
+ */
 export class IDBFS extends FileStoreCache {
   #db: idb.IDBPDatabase<T.IDBFSSchema>;
   open = true;
@@ -174,7 +189,6 @@ export class IDBFS extends FileStoreCache {
         path,
         files,
       };
-      log('addFolderListing', path, files);
       await folderListingsStore.put(row);
 
       if (path !== '/') {
@@ -336,10 +350,10 @@ export class IDBFS extends FileStoreCache {
     const folderListingsStore = tx.objectStore('folderListings');
     const oldFolderPath = oldPath ? getDirName(oldPath) : null;
     const newFolderPath = getDirName(metadata.path);
-    let folder = await folderListingsStore.get(newFolderPath);
+    let newFolder = await folderListingsStore.get(newFolderPath);
 
     log('#updateFileInFolderListings', {
-      folder,
+      folder: newFolder,
       oldFolderPath,
       oldPath,
       newFolderPath,
@@ -365,14 +379,14 @@ export class IDBFS extends FileStoreCache {
       }
     }
 
-    if (folder) {
-      folder.files = folder.files.filter((file) => file.path !== oldPath);
-      folder.files.push(metadata);
-      folder.files.sort((a, b) => a.name.localeCompare(b.name));
-      await folderListingsStore.put(folder);
+    if (newFolder) {
+      newFolder.files = newFolder.files.filter((file) => file.path !== oldPath);
+      newFolder.files.push(metadata);
+      newFolder.files.sort((a, b) => a.name.localeCompare(b.name));
+      await folderListingsStore.put(newFolder);
     } else {
       // Create the folder path if it does not exist.
-      folder = await this.addFolderListing(newFolderPath, [metadata], tx);
+      newFolder = await this.addFolderListing(newFolderPath, [metadata], tx);
     }
 
     await tx.done;
@@ -508,6 +522,7 @@ export class IDBFS extends FileStoreCache {
           // Update any files in the listing.
           file.path = updatePathRoot(file.path, oldPath, metadata.path);
         }
+
         // This requires a delete since the key changes.
         await cursor.delete();
         await folderListings.put(value);
