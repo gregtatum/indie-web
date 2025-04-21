@@ -1,5 +1,6 @@
 export * as T from './@types/index.ts';
 import Express, {
+  type Express as ExpressApp,
   type Request,
   type Response,
   type NextFunction,
@@ -10,7 +11,7 @@ import cors from 'cors';
 
 startServer();
 
-export function startServer() {
+export function startServer(): ExpressApp {
   const app = Express();
   app.set('query parser', 'simple');
   app.use(cors());
@@ -31,6 +32,7 @@ export function startServer() {
 
   app.listen(port);
   console.log('Server started at', serverUrl);
+  return app;
 }
 
 function handleMissingRoutes(req: Request, res: Response) {

@@ -39,8 +39,24 @@ export class ServerFS extends FileStore {
   ): Promise<T.FileMetadata> {
     const path =
       typeof pathOrMetadata === 'string' ? pathOrMetadata : pathOrMetadata.path;
-    const base64Contents = await contents.text().then((text) => btoa(text));
-    return this.fetchJSON('/save-blob', { path, contents: base64Contents });
+
+    const response = await fetch(`${this.apiBaseUrl}/save-blob`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-File-Metadata': JSON.stringify({
+          path,
+          mode,
+        }),
+      },
+      body: contents,
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return response.json();
   }
 
   async loadBlob(path: string): Promise<T.BlobFile> {
