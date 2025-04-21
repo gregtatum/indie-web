@@ -12,7 +12,7 @@ export class ServerFS extends FileStore {
     if (!apiBaseUrl.endsWith('/')) {
       apiBaseUrl += '/';
     }
-    this.apiBaseUrl = apiBaseUrl + 'fs-server';
+    this.apiBaseUrl = apiBaseUrl + 'file-store';
 
     this.cachePromise = openIDBFS(`server-fs-cache(${server.id})`).then(
       (IDBFS) => {

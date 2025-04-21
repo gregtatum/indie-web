@@ -6,7 +6,7 @@ import Express, {
   type NextFunction,
 } from 'express';
 import { colors } from './utils.ts';
-import { setupFsServer } from './fs-server.ts';
+import { fileStoreRoute } from './route-file-store.ts';
 import cors from 'cors';
 
 startServer();
@@ -21,10 +21,10 @@ export function startServer(): ExpressApp {
   );
   app.use(Express.json());
   app.use(simpleLoggingMiddleware);
-  app.use('/fs-server', setupFsServer('/Users/greg/me/indie-web/dist/mount'));
+  app.use('/file-store', fileStoreRoute('/Users/greg/me/indie-web/dist/mount'));
   app.get('/', (_request, response) => {
     response.json({
-      routes: ['/fs-server'],
+      routes: ['/file-store'],
     });
   });
 

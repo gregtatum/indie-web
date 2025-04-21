@@ -7,7 +7,7 @@ import {
 import { type T } from './index.ts';
 import { resolve, join, basename } from 'node:path';
 import { createReadStream, promises as fs, type Stats } from 'node:fs';
-import { writeFile, mkdir, readFile, rename } from 'node:fs/promises';
+import { writeFile, mkdir, rename } from 'node:fs/promises';
 import archiver from 'archiver';
 import { finished } from 'stream/promises';
 
@@ -18,7 +18,7 @@ interface ListFilesRequest {
 /**
  * The mount path should not have a trailing slash.
  */
-export function setupFsServer(mountPath: string) {
+export function fileStoreRoute(mountPath: string) {
   const route = new ApiRoute();
 
   if (mountPath[mountPath.length - 1] === '/') {
