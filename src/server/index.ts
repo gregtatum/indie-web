@@ -14,7 +14,11 @@ startServer();
 export function startServer(): ExpressApp {
   const app = Express();
   app.set('query parser', 'simple');
-  app.use(cors());
+  app.use(
+    cors({
+      exposedHeaders: ['File-Store-Response'],
+    }),
+  );
   app.use(Express.json());
   app.use(simpleLoggingMiddleware);
   app.use('/fs-server', setupFsServer('/Users/greg/me/indie-web/dist/mount'));
@@ -51,12 +55,15 @@ function handleMissingRoutes(req: Request, res: Response) {
  * A simple logging middleware.
  */
 function simpleLoggingMiddleware(
-  req: Request,
-  _res: Response,
+  request: Request,
+  _response: Response,
   next: NextFunction,
 ) {
-  console.log(
-    `${colors.FgYellow}[request]${colors.Reset} ${req.method} ${req.originalUrl}`,
-  );
+  const path = request.body?.path;
+  let message = `${colors.FgYellow}[request]${colors.Reset} ${request.method} ${request.originalUrl}`;
+  if (path) {
+    message += ` ${colors.FgGray}${path}${colors.Reset}`;
+  }
+  console.log(message);
   next();
 }

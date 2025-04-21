@@ -218,7 +218,7 @@ export const getServerFSOrNull = createSelector(
     if (!server) {
       return null;
     }
-    return new ServerFS(server.url);
+    return new ServerFS(server);
   },
 );
 

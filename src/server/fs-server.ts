@@ -6,7 +6,7 @@ import {
 } from './utils.ts';
 import { type T } from './index.ts';
 import { resolve, join, basename } from 'node:path';
-import { promises as fs, type Stats } from 'node:fs';
+import { createReadStream, promises as fs, type Stats } from 'node:fs';
 import { writeFile, mkdir, readFile, rename } from 'node:fs/promises';
 import archiver from 'archiver';
 import { finished } from 'stream/promises';
@@ -76,7 +76,7 @@ export function setupFsServer(mountPath: string) {
   });
 
   route.post('/save-blob', async (request): Promise<T.FileMetadata> => {
-    const metadata = parseMetadata(request.header('X-File-Metadata'));
+    const metadata = parseHeaderRequest(request.header('File-Store-Request'));
 
     const clientPath = metadata.path;
     if (!clientPath) {
@@ -101,26 +101,31 @@ export function setupFsServer(mountPath: string) {
     return getFileMetadata(clientPath, stats);
   });
 
-  route.post(
-    '/load-blob',
-    async (
-      request,
-    ): Promise<{ metadata: T.FileMetadata; contents: string }> => {
-      const { path: clientPath } = request.body;
-      if (typeof clientPath !== 'string') {
-        throw new ClientError('The path for the file was not sent.');
-      }
+  route.post('/load-blob', async (request, response): Promise<void> => {
+    const metadata = parseHeaderRequest(request.header('File-Store-Request'));
 
-      const resolvedPath = resolveMountedPath(clientPath, mountPath);
-      const buffer = await readFile(resolvedPath);
-      const stats = await fs.stat(resolvedPath);
+    const clientPath = metadata.path;
+    if (!clientPath) {
+      throw new ClientError('Invalid or missing path in metadata.');
+    }
 
-      return {
-        metadata: getFileMetadata(clientPath, stats),
-        contents: buffer.toString('base64'),
-      };
-    },
-  );
+    const resolvedPath = resolveMountedPath(clientPath, mountPath);
+    if (resolvedPath === mountPath) {
+      throw new ClientError('Invalid path.');
+    }
+
+    const stats = await fs.stat(resolvedPath);
+    const fileMetadata = getFileMetadata(clientPath, stats);
+
+    console.log(`!!! load-blob`);
+    response.setHeader('Content-Type', 'application/octet-stream');
+    response.setHeader('File-Store-Response', JSON.stringify(fileMetadata));
+
+    const stream = createReadStream(resolvedPath);
+    stream.pipe(response);
+    await finished(stream);
+    console.log(`!!! stream done`);
+  });
 
   route.post(
     '/move',
@@ -256,7 +261,7 @@ function resolveMountedPath(
   expectedFolder = false,
 ) {
   if (!clientPath.startsWith('/')) {
-    throw new ClientError('Expected all paths to start with a /');
+    clientPath = '/' + clientPath;
   }
   let resolvedPath = resolve(
     mountPath,
@@ -279,23 +284,23 @@ function resolveMountedPath(
   return resolvedPath;
 }
 
-function parseMetadata(metaHeader?: string): Record<string, string> {
+function parseHeaderRequest(metaHeader?: string): Record<string, string> {
   if (!metaHeader) {
-    throw new ClientError('No X-File-Metadata was provided.');
+    throw new ClientError('No File-Store-Request was provided.');
   }
   let metadata: unknown;
   try {
     metadata = JSON.parse(metaHeader);
   } catch {
-    throw new ClientError('Invalid JSON in the X-File-Metadata.');
+    throw new ClientError('Invalid JSON in the File-Store-Request.');
   }
   if (!metadata || typeof metadata !== 'object') {
-    throw new ClientError('Expected the X-File-Metadata to be an object.');
+    throw new ClientError('Expected the File-Store-Request to be an object.');
   }
   for (const [key, value] of Object.entries(metadata)) {
     if (typeof key !== 'string' || typeof value !== 'string') {
       throw new ClientError(
-        'Expected all keys and values of the X-File-Metadata to be strings.',
+        'Expected all keys and values of the File-Store-Request to be strings.',
       );
     }
   }

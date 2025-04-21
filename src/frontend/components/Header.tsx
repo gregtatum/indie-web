@@ -2,10 +2,7 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $$, A, Hooks } from 'frontend';
 import { assertType, isAppSettingScrollTop } from 'frontend/utils';
-import {
-  getBrowserName,
-  getFileStoreDisplayName,
-} from 'frontend/logic/app-logic';
+import { getBrowserName } from 'frontend/logic/app-logic';
 import './Header.css';
 import { Menu, MenuButton } from './Menus';
 import { overlayPortal } from 'frontend/hooks';
@@ -218,7 +215,6 @@ function SettingsButton() {
 
 function FileStoreSelection() {
   const fileStoreDisplayName = $$.getFileStoreDisplayName();
-  const server = $$.getCurrentServerOrNull();
   const fileStoreServers = $$.getServers();
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
