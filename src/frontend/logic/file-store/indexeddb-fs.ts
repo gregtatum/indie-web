@@ -200,9 +200,7 @@ export class IDBFS extends FileStoreCache {
         const parent = await folderListingsStore.get(parentPath);
         if (parent) {
           // The parent exists, add the folder to it.
-          const fileInParent = parent.files.find(
-            (file) => file.path === parentPath,
-          );
+          const fileInParent = parent.files.find((file) => file.path === path);
           if (fileInParent) {
             /* istanbul ignore next */
             if (fileInParent.type !== 'folder') {
