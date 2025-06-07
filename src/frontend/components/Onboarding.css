@@ -1,0 +1,106 @@
+.onboarding {
+  max-width: 700px;
+  padding: 1em;
+  margin: 100px auto 0;
+
+  h1 {
+    font-size: 3.2em;
+    margin-bottom: 1.5em;
+  }
+}
+
+.onboardingSubtag {
+  font-size: 1.7em;
+  line-height: 1.2em;
+}
+
+.onboardingButtons {
+  display: flex;
+  gap: 0.4em;
+  margin: 2em 0 3em;
+
+  @media (max-width: 700px) {
+    & {
+      flex-direction: column;
+    }
+  }
+
+  button, button:hover {
+    opacity: 0;
+    font-size: 1.1em;
+    padding: 0.8em;
+    animation: fadein 300ms ease-in forwards;
+  }
+
+  button:nth-child(2) { animation-delay: 200ms; }
+  button:nth-child(3) { animation-delay: 400ms; }
+}
+
+.onboardingSecondary {
+  background: transparent;
+  border-color: transparent;
+  color: var(--primary-color);
+  font-weight: bold;
+
+  &:is(:active, :hover) {
+    color: var(--primary-color-hover);
+  }
+}
+
+.onboardingImage {
+  max-width: 1600px;
+  margin: 0 auto;
+  position: relative;
+  animation: fadein 300ms ease-in forwards;
+  opacity: 0;
+  animation-delay: 600ms;
+
+  img {
+    width: 100%;
+    height: auto;
+  }
+  div {
+    padding: 1em;
+  }
+
+  & div:nth-child(1) {
+    width: 85%;
+    height: auto;
+  }
+  & div:nth-child(2) {
+    position: absolute;
+    width: 23%;
+    height: auto;
+    right: 4%;
+    padding-top: 10%;
+    top: 0;
+  }
+}
+
+.onboardingSupport {
+  max-width: 800px;
+  margin: 5em auto 0;
+  padding-bottom: 5em;
+  line-height: 1.7em;
+
+  h2 {
+    margin-top: 1.5em;
+    font-size: 2em;
+  }
+  p {
+    font-size: 1.1em;
+  }
+}
+
+.onboardingShadow {
+  position: absolute;
+  color: var(--accent-color);
+  position: absolute;
+  color: var(--accent-color);
+  z-index: -1;
+  margin-top: 3px;
+  margin-left: 3px;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.6;
+}
