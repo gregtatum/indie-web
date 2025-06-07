@@ -170,7 +170,6 @@ a.listFilesFileEmpty {
 
 .listFileDisplayName {
   flex: 1;
-  display: flex;
 }
 
 .listFileRename {
