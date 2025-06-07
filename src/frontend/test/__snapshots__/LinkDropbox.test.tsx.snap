@@ -37,15 +37,7 @@ exports[`LinkDropbox can render 1`] = `
     >
       <div
         class="headerTitle"
-      >
-        <button
-          class="headerFileStoreSelection"
-          title="Change the file system source"
-          type="button"
-        >
-          Dropbox
-        </button>
-      </div>
+      />
     </div>
     <div
       class="headerEnd"
@@ -83,12 +75,13 @@ exports[`LinkDropbox can render 1`] = `
         <p>
           Privacy is important. 
           Browser Chords
-           will only be given access to the 
-          <code>
-            Dropbox/Apps/Chords
-          </code>
+           will only be given access to the
            
-          folder in Dropbox to manage files. See the
+          <code>
+            Dropbox/Apps/
+            Chords
+          </code>
+           folder in Dropbox to manage files. See the
            
           <a
             href="/privacy"
