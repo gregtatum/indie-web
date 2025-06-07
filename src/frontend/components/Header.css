@@ -98,6 +98,7 @@
   margin: 0;
   line-height: 0;
   position: relative;
+  margin-left: 9px;
 }
 
 .headerPathBack::after {
