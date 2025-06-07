@@ -22,7 +22,7 @@ if (process.env.SITE === 'floppydisk') {
 /**
  * @type {import("webpack").Configuration}
  */
-export const config = {
+const config = {
   entry: './src/frontend/index.tsx',
   devtool: 'source-map',
   resolve: {
@@ -92,3 +92,5 @@ config.plugins.push(
     'process.env': JSON.stringify(process.env),
   }),
 );
+
+export default config;
