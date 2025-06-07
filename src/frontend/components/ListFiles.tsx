@@ -31,7 +31,10 @@ export function ListFiles() {
   const parts = path.split('/');
   parts.pop();
   // The first part is always an empty string.
-  const backPath = parts.join('/');
+  let backPath = parts.join('/');
+  if (!backPath) {
+    backPath = '/';
+  }
   Hooks.useUploadOnFileDrop(filesBackRef, backPath);
 
   React.useEffect(() => {
