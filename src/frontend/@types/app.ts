@@ -73,6 +73,7 @@ export type View =
   | 'list-files'
   | 'file-storage'
   | 'settings'
+  | 'connect'
   | 'privacy'
   | 'language-coach';
 

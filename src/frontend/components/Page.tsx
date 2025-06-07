@@ -3,7 +3,10 @@ import * as Router from 'react-router-dom';
 import { getEnv } from 'frontend/utils';
 import { UnlinkDropbox } from './LinkDropbox';
 import { Hooks, A, $$ } from 'frontend';
-import { getFileStoreDisplayName } from 'frontend/logic/app-logic';
+import {
+  getBrowserName,
+  getFileStoreDisplayName,
+} from 'frontend/logic/app-logic';
 import './Page.css';
 
 export function Settings() {
@@ -69,20 +72,22 @@ export function Privacy() {
   if (process.env.SITE === 'floppydisk') {
     description = (
       <p>
-        {getEnv('SITE_DISPLAY_NAME')} is a personal project by me, Greg Tatum.
-        It is a collection of tools that work on files. These files are stored
-        either on your machine via the browser, or via a third party service,
-        such as Dropbox.
+        {getEnv('SITE_DISPLAY_NAME')} is a personal project by me,{' '}
+        <a href="https://gregtatum.com/">Greg Tatum</a>. It is a collection of
+        tools that work on files. These files are stored either on your machine
+        via the browser, on a locally hosted server, or via a third party
+        service, such as Dropbox.
       </p>
     );
   } else {
     description = (
       <p>
-        {getEnv('SITE_DISPLAY_NAME')} is a personal project by me, Greg Tatum.
-        It is mainly built to provide a great experience with managing chords,
-        and sheet music for playing music. It is designed to be extremely
-        portable and work with just files stored on a Dropbox account and common
-        music formats.
+        {getEnv('SITE_DISPLAY_NAME')} is a personal project by me,{' '}
+        <a href="https://gregtatum.com/">Greg Tatum</a>. It is mainly built to
+        provide a great experience with managing chords, and sheet music for
+        playing music. It is designed to be extremely portable and work with
+        just files stored in the browser, on a locally hosted server, or on a
+        Dropbox account. It works with common music formats.
       </p>
     );
   }
@@ -93,7 +98,8 @@ export function Privacy() {
 
         <h2>Definitions</h2>
         <p>
-          <b>The Site:</b> {getEnv('SITE_DISPLAY_NAME')} at {getEnv('SITE_URL')}
+          <b>The Site:</b> {getEnv('SITE_DISPLAY_NAME')} at{' '}
+          <a href={getEnv('SITE_URL')}>{getEnv('SITE_URL')}</a>
           <br />
           <b>User:</b> A user of The Site.
         </p>
@@ -101,7 +107,7 @@ export function Privacy() {
 
         <h2>Dropbox</h2>
         <p>
-          The Site requires a Dropbox account to access files. The Site does not
+          The Site can use a Dropbox account to access files. The Site does not
           store Dropbox user information beyond the authorization tokens
           provided by Dropbox.{' '}
           <a href="https://dropbox.com/privacy">
@@ -153,6 +159,57 @@ export function Privacy() {
           Please report any bugs for data integrity on{' '}
           <a href="https://github.com/gregtatum/indie-web/">GitHub</a>.
         </p>
+      </div>
+    </div>
+  );
+}
+
+export function Connect() {
+  const dispatch = Hooks.useDispatch();
+  const navigate = Router.useNavigate();
+  Hooks.useRetainScroll();
+  return (
+    <div className="page">
+      <div className="pageInner">
+        <h1>Connect to Storage</h1>
+        <p>
+          Different storage locations are available. Choose between storing the
+          files directly in your browser, on Dropbox, or host your own server to
+          connect to a NAS or your local file system. You can always add another
+          storage location later.
+        </p>
+        <div className="pageButtonList">
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => {
+              dispatch(A.setHasOnboarded(true));
+              navigate('/');
+            }}
+          >
+            Use {getBrowserName()}
+          </button>
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => {
+              dispatch(A.setHasOnboarded(true));
+              dispatch(A.changeFileStore('dropbox'));
+              navigate('/');
+            }}
+          >
+            Connect Dropbox
+          </button>
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => {
+              navigate('/add-file-storage');
+            }}
+          >
+            Host Your Own <span className="pageButtonBeta">Beta</span>
+          </button>
+        </div>
       </div>
     </div>
   );

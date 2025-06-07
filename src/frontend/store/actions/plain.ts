@@ -142,6 +142,10 @@ export function viewSettings() {
   return { type: 'view-settings' as const };
 }
 
+export function viewConnect() {
+  return { type: 'view-connect' as const };
+}
+
 export function viewFileStorage() {
   return { type: 'view-file-storage' as const };
 }
@@ -272,5 +276,12 @@ export function setOpenAIApiKey(apiKey: string) {
   return {
     type: 'set-open-ai-api-key' as const,
     apiKey,
+  };
+}
+
+export function setHasOnboarded(value: boolean) {
+  return {
+    type: 'set-has-onboarded' as const,
+    value,
   };
 }

@@ -487,6 +487,8 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'view-markdown';
     case 'view-settings':
       return 'settings';
+    case 'view-connect':
+      return 'connect';
     case 'view-file-storage':
       return 'file-storage';
     case 'view-privacy':
@@ -664,6 +666,18 @@ function openAIApiKey(
   }
 }
 
+function hasOnboarded(
+  state: boolean = localStorage.getItem('hasOnboarded') === 'true',
+  action: T.Action,
+): boolean {
+  switch (action.type) {
+    case 'set-has-onboarded':
+      localStorage.setItem('hasOnboarded', JSON.stringify(action.value));
+      return action.value;
+    default:
+      return state;
+  }
+}
 export const reducers = combineReducers({
   currentFileStoreName,
   downloadBlobCache,
@@ -681,6 +695,7 @@ export const reducers = combineReducers({
   listFilesCache,
   messages,
   modifiedTextByPath,
+  hasOnboarded,
   path,
   renameFile,
   searchString,

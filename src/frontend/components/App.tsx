@@ -13,7 +13,7 @@ import { ViewMarkdown } from './ViewMarkdown';
 
 import { Messages } from './Messages';
 import { ensureNever, UnhandledCaseError } from 'frontend/utils';
-import { Settings, Privacy } from './Page';
+import { Settings, Privacy, Connect } from './Page';
 import { useFilesIndex } from 'frontend/logic/files-index';
 
 import { toFileStoreName } from 'frontend/logic/app-logic';
@@ -21,6 +21,7 @@ import { LanguageCoach } from './LanguageCoach';
 import { FileStorage } from './FileStorage';
 
 import './App.css';
+import { Onboarding } from './Onboarding';
 
 function ListFilesRouter() {
   const currentFileStoreName = $$.getCurrentFileStoreName();
@@ -146,6 +147,14 @@ function SettingsRouter() {
   return null;
 }
 
+function ConnectRouter() {
+  const dispatch = Hooks.useDispatch();
+  React.useEffect(() => {
+    dispatch(A.viewConnect());
+  });
+  return null;
+}
+
 function FileStorageRouter() {
   const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
@@ -177,6 +186,7 @@ export function AppRoutes() {
       <Router.Routes>
         <Router.Route path="/" element={<ListFilesRouter />} />
         <Router.Route path="settings" element={<SettingsRouter />} />
+        <Router.Route path="connect" element={<ConnectRouter />} />
         <Router.Route path="add-file-storage" element={<FileStorageRouter />} />
         <Router.Route path="privacy" element={<PrivacyRouter />} />
         <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
@@ -231,7 +241,11 @@ function Views() {
     case null:
       return null;
     case 'list-files':
-      return <ListFiles key={key} />;
+      return (
+        <Onboarding key={key}>
+          <ListFiles />
+        </Onboarding>
+      );
     case 'view-file':
       return <ViewChopro key={key} />;
     case 'view-pdf':
@@ -240,6 +254,8 @@ function Views() {
       return <ViewImage key={key} />;
     case 'view-markdown':
       return <ViewMarkdown key={key} />;
+    case 'connect':
+      return <Connect key={key} />;
     case 'settings':
       return <Settings key={key} />;
     case 'file-storage':

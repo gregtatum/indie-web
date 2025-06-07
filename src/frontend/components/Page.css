@@ -27,3 +27,43 @@
     max-width: var(--page-max-width);
   }
 }
+
+.pageButtonList {
+  flex-direction: column;
+  display: flex;
+  gap: 1em;
+  max-width: 18em;
+  margin: 3em auto;
+  .button {
+    padding: 0.6em;
+  }
+}
+
+.pageBeta {
+  text-transform: uppercase;
+  margin: 0 0.5em;
+  font-size: 0.5em;
+  padding: 0.6em 0.5em 0.5em;
+  display: inline-block;
+  background: #ccc;
+  border-radius: 0.5em;
+  line-height: 0.7;
+  position: relative;
+  top: -0.3em;
+}
+
+.pageButtonBeta {
+  text-transform: uppercase;
+  margin: 0 0.5em;
+  font-size: 0.5em;
+  padding: 0.6em 0.5em 0.5em;
+  display: inline-block;
+  background: #ccc;
+  border-radius: 0.5em;
+  line-height: 0.7;
+  position: relative;
+  top: -0.1em;
+  color: var(--primary-color);
+  font-weight: bold;
+  font-size: 0.7em;
+}

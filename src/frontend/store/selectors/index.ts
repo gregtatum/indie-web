@@ -78,6 +78,10 @@ export function getMessages(state: State) {
   return state.messages;
 }
 
+export function getHasOnboarded(state: State) {
+  return state.hasOnboarded;
+}
+
 export function getHideEditor(state: State) {
   return state.hideEditor;
 }
@@ -490,6 +494,7 @@ export function canGoFullScreen(state: State) {
       return document.fullscreenEnabled;
     case 'list-files':
     case 'settings':
+    case 'connect':
     case 'file-storage':
     case 'privacy':
     case 'language-coach':

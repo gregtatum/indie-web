@@ -224,6 +224,7 @@ export function LinkDropbox(props: { children: any }) {
 
   switch (view) {
     case 'settings':
+    case 'connect':
     case 'privacy':
       return props.children;
     case null:
@@ -287,8 +288,9 @@ export function LinkDropbox(props: { children: any }) {
                   </p>
                   <p>
                     Privacy is important. {getEnv('SITE_DISPLAY_NAME')} will
-                    only be given access to the <code>Dropbox/Apps/Chords</code>{' '}
-                    folder in Dropbox to manage files. See the{' '}
+                    only be given access to the{' '}
+                    <code>Dropbox/Apps/{getDropboxSubfolder()}</code> folder in
+                    Dropbox to manage files. See the{' '}
                     <Router.Link to="/privacy">privacy policy</Router.Link> for
                     more details. The source code is on{' '}
                     <a href="https://github.com/gregtatum/indie-web">GitHub</a>.
@@ -346,6 +348,7 @@ export function UnlinkDropbox() {
   const dropbox = $$.getDropboxOrNull();
   return (
     <>
+      <h1>Settings</h1>
       <h2>Your Dropbox Account</h2>
       {dropbox ? (
         <>
@@ -668,4 +671,11 @@ export function DropboxLogin(props: { children: any }) {
     }
   }
   return props.children;
+}
+
+function getDropboxSubfolder() {
+  if (process.env.SITE === 'floppydisk') {
+    return 'floppydisk';
+  }
+  return 'Chords';
 }

@@ -79,6 +79,10 @@ export function Header() {
   let isOpen;
   let title;
   switch (view) {
+    case 'connect':
+      isOpen = true;
+      title = <Path path="/" key={key} title="Connect" hideSiteName={true} />;
+      break;
     case 'settings':
       isOpen = true;
       title = (
@@ -91,7 +95,7 @@ export function Header() {
         <Path
           path="/"
           key={key}
-          title="Manage File Storage"
+          title="Host Your Own Storage"
           hideSiteName={true}
         />
       );
@@ -216,6 +220,7 @@ function SettingsButton() {
 function FileStoreSelection() {
   const fileStoreDisplayName = $$.getFileStoreDisplayName();
   const fileStoreServers = $$.getServers();
+  const hasOnboarded = $$.getHasOnboarded();
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
@@ -257,6 +262,10 @@ function FileStoreSelection() {
     ],
     [],
   );
+
+  if (!hasOnboarded) {
+    return null;
+  }
 
   return (
     <>

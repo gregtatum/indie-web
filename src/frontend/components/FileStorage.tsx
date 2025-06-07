@@ -20,14 +20,19 @@ export function FileStorage() {
     const url = urlRef.current?.value;
     const server = validateFileStoreServer(name, url, servers, setError);
     if (server) {
+      dispatch(A.setHasOnboarded(true));
       dispatch(A.addFileStoreServer(server));
+      dispatch(A.changeFileStore('server', server));
     }
   }
 
   return (
     <div className="page">
       <div className="pageInner">
-        <h1>Manage File Storage</h1>
+        <h1>
+          Host Your Own Storage File Storage
+          <span className="pageBeta">Beta</span>
+        </h1>
         <FileStorageList fileStoreServers={fileStoreServers} />
         <h2>Add a File Storage Server</h2>
         <p>
