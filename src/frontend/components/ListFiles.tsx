@@ -169,6 +169,7 @@ export function File(props: FileProps) {
   const isMarkdown = !isFolder && extension === 'md';
   const isLanguageCoach = isFolder && extension === 'coach';
 
+  // https://www.svgrepo.com/collection/dazzle-line-icons/
   let icon = '/svg/file.svg';
   let iconClassName = 'listFilesIcon';
   if (isFolder) {

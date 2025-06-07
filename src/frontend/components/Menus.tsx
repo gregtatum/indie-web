@@ -9,7 +9,7 @@ const menuBorderHeight = 2;
 // Keeping this static makes the positioning below much simpler as there is no
 // measurement that needs to take place. Keep the value in sync with .menusFileButton
 const menuItemHeight = 41;
-const menuWidth = 175;
+const menuWidth = 200;
 const menuMargin = 10;
 
 /**

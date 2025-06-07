@@ -252,6 +252,32 @@ code {
   mask-image: url("/svg/pause.svg");
 }
 
+[data-icon="trash-fill"] {
+  /* webpackIgnore: true */
+  background-image: url("/svg/trash-fill.svg");
+}
+
+[data-icon="music"] {
+  /* webpackIgnore: true */
+  background-image: url("/svg/music.svg")
+}
+[data-icon="folder"] {
+  /* webpackIgnore: true */
+    background-image: url("/svg/folder.svg")
+}
+[data-icon="translate"] {
+  /* webpackIgnore: true */
+    background-image: url("/svg/translate.svg")
+}
+[data-icon="file-alt"] {
+  /* webpackIgnore: true */
+    background-image: url("/svg/file-alt.svg")
+}
+[data-icon="upload"] {
+  /* webpackIgnore: true */
+    background-image: url("/svg/upload.svg")
+}
+
 .renderedSong.dragging,
 .viewMarkdown.dragging {
   opacity: 0.8;

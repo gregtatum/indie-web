@@ -14,6 +14,15 @@ const order =
     ? ['Folder', 'Markdown', 'ChordPro', 'Language Coach', 'Upload File']
     : ['ChordPro', 'Folder', 'Upload File'];
 
+// https://www.svgrepo.com/collection/dazzle-line-icons/
+const icons: Record<string, string> = {
+  ChordPro: 'music',
+  Folder: 'folder',
+  'Language Coach': 'translate',
+  Markdown: 'file-alt',
+  'Upload File': 'upload',
+};
+
 type FileDetails =
   | {
       slug: string;
@@ -279,7 +288,12 @@ export function AddFileMenu(props: AddFileMenuProps) {
           openGeneration={openGeneration}
           buttons={order.map((buttonName) => ({
             key: buttonName,
-            children: buttonName,
+            children: (
+              <>
+                <span className="icon" data-icon={icons[buttonName]}></span>
+                {buttonName}
+              </>
+            ),
             onClick: items[buttonName],
           }))}
         />,
