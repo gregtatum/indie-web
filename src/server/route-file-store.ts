@@ -122,14 +122,12 @@ export function fileStoreRoute(mountPath: string) {
     const stats = await fs.stat(resolvedPath);
     const fileMetadata = getFileMetadata(clientPath, stats);
 
-    console.log(`!!! load-blob`);
     response.setHeader('Content-Type', 'application/octet-stream');
     response.setHeader('File-Store-Response', JSON.stringify(fileMetadata));
 
     const stream = createReadStream(resolvedPath);
     stream.pipe(response);
     await finished(stream);
-    console.log(`!!! stream done`);
   });
 
   route.post(

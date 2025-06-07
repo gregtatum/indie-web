@@ -187,9 +187,7 @@ export class ApiRoute {
           return;
         }
         try {
-          console.log(`!!! before fn`);
           await fn(req as Express.Request, res as Express.Response);
-          console.log(`!!! after fn`);
           if (process.env.NODE_ENV === 'development') {
             console.log(`${colors.FgGreen}[200ok  ]${colors.Reset} blog}`);
           }
