@@ -2,7 +2,13 @@ import * as idb from 'idb';
 import * as uuid from 'uuid';
 import { FileStoreCache, FileStoreError } from 'frontend/logic/file-store';
 import { type T } from 'frontend';
-import { getPathFileName, getDirName, updatePathRoot } from 'frontend/utils';
+import {
+  getPathFileName,
+  getDirName,
+  updatePathRoot,
+  pathJoin,
+} from 'frontend/utils';
+import * as AppLogic from 'frontend/logic/app-logic';
 
 export const BROWSER_FILES_DB_NAME = 'browser-files';
 
@@ -301,11 +307,10 @@ export class IDBFS extends FileStoreCache {
         await store.put({ metadata, storedAt: new Date(), blob });
       }
       log('saveBlob', metadata.path, { metadata });
+      await this.#updateFileInFolderListings(oldPath, metadata);
     } else {
       log('saveBlob', 'hash match');
     }
-
-    await this.#updateFileInFolderListings(oldPath, metadata);
 
     return metadata;
   }
@@ -378,9 +383,11 @@ export class IDBFS extends FileStoreCache {
     }
 
     if (newFolder) {
-      newFolder.files = newFolder.files.filter((file) => file.path !== oldPath);
+      newFolder.files = newFolder.files.filter((file) => {
+        return file.path !== oldPath && file.path !== metadata.path;
+      });
       newFolder.files.push(metadata);
-      newFolder.files.sort((a, b) => a.name.localeCompare(b.name));
+      newFolder.files = AppLogic.sortFiles(newFolder.files);
       await folderListingsStore.put(newFolder);
     } else {
       // Create the folder path if it does not exist.
