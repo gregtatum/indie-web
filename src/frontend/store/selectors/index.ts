@@ -599,12 +599,7 @@ export const getSearchFilteredFiles = createSelector(
     }
 
     if (!parsedSearch) {
-      return [...listFiles].sort((a, b) => {
-        if (a.type !== b.type) {
-          return a.type === 'folder' ? -1 : 1;
-        }
-        return a.name.localeCompare(b.name);
-      });
+      return AppLogic.sortFiles(listFiles);
     }
 
     if (!filesIndex) {
@@ -667,14 +662,7 @@ export const getSearchFilteredFiles = createSelector(
       });
     }
 
-    return results
-      .map((fileIndex) => fileIndex.metadata)
-      .sort((a, b) => {
-        if (a.type !== b.type) {
-          return a.type === 'folder' ? -1 : 1;
-        }
-        return a.name.localeCompare(b.name);
-      });
+    return AppLogic.sortFiles(results.map((fileIndex) => fileIndex.metadata));
   },
 );
 

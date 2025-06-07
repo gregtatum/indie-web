@@ -55,3 +55,22 @@ export function toFileStoreName(text: unknown): T.FileStoreName | null {
     }
   }
 }
+
+export function sortFiles(files: Array<T.FileMetadata | T.FolderMetadata>) {
+  return files.slice().sort((a, b) => {
+    let aType = a.type;
+    let bType = b.type;
+
+    // Treat language coach folders as files.
+    if (a.name.endsWith('.coach')) {
+      aType = 'file';
+    }
+    if (b.name.endsWith('.coach')) {
+      bType = 'file';
+    }
+    if (aType !== bType) {
+      return aType === 'folder' ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}

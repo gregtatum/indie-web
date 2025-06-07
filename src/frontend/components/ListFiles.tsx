@@ -166,11 +166,15 @@ export function File(props: FileProps) {
   const isMarkdown = !isFolder && extension === 'md';
   const isLanguageCoach = isFolder && extension === 'coach';
 
-  let icon = '📄';
+  let icon = '/svg/file.svg';
+  let iconClassName = 'listFilesIcon';
   if (isFolder) {
-    icon = '📁';
+    icon = '/svg/folder.svg';
+    if (!isLanguageCoach) {
+      iconClassName += ' listFilesFolder';
+    }
   } else if (isChordPro) {
-    icon = '🎵';
+    icon = '/svg/music.svg';
   }
 
   let link = null;
@@ -188,16 +192,17 @@ export function File(props: FileProps) {
 
   if (isImage) {
     link = `/${fsSlug}/image${path}`;
+    icon = '/svg/image-square.svg';
   }
 
   if (isMarkdown) {
     link = `/${fsSlug}/md${path}`;
-    icon = '📕';
+    icon = '/svg/file-alt.svg';
   }
 
   if (isLanguageCoach) {
     link = `/${fsSlug}/language-coach${path}`;
-    icon = '🧳';
+    icon = '/svg/translate.svg';
   }
 
   if (props.linkOverride) {
@@ -223,7 +228,9 @@ export function File(props: FileProps) {
           // Drag/drop events can read this:
           data-file-path={path}
         >
-          <span className="listFilesIcon">{icon}</span>
+          <span className={iconClassName}>
+            <img src={icon} />
+          </span>
           {fileDisplayName}
         </Router.Link>
         <FileMenu file={props.file} />
@@ -240,7 +247,9 @@ export function File(props: FileProps) {
         data-file-path={path}
         onClick={(event) => void event.preventDefault()}
       >
-        <span className="listFilesIcon">{icon}</span>
+        <span className={iconClassName}>
+          <img src={icon} />
+        </span>
         {fileDisplayName}
       </a>
       <FileMenu file={props.file} />
