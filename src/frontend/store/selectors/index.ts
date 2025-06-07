@@ -602,67 +602,83 @@ export const getSearchFilteredFiles = createSelector(
       return AppLogic.sortFiles(listFiles);
     }
 
-    if (!filesIndex) {
-      return null;
-    }
-
     const { query, inFolder, path: searchPath, directives } = parsedSearch;
-
     // Do a full filesIndex search.
-    let results = filesIndex.data.files;
+    let searchedFiles: Array<T.FileMetadata | T.FolderMetadata> = [];
+    if (filesIndex) {
+      let results = filesIndex.data.files;
 
-    if (searchPath) {
-      results = results.filter((fileIndex) =>
-        fileIndex.metadata.path.toLowerCase().includes(searchPath),
-      );
-    }
+      if (searchPath) {
+        results = results.filter((fileIndex) =>
+          fileIndex.metadata.path.toLowerCase().includes(searchPath),
+        );
+      }
 
-    if (inFolder) {
-      results = results.filter((fileIndex) =>
-        fileIndex.metadata.path.toLowerCase().startsWith(inFolder),
-      );
-    }
+      if (inFolder) {
+        results = results.filter((fileIndex) =>
+          fileIndex.metadata.path.toLowerCase().startsWith(inFolder),
+        );
+      }
 
-    if (query.length > 0) {
-      results = results.filter((fileIndex) => {
-        for (const queryTerm of query) {
-          // Match the path
-          if (fileIndex.metadata.path.toLowerCase().includes(queryTerm)) {
-            continue;
-          }
-
-          // Search through all of the directives
-          for (const value of Object.values(fileIndex.directives)) {
-            if (value.toLowerCase().includes(queryTerm)) {
+      if (query.length > 0) {
+        results = results.filter((fileIndex) => {
+          for (const queryTerm of query) {
+            // Match the path
+            if (fileIndex.metadata.path.toLowerCase().includes(queryTerm)) {
               continue;
             }
+
+            // Search through all of the directives
+            for (const value of Object.values(fileIndex.directives)) {
+              if (value.toLowerCase().includes(queryTerm)) {
+                continue;
+              }
+            }
+
+            // No match was found.
+            return false;
           }
 
-          // No match was found.
-          return false;
-        }
+          // All query terms matched.
+          return true;
+        });
+      }
 
-        // All query terms matched.
-        return true;
-      });
-    }
-
-    if (directives && Object.values(directives).length > 0) {
-      results = results.filter((fileIndex) => {
-        for (const [keyTerm, valueTerm] of Object.entries(directives)) {
-          const fileValue = fileIndex.directives[keyTerm]?.toLowerCase();
-          if (valueTerm === fileValue || (!valueTerm && !fileValue)) {
-            continue;
+      if (directives && Object.values(directives).length > 0) {
+        results = results.filter((fileIndex) => {
+          for (const [keyTerm, valueTerm] of Object.entries(directives)) {
+            const fileValue = fileIndex.directives[keyTerm]?.toLowerCase();
+            if (valueTerm === fileValue || (!valueTerm && !fileValue)) {
+              continue;
+            }
+            return false;
           }
-          return false;
-        }
 
-        // All directive terms match.
-        return true;
-      });
+          // All directive terms match.
+          return true;
+        });
+      }
+      searchedFiles = results.map((fileIndex) => fileIndex.metadata);
+    } else {
+      if (query.length > 0) {
+        searchedFiles = listFiles.filter((metadata) => {
+          for (const queryTerm of query) {
+            // Match the path
+            if (metadata.path.toLowerCase().includes(queryTerm)) {
+              continue;
+            }
+
+            // No match was found.
+            return false;
+          }
+
+          // All query terms matched.
+          return true;
+        });
+      }
     }
 
-    return AppLogic.sortFiles(results.map((fileIndex) => fileIndex.metadata));
+    return AppLogic.sortFiles(searchedFiles);
   },
 );
 
