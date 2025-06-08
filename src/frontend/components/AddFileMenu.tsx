@@ -23,6 +23,8 @@ const icons: Record<string, string> = {
   'Upload File': 'upload',
 };
 
+const experimentalMenuItems = new Set(['Language Coach']);
+
 type FileDetails =
   | {
       slug: string;
@@ -62,6 +64,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
   const input = React.useRef<HTMLInputElement | null>(null);
   const navigate = Router.useNavigate();
   const [error, setError] = React.useState<null | string>(null);
+  const experimentalFeatures = $$.getExperimentalFeatures();
 
   React.useEffect(() => {
     if (fileDetails) {
@@ -286,16 +289,22 @@ export function AddFileMenu(props: AddFileMenuProps) {
           clickedElement={button}
           openEventDetail={openEventDetail}
           openGeneration={openGeneration}
-          buttons={order.map((buttonName) => ({
-            key: buttonName,
-            children: (
-              <>
-                <span className="icon" data-icon={icons[buttonName]}></span>
-                {buttonName}
-              </>
-            ),
-            onClick: items[buttonName],
-          }))}
+          buttons={order
+            .filter(
+              // Exclude any experimental features.
+              (buttonName) =>
+                experimentalFeatures || !experimentalMenuItems.has(buttonName),
+            )
+            .map((buttonName) => ({
+              key: buttonName,
+              children: (
+                <>
+                  <span className="icon" data-icon={icons[buttonName]}></span>
+                  {buttonName}
+                </>
+              ),
+              onClick: items[buttonName],
+            }))}
         />,
       )}
     </>

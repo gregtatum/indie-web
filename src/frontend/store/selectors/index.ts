@@ -82,6 +82,10 @@ export function getHasOnboarded(state: State) {
   return state.hasOnboarded;
 }
 
+export function getExperimentalFeatures(state: State) {
+  return state.experimentalFeatures;
+}
+
 export function getHideEditor(state: State) {
   return state.hideEditor;
 }

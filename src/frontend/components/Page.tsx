@@ -10,10 +10,28 @@ import {
 import './Page.css';
 
 export function Settings() {
+  const experimentalFeatures = $$.getExperimentalFeatures()
+  const dispatch = Hooks.useDispatch()
   Hooks.useRetainScroll();
   return (
     <div className="page">
       <div className="pageInner">
+        <h2>Enable experimental features</h2>
+        <p>
+          Enable experimental features which many not be as fully fleshed out,
+          not documented, and may have bugs.
+        </p>
+        <p>
+          <input
+            type="checkbox"
+            id="experimental-features"
+            defaultChecked={experimentalFeatures}
+            onChange={(event) => {
+              dispatch(A.setExperimentalFeatures(Boolean(event.target.checked)))
+            }}
+            />
+          <label htmlFor="experimental-features">Enable experimental features</label>
+        </p>
         <UnlinkDropbox />
         <DeleteBrowserFiles />
         <h2>About</h2>

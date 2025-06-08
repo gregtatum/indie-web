@@ -285,3 +285,10 @@ export function setHasOnboarded(value: boolean) {
     value,
   };
 }
+
+export function setExperimentalFeatures(value: boolean) {
+  return {
+    type: 'set-experimental-features' as const,
+    value,
+  };
+}

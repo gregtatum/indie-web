@@ -678,12 +678,30 @@ function hasOnboarded(
       return state;
   }
 }
+
+function experimentalFeatures(
+  state: boolean = localStorage.getItem('experimentalFeatures') === 'true',
+  action: T.Action,
+): boolean {
+  switch (action.type) {
+    case 'set-experimental-features':
+      localStorage.setItem(
+        'experimentalFeatures',
+        JSON.stringify(action.value),
+      );
+      return action.value;
+    default:
+      return state;
+  }
+}
+
 export const reducers = combineReducers({
   currentFileStoreName,
   downloadBlobCache,
   downloadFileCache,
   downloadFileErrors,
   dropboxOauth,
+  experimentalFeatures,
   filesIndex,
   serverId,
   servers,
