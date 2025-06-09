@@ -10,8 +10,8 @@ import {
 import './Page.css';
 
 export function Settings() {
-  const experimentalFeatures = $$.getExperimentalFeatures()
-  const dispatch = Hooks.useDispatch()
+  const experimentalFeatures = $$.getExperimentalFeatures();
+  const dispatch = Hooks.useDispatch();
   Hooks.useRetainScroll();
   return (
     <div className="page">
@@ -27,10 +27,14 @@ export function Settings() {
             id="experimental-features"
             defaultChecked={experimentalFeatures}
             onChange={(event) => {
-              dispatch(A.setExperimentalFeatures(Boolean(event.target.checked)))
+              dispatch(
+                A.setExperimentalFeatures(Boolean(event.target.checked)),
+              );
             }}
-            />
-          <label htmlFor="experimental-features">Enable experimental features</label>
+          />
+          <label htmlFor="experimental-features">
+            Enable experimental features
+          </label>
         </p>
         <UnlinkDropbox />
         <DeleteBrowserFiles />

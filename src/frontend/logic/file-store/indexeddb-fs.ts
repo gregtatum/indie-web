@@ -2,12 +2,7 @@ import * as idb from 'idb';
 import * as uuid from 'uuid';
 import { FileStoreCache, FileStoreError } from 'frontend/logic/file-store';
 import { type T } from 'frontend';
-import {
-  getPathFileName,
-  getDirName,
-  updatePathRoot,
-  pathJoin,
-} from 'frontend/utils';
+import { getPathFileName, getDirName, updatePathRoot } from 'frontend/utils';
 import * as AppLogic from 'frontend/logic/app-logic';
 
 export const BROWSER_FILES_DB_NAME = 'browser-files';
