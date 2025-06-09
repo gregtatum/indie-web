@@ -2,7 +2,7 @@
 set -euo pipefail
 
 VERSION=$(node --print "require('./src/server/package.json').version")
-IMAGE="gregtatum/floppy-disk"
+IMAGE="tatumcreative/floppy-disk.link"
 TAG="v$VERSION"
 IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 
@@ -37,18 +37,18 @@ docker build \
   .
 
 # # Apply tag aliases
-# docker tag "$IMAGE:$VERSION_CLEAN" "$IMAGE:$MAJOR.$MINOR"
-# docker tag "$IMAGE:$VERSION_CLEAN" "$IMAGE:$MAJOR"
-# docker tag "$IMAGE:$VERSION_CLEAN" "$IMAGE:latest"
+docker tag "$IMAGE:$VERSION" "$IMAGE:$MAJOR.$MINOR"
+docker tag "$IMAGE:$VERSION" "$IMAGE:$MAJOR"
+docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
 
-# echo "Pushing Docker tags..."
-# docker push "$IMAGE:$VERSION_CLEAN"
-# docker push "$IMAGE:$MAJOR.$MINOR"
-# docker push "$IMAGE:$MAJOR"
-# docker push "$IMAGE:latest"
+echo "Pushing Docker tags..."
+docker push "$IMAGE:$VERSION"
+docker push "$IMAGE:$MAJOR.$MINOR"
+docker push "$IMAGE:$MAJOR"
+docker push "$IMAGE:latest"
 
-# echo "Published:"
-# echo "  $IMAGE:$VERSION_CLEAN"
-# echo "  $IMAGE:$MAJOR.$MINOR"
-# echo "  $IMAGE:$MAJOR"
-# echo "  $IMAGE:latest"
+echo "Published:"
+echo "  $IMAGE:$VERSION"
+echo "  $IMAGE:$MAJOR.$MINOR"
+echo "  $IMAGE:$MAJOR"
+echo "  $IMAGE:latest"
