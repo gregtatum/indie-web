@@ -17,7 +17,7 @@ export function Onboarding(props: { children: any }) {
   }
 
   const markdown = (
-    <div>
+    <div key="markdown">
       <h2>Write with Markdown</h2>
       <p>
         Use portable Markdown to draft notes, write documents, or manage your
@@ -28,7 +28,7 @@ export function Onboarding(props: { children: any }) {
   );
 
   const chordPro = (
-    <div>
+    <div key="chordPro">
       <h2>Music with ChordPro</h2>
       <p>
         Compose and edit song sheets and tabs using the{' '}
@@ -38,7 +38,7 @@ export function Onboarding(props: { children: any }) {
     </div>
   );
   const sheetMusic = (
-    <div>
+    <div key="sheetMusic">
       <h2>Manage Sheet Music</h2>
       <p>
         Upload and view your sheet music as PDFs or images — fast to load, easy
