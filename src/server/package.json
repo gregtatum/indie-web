@@ -1,12 +1,13 @@
 {
   "name": "indie-web-server",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "main": "index.ts",
   "author": "Greg Tatum",
   "type": "module",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning .",
-    "start-dev": "nodemon --exec 'node --disable-warning=ExperimentalWarning . ' --watch . -V --ext 'js,json,ts'"
+    "start-dev": "nodemon --exec 'node --disable-warning=ExperimentalWarning . ' --watch . -V --ext 'js,json,ts'",
+    "start-docker": ""
   },
   "dependencies": {
     "archiver": "^7.0.1",

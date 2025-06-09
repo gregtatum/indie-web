@@ -10,11 +10,30 @@ import { createReadStream, promises as fs, type Stats } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
 import archiver from 'archiver';
 import { finished } from 'stream/promises';
+import { statSync } from 'fs';
 
 const ignoredFiles = new Set(['.DS_Store']);
 
 interface ListFilesRequest {
   path: string;
+}
+
+function checkMountPath(mountPath: string) {
+  if (mountPath[mountPath.length - 1] === '/') {
+    throw new Error('The mount path should not end in a trailing slash.');
+  }
+
+  let isDirectory = false;
+  try {
+    isDirectory = statSync(mountPath).isDirectory();
+  } catch (error) {
+    console.error(error);
+  }
+  if (!isDirectory) {
+    throw new Error(
+      `${mountPath} is not a directory. Did you forget to add /app/mount to the docker-compose volume?`,
+    );
+  }
 }
 
 /**
@@ -23,9 +42,8 @@ interface ListFilesRequest {
 export function fileStoreRoute(mountPath: string) {
   const route = new ApiRoute();
 
-  if (mountPath[mountPath.length - 1] === '/') {
-    throw new Error('The mount path should not end in a trailing slash.');
-  }
+  checkMountPath(mountPath);
+  console.log('Mounting', mountPath);
 
   route.get('/', async (): Promise<{ routes: string[] }> => {
     return { routes: route.routes.map((r) => r.toString()) };

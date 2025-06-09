@@ -2,3 +2,4 @@ dist
 .env.local
 stats.json
 coverage
+mount

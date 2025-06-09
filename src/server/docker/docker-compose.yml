@@ -1,0 +1,16 @@
+services:
+  floppy-disk-server:
+    build:
+      context: ../../..
+      dockerfile: src/server/docker/Dockerfile.dev
+    volumes:
+      # Live mount source code for development.
+      - /app/src/server/node_modules
+      - ../../../src/:/app/src
+
+      # Mount the directory to serve.
+      - ../../../mount:/app/mount
+    ports:
+      - "6543:6543"
+    working_dir: /app/src/server
+    command: ["npm", "run", "start-dev"]

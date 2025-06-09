@@ -8,7 +8,7 @@ tasks:
       SITE=browserchords task build
     cmds:
       - rm -rf dist
-      - NODE_ENV=production webpack
+      - SITE=browserchords NODE_ENV=production webpack
 
   check-updates:
     desc: Check for package updates
@@ -103,3 +103,16 @@ tasks:
       - task: lint
       - task: ts
       - task: test
+
+  docker-server:
+    desc: Run the server from docker.
+    dir: src/server/docker
+    cmds:
+      # Add --progress=plain to debug the build.
+      - docker compose build
+      - docker compose up
+
+  docker-publish:
+    desc: Publish the docker image for the server.
+    cmds:
+      - ./src/server/docker/publish.sh

@@ -8,6 +8,8 @@ import Express, {
 import { colors } from './utils.ts';
 import { fileStoreRoute } from './route-file-store.ts';
 import cors from 'cors';
+import * as url from 'url';
+import path from 'path';
 
 startServer();
 
@@ -21,7 +23,11 @@ export function startServer(): ExpressApp {
   );
   app.use(Express.json());
   app.use(simpleLoggingMiddleware);
-  app.use('/file-store', fileStoreRoute('/Users/greg/me/indie-web/dist/mount'));
+
+  const dirname = url.fileURLToPath(new URL('.', import.meta.url));
+  const mountPath = path.join(dirname, '../../mount');
+
+  app.use('/file-store', fileStoreRoute(mountPath));
   app.get('/', (_request, response) => {
     response.json({
       routes: ['/file-store'],
@@ -31,7 +37,7 @@ export function startServer(): ExpressApp {
   app.use(handleMissingRoutes);
 
   const port = process.env.PORT || 6543;
-  const host = process.env.host || 'localhost';
+  const host = process.env.HOST || 'localhost';
   const serverUrl = `http://${host}:${port}`;
 
   app.listen(port);

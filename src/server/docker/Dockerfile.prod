@@ -1,0 +1,19 @@
+FROM node:24
+
+WORKDIR /app
+
+ARG REPO=https://github.com/gregtatum/indie-web.git
+ARG TAG=main
+
+# Install the repo via a git clone./
+RUN apt-get update && \
+    apt-get install -y git && \
+    git clone --branch ${TAG} --depth 1 ${REPO} . && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install the app and start it.
+WORKDIR /app/src/server
+# RUN pwd && echo "-----" && ls -ahL && exit 1
+RUN npm ci
+ENV NODE_ENV=production
+CMD npm run start

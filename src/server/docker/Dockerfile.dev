@@ -1,0 +1,18 @@
+FROM node:24
+
+# The build.context is assumed to be the repo's root directory.
+
+WORKDIR /app
+
+# Install the node modules, but no other files for good caching.
+COPY src/server/package.json ./src/server/package.json
+COPY src/server/package-lock.json ./src/server/package-lock.json
+
+ENV NODE_ENV=development
+
+WORKDIR /app/src/server
+RUN npm install
+
+# Start the server.
+WORKDIR /app/src/server
+CMD ["npm", "run", "start-dev"]
