@@ -1,0 +1,15 @@
+services:
+  floppydisk:
+    # Use the latest published Docker image.
+    image: tatumcreative/floppydisk.link:latest
+    # The name of the running container.
+    container_name: floppydisk
+    # Automatically restart the container unless it is explicitly stopped.
+    restart: unless-stopped
+    ports:
+      # This is the port of the server. You can adjust the number on the
+      # right if you need it to use another port.
+      - "6543:6543"
+    volumes:
+      # Choose what folder you want to serve.
+      - ./mount:/app/mount

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 VERSION=$(node --print "require('./src/server/package.json').version")
-IMAGE="tatumcreative/floppy-disk.link"
+IMAGE="tatumcreative/floppydisk.link"
 TAG="v$VERSION"
 IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
 

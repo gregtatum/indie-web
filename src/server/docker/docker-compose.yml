@@ -1,5 +1,5 @@
 services:
-  floppy-disk-server:
+  floppydisk-server:
     build:
       context: ../../..
       dockerfile: src/server/docker/Dockerfile.dev
