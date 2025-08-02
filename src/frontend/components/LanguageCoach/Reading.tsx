@@ -77,13 +77,15 @@ function ReadingList() {
 
   return (
     <div className="listFilesList lcReadingListFiles">
-      {files.map((file) => {
+      {files.map((file, index) => {
         return (
           <div key={file.id} className="listFilesFile">
             <File
               file={file}
               hideExtension={true}
               linkOverride={`${fsSlug}/language-coach${file.path}?section=reading`}
+              index={index}
+              fileFocus={undefined}
             />
           </div>
         );

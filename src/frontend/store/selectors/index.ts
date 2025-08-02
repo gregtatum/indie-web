@@ -102,6 +102,10 @@ export function getCurrentFileStoreName(state: State) {
   return state.currentFileStoreName;
 }
 
+export function getFileFocus(state: State) {
+  return state.fileFocus;
+}
+
 /**
  * The file store slug is either the server id or the current file store name, like
  * "dropbox".

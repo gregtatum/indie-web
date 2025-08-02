@@ -292,3 +292,11 @@ export function setExperimentalFeatures(value: boolean) {
     value,
   };
 }
+
+export function changeFileFocus(folder: string, file: string) {
+  return {
+    type: 'change-file-focus' as const,
+    folder,
+    file,
+  };
+}

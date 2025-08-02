@@ -9,6 +9,14 @@
   overflow: auto;
 }
 
+.listFilesList {
+  position: relative;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
 .listFilesBack {
   width: 20px;
   height: 20px;
@@ -65,6 +73,35 @@
   display: flex;
   border-bottom: 1px solid #ddd;
   position: relative;
+
+  &.selected {
+    background: var(--primary-color-dim);
+
+    .listFilesList:focus-within & {
+      background: var(--primary-color);
+    }
+
+    & a:hover {
+      background: none;
+    }
+
+    & a.listFilesFileLink,
+    & a.listFilesFileEmpty {
+      color: #fff;
+    }
+
+    & .listFilesFolder {
+      background-color: var(--accent-color);
+    }
+
+    & .listFilesIcon img {
+      filter: invert(1);
+    }
+
+    & .listFilesFileMenuIcon {
+      filter: invert(1);
+    }
+  }
 
   /* Create an inset pseudo element so the outline isn't cut off. */
   &.dragging {
@@ -148,6 +185,7 @@ a.listFilesFileEmpty {
   background: none;
   font-size: inherit;
   line-height: 0;
+  position: relative;
 
   &:hover {
     border-right: 8px solid #fff;
@@ -157,6 +195,25 @@ a.listFilesFileEmpty {
       margin-inline-end: 10px;
     }
   }
+  .selected &:hover {
+    border-color: transparent;
+    background-color: transparent;
+    background: #ffffff33;
+  }
+
+  .selected &:hover::after {
+    display: none;
+  }
+
+  .file-menu-focused .selected &::after {
+    content: "";
+    inset: 9px 13px 9px 5px;
+    pointer-events: none;
+    border-radius: 3px;
+    outline: 2px solid #fff;
+    position: absolute;
+  }
+
 }
 
 .listFilesFileMenuIcon {

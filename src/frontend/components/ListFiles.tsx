@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, T, $$, Hooks } from 'frontend';
+import { A, T, $, $$, Hooks } from 'frontend';
 import {
   debounce,
   ensureExists,
@@ -26,7 +26,11 @@ export function ListFiles() {
   const parsedSearch = $$.getParsedSearch();
   const fsName = $$.getCurrentFileStoreName();
   const fsSlug = $$.getCurrentFileStoreSlug();
+  const fileFocus = $$.getFileFocus()[path];
   const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
+  const listFilesRef = React.useRef<null | HTMLDivElement>(null);
+  const focusIndex = files?.findIndex((file) => file.name === fileFocus) ?? -1;
+  const [isFileMenuFocused, setFileMenuFocused] = React.useState(false);
 
   const parts = path.split('/');
   parts.pop();
@@ -67,6 +71,20 @@ export function ListFiles() {
     }
   }, [activeFileDisplayPath, files]);
 
+  // Any time the focused file changes, don't focus the file menu.
+  React.useEffect(() => {
+    setFileMenuFocused(false);
+  }, [fileFocus]);
+
+  const isFocused = true;
+
+  useFileNavigation(
+    isFocused,
+    listFilesRef,
+    isFileMenuFocused,
+    setFileMenuFocused,
+  );
+
   if (!files) {
     if (error) {
       return (
@@ -98,6 +116,11 @@ export function ListFiles() {
     );
   }
 
+  let listFilesListClassName = 'listFilesList';
+  if (isFileMenuFocused) {
+    listFilesListClassName += ' file-menu-focused';
+  }
+
   return (
     <>
       <div className="listFiles" data-testid="list-files">
@@ -105,10 +128,25 @@ export function ListFiles() {
           {parent}
           <Search />
         </div>
-        <div className="listFilesList">
-          {files.map((file) => {
-            return <File key={file.id} file={file} />;
+        <div
+          className={listFilesListClassName}
+          role="listbox"
+          tabIndex={0}
+          aria-activedescendant={focusIndex === -1 ? '' : `file-${focusIndex}`}
+          ref={listFilesRef}
+        >
+          {files.map((file, fileIndex) => {
+            return (
+              <File
+                key={file.id}
+                file={file}
+                fileFocus={fileFocus}
+                index={fileIndex}
+              />
+            );
           })}
+        </div>
+        <div className="listFilesFooter">
           <AddFileMenu path={path} />
         </div>
       </div>
@@ -130,15 +168,17 @@ export function ListFilesSkeleton() {
 
 interface FileProps {
   file: T.FileMetadata | T.FolderMetadata;
+  index: number;
+  fileFocus: string | undefined;
   hideExtension?: boolean;
   linkOverride?: string;
 }
 
 export function File(props: FileProps) {
+  const { name, path, type } = props.file;
   const renameFile = $$.getRenameFile();
   const fsSlug = $$.getCurrentFileStoreSlug();
   const divRef = React.useRef<null | HTMLDivElement>(null);
-  const { name, path, type } = props.file;
   const isFolder = type === 'folder';
   const nameParts = name.split('.');
   const extension =
@@ -223,40 +263,49 @@ export function File(props: FileProps) {
     );
   }
 
+  let className = 'listFilesFile';
+  if (props.fileFocus === name) {
+    className += ' selected';
+  }
+
+  const id = 'file-' + props.index;
+
   if (link) {
     return (
-      <div className="listFilesFile" ref={divRef}>
+      <div className={className} ref={divRef} id={id}>
         <Router.Link
           className="listFilesFileLink"
           to={link}
           // Drag/drop events can read this:
           data-file-path={path}
+          tabIndex={-1}
         >
           <span className={iconClassName}>
             <img src={icon} />
           </span>
           {fileDisplayName}
         </Router.Link>
-        <FileMenu file={props.file} />
+        <FileMenu tabIndex={-1} file={props.file} />
       </div>
     );
   }
 
   return (
-    <div className="listFilesFile" ref={divRef}>
+    <div className={className} ref={divRef} id={id}>
       <a
         href=""
         className="listFilesFileEmpty"
         // Drag/drop events can read this:
         data-file-path={path}
         onClick={(event) => void event.preventDefault()}
+        tabIndex={-1}
       >
         <span className={iconClassName}>
           <img src={icon} />
         </span>
         {fileDisplayName}
       </a>
-      <FileMenu file={props.file} />
+      <FileMenu tabIndex={-1} file={props.file} />
     </div>
   );
 }
@@ -341,7 +390,10 @@ function RenameFile(props: {
   );
 }
 
-function FileMenu(props: { file: T.FileMetadata | T.FolderMetadata }) {
+function FileMenu(props: {
+  file: T.FileMetadata | T.FolderMetadata;
+  tabIndex?: number;
+}) {
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [openGeneration, setOpenGeneration] = React.useState(0);
@@ -354,7 +406,12 @@ function FileMenu(props: { file: T.FileMetadata | T.FolderMetadata }) {
         type="button"
         aria-label="File Menu"
         className="listFilesFileMenu"
+        tabIndex={props.tabIndex}
         ref={button}
+        onFocus={() => {
+          // If the button is manually focused, put it back on the list element.
+          button.current?.closest<HTMLElement>('.listFilesList')?.focus();
+        }}
         onClick={(event) => {
           setOpenGeneration((generation) => generation + 1);
           setOpenEventDetail(event.detail);
@@ -448,4 +505,116 @@ function Search() {
       onChange={onChange}
     />
   );
+}
+
+function useFileNavigation(
+  isFocused: boolean,
+  listFilesRef: React.MutableRefObject<HTMLDivElement | null>,
+  isFileMenuFocused: boolean,
+  setFileMenuFocused: React.Dispatch<React.SetStateAction<boolean>>,
+) {
+  const { getState, dispatch } = Hooks.useStore();
+
+  return React.useEffect(() => {
+    if (!isFocused) {
+      return () => {};
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      const state = getState();
+      const path = $.getPath(state);
+      const fileFocus: string | null = $.getFileFocus(state)[path] ?? null;
+      const files = $.getSearchFilteredFiles(state);
+      const index = files?.findIndex((file) => file.name === fileFocus) ?? -1;
+
+      if (!files) {
+        return;
+      }
+
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        if (document.activeElement === document.body) {
+          if (listFilesRef.current) {
+            listFilesRef.current.focus();
+          }
+        }
+      }
+
+      const changeFileFocus = (nextFile: string) => {
+        if (nextFile !== fileFocus) {
+          dispatch(A.changeFileFocus(path, nextFile));
+        }
+      };
+
+      if (document.activeElement !== listFilesRef.current) {
+        return;
+      }
+
+      switch (event.key) {
+        case 'ArrowUp': {
+          event.preventDefault();
+          if (!fileFocus) {
+            if (!files.length) {
+              break;
+            }
+            changeFileFocus(files[files.length - 1].name);
+            break;
+          }
+          if (index === -1) {
+            throw new Error('Unexpected index.');
+          }
+          changeFileFocus(files[Math.max(0, index - 1)].name);
+          break;
+        }
+        case 'ArrowDown': {
+          event.preventDefault();
+          if (!fileFocus) {
+            if (!files.length) {
+              break;
+            }
+            changeFileFocus(files[0].name);
+            break;
+          }
+          if (index === -1) {
+            throw new Error('Unexpected index.');
+          }
+          changeFileFocus(files[Math.min(files.length - 1, index + 1)].name);
+          break;
+        }
+        case 'ArrowLeft':
+        case 'ArrowRight':
+          setFileMenuFocused((value) => !value);
+          break;
+        case 'Enter': {
+          event.preventDefault();
+
+          if (isFileMenuFocused) {
+            const link: HTMLAnchorElement | undefined | null =
+              listFilesRef.current?.querySelector(
+                `#file-${index} .listFilesFileMenu`,
+              );
+            link?.click();
+          } else {
+            if (fileFocus) {
+              const link: HTMLAnchorElement | undefined | null =
+                listFilesRef.current?.querySelector(
+                  `#file-${index} .listFilesFileLink`,
+                );
+              link?.click();
+            }
+          }
+          break;
+        }
+        case 'Escape':
+          event.preventDefault();
+          listFilesRef.current?.blur();
+          setFileMenuFocused((value) => !value);
+          break;
+        default:
+          break;
+      }
+    }
+    document.body.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFocused, isFileMenuFocused, listFilesRef]);
 }

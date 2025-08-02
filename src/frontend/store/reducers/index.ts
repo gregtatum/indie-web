@@ -695,6 +695,25 @@ function experimentalFeatures(
   }
 }
 
+/**
+ * Record<string, string> is the map of the folder to the file name. This way
+ * the file focus is retained when navigating between folders.
+ */
+function fileFocus(
+  state: Record<string, string> = {},
+  action: T.Action,
+): Record<string, string> {
+  switch (action.type) {
+    case 'change-file-focus':
+      return {
+        ...state,
+        [action.folder]: action.file,
+      };
+    default:
+      return state;
+  }
+}
+
 export const reducers = combineReducers({
   currentFileStoreName,
   downloadBlobCache,
@@ -721,6 +740,7 @@ export const reducers = combineReducers({
   songKeySettings,
   view,
   openAIApiKey,
+  fileFocus,
 });
 
 function wrapReducer<S>(
