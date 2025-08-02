@@ -709,6 +709,11 @@ function fileFocus(
         ...state,
         [action.folder]: action.file,
       };
+    case 'change-file-system':
+    case 'clear-api-cache':
+    case 'remove-dropbox-oauth':
+    case 'remove-browser-files':
+      return {};
     default:
       return state;
   }
