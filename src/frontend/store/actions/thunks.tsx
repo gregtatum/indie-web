@@ -951,6 +951,19 @@ export function uploadFilesWithMessages(
     const fileStore = $.getCurrentFS(getState());
 
     for (const file of files) {
+      if (!file.type && file.size == 0) {
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Browsers do not support dragging and dropping folders, cannot
+                add <code>{file.name}</code>.
+              </>
+            ),
+          }),
+        );
+        continue;
+      }
       const path = pathJoin(folderPath, file.name);
       const messageGeneration = dispatch(
         addMessage({

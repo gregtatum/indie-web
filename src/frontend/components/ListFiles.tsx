@@ -8,7 +8,6 @@ import {
   imageExtensions,
   isChordProExtension,
 } from 'frontend/utils';
-import { overlayPortal, useRetainScroll } from '../hooks';
 import { getFileStoreDisplayName } from 'frontend/logic/app-logic';
 
 import './ListFiles.css';
@@ -16,7 +15,7 @@ import { Menu } from './Menus';
 import { AddFileMenu } from './AddFileMenu';
 
 export function ListFiles() {
-  useRetainScroll();
+  Hooks.useRetainScroll();
   const path = $$.getPath();
   const server = $$.getCurrentServerOrNull();
   const activeFileDisplayPath = $$.getActiveFileDisplayPath();
@@ -29,6 +28,7 @@ export function ListFiles() {
   const fileFocus = $$.getFileFocus()[path];
   const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
   const listFilesRef = React.useRef<null | HTMLDivElement>(null);
+  const listFilesListRef = React.useRef<null | HTMLDivElement>(null);
   const focusIndex = files?.findIndex((file) => file.name === fileFocus) ?? -1;
   const [isFileMenuFocused, setFileMenuFocused] = React.useState(false);
 
@@ -40,6 +40,7 @@ export function ListFiles() {
     backPath = '/';
   }
   Hooks.useUploadOnFileDrop(filesBackRef, backPath);
+  Hooks.useUploadOnFileDrop(listFilesRef, path);
 
   React.useEffect(() => {
     if (path === '/') {
@@ -80,7 +81,7 @@ export function ListFiles() {
 
   useFileNavigation(
     isFocused,
-    listFilesRef,
+    listFilesListRef,
     isFileMenuFocused,
     setFileMenuFocused,
   );
@@ -123,7 +124,7 @@ export function ListFiles() {
 
   return (
     <>
-      <div className="listFiles" data-testid="list-files">
+      <div className="listFiles" data-testid="list-files" ref={listFilesRef}>
         <div className="listFilesFilter">
           {parent}
           <Search />
@@ -133,7 +134,7 @@ export function ListFiles() {
           role="listbox"
           tabIndex={0}
           aria-activedescendant={focusIndex === -1 ? '' : `file-${focusIndex}`}
-          ref={listFilesRef}
+          ref={listFilesListRef}
         >
           {files.map((file, fileIndex) => {
             return (
@@ -419,7 +420,7 @@ function FileMenu(props: {
       >
         <span className="listFilesFileMenuIcon" />
       </button>
-      {overlayPortal(
+      {Hooks.overlayPortal(
         <Menu
           clickedElement={button}
           openEventDetail={openEventDetail}

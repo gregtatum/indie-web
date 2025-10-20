@@ -1,6 +1,8 @@
 .listFiles {
   display: flex;
   flex-direction: column;
+  /* For some reason there was still an overflow without the -1px */
+  min-height: calc(100vh - var(--header-height) - 1px);
 }
 
 .listFilesList,
