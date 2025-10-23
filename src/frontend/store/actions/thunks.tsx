@@ -11,6 +11,8 @@ import {
   getPathFileName,
   insertTextAtLine,
   pathJoin,
+  getZipJs,
+  processInChunks,
 } from 'frontend/utils';
 import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
@@ -349,7 +351,7 @@ interface MessageArgs {
   message: React.ReactNode;
   // A unique generation number to identify a message, useful if
   // the message needs dismissing or can be replaced.
-  generation?: number;
+  generation?: number | void;
   // If a number, the number of milliseconds before hiding.
   // If `true`, then use the default delay.
   // If falsey, do not auto-hide the message.
@@ -939,6 +941,65 @@ export function languageCoachSaveTimer(): Thunk {
   };
 }
 
+async function extractAndUploadZip(
+  dispatch: T.Dispatch,
+  getState: T.GetState,
+  folderPath: string,
+  file: File,
+) {
+  const fileStore = $.getCurrentFS(getState());
+  const zip = await getZipJs();
+  const zipReader = new zip.ZipReader(new zip.BlobReader(file));
+  const entries = await zipReader.getEntries();
+  const fileEntries = entries.filter((entry) => !entry.directory);
+
+  let count = 0;
+  let generation: number | void = undefined;
+  function updateMessage(message: React.ReactNode) {
+    generation = dispatch(
+      addMessage({
+        message,
+        generation,
+      }),
+    );
+  }
+
+  processInChunks(fileEntries, 5, async (entry) => {
+    count++;
+
+    updateMessage(
+      <>
+        Adding file {count} of {entries.length} from <code>{file.name}</code>.
+      </>,
+    );
+
+    const writer = new zip.BlobWriter();
+
+    await fileStore.saveBlob(
+      pathJoin(folderPath, entry.filename),
+      'add',
+      await entry.getData(writer),
+    );
+  }).then(
+    () => {
+      dispatch(listFiles(folderPath)).catch((error) => console.error(error));
+
+      updateMessage(
+        <>
+          Added all files from <code>{file.name}</code>.
+        </>,
+      );
+    },
+    () => {
+      updateMessage(
+        <>
+          There was an error adding files from <code>{file.name}</code>.
+        </>,
+      );
+    },
+  );
+}
+
 /**
  * Upload files into a folder. This function is infallible, and errors will be reported
  * with messages.
@@ -949,6 +1010,18 @@ export function uploadFilesWithMessages(
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const fileStore = $.getCurrentFS(getState());
+
+    if (files.length === 1) {
+      const [file] = files;
+      if (file.type == 'application/zip') {
+        const extract = confirm(
+          'The zip file will be automatically extracted. Click cancel to upload it instead.',
+        );
+        if (extract) {
+          return extractAndUploadZip(dispatch, getState, folderPath, file);
+        }
+      }
+    }
 
     for (const file of files) {
       if (!file.type && file.size == 0) {

@@ -476,3 +476,114 @@ export function sluggify(text: string): string {
     .replace(/^-+|-+$/g, '') // Trim leading/trailing dashes
     .replace(/-{2,}/g, '-'); // Collapse multiple dashes
 }
+
+const scriptLoaded: Map<string, Promise<void>> = new Map();
+
+/**
+ * Make sure a script gets dynamically loaded.
+ */
+export function ensureScriptLoaded(src: string): Promise<void> {
+  const loadedPromise = scriptLoaded.get(src);
+  if (loadedPromise) {
+    return loadedPromise;
+  }
+  const { resolve, reject, promise } = Promise.withResolvers<void>();
+  scriptLoaded.set(src, promise);
+
+  const script = document.createElement('script');
+  script.src = src;
+  script.async = true;
+  script.onload = () => resolve();
+  script.onerror = (error) => reject(error);
+  document.head.appendChild(script);
+
+  return promise;
+}
+
+import type * as PDFJS from 'pdfjs-dist';
+
+export async function getPDFJS(): Promise<typeof PDFJS> {
+  await ensureScriptLoaded('/pdf.min.js');
+  const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
+
+  if (process.env.NODE_ENV !== 'test') {
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
+  }
+  return pdfjs;
+}
+
+import type * as ZIP from '@zip.js/zip.js';
+
+export async function getZipJs(): Promise<typeof ZIP> {
+  await ensureScriptLoaded('/zip.min.js');
+  return (window as any).zip;
+}
+
+/**
+ * Process items with bounded concurrency. If the initial chunks all fail, then the
+ * processing is canceled
+ */
+export function processInChunks<T>(
+  items: Iterable<T>,
+  concurrency: number,
+  fn: (item: T) => Promise<void>,
+) {
+  const iterator = items[Symbol.iterator]();
+  const taskStatuses = new Set<Promise<boolean>>();
+  const { resolve, reject, promise } = Promise.withResolvers();
+  let initialBlocker = Promise.resolve();
+  let failed = false;
+  let allDone = false;
+
+  const startNextItem = async () => {
+    if (failed) {
+      return;
+    }
+    const { done, value } = iterator.next();
+    if (done) {
+      if (!allDone) {
+        Promise.all(taskStatuses).then(resolve);
+        allDone = true;
+      }
+      return;
+    }
+
+    const nextPromise = initialBlocker.then(() => fn(value));
+
+    // Mark the task status.
+    taskStatuses.add(
+      nextPromise.then(
+        () => true, // success
+        () => false, // failure
+      ),
+    );
+
+    nextPromise.then(
+      () => {
+        // We're ready to start the next task.
+        startNextItem();
+      },
+      (error) => {
+        console.error(error);
+        if (!failed) {
+          startNextItem();
+        }
+      },
+    );
+  };
+
+  for (let i = 0; i < concurrency; i++) {
+    startNextItem();
+  }
+
+  // Go through all of the initial batch.
+  initialBlocker = Promise.all(taskStatuses).then((statuses) => {
+    if (statuses.every((status) => !status)) {
+      // Every initial task failed. Cancel and reject.
+      failed = true;
+      reject();
+    }
+  });
+
+  return promise;
+}

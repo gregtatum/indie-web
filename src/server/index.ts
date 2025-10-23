@@ -57,6 +57,7 @@ function handleMissingRoutes(req: Request, res: Response) {
     .status(404)
     .send(`The route does not exist: ${req.method}  ${req.originalUrl}`);
 }
+
 /**
  * A simple logging middleware.
  */

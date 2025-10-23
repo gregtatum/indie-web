@@ -7,13 +7,13 @@ import {
   getDirName,
   getUrlForFile,
   UnhandledCaseError,
+  getPDFJS
 } from 'frontend/utils';
 import {
   parseChordPro,
   SongKey,
   transposeParsedSong,
 } from 'frontend/logic/parse-chords';
-import type * as PDFJS from 'pdfjs-dist';
 import { parseSearchString } from 'frontend/logic/search';
 import { marked } from 'marked';
 import { DropboxFS } from 'frontend/logic/file-store/dropbox-fs';
@@ -22,11 +22,6 @@ import { ServerFS } from 'frontend/logic/file-store/server-fs';
 import * as AppLogic from 'frontend/logic/app-logic';
 
 type State = T.State;
-const pdfjs: typeof PDFJS = (window as any).pdfjsLib;
-
-if (process.env.NODE_ENV !== 'test') {
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
-}
 
 export * from './language-coach';
 
@@ -360,6 +355,7 @@ export const getActivePDFOrNull = createSelector(
     if (!blob) {
       return null;
     }
+    const pdfjs = await getPDFJS()
     return pdfjs.getDocument(await blob.arrayBuffer()).promise;
   },
 );
