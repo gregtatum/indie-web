@@ -5,6 +5,7 @@ import {
   debounce,
   ensureElementIsInView,
   ensureExists,
+  getDirName,
   getEnv,
   imageExtensions,
   isChordProExtension,
@@ -545,6 +546,7 @@ function useFileNavigation(
   setFileMenuFocused: React.Dispatch<React.SetStateAction<boolean>>,
 ) {
   const { getState, dispatch } = Hooks.useStore();
+  const navigate = Router.useNavigate();
 
   return React.useEffect(() => {
     if (!isFocused) {
@@ -556,6 +558,27 @@ function useFileNavigation(
       const fileFocus: string | null = $.getFileFocus(state);
       const files = $.getSearchFilteredFiles(state);
       const fileFocusIndex = $.getFileFocusIndex(state);
+
+      if (event.key === 'ArrowUp' && event.metaKey) {
+        event.preventDefault();
+        if (path === '/') {
+          return;
+        }
+        if (
+          path !== '/' &&
+          (document.activeElement === document.body ||
+            document.activeElement === listFilesRef.current)
+        ) {
+          const parentPath = getDirName(path);
+          const fsSlug = $.getCurrentFileStoreSlug(state);
+          if (parentPath !== '/') {
+            navigate('/');
+          } else {
+            navigate(`/${fsSlug}/folder${parentPath}`);
+          }
+        }
+        return;
+      }
 
       if (!files) {
         return;
@@ -643,5 +666,5 @@ function useFileNavigation(
     return () => {
       document.body.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isFocused, isFileMenuFocused, listFilesRef]);
+  }, [isFocused, isFileMenuFocused, listFilesRef, navigate]);
 }
