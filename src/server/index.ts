@@ -24,6 +24,7 @@ export function startServer(): ExpressApp {
   app.use(Express.json());
   app.use(simpleLoggingMiddleware);
 
+  // @ts-ignore - For some reason this is erroring only when live serving the files.
   const dirname = url.fileURLToPath(new URL('.', import.meta.url));
   const mountPath = path.join(dirname, '../../mount');
 

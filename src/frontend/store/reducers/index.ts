@@ -699,15 +699,21 @@ function experimentalFeatures(
  * Record<string, string> is the map of the folder to the file name. This way
  * the file focus is retained when navigating between folders.
  */
-function fileFocus(
+function fileFocusByPath(
   state: Record<string, string> = {},
   action: T.Action,
 ): Record<string, string> {
   switch (action.type) {
+    case 'delete-file-done':
     case 'change-file-focus':
+      if (!action.fileFocus) {
+        const newState = { ...state };
+        delete newState[action.folder];
+        return newState;
+      }
       return {
         ...state,
-        [action.folder]: action.file,
+        [action.folder]: action.fileFocus,
       };
     case 'change-file-system':
     case 'clear-api-cache':
@@ -745,7 +751,7 @@ export const reducers = combineReducers({
   songKeySettings,
   view,
   openAIApiKey,
-  fileFocus,
+  fileFocusByPath,
 });
 
 function wrapReducer<S>(

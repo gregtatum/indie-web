@@ -7,7 +7,7 @@ import {
   getDirName,
   getUrlForFile,
   UnhandledCaseError,
-  getPDFJS
+  getPDFJS,
 } from 'frontend/utils';
 import {
   parseChordPro,
@@ -97,8 +97,8 @@ export function getCurrentFileStoreName(state: State) {
   return state.currentFileStoreName;
 }
 
-export function getFileFocus(state: State) {
-  return state.fileFocus;
+export function getFileFocusByPath(state: State) {
+  return state.fileFocusByPath;
 }
 
 /**
@@ -355,7 +355,7 @@ export const getActivePDFOrNull = createSelector(
     if (!blob) {
       return null;
     }
-    const pdfjs = await getPDFJS()
+    const pdfjs = await getPDFJS();
     return pdfjs.getDocument(await blob.arrayBuffer()).promise;
   },
 );
@@ -683,6 +683,33 @@ export const getSearchFilteredFiles = createSelector(
     }
 
     return AppLogic.sortFiles(searchedFiles);
+  },
+);
+
+/**
+ * Get the current file focus for the path. This is the name of the file.
+ */
+export const getFileFocus = createSelector(
+  getFileFocusByPath,
+  getPath,
+  (fileFocusByPath, path): string | null => {
+    return fileFocusByPath[path] ?? null;
+  },
+);
+
+/**
+ * Gets the current file focus index for the the current path. This is the index
+ * into the search filtered files.
+ */
+export const getFileFocusIndex = createSelector(
+  getFileFocus,
+  getSearchFilteredFiles,
+  (fileFocus, files) => {
+    let index = files?.findIndex((file) => file.name === fileFocus);
+    if (!index || index == -1) {
+      return 0;
+    }
+    return index;
   },
 );
 

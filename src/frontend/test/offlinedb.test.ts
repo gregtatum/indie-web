@@ -6,6 +6,7 @@ import {
 } from './utils/fixtures';
 import { PlainInternal } from 'frontend/store/actions';
 import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import { getDirName } from 'frontend/utils';
 
 describe('offline db', () => {
   // Ignore "Dropbox wasn't available" errors.
@@ -525,7 +526,9 @@ describe('offline db', () => {
 
     // Signal to the store that moving the file is done so the internal cache there
     // can be updated as well.
-    dispatch(PlainInternal.deleteFileDone(metadata));
+    dispatch(
+      PlainInternal.deleteFileDone(metadata, getDirName(metadata.name), null),
+    );
 
     // The store should be up to date as well.
     expect(await fetchTextFile('/band/song 3.chopro')).toEqual(null);
@@ -602,7 +605,9 @@ describe('offline db', () => {
 
     // Signal to the store that deleting the file is done so the internal cache there
     // can be updated as well.
-    dispatch(PlainInternal.deleteFileDone(metadata));
+    dispatch(
+      PlainInternal.deleteFileDone(metadata, getDirName(metadata.name), null),
+    );
 
     // The store should be up to date as well.
     {

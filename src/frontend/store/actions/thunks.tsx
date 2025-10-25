@@ -73,8 +73,12 @@ export namespace PlainInternal {
     return { type: 'move-file-done' as const, oldPath, metadata };
   }
 
-  export function deleteFileDone(metadata: T.FileMetadata | T.FolderMetadata) {
-    return { type: 'delete-file-done' as const, metadata };
+  export function deleteFileDone(
+    metadata: T.FileMetadata | T.FolderMetadata,
+    folder: string,
+    fileFocus: string | null,
+  ) {
+    return { type: 'delete-file-done' as const, metadata, folder, fileFocus };
   }
 
   export function downloadFileRequested(path: string) {
@@ -583,11 +587,37 @@ export function deleteFile(
       }),
     );
 
+    const fileFocusIndex = $.getFileFocusIndex(getState());
+
     await $.getCurrentFS(getState())
       .delete(file.path)
       .then(
         () => {
-          dispatch(PlainInternal.deleteFileDone(file));
+          // Adjust the file focus if needed.
+          let fileFocus = $.getFileFocus(getState());
+          if (fileFocus === file.name) {
+            // We deleted the focused file, go ahead and focus the next file.
+            const files = $.getSearchFilteredFiles(getState());
+            fileFocus = null;
+            if (files) {
+              const file = files[fileFocusIndex + 1];
+              if (file) {
+                fileFocus = file.name;
+              } else {
+                const file = files[fileFocusIndex - 1];
+                if (file) {
+                  fileFocus = file.name;
+                }
+              }
+            }
+          }
+          dispatch(
+            PlainInternal.deleteFileDone(
+              file,
+              getDirName(file.path),
+              fileFocus,
+            ),
+          );
 
           dispatch(
             addMessage({

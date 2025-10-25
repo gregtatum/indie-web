@@ -25,7 +25,7 @@ export function ListFiles() {
   const parsedSearch = $$.getParsedSearch();
   const fsName = $$.getCurrentFileStoreName();
   const fsSlug = $$.getCurrentFileStoreSlug();
-  const fileFocus = $$.getFileFocus()[path];
+  const fileFocus = $$.getFileFocus();
   const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
   const listFilesRef = React.useRef<null | HTMLDivElement>(null);
   const listFilesListRef = React.useRef<null | HTMLDivElement>(null);
@@ -170,7 +170,7 @@ export function ListFilesSkeleton() {
 interface FileProps {
   file: T.FileMetadata | T.FolderMetadata;
   index: number;
-  fileFocus: string | undefined;
+  fileFocus: string | undefined | null;
   hideExtension?: boolean;
   linkOverride?: string;
 }
@@ -523,9 +523,9 @@ function useFileNavigation(
     function handleKeyDown(event: KeyboardEvent) {
       const state = getState();
       const path = $.getPath(state);
-      const fileFocus: string | null = $.getFileFocus(state)[path] ?? null;
+      const fileFocus: string | null = $.getFileFocus(state);
       const files = $.getSearchFilteredFiles(state);
-      const index = files?.findIndex((file) => file.name === fileFocus) ?? -1;
+      const index = $.getFileFocusIndex(state);
 
       if (!files) {
         return;

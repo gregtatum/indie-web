@@ -272,7 +272,7 @@ export function getUrlForFile(fsName: string, path: string): string | null {
 }
 
 /**
- * getPathFolder('/foo/bar/baz.html') === '/foo/bar'
+ * getDirName('/foo/bar/baz.html') === '/foo/bar'
  */
 export function getDirName(path: string): string {
   const parts = path.split('/');
