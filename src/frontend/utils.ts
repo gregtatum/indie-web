@@ -587,3 +587,45 @@ export function processInChunks<T>(
 
   return promise;
 }
+
+export function isInViewport(el: HTMLElement) {
+  const rect = el.getBoundingClientRect();
+  return (
+    rect.top >= 0 &&
+    rect.left >= 0 &&
+    rect.bottom <= window.innerHeight &&
+    rect.right <= window.innerWidth
+  );
+}
+
+/**
+ * Ensures that an element is visible within the viewport, and scrolls if not.
+ */
+export function ensureElementIsInView(
+  element: Element,
+  options?: Partial<{
+    topOffset: number;
+    bottomOffset: number;
+    behavior: ScrollBehavior;
+  }>,
+): void {
+  const topOffset = options?.topOffset ?? 0;
+  const bottomOffset = options?.bottomOffset ?? 0;
+  const behavior = options?.behavior ?? 'smooth';
+
+  const { top, bottom } = element.getBoundingClientRect();
+
+  if (top < topOffset) {
+    // The element is above the page.
+    window.scrollBy({
+      top: top - topOffset,
+      behavior,
+    });
+  } else if (bottom > window.innerHeight - bottomOffset) {
+    // The element is below the page.
+    window.scrollBy({
+      top: bottom - window.innerHeight + bottomOffset,
+      behavior,
+    });
+  }
+}

@@ -3,10 +3,12 @@ import * as Router from 'react-router-dom';
 import { A, T, $, $$, Hooks } from 'frontend';
 import {
   debounce,
+  ensureElementIsInView,
   ensureExists,
   getEnv,
   imageExtensions,
   isChordProExtension,
+  isInViewport,
 } from 'frontend/utils';
 import { getFileStoreDisplayName } from 'frontend/logic/app-logic';
 
@@ -26,10 +28,11 @@ export function ListFiles() {
   const fsName = $$.getCurrentFileStoreName();
   const fsSlug = $$.getCurrentFileStoreSlug();
   const fileFocus = $$.getFileFocus();
+  const focusIndex = $$.getFileFocusIndex();
+
   const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
   const listFilesRef = React.useRef<null | HTMLDivElement>(null);
   const listFilesListRef = React.useRef<null | HTMLDivElement>(null);
-  const focusIndex = files?.findIndex((file) => file.name === fileFocus) ?? -1;
   const [isFileMenuFocused, setFileMenuFocused] = React.useState(false);
 
   const parts = path.split('/');
@@ -175,7 +178,26 @@ interface FileProps {
   linkOverride?: string;
 }
 
+/**
+ * Helper function to ensure the element is in view with appropriate offets.
+ */
+function keepFileInView(div: HTMLElement) {
+  const headerHeightString =
+    getComputedStyle(div).getPropertyValue('--header-height');
+  const headerHeight = Number(headerHeightString.trim().replace('px', ''));
+  if (!(headerHeight > 0)) {
+    throw new Error('Failed to parse header height: ' + headerHeightString);
+  }
+  const { height } = div.getBoundingClientRect();
+
+  ensureElementIsInView(div, {
+    topOffset: headerHeight + height,
+    bottomOffset: height,
+  });
+}
+
 export function File(props: FileProps) {
+  const { fileFocus } = props;
   const { name, path, type } = props.file;
   const renameFile = $$.getRenameFile();
   const fsSlug = $$.getCurrentFileStoreSlug();
@@ -185,6 +207,14 @@ export function File(props: FileProps) {
   const extension =
     nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
   let displayName: React.ReactNode = name;
+
+  // Ensure the element is in view when navigating by keyboard.
+  React.useEffect(() => {
+    const div = divRef.current;
+    if (fileFocus === name && div) {
+      keepFileInView(div);
+    }
+  }, [fileFocus, name]);
 
   if (isFolder) {
     Hooks.useUploadOnFileDrop(divRef, path);
@@ -525,7 +555,7 @@ function useFileNavigation(
       const path = $.getPath(state);
       const fileFocus: string | null = $.getFileFocus(state);
       const files = $.getSearchFilteredFiles(state);
-      const index = $.getFileFocusIndex(state);
+      const fileFocusIndex = $.getFileFocusIndex(state);
 
       if (!files) {
         return;
@@ -559,10 +589,7 @@ function useFileNavigation(
             changeFileFocus(files[files.length - 1].name);
             break;
           }
-          if (index === -1) {
-            throw new Error('Unexpected index.');
-          }
-          changeFileFocus(files[Math.max(0, index - 1)].name);
+          changeFileFocus(files[Math.max(0, fileFocusIndex - 1)].name);
           break;
         }
         case 'ArrowDown': {
@@ -574,10 +601,9 @@ function useFileNavigation(
             changeFileFocus(files[0].name);
             break;
           }
-          if (index === -1) {
-            throw new Error('Unexpected index.');
-          }
-          changeFileFocus(files[Math.min(files.length - 1, index + 1)].name);
+          changeFileFocus(
+            files[Math.min(files.length - 1, fileFocusIndex + 1)].name,
+          );
           break;
         }
         case 'ArrowLeft':
@@ -590,14 +616,14 @@ function useFileNavigation(
           if (isFileMenuFocused) {
             const link: HTMLAnchorElement | undefined | null =
               listFilesRef.current?.querySelector(
-                `#file-${index} .listFilesFileMenu`,
+                `#file-${fileFocusIndex} .listFilesFileMenu`,
               );
             link?.click();
           } else {
             if (fileFocus) {
               const link: HTMLAnchorElement | undefined | null =
                 listFilesRef.current?.querySelector(
-                  `#file-${index} .listFilesFileLink`,
+                  `#file-${fileFocusIndex} .listFilesFileLink`,
                 );
               link?.click();
             }
