@@ -10,7 +10,7 @@ import { Blob } from 'node:buffer';
 globalThis.structuredClone = structuredClone;
 
 const originalEnv = process.env;
-
+const originalConsoleWarn = console.warn;
 /**
  * The secure digest is not available for some reason in Jest. Work around it
  * by providing a simple insecure implementation.
@@ -33,6 +33,20 @@ function simpleDigest256(_scheme: string, buffer: Uint8Array): ArrayBuffer {
 
 beforeEach(function () {
   jest.resetModules();
+  jest.spyOn(console, 'warn').mockImplementation((...args) => {
+    const [message, ...rest] = args;
+
+    // Suppress this warn statement. I don't care and will deal with migrations when/if
+    // I upgrade the component.
+    if (
+      typeof message === 'string' &&
+      message.includes('⚠️ React Router Future Flag Warning')
+    ) {
+      return;
+    }
+
+    originalConsoleWarn.call(console, message, ...rest);
+  });
   global.indexedDB = new IDBFactory();
   (global as any).fetch = fetchMockJest.sandbox();
   (global as any).Headers = Headers;
