@@ -3,6 +3,7 @@ import {
   foldersFromPaths,
   setupDBWithFiles,
   createFolderMetadata,
+  getFileTree,
 } from './utils/fixtures';
 import { PlainInternal } from 'frontend/store/actions';
 import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
@@ -41,58 +42,6 @@ describe('offline db', () => {
     expect(file.text).toEqual(text);
     idbfs.close();
   });
-
-  /**
-   * Get a text represent of a file tree, similar to the Unix `tree` command.
-   */
-  async function getFileTree(
-    idbfs: IDBFS,
-    path = '/',
-    indent = '',
-    // This is an object so it can be passed into the recursive calls.
-    fileCount = { value: 0 },
-    assertFileCounts = true,
-  ): Promise<string> {
-    let output = '';
-    if (path === '/') {
-      output += '\n.\n';
-    }
-    const files = await idbfs.listFiles(path);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      // Output the art
-      const art = i === files.length - 1 ? '└──' : '├──';
-      output += `${indent}${art} ${file.name}\n`;
-      if (file.type === 'folder') {
-        const nextIndent = i + 1 === files.length ? '    ' : '│   ';
-        output += await getFileTree(
-          idbfs,
-          file.path,
-          indent + nextIndent,
-          fileCount,
-          false /* assertFileCounts */,
-        );
-      }
-
-      // Validate the files exist, as the folder listing and the actual files should agree.
-      if (file.type === 'file') {
-        fileCount.value++;
-        if (!(await idbfs.fileExists(file.path))) {
-          throw new Error('Could not find file in the database: ' + file.path);
-        }
-      }
-    }
-
-    const actualFileCount = await idbfs.getFileCount();
-    if (assertFileCounts && fileCount.value !== actualFileCount) {
-      throw new Error(
-        `There were ${fileCount.value} files in the folder listings, ` +
-          `but ${actualFileCount} in the database.`,
-      );
-    }
-    return output;
-  }
 
   it('can create files as the root of the folder', async () => {
     const idbfs = await openIDBFS('test-db');

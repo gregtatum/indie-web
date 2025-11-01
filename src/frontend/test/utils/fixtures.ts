@@ -4,7 +4,7 @@ import { ensureExists, UnhandledCaseError } from '../../utils';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { createStore } from 'frontend/store/create-store';
 import { fixupMetadata } from 'frontend/logic/file-store/dropbox-fs';
-import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 
 export function createFileMetadata(path: string, id?: string): T.FileMetadata {
   const parts = path.split('/');
@@ -291,4 +291,56 @@ export async function setupDBWithFiles(paths: string[]) {
   }
 
   return { dispatch, getState, fetchTextFile, fetchFileListing, idbfs };
+}
+
+/**
+ * Get a text represent of a file tree, similar to the Unix `tree` command.
+ */
+export async function getFileTree(
+  idbfs: IDBFS,
+  path = '/',
+  indent = '',
+  // This is an object so it can be passed into the recursive calls.
+  fileCount = { value: 0 },
+  assertFileCounts = true,
+): Promise<string> {
+  let output = '';
+  if (path === '/') {
+    output += '\n.\n';
+  }
+  const files = await idbfs.listFiles(path);
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+
+    // Output the art
+    const art = i === files.length - 1 ? '└──' : '├──';
+    output += `${indent}${art} ${file.name}\n`;
+    if (file.type === 'folder') {
+      const nextIndent = i + 1 === files.length ? '    ' : '│   ';
+      output += await getFileTree(
+        idbfs,
+        file.path,
+        indent + nextIndent,
+        fileCount,
+        false /* assertFileCounts */,
+      );
+    }
+
+    // Validate the files exist, as the folder listing and the actual files should agree.
+    if (file.type === 'file') {
+      fileCount.value++;
+      if (!(await idbfs.fileExists(file.path))) {
+        throw new Error('Could not find file in the database: ' + file.path);
+      }
+    }
+  }
+
+  const actualFileCount = await idbfs.getFileCount();
+  if (assertFileCounts && fileCount.value !== actualFileCount) {
+    throw new Error(
+      `There were ${fileCount.value} files in the folder listings, ` +
+        `but ${actualFileCount} in the database.`,
+    );
+  }
+  return output;
 }
