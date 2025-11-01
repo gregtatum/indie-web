@@ -133,6 +133,10 @@ export function getOpenAIApiKey(state: State) {
   return state.openAIApiKey;
 }
 
+export function getCopyFile(state: State) {
+  return state.copyFile;
+}
+
 export function getFileStoreDisplayName(state: State): string {
   return AppLogic.getFileStoreDisplayName(
     getCurrentFileStoreName(state),

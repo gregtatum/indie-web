@@ -200,6 +200,14 @@ export function removeKeySettings(path: string) {
   return { type: 'remove-key-settings' as const, path };
 }
 
+export function setCopyFile(path: string, isCut: boolean) {
+  return { type: 'set-copy-file' as const, path, isCut };
+}
+
+export function clearCopyFile() {
+  return { type: 'clear-copy-file' as const };
+}
+
 export function changeFileStore(
   fileStoreName: T.FileStoreName,
   fileStoreServer?: T.FileStoreServer,

@@ -695,6 +695,20 @@ function experimentalFeatures(
   }
 }
 
+function copyFile(
+  state: T.CopyFileState | null = null,
+  action: T.Action,
+): T.CopyFileState | null {
+  switch (action.type) {
+    case 'set-copy-file':
+      return { path: action.path, isCut: action.isCut };
+    case 'clear-copy-file':
+      return null;
+    default:
+      return state;
+  }
+}
+
 /**
  * Record<string, string> is the map of the folder to the file name. This way
  * the file focus is retained when navigating between folders.
@@ -731,6 +745,7 @@ export const reducers = combineReducers({
   downloadFileCache,
   downloadFileErrors,
   dropboxOauth,
+  copyFile,
   experimentalFeatures,
   filesIndex,
   serverId,

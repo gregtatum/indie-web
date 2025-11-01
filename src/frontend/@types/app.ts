@@ -152,6 +152,11 @@ export interface ClickedFileStoreMenu {
   openedByKeyboard: boolean;
 }
 
+export interface CopyFileState {
+  path: string;
+  isCut: boolean;
+}
+
 export type RenameFileState =
   | { phase: 'none'; path: null }
   | { phase: 'editing'; path: string }
