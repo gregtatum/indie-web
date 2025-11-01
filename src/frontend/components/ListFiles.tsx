@@ -609,7 +609,7 @@ function useFileNavigation(
       };
 
       const focusedFile =
-        fileFocusIndex >= 0 && fileFocusIndex < files.length
+        fileFocus && fileFocusIndex >= 0 && fileFocusIndex < files.length
           ? files[fileFocusIndex]
           : null;
 
@@ -623,6 +623,7 @@ function useFileNavigation(
         }
       };
 
+      console.log(`!!! key`, key);
       switch (key) {
         case 'ArrowUp': {
           event.preventDefault();
@@ -690,6 +691,31 @@ function useFileNavigation(
           if (focusedFile) {
             event.preventDefault();
             dispatch(A.setCopyFile(focusedFile.path, true));
+          }
+          break;
+        }
+        case 'Meta+v':
+        case 'Control+v': {
+          const clipboard = $.getCopyFile(state);
+          if (clipboard) {
+            event.preventDefault();
+            ensureElementFocus();
+            void dispatch(A.pasteCopyFile(path, clipboard));
+          }
+          break;
+        }
+        case 'Meta+Alt+v':
+        case 'Meta+Alt+√': {
+          // Handle the macOS-specific pasting of files. The "Meta+Alt+√" is a little
+          // weird, but I'm lazy and that's how the event is represented when option
+          // is pressed on an English keyboard.
+          const clipboard = $.getCopyFile(state);
+          if (clipboard) {
+            event.preventDefault();
+            ensureElementFocus();
+            void dispatch(
+              A.pasteCopyFile(path, { path: clipboard.path, isCut: true }),
+            );
           }
           break;
         }

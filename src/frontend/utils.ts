@@ -186,6 +186,20 @@ export function pathJoin(...segments: string[]) {
 }
 
 /**
+ *  Returns the base name and extension.
+ */
+export function splitOutFileExtension(fileName: string) {
+  const extensionIndex = fileName.lastIndexOf('.');
+  if (extensionIndex < 0) {
+    return { baseName: fileName, extension: '' };
+  }
+  return {
+    baseName: fileName.slice(0, extensionIndex),
+    extension: fileName.slice(extensionIndex),
+  };
+}
+
+/**
  * Convert an arbitrary Dropbox or network error into a nice message.
  */
 export function dropboxErrorMessage(error: any): string {

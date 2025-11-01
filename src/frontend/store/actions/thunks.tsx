@@ -13,11 +13,20 @@ import {
   pathJoin,
   getZipJs,
   processInChunks,
+  splitOutFileExtension,
 } from 'frontend/utils';
 import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
 import { FileStoreError } from 'frontend/logic/file-store';
 import { IDBError } from 'frontend/logic/file-store/indexeddb-fs';
+
+function getMetadataFromCache(
+  cache: T.ListFilesCache,
+  folder: string,
+  path: string,
+) {
+  return cache.get(folder)?.find((entry) => entry.path === path);
+}
 
 /**
  * This file contains all of the thunk actions, that contain extra logic,
@@ -347,6 +356,188 @@ export function moveFile(
       );
       console.error(error);
       throw new Error(`Unable to save the file with ${fileStoreDisplayName}.`);
+    }
+  };
+}
+
+/**
+ * Handle the pasting of files, with either copy or cut behavior. If there is a
+ * duplicate file, then the file will automatically be renamed as a copy file.
+ */
+export function pasteCopyFile(
+  destinationFolder: string,
+  clipboard: T.CopyFileState,
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const { path: sourcePath, isCut } = clipboard;
+    const sourceFolder = getDirName(sourcePath);
+
+    const ensureFolderListing = async (folder: string) => {
+      let state = getState();
+      if (!$.getListFilesCache(state).get(folder)) {
+        await dispatch(listFiles(folder));
+        state = getState();
+      }
+      return $.getListFilesCache(getState()).get(folder) ?? null;
+    };
+
+    if (!(await ensureFolderListing(sourceFolder))) {
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Unable to locate <code>{sourcePath}</code> for pasting.
+            </>
+          ),
+          timeout: true,
+        }),
+      );
+      dispatch(Plain.clearCopyFile());
+      return;
+    }
+
+    let state = getState();
+    let metadata =
+      getMetadataFromCache(
+        $.getListFilesCache(state),
+        sourceFolder,
+        sourcePath,
+      ) ?? null;
+
+    if (!metadata) {
+      await dispatch(listFiles(sourceFolder));
+      state = getState();
+      metadata =
+        getMetadataFromCache(
+          $.getListFilesCache(state),
+          sourceFolder,
+          sourcePath,
+        ) ?? null;
+    }
+
+    if (!metadata) {
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Unable to locate <code>{sourcePath}</code> for pasting.
+            </>
+          ),
+          timeout: true,
+        }),
+      );
+      dispatch(Plain.clearCopyFile());
+      return;
+    }
+
+    const targetFolder = canonicalizePath(destinationFolder);
+    const targetListing = await ensureFolderListing(targetFolder);
+
+    if (!targetListing) {
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Unable to access <code>{targetFolder}</code>.
+            </>
+          ),
+        }),
+      );
+      return;
+    }
+
+    // Handle duplicate names.
+    // 1. "filename.jpg"
+    // 2. "filename copy.jpg"
+    // 3. "filename copy 2.jpg"
+    const existingNames = new Set(targetListing.map((entry) => entry.name));
+    let targetName = metadata.name;
+    if (existingNames.has(metadata.name)) {
+      const { baseName, extension } = splitOutFileExtension(metadata.name);
+
+      let candidate = `${baseName} copy${extension}`;
+      let counter = 2;
+      while (existingNames.has(candidate)) {
+        candidate = `${baseName} copy ${counter}${extension}`;
+        counter += 1;
+      }
+      targetName = candidate;
+    }
+
+    const targetPath = canonicalizePath(pathJoin(targetFolder, targetName));
+
+    if (isCut) {
+      if (targetPath === metadata.path) {
+        dispatch(Plain.clearCopyFile());
+        return;
+      }
+      try {
+        await dispatch(moveFile(sourcePath, targetPath));
+        dispatch(Plain.clearCopyFile());
+        dispatch(Plain.changeFileFocus(targetFolder, targetName));
+      } catch (error) {
+        console.error(error);
+      }
+      return;
+    }
+
+    if (metadata.type === 'folder') {
+      dispatch(
+        addMessage({
+          message: (
+            <>Copying folders is not supported yet. Try cutting instead.</>
+          ),
+          timeout: true,
+        }),
+      );
+      return;
+    }
+
+    const fileStore = $.getCurrentFS(getState());
+    const fileStoreDisplayName = $.getFileStoreDisplayName(getState());
+    const messageGeneration = dispatch(
+      addMessage({
+        message: (
+          <>
+            Copying <code>{metadata.name}</code>
+          </>
+        ),
+      }),
+    );
+
+    try {
+      const { blob } = await fileStore.loadBlob(sourcePath);
+      const savedMetadata = await fileStore.saveBlob(
+        targetPath,
+        'overwrite',
+        blob,
+      );
+      await dispatch(listFiles(targetFolder));
+      dispatch(Plain.changeFileFocus(targetFolder, savedMetadata.name));
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Pasted <code>{savedMetadata.path}</code>
+            </>
+          ),
+          generation: messageGeneration,
+          timeout: true,
+        }),
+      );
+    } catch (error) {
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              Unable to copy <code>{metadata.name}</code> with{' '}
+              {fileStoreDisplayName}.
+            </>
+          ),
+          generation: messageGeneration,
+        }),
+      );
+      console.error(error);
     }
   };
 }
