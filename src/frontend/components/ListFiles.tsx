@@ -608,6 +608,11 @@ function useFileNavigation(
         }
       };
 
+      const focusedFile =
+        fileFocusIndex >= 0 && fileFocusIndex < files.length
+          ? files[fileFocusIndex]
+          : null;
+
       const openFile = () => {
         if (fileFocus) {
           const link: HTMLAnchorElement | undefined | null =
@@ -670,6 +675,22 @@ function useFileNavigation(
         case 'Meta+ArrowDown': {
           ensureElementFocus();
           openFile();
+          break;
+        }
+        case 'Meta+c':
+        case 'Control+c': {
+          if (focusedFile) {
+            event.preventDefault();
+            dispatch(A.setCopyFile(focusedFile.path, false));
+          }
+          break;
+        }
+        case 'Meta+x':
+        case 'Control+x': {
+          if (focusedFile) {
+            event.preventDefault();
+            dispatch(A.setCopyFile(focusedFile.path, true));
+          }
           break;
         }
         case 'Escape':
