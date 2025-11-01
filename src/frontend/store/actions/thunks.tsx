@@ -1043,18 +1043,19 @@ export function uploadFilesWithMessages(
 
     if (files.length === 1) {
       const [file] = files;
-      if (file.type == 'application/zip') {
+      if (file.type === 'application/zip') {
         const extract = confirm(
           'The zip file will be automatically extracted. Click cancel to upload it instead.',
         );
         if (extract) {
-          return extractAndUploadZip(dispatch, getState, folderPath, file);
+          await extractAndUploadZip(dispatch, getState, folderPath, file);
+          return;
         }
       }
     }
 
     for (const file of files) {
-      if (!file.type && file.size == 0) {
+      if (!file.type && file.size === 0) {
         dispatch(
           addMessage({
             message: (

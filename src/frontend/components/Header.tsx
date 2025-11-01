@@ -378,7 +378,7 @@ function Path({
         <div className="headerPathBreadcrumbs">
           {breadcrumbs}
           <span>»</span>
-          {songTitle ?? fileName ? (
+          {(songTitle ?? fileName) ? (
             <span title={fileName}>{songTitle ?? fileName}</span>
           ) : null}
           {title ? <span>{title}</span> : null}
@@ -443,7 +443,10 @@ function SiteName(props: { isOpen: boolean }) {
       <div className="headerSiteName">
         <SlideIn isOpen={props.isOpen} skipAnimation={skipAnimation}>
           <span>
-            <img src="/favicon-48x48.png" className="headerFloppyDiskImg" />{' '}
+            <img
+              src="/favicon-48x48.png"
+              className="headerFloppyDiskImg"
+            />{' '}
           </span>
           <span className="headerSiteNameTitle">
             FloppyDisk<span className="headerSiteNameSuffix">.link</span>

@@ -705,8 +705,8 @@ export const getFileFocusIndex = createSelector(
   getFileFocus,
   getSearchFilteredFiles,
   (fileFocus, files) => {
-    let index = files?.findIndex((file) => file.name === fileFocus);
-    if (!index || index == -1) {
+    const index = files?.findIndex((file) => file.name === fileFocus);
+    if (!index || index === -1) {
       return 0;
     }
     return index;

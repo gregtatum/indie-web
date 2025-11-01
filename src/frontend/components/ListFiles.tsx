@@ -10,7 +10,6 @@ import {
   getKeyboardString,
   imageExtensions,
   isChordProExtension,
-  isInViewport,
 } from 'frontend/utils';
 import { getFileStoreDisplayName } from 'frontend/logic/app-logic';
 
@@ -576,7 +575,7 @@ function useFileNavigation(
       // Actions to perform even if there are no files.
       switch (key) {
         case 'Meta+ArrowUp':
-        case 'Alt+ArrowUp':
+        case 'Alt+ArrowUp': {
           event.preventDefault();
           if (path === '/') {
             return;
@@ -585,6 +584,9 @@ function useFileNavigation(
           const fsSlug = $.getCurrentFileStoreSlug(state);
           navigate(`/${fsSlug}/folder${parentPath}`);
           return;
+        }
+        default:
+        // Do nothing.
       }
 
       if (!files) {
@@ -668,6 +670,7 @@ function useFileNavigation(
         case 'Meta+ArrowDown': {
           ensureElementFocus();
           openFile();
+          break;
         }
         case 'Escape':
           // Blur the focus.
