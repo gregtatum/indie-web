@@ -629,3 +629,25 @@ export function ensureElementIsInView(
     });
   }
 }
+
+/**
+ * Normalizes the keyboard event into a string representation appropriate for
+ * case statements.
+ */
+export function getKeyboardString(event: KeyboardEvent) {
+  let key = '';
+  if (event.metaKey && event.key !== 'Meta') {
+    key += 'Meta+';
+  }
+  if (event.ctrlKey && event.key !== 'Control') {
+    key += 'Control+';
+  }
+  if (event.altKey && event.key !== 'Alt') {
+    key += 'Alt+';
+  }
+  if (event.shiftKey && event.key !== 'Shift') {
+    key += 'Shift+';
+  }
+  key += event.key;
+  return key;
+}

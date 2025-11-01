@@ -7,6 +7,7 @@ import {
   ensureExists,
   getDirName,
   getEnv,
+  getKeyboardString,
   imageExtensions,
   isChordProExtension,
   isInViewport,
@@ -558,39 +559,46 @@ function useFileNavigation(
       const fileFocus: string | null = $.getFileFocus(state);
       const files = $.getSearchFilteredFiles(state);
       const fileFocusIndex = $.getFileFocusIndex(state);
+      const key = getKeyboardString(event);
 
-      if (event.key === 'ArrowUp' && event.metaKey) {
-        event.preventDefault();
-        if (path === '/') {
-          return;
-        }
-        if (
-          path !== '/' &&
-          (document.activeElement === document.body ||
-            document.activeElement === listFilesRef.current)
-        ) {
+      // The file is considered focused if the active element is the document body
+      // or if the current list files ref is the active element.
+      const isFileFocused =
+        document.activeElement === document.body ||
+        document.activeElement === listFilesRef.current;
+
+      if (!isFileFocused) {
+        // The keyboard handler ran, but the list files element wasn't focused,
+        // so there is no reason to run the event handlers.
+        return;
+      }
+
+      // Actions to perform even if there are no files.
+      switch (key) {
+        case 'Meta+ArrowUp':
+        case 'Alt+ArrowUp':
+          event.preventDefault();
+          if (path === '/') {
+            return;
+          }
           const parentPath = getDirName(path);
           const fsSlug = $.getCurrentFileStoreSlug(state);
-          if (parentPath !== '/') {
-            navigate('/');
-          } else {
-            navigate(`/${fsSlug}/folder${parentPath}`);
-          }
-        }
-        return;
+          navigate(`/${fsSlug}/folder${parentPath}`);
+          return;
       }
 
       if (!files) {
+        // There are no files, so don't perform any navigation.
         return;
       }
 
-      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      const ensureElementFocus = () => {
         if (document.activeElement === document.body) {
           if (listFilesRef.current) {
             listFilesRef.current.focus();
           }
         }
-      }
+      };
 
       const changeFileFocus = (nextFile: string) => {
         if (nextFile !== fileFocus) {
@@ -598,13 +606,20 @@ function useFileNavigation(
         }
       };
 
-      if (document.activeElement !== listFilesRef.current) {
-        return;
-      }
+      const openFile = () => {
+        if (fileFocus) {
+          const link: HTMLAnchorElement | undefined | null =
+            listFilesRef.current?.querySelector(
+              `#file-${fileFocusIndex} .listFilesFileLink`,
+            );
+          link?.click();
+        }
+      };
 
-      switch (event.key) {
+      switch (key) {
         case 'ArrowUp': {
           event.preventDefault();
+          ensureElementFocus();
           if (!fileFocus) {
             if (!files.length) {
               break;
@@ -617,6 +632,7 @@ function useFileNavigation(
         }
         case 'ArrowDown': {
           event.preventDefault();
+          ensureElementFocus();
           if (!fileFocus) {
             if (!files.length) {
               break;
@@ -631,10 +647,12 @@ function useFileNavigation(
         }
         case 'ArrowLeft':
         case 'ArrowRight':
+          ensureElementFocus();
           setFileMenuFocused((value) => !value);
           break;
         case 'Enter': {
           event.preventDefault();
+          ensureElementFocus();
 
           if (isFileMenuFocused) {
             const link: HTMLAnchorElement | undefined | null =
@@ -643,18 +661,18 @@ function useFileNavigation(
               );
             link?.click();
           } else {
-            if (fileFocus) {
-              const link: HTMLAnchorElement | undefined | null =
-                listFilesRef.current?.querySelector(
-                  `#file-${fileFocusIndex} .listFilesFileLink`,
-                );
-              link?.click();
-            }
+            openFile();
           }
           break;
         }
+        case 'Meta+ArrowDown': {
+          ensureElementFocus();
+          openFile();
+        }
         case 'Escape':
+          // Blur the focus.
           event.preventDefault();
+          ensureElementFocus();
           listFilesRef.current?.blur();
           setFileMenuFocused((value) => !value);
           break;
