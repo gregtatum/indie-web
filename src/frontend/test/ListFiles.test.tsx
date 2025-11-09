@@ -43,7 +43,10 @@ function useTestIDBFS() {
 describe('ListFiles', () => {
   const { getIDBFS } = useTestIDBFS();
 
-  async function setupWithListing(paths: string[]) {
+  async function setupWithListing(
+    paths: string[],
+    userOptions?: Parameters<typeof userEvent.setup>[0],
+  ) {
     const idbfs = getIDBFS();
     const store = createStore();
     store.dispatch(A.changeFileStore('browser'));
@@ -68,7 +71,7 @@ describe('ListFiles', () => {
       return getFilePath(element);
     }
 
-    const user = userEvent.setup();
+    const user = userEvent.setup(userOptions);
     return {
       user,
       getSelectedFilePath,
@@ -163,5 +166,31 @@ describe('ListFiles', () => {
           └── NPCs.md
       "
     `);
+  });
+
+  it('filters files via the search input', async () => {
+    jest.useFakeTimers();
+    const { user } = await setupWithListing(
+      ['README.md', 'Lyrics.txt', 'NPCs.md', 'Ideas.md'],
+      {
+        advanceTimers: jest.advanceTimersByTime,
+      },
+    );
+
+    await waitFor(() => screen.getByText(/README/));
+
+    const searchInput = screen.getByPlaceholderText('Search');
+    await user.type(searchInput, 'npc');
+
+    await act(() => {
+      // The searchbox is debounced.
+      jest.advanceTimersByTime(1000);
+    });
+
+    await waitFor(() => {
+      const options = screen.getAllByRole('option');
+      expect(options).toHaveLength(1);
+      expect(getFilePath(options[0])).toEqual('/NPCs.md');
+    });
   });
 });
