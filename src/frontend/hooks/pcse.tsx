@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { getEnv } from 'frontend/utils';
+import { $$ } from 'frontend';
 
 /**
  * This file consolidates some of the PCSE process of generating and persisting the
@@ -122,7 +123,11 @@ function getDropboxAuthorizeUrl(codeChallenge: string) {
 
 export function useCodeVerifier() {
   const [authorizationUrl, setAuthorizationUrl] = React.useState<string>('');
+  const fsName = $$.getCurrentFileStoreName();
   React.useEffect(() => {
+    if (fsName !== 'dropbox') {
+      return;
+    }
     (async () => {
       const { codeChallenge } = await getCodes();
       const url = getDropboxAuthorizeUrl(codeChallenge);
@@ -130,6 +135,6 @@ export function useCodeVerifier() {
     })().catch((error) => {
       console.error('Error getting dropbox authorization url:', error);
     });
-  }, []);
+  }, [fsName]);
   return { persistCodeVerifier, authorizationUrl };
 }

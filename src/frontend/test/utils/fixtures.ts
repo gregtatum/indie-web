@@ -1,6 +1,10 @@
 import { A, $, T } from 'frontend';
 import { type files } from 'dropbox';
-import { ensureExists, UnhandledCaseError } from '../../utils';
+import {
+  canonicalizePath,
+  ensureExists,
+  UnhandledCaseError,
+} from '../../utils';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { createStore } from 'frontend/store/create-store';
 import { fixupMetadata } from 'frontend/logic/file-store/dropbox-fs';
@@ -343,4 +347,15 @@ export async function getFileTree(
     );
   }
   return output;
+}
+
+export async function buildTestFiles(idbfs: IDBFS, paths: string[]) {
+  await idbfs.addFolderListing('/', []);
+  for (const path of paths.map((path) => canonicalizePath(path))) {
+    if (path.endsWith('/')) {
+      await idbfs.addFolderListing(path.slice(0, -1), []);
+    } else {
+      await idbfs.saveText(path, 'overwrite', `${path} contents for tests`);
+    }
+  }
 }

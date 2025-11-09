@@ -183,14 +183,19 @@ interface FileProps {
  * Helper function to ensure the element is in view with appropriate offets.
  */
 function keepFileInView(div: HTMLElement) {
-  const headerHeightString =
-    getComputedStyle(div).getPropertyValue('--header-height');
-  const headerHeight = Number(headerHeightString.trim().replace('px', ''));
-  if (!(headerHeight > 0)) {
-    throw new Error('Failed to parse header height: ' + headerHeightString);
+  // In tests set an arbitrary header height since the style won't necessarily have
+  // been applied.
+  let headerHeight = 50;
+  if (process.env.NODE_ENV !== 'test') {
+    const headerHeightString =
+      getComputedStyle(div).getPropertyValue('--header-height');
+    headerHeight = Number(headerHeightString.trim().replace('px', ''));
+    if (!(headerHeight > 0)) {
+      throw new Error('Failed to parse header height: ' + headerHeightString);
+    }
   }
-  const { height } = div.getBoundingClientRect();
 
+  const { height } = div.getBoundingClientRect();
   ensureElementIsInView(div, {
     topOffset: headerHeight + height,
     bottomOffset: height,
@@ -296,15 +301,23 @@ export function File(props: FileProps) {
   }
 
   let className = 'listFilesFile';
+  let ariaSelected = false;
   if (props.fileFocus === name) {
     className += ' selected';
+    ariaSelected = true;
   }
 
   const id = 'file-' + props.index;
 
   if (link) {
     return (
-      <div className={className} ref={divRef} id={id}>
+      <div
+        className={className}
+        ref={divRef}
+        id={id}
+        aria-selected={ariaSelected}
+        role="option"
+      >
         <Router.Link
           className="listFilesFileLink"
           to={link}
@@ -623,7 +636,6 @@ function useFileNavigation(
         }
       };
 
-      console.log(`!!! key`, key);
       switch (key) {
         case 'ArrowUp': {
           event.preventDefault();

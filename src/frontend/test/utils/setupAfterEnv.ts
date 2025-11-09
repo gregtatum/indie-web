@@ -33,6 +33,7 @@ function simpleDigest256(_scheme: string, buffer: Uint8Array): ArrayBuffer {
 
 beforeEach(function () {
   jest.resetModules();
+  jest.spyOn(window, 'scrollBy').mockImplementation();
   jest.spyOn(console, 'warn').mockImplementation((...args) => {
     const [message, ...rest] = args;
 

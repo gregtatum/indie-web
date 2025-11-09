@@ -1,60 +1,58 @@
+import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '@testing-library/react';
 import * as React from 'react';
+import { act } from 'react';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import { A } from 'frontend';
 import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
-import { ensureExists } from 'frontend/utils';
-import { getFileTree } from './utils/fixtures';
+import { canonicalizePath, ensureExists } from 'frontend/utils';
+import { buildTestFiles, getFileTree } from './utils/fixtures';
 
-describe('ListFiles', () => {
-  const DB_NAME = 'list-files-test';
+/**
+ * Handles the life cycle of creating and deleted a test-only IDBFS.
+ */
+function useTestIDBFS() {
+  const dbName = 'test-only-db';
   let idbfs: IDBFS | null = null;
-  let renderResult: ReturnType<typeof render> | null = null;
 
-  async function deleteDatabase(name: string) {
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.deleteDatabase(name);
-      request.onsuccess = () => resolve();
-      request.onblocked = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
+  beforeEach(async () => {
+    idbfs = await openIDBFS(dbName);
+  });
 
   afterEach(async () => {
     idbfs?.close();
     idbfs = null;
-    renderResult?.unmount();
-    renderResult = null;
-    await deleteDatabase(DB_NAME);
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(dbName);
+      request.onsuccess = () => resolve();
+      request.onblocked = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   });
 
+  return {
+    getIDBFS() {
+      return ensureExists(idbfs);
+    },
+  };
+}
+
+describe('ListFiles', () => {
+  const { getIDBFS } = useTestIDBFS();
+
   async function setupWithListing(paths: string[]) {
+    const idbfs = getIDBFS();
     const store = createStore();
     store.dispatch(A.changeFileStore('browser'));
     store.dispatch(A.setHasOnboarded(true));
-
-    idbfs = await openIDBFS(DB_NAME);
     store.dispatch(A.connectIDBFS(idbfs));
 
-    // Build out the files.
-    await idbfs.addFolderListing('/', []);
-    for (const path of paths) {
-      const normalized = path.startsWith('/') ? path : `/${path}`;
-      if (normalized.endsWith('/')) {
-        await idbfs.addFolderListing(normalized.slice(0, -1), []);
-      } else {
-        await idbfs.saveText(
-          normalized,
-          'overwrite',
-          `${normalized} contents for tests`,
-        );
-      }
-    }
+    await buildTestFiles(idbfs, paths);
 
-    renderResult = render(
+    render(
       <MemoryRouter initialEntries={['/']}>
         <Provider store={store as any}>
           <AppRoutes />
@@ -62,10 +60,40 @@ describe('ListFiles', () => {
       </MemoryRouter>,
     );
 
+    function getSelectedFilePath() {
+      const element = screen.queryByRole('option', { selected: true });
+      if (!element) {
+        return null;
+      }
+      return getFilePath(element);
+    }
+
+    const user = userEvent.setup();
     return {
-      store,
-      renderTree: () => getFileTree(ensureExists(idbfs)),
+      user,
+      getSelectedFilePath,
+      renderTree: () => getFileTree(idbfs),
+      async navigateByKeyboard(key: string, path: string | null) {
+        await act(() => user.keyboard(key));
+        expect(getSelectedFilePath()).toEqual(path);
+      },
     };
+  }
+
+  function getFilePath(container: HTMLElement) {
+    const results = container.querySelectorAll('[data-file-path]');
+    if (results.length > 1) {
+      throw new Error('Found too many file paths');
+    }
+    const [element] = results;
+    if (!element) {
+      return null;
+    }
+    const filePath = element.getAttribute('data-file-path');
+    if (!filePath) {
+      throw new Error('The file path did not have a value.');
+    }
+    return filePath;
   }
 
   it('renders a folder listing', async () => {
@@ -77,10 +105,7 @@ describe('ListFiles', () => {
       '02 - Lark Bastion/',
     ]);
 
-    await waitFor(() => screen.getByTestId('list-files'));
-    await waitFor(() =>
-      screen.getByText((content) => content.includes('README')),
-    );
+    await waitFor(() => screen.getByText(/README/));
 
     expect(await renderTree()).toMatchInlineSnapshot(`
       "
@@ -91,6 +116,51 @@ describe('ListFiles', () => {
       │   ├── NPCs.md
       │   └── Scenery.md
       └── 02 - Lark Bastion
+      "
+    `);
+  });
+
+  it('copies a file into a folder using keyboard navigation', async () => {
+    const { renderTree, navigateByKeyboard, getSelectedFilePath, user } =
+      await setupWithListing([
+        'README.md',
+        '01 - Stone End/Enemies.md',
+        '01 - Stone End/NPCs.md',
+        '01 - Stone End/Scenery.md',
+        '02 - Lark Bastion/',
+      ]);
+
+    // Navigate into 01 - Stone End.
+    expect(getSelectedFilePath()).toBeNull();
+
+    await navigateByKeyboard('{ArrowDown}', '/01 - Stone End');
+
+    // Navigate to the subfolder.
+    await navigateByKeyboard('{Enter}', null);
+    await navigateByKeyboard('{ArrowDown}', '/01 - Stone End/Enemies.md');
+    await navigateByKeyboard('{ArrowDown}', '/01 - Stone End/NPCs.md');
+
+    // Copy the file.
+    await act(() => user.keyboard('{Meta>}c{/Meta}'));
+
+    // Navigate into the Lark Bastion subfolder.
+    await navigateByKeyboard('{Meta>}{ArrowUp}{/Meta}', '/01 - Stone End');
+    await navigateByKeyboard('{ArrowDown}', '/02 - Lark Bastion');
+    await navigateByKeyboard('{Meta>}{ArrowDown}{/Meta}', null);
+
+    // Paste the file NPCs file.
+    await act(() => user.keyboard('{Meta>}v{/Meta}'));
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── README.md
+      ├── 01 - Stone End
+      │   ├── Enemies.md
+      │   ├── NPCs.md
+      │   └── Scenery.md
+      └── 02 - Lark Bastion
+          └── NPCs.md
       "
     `);
   });
