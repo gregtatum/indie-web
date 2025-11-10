@@ -1,5 +1,5 @@
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import * as React from 'react';
 import { act } from 'react';
 import { Provider } from 'react-redux';
@@ -99,6 +99,13 @@ describe('ListFiles', () => {
     return filePath;
   }
 
+  function getFileListing(path: string) {
+    const option = screen
+      .queryAllByRole('option')
+      .find((element) => getFilePath(element) === path);
+    return ensureExists(option, 'Could not find file option for path.');
+  }
+
   it('renders a folder listing', async () => {
     const { renderTree } = await setupWithListing([
       'README.md',
@@ -192,5 +199,49 @@ describe('ListFiles', () => {
       expect(options).toHaveLength(1);
       expect(getFilePath(options[0])).toEqual('/NPCs.md');
     });
+  });
+
+  it('renames a file inline', async () => {
+    const { renderTree, user, navigateByKeyboard } = await setupWithListing([
+      'README.md',
+      'lyrics/NPCs.md',
+      'lyrics/Scenery.md',
+    ]);
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    await navigateByKeyboard('{ArrowDown}', '/lyrics');
+    await navigateByKeyboard('{ArrowDown}', '/README.md');
+
+    const fileOption = getFileListing('/README.md');
+    const menuButton = within(fileOption).getByRole('button', {
+      name: /File Menu/i,
+    });
+    await act(async () => {
+      await user.click(menuButton);
+    });
+
+    const renameButton = await screen.findByRole('button', { name: /Rename/i });
+    await act(async () => {
+      await user.click(renameButton);
+    });
+
+    const renameInput = await screen.findByDisplayValue('README.md');
+    await user.clear(renameInput);
+    await act(async () => {
+      await user.type(renameInput, 'Journal.md{Enter}');
+    });
+
+    await waitFor(() => getFileListing('/Journal.md'));
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── lyrics
+      │   ├── NPCs.md
+      │   └── Scenery.md
+      └── Journal.md
+      "
+    `);
   });
 });

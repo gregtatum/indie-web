@@ -532,7 +532,7 @@ let overlayContainer: HTMLDivElement;
  * the z-indexing is guaranteed to be correct.
  */
 export function overlayPortal(child: React.ReactNode, key?: string) {
-  if (!overlayContainer) {
+  if (!overlayContainer || !overlayContainer.isConnected) {
     overlayContainer = ensureExists(
       document.querySelector<HTMLDivElement>('#overlayContainer'),
       'Could not find the overlayContainer',
