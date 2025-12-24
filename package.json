@@ -19,7 +19,7 @@
     "@babel/preset-env": "^7.26.9",
     "@babel/preset-react": "^7.26.3",
     "@babel/preset-typescript": "^7.26.0",
-    "@codemirror/view": "^6.22.3",
+    "@codemirror/view": "^6.39.7",
     "@eslint/js": "^9.21.0",
     "@lezer/generator": "^1.5.1",
     "@lezer/lr": "^1.3.14",
@@ -69,15 +69,15 @@
     "workbox-webpack-plugin": "^7.0.0"
   },
   "dependencies": {
-    "@codemirror/commands": "^6.3.2",
-    "@codemirror/lang-markdown": "^6.2.3",
-    "@codemirror/language": "^6.9.3",
-    "@codemirror/language-data": "^6.3.1",
-    "@codemirror/search": "^6.5.5",
-    "@codemirror/state": "^6.3.3",
-    "@types/codemirror": "^5.60.15",
+    "@codemirror/commands": "^6.10.1",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/language": "^6.12.1",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/search": "^6.5.11",
+    "@codemirror/state": "^6.5.3",
+    "@types/codemirror": "^5.60.17",
     "@types/node": "^22.13.8",
-    "codemirror": "^6.0.1",
+    "codemirror": "^6.0.2",
     "codemirror-lang-chordpro": "^0.0.6",
     "dedent": "^1.5.3",
     "dropbox": "^10.34.0",
@@ -94,5 +94,12 @@
     "redux-thunk": "^3.1.0",
     "turndown": "^7.1.2",
     "uuid": "^9.0.1"
+  },
+  "overrides": {
+    "codemirror-lang-chordpro": {
+      "@lezer/common": "^1.5.0",
+      "@lezer/highlight": "^1.2.2",
+      "@lezer/lr": "^1.4.2"
+    }
   }
 }
