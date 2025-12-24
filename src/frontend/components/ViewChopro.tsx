@@ -1,13 +1,12 @@
+import { EditorView } from '@codemirror/view';
 import * as React from 'react';
 import { A, $$, Hooks } from 'frontend';
+import { ChordPro } from 'frontend/logic/chordpo-lang';
 import { RenderedSong } from './RenderedSong';
 import { TextArea } from './TextArea';
 import { useRetainScroll } from '../hooks';
 import { useNextPrevSwipe, NextPrevLinks } from './NextPrev';
 import { Splitter } from './Splitter';
-// @ts-expect-error This is untyped.
-import { ChordPro } from 'codemirror-lang-chordpro';
-import { EditorView } from '@codemirror/view';
 import {
   getChordLineRatio,
   ultimateGuitarToChordPro,

@@ -1,0 +1,50 @@
+@dialects { noTitle }
+
+@top Song {
+  (Title { titleText } eol (Author { authorText } eol)?)?
+  ((Comment | Directive | LineDirective | Lyrics | blankLine | ChordLine | Section) (eol | eof))*
+}
+
+Directive { "{" DirectiveName (":" space? DirectiveValue)? "}" }
+
+LineDirective[@name=Directive] { directiveLineStart DirectiveName ":" space? DirectiveValue }
+
+Lyrics {
+  (InlineChord | Lyric | Separator) (InlineChord | Lyric | Directive | Separator)* |
+  Directive (InlineChord | Lyric | Directive | Separator)+
+}
+
+ChordLine { chordLineStart (space? Chord)+ space? }
+
+Section { SectionName SectionText? ":"? }
+
+InlineChord { "[" Chord? "]" }
+
+@external tokens line from "./tokens.js" {
+  Comment
+  blankLine
+  titleText
+  authorText
+  SectionName
+  chordLineStart
+  directiveLineStart
+}
+
+@external tokens chord from "./tokens.js" { Chord }
+
+@tokens {
+  DirectiveName { (@asciiLetter | "_")+ }
+  DirectiveValue { ("\\" ![\r\n] | ![\\}\r\n])+ }
+  SectionText { ![\r\n:]+ }
+
+  Lyric { ![\\{\[\r\n]+ }
+  Separator { "\\" }
+
+  eol { "\r"? "\n" }
+  eof { @eof }
+  space { $[ \t]+ }
+
+  @precedence { space, DirectiveValue }
+
+  "{" "}" "[" "]" ":"
+}
