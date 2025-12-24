@@ -9,7 +9,7 @@ export const ChordProLanguage = LRLanguage.define({
       styleTags({
         Chord: t.keyword,
         Comment: t.lineComment,
-        DirectiveName: t.attributeName,
+        DirectiveName: t.tagName,
         DirectiveValue: t.attributeValue,
         Title: t.heading1,
         Author: t.meta,
