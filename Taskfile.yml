@@ -1,6 +1,11 @@
 version: '3'
 
 tasks:
+  build-chordpo-lang:
+    desc: Build ChordPro grammar artifacts
+    cmds:
+      - node src/frontend/logic/chordpo-lang/build.js
+
   build:
     desc: |
       Build the project for distribution. The site must be specified.
