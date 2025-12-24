@@ -78,7 +78,6 @@
     "@types/codemirror": "^5.60.17",
     "@types/node": "^22.13.8",
     "codemirror": "^6.0.2",
-    "codemirror-lang-chordpro": "^0.0.6",
     "dedent": "^1.5.3",
     "dropbox": "^10.34.0",
     "hunspell-asm": "github:gregtatum/hunspell-asm#72494a846ea709815b0bebf037f59853912dd4a3",
@@ -94,12 +93,5 @@
     "redux-thunk": "^3.1.0",
     "turndown": "^7.1.2",
     "uuid": "^9.0.1"
-  },
-  "overrides": {
-    "codemirror-lang-chordpro": {
-      "@lezer/common": "^1.5.0",
-      "@lezer/highlight": "^1.2.2",
-      "@lezer/lr": "^1.4.2"
-    }
   }
 }
