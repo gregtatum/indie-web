@@ -18,13 +18,13 @@ import {
   syntaxHighlighting,
   defaultHighlightStyle,
 } from '@codemirror/language';
+import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
-
+import { EditorState, type EditorStateConfig } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import './TextArea.css';
-import { EditorState, type EditorStateConfig } from '@codemirror/state';
 
 export function TextArea(props: {
   path: string;
@@ -88,6 +88,7 @@ export function TextArea(props: {
           ...defaultKeymap,
           ...searchKeymap,
           ...historyKeymap,
+          ...completionKeymap,
           {
             key: 'Mod-s',
             run: saveFile,
@@ -98,6 +99,7 @@ export function TextArea(props: {
 
         drawSelection(),
         dropCursor(),
+        autocompletion(),
         EditorState.allowMultipleSelections.of(true),
         syntaxHighlighting(defaultHighlightStyle, {
           fallback: true,
