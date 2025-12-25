@@ -2,6 +2,12 @@ import globals from 'globals';
 import { baseConfigs } from './eslint.base.mjs';
 
 export default [
+  {
+    ignores: [
+      'src/frontend/logic/chordpo-lang/syntax.grammar.ts',
+      'src/frontend/logic/chordpo-lang/syntax.grammar.terms.ts',
+    ],
+  },
   ...baseConfigs,
 
   // Frontend
