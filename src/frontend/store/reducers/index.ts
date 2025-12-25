@@ -679,6 +679,26 @@ function hasOnboarded(
   }
 }
 
+function getEditorAutocompleteDefaults(): {
+  markdown: boolean;
+  chordpro: boolean;
+} {
+  const rawSettings = localStorage.getItem('editorAutocompleteSettings');
+  const defaults = { markdown: false, chordpro: true };
+  if (!rawSettings) {
+    return defaults;
+  }
+  try {
+    const parsed = JSON.parse(rawSettings) ?? {};
+    return {
+      markdown: Boolean(parsed.markdown ?? defaults.markdown),
+      chordpro: Boolean(parsed.chordpro ?? defaults.chordpro),
+    };
+  } catch {
+    return defaults;
+  }
+}
+
 function experimentalFeatures(
   state: boolean = localStorage.getItem('experimentalFeatures') === 'true',
   action: T.Action,
@@ -690,6 +710,27 @@ function experimentalFeatures(
         JSON.stringify(action.value),
       );
       return action.value;
+    default:
+      return state;
+  }
+}
+
+function editorAutocompleteSettings(
+  state: { markdown: boolean; chordpro: boolean } = getEditorAutocompleteDefaults(),
+  action: T.Action,
+): { markdown: boolean; chordpro: boolean } {
+  switch (action.type) {
+    case 'set-editor-autocomplete': {
+      const nextState = {
+        ...state,
+        [action.editor]: action.value,
+      };
+      localStorage.setItem(
+        'editorAutocompleteSettings',
+        JSON.stringify(nextState),
+      );
+      return nextState;
+    }
     default:
       return state;
   }
@@ -746,6 +787,7 @@ export const reducers = combineReducers({
   downloadFileErrors,
   dropboxOauth,
   copyFile,
+  editorAutocompleteSettings,
   experimentalFeatures,
   filesIndex,
   serverId,

@@ -81,6 +81,10 @@ export function getExperimentalFeatures(state: State) {
   return state.experimentalFeatures;
 }
 
+export function getEditorAutocompleteSettings(state: State) {
+  return state.editorAutocompleteSettings;
+}
+
 export function getHideEditor(state: State) {
   return state.hideEditor;
 }

@@ -301,6 +301,17 @@ export function setExperimentalFeatures(value: boolean) {
   };
 }
 
+export function setEditorAutocomplete(
+  editor: 'markdown' | 'chordpro',
+  value: boolean,
+) {
+  return {
+    type: 'set-editor-autocomplete' as const,
+    editor,
+    value,
+  };
+}
+
 export function changeFileFocus(folder: string, fileFocus: string) {
   return {
     type: 'change-file-focus' as const,

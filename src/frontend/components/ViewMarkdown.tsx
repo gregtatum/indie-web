@@ -1,15 +1,15 @@
 import * as React from 'react';
-import { A, T, $, $$, Hooks } from 'frontend';
+import { EditorView } from '@codemirror/view';
 import { markdown } from '@codemirror/lang-markdown';
-import './ViewMarkdown.css';
+import TurndownService from 'turndown';
+import { A, T, $, $$, Hooks } from 'frontend';
+import { downloadImage } from 'frontend/logic/download-image';
+import { getEnv, getDirName, htmlElementOrNull } from 'frontend/utils';
 import { useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
-import { downloadImage } from 'frontend/logic/download-image';
-import { getEnv, getDirName, htmlElementOrNull } from 'frontend/utils';
-import { EditorView } from '@codemirror/view';
-import TurndownService from 'turndown';
+import './ViewMarkdown.css';
 
 export function ViewMarkdown() {
   useRetainScroll();
@@ -19,6 +19,7 @@ export function ViewMarkdown() {
   const error = $$.getDownloadFileErrors().get(path);
   const hideEditor = $$.getHideEditor();
   const displayPath = $$.getActiveFileDisplayPath();
+  const editorAutocomplete = $$.getEditorAutocompleteSettings();
 
   React.useEffect(() => {
     const parts = path.split('/');
@@ -151,7 +152,7 @@ export function ViewMarkdown() {
           path={path}
           textFile={textFile}
           language={markdown}
-          enableAutocomplete={false}
+          enableAutocomplete={editorAutocomplete.markdown}
           editorExtensions={[
             EditorView.lineWrapping,
             EditorView.domEventHandlers({

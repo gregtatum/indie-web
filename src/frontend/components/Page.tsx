@@ -1,16 +1,17 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { getEnv } from 'frontend/utils';
-import { UnlinkDropbox } from './LinkDropbox';
-import { Hooks, A, $$ } from 'frontend';
+import { A, $$, Hooks } from 'frontend';
 import {
   getBrowserName,
   getFileStoreDisplayName,
 } from 'frontend/logic/app-logic';
+import { getEnv } from 'frontend/utils';
+import { UnlinkDropbox } from './LinkDropbox';
 import './Page.css';
 
 export function Settings() {
   const experimentalFeatures = $$.getExperimentalFeatures();
+  const editorAutocomplete = $$.getEditorAutocompleteSettings();
   const dispatch = Hooks.useDispatch();
   Hooks.useRetainScroll();
   return (
@@ -34,6 +35,43 @@ export function Settings() {
           />
           <label htmlFor="experimental-features">
             Enable experimental features
+          </label>
+        </p>
+        <h2>Editor Settings</h2>
+        <p>
+          <input
+            type="checkbox"
+            id="editor-autocomplete-markdown"
+            defaultChecked={editorAutocomplete.markdown}
+            onChange={(event) => {
+              dispatch(
+                A.setEditorAutocomplete(
+                  'markdown',
+                  Boolean(event.target.checked),
+                ),
+              );
+            }}
+          />
+          <label htmlFor="editor-autocomplete-markdown">
+            Enable Markdown autocompletion
+          </label>
+        </p>
+        <p>
+          <input
+            type="checkbox"
+            id="editor-autocomplete-chordpro"
+            defaultChecked={editorAutocomplete.chordpro}
+            onChange={(event) => {
+              dispatch(
+                A.setEditorAutocomplete(
+                  'chordpro',
+                  Boolean(event.target.checked),
+                ),
+              );
+            }}
+          />
+          <label htmlFor="editor-autocomplete-chordpro">
+            Enable ChordPro autocompletion
           </label>
         </p>
         <UnlinkDropbox />

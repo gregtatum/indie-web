@@ -1,16 +1,16 @@
-import { EditorView } from '@codemirror/view';
 import * as React from 'react';
+import { EditorView } from '@codemirror/view';
 import { A, $$, Hooks } from 'frontend';
 import { ChordPro } from 'frontend/logic/chordpo-lang';
-import { RenderedSong } from './RenderedSong';
-import { TextArea } from './TextArea';
 import { useRetainScroll } from '../hooks';
-import { useNextPrevSwipe, NextPrevLinks } from './NextPrev';
-import { Splitter } from './Splitter';
 import {
   getChordLineRatio,
   ultimateGuitarToChordPro,
 } from '../logic/parse-chords';
+import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
+import { RenderedSong } from './RenderedSong';
+import { Splitter } from './Splitter';
+import { TextArea } from './TextArea';
 
 export function ViewChopro() {
   useRetainScroll();
@@ -20,6 +20,7 @@ export function ViewChopro() {
   const error = $$.getDownloadFileErrors().get(path);
   const songTitle = $$.getActiveFileSongTitleOrNull();
   const hideEditor = $$.getHideEditor();
+  const editorAutocomplete = $$.getEditorAutocompleteSettings();
   const swipeDiv = React.useRef(null);
   useNextPrevSwipe(swipeDiv);
 
@@ -80,7 +81,7 @@ export function ViewChopro() {
           path={path}
           textFile={textFile}
           language={ChordPro}
-          enableAutocomplete={true}
+          enableAutocomplete={editorAutocomplete.chordpro}
           editorExtensions={[
             EditorView.domEventHandlers({
               paste(event, view) {
