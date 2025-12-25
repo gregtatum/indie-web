@@ -80,6 +80,7 @@ export function ViewChopro() {
           path={path}
           textFile={textFile}
           language={ChordPro}
+          enableAutocomplete={true}
           editorExtensions={[
             EditorView.domEventHandlers({
               paste(event, view) {

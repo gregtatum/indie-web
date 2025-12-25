@@ -151,6 +151,7 @@ export function ViewMarkdown() {
           path={path}
           textFile={textFile}
           language={markdown}
+          enableAutocomplete={false}
           editorExtensions={[
             EditorView.lineWrapping,
             EditorView.domEventHandlers({

@@ -32,6 +32,7 @@ export function TextArea(props: {
   language?: any;
   editorExtensions?: EditorStateConfig['extensions'];
   autoSave?: boolean;
+  enableAutocomplete?: boolean;
 }) {
   const isDragging = $$.getIsDraggingSplitter();
   const modifiedText = $$.getModifiedText();
@@ -88,7 +89,7 @@ export function TextArea(props: {
           ...defaultKeymap,
           ...searchKeymap,
           ...historyKeymap,
-          ...completionKeymap,
+          ...(props.enableAutocomplete ? completionKeymap : []),
           {
             key: 'Mod-s',
             run: saveFile,
@@ -99,7 +100,7 @@ export function TextArea(props: {
 
         drawSelection(),
         dropCursor(),
-        autocompletion(),
+        ...(props.enableAutocomplete ? [autocompletion()] : []),
         EditorState.allowMultipleSelections.of(true),
         syntaxHighlighting(defaultHighlightStyle, {
           fallback: true,
