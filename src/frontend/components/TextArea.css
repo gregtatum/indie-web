@@ -12,7 +12,7 @@
   padding: 10px;
   resize: none;
   font-family: 'Roboto Mono', monospace;
-  font-size: var(--font-size-song);
+  font-size: var(--font-size-editor);
   background: linear-gradient(270deg, #ddd7d3 0px, #f3efed 60px);
 }
 
@@ -54,8 +54,27 @@
   padding-left: 0 !important;
   padding-right: 0 !important;
   /* padding bottom is handled by scrollPastEnd */
-  font-size: 14px;
+  font-size: var(--font-size-editor);
 }
 .cm-line {
   padding: 0 20px !important;
+}
+
+/* Increase the selector specificity to get over the built-in codemirror rules. */
+:root {
+  & .cm-tooltip.cm-tooltip-autocomplete {
+    font-size: var(--font-size-editor);
+    box-shadow: var(--modal-shadow);
+    border-radius: var(--modal-radius);
+    border-color: var(--modal-border-color);
+    background: var(--modal-background);
+  }
+
+  & .cm-tooltip-autocomplete ul li[aria-selected] {
+    background: var(--primary-color-dim);
+  }
+
+  & .cm-tooltip.cm-tooltip-autocomplete > ul > li {
+      line-height: 1.5;
+  }
 }

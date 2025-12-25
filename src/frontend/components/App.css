@@ -5,7 +5,7 @@
   --header-height: 40px;
   --font-size-normal: 16px;
   --font-size-small: 13px;
-  --font-size-song: 14px;
+  --font-size-editor: 14px;
   /* Grep for media queries if changing */
   --page-max-width: 900px;
   --page-padding: 50px;
@@ -16,6 +16,11 @@
   --button-color: #000;
   --button-border-radius: 4px;
   --button-opacity: 0.9;
+
+  --modal-border-color: #ddd;
+  --modal-background: #eee;
+  --modal-shadow: 7px 6px 6px #0001;
+  --modal-radius: 4px;
 
   --outline-active: 2px solid #0040ff;
   --outline-focus: 2px solid #0040ffaa;
