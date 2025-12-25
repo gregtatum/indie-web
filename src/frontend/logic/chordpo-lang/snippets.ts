@@ -11,7 +11,7 @@ const Directives = [
   'end_of_tab',
 ];
 
-const snippets: readonly Completion[] = [
+export const snippets: readonly Completion[] = [
   ...ValueDirectives.map((name) =>
     snippetCompletion(`{${name}: #{}}`, { label: name, type: 'directive' }),
   ),
@@ -40,5 +40,3 @@ const snippets: readonly Completion[] = [
     { label: 'tab', type: 'directive' },
   ),
 ];
-
-export default snippets;

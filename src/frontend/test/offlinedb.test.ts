@@ -6,7 +6,7 @@ import {
   getFileTree,
 } from './utils/fixtures';
 import { PlainInternal } from 'frontend/store/actions';
-import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { getDirName } from 'frontend/utils';
 
 describe('offline db', () => {

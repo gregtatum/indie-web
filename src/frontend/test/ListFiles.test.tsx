@@ -8,7 +8,7 @@ import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import { A } from 'frontend';
 import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
-import { canonicalizePath, ensureExists } from 'frontend/utils';
+import { ensureExists } from 'frontend/utils';
 import { buildTestFiles, getFileTree } from './utils/fixtures';
 
 /**

@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* eslint-disable no-undef */
 import fs from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';

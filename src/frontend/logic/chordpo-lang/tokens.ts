@@ -1,3 +1,4 @@
+/* eslint-disable eqeqeq */
 import {
   titleText,
   authorText,
@@ -189,7 +190,13 @@ function readChord(input: InputStream) {
     }
   } else if (input.next == Ch.Slash) {
     input.advance();
-    readSymbolNote(input) || readNumeralNote(input) || readNumericNote(input);
+    if (
+      !readSymbolNote(input) &&
+      !readNumeralNote(input) &&
+      !readNumericNote(input)
+    ) {
+      return false;
+    }
   } else if (
     input.next == Ch.Pipe ||
     input.next == Ch.Dash ||

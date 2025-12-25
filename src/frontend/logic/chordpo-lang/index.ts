@@ -1,7 +1,7 @@
-import { LRLanguage, LanguageSupport } from "@codemirror/language"
-import { styleTags, tags as t } from "@lezer/highlight"
-import { chordproCompletionSource } from "./completion"
-import { parser } from "./syntax.grammar.ts"
+import { LRLanguage, LanguageSupport } from '@codemirror/language';
+import { styleTags, tags as t } from '@lezer/highlight';
+import { chordproCompletionSource } from './completion';
+import { parser } from './syntax.grammar.ts';
 
 export const ChordProLanguage = LRLanguage.define({
   parser: parser.configure({
@@ -14,28 +14,26 @@ export const ChordProLanguage = LRLanguage.define({
         Title: t.heading1,
         Author: t.meta,
         SectionName: t.name,
-        "Section/...": t.heading2,
+        'Section/...': t.heading2,
         Lyric: t.content,
-        "{ }": t.brace,
-        "[ ]": t.squareBracket,
-        ":": t.punctuation,
-        Separator: t.separator
-      })
+        '{ }': t.brace,
+        '[ ]': t.squareBracket,
+        ':': t.punctuation,
+        Separator: t.separator,
+      }),
     ],
-    dialect: "noTitle"
+    dialect: 'noTitle',
   }),
   languageData: {
-    commentTokens: {line: "#"}
-  }
-})
-
-
+    commentTokens: { line: '#' },
+  },
+});
 export function ChordPro() {
   return new LanguageSupport(ChordProLanguage, [
     ChordProLanguage.data.of({
-      autocomplete: chordproCompletionSource
-    })
-  ])
+      autocomplete: chordproCompletionSource,
+    }),
+  ]);
 }
 
-export {exampleStringLinter} from "./lint"
+export { exampleStringLinter } from './lint';

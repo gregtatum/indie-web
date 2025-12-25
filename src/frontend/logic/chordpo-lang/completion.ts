@@ -1,7 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { CompletionContext, completeFromList } from '@codemirror/autocomplete';
-import snippets from './snippets';
+import { snippets } from './snippets';
 
 // Get a list of all the chords used in the document
 export function chordsUsed(state: EditorState) {
@@ -20,7 +20,7 @@ export function chordsUsed(state: EditorState) {
 }
 
 export function completeChords(context: CompletionContext) {
-  const word = context.matchBefore(/[^\[]*/)!;
+  const word = context.matchBefore(/[^[]*/)!;
   const chords = chordsUsed(context.state);
 
   return {
