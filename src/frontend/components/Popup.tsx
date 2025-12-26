@@ -43,27 +43,33 @@ function useDismissOnOutsideClick(
   }, [elementRef, isOpen]);
 }
 
-function getFocusableElement(
-  popup: HTMLDivElement,
-  focusOnOpenSelector?: string,
-) {
-  if (focusOnOpenSelector) {
-    const target = popup.querySelector<HTMLElement>(focusOnOpenSelector);
-    if (target) {
-      return target;
-    }
+const focusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+function isFocusable(element: HTMLElement) {
+  if (element.hasAttribute('disabled')) {
+    return false;
   }
-  return popup.querySelector<HTMLElement>(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-  );
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden') {
+    return false;
+  }
+  if (element.offsetParent === null && style.position !== 'fixed') {
+    return false;
+  }
+  return true;
 }
 
 function getFocusableElements(popup: HTMLDivElement) {
   return Array.from(
-    popup.querySelectorAll<HTMLElement>(
-      'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])',
-    ),
-  ).filter((element) => !element.hasAttribute('disabled'));
+    popup.querySelectorAll<HTMLElement>(focusableSelector),
+  ).filter(isFocusable);
 }
 
 interface PopupProps {
@@ -71,7 +77,6 @@ interface PopupProps {
   openEventDetail: React.MouseEvent['detail'];
   openGeneration: number;
   className?: string;
-  focusOnOpenSelector?: string;
   children: React.ReactNode;
 }
 
@@ -80,7 +85,6 @@ export function Popup({
   openEventDetail,
   openGeneration,
   className,
-  focusOnOpenSelector,
   children,
 }: PopupProps) {
   const [closeGeneration, setCloseGeneration] = React.useState(0);
@@ -148,10 +152,16 @@ export function Popup({
       if (!popup) {
         return;
       }
-      const target = getFocusableElement(popup, focusOnOpenSelector);
-      target?.focus();
+      requestAnimationFrame(() => {
+        const focusable = getFocusableElements(popup);
+        if (focusable.length > 0) {
+          focusable[0].focus();
+          return;
+        }
+        popup.focus();
+      });
     }
-  }, [openEventDetail, isOpen, focusOnOpenSelector]);
+  }, [openEventDetail, isOpen]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -162,7 +172,7 @@ export function Popup({
       return () => {};
     }
 
-    function handleKeyDown(event: KeyboardEvent) {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') {
         return;
       }
@@ -181,7 +191,7 @@ export function Popup({
         event.preventDefault();
         first.focus();
       }
-    }
+    };
 
     popup.addEventListener('keydown', handleKeyDown);
     return () => popup.removeEventListener('keydown', handleKeyDown);
@@ -193,7 +203,7 @@ export function Popup({
 
   return (
     <div
-      className={`popup${className ? ` ${className}` : ''}`}
+      className={`popup ${className ?? ''}`}
       ref={divRef}
       role="dialog"
       aria-modal="true"

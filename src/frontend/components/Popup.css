@@ -1,4 +1,4 @@
 .popup {
   position: absolute;
-  z-index: 10;
+  animation: menudown 80ms;
 }

@@ -189,7 +189,6 @@ function SongInfoPopup() {
           openEventDetail={openEventDetail}
           openGeneration={openGeneration}
           className="viewChoproSongInfoMenu"
-          focusOnOpenSelector="#song-info-title"
         >
           <div className="viewChoproSongInfoRow">
             <label className="viewChoproSongInfoLabel" htmlFor="song-info-title">
