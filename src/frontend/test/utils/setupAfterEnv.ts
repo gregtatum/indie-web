@@ -61,19 +61,41 @@ beforeEach(function () {
   overlayContainer.id = 'overlayContainer';
   document.body.appendChild(overlayContainer);
 
+  function getBoundingClientRect(): DOMRect {
+    const rec = {
+      x: 0,
+      y: 0,
+      bottom: 0,
+      height: 0,
+      left: 0,
+      right: 0,
+      top: 0,
+      width: 0,
+    };
+    return { ...rec, toJSON: () => rec };
+  }
+
+  class FakeDOMRectList extends Array<DOMRect> implements DOMRectList {
+    item(index: number): DOMRect | null {
+      return this[index];
+    }
+  }
+
   document.createRange = () => {
     const range = new Range();
 
-    (range as any).getBoundingClientRect = jest.fn();
-
-    (range as any).getClientRects = jest.fn(() => ({
-      item: () => null,
-      length: 0,
-      [Symbol.iterator]: jest.fn(),
-    }));
+    (range as any).getBoundingClientRect = getBoundingClientRect;
+    (range as any).getClientRects = (): DOMRectList => new FakeDOMRectList();
 
     return range;
   };
+
+  document.elementFromPoint = (): null => null;
+  HTMLElement.prototype.getBoundingClientRect = getBoundingClientRect;
+  HTMLElement.prototype.getClientRects = (): DOMRectList =>
+    new FakeDOMRectList();
+  Range.prototype.getBoundingClientRect = getBoundingClientRect;
+  Range.prototype.getClientRects = (): DOMRectList => new FakeDOMRectList();
 
   (global as any).ResizeObserver = jest.fn().mockImplementation(() => ({
     observe: jest.fn(),
