@@ -5,6 +5,7 @@ import { ChordPro } from 'frontend/logic/chordpo-lang';
 import {
   SongKey,
   getChordLineRatio,
+  transposeSongKeyByHalfSteps,
   ultimateGuitarToChordPro,
 } from 'frontend/logic/parse-chords';
 import { overlayPortal, useRetainScroll } from 'frontend/hooks';
@@ -195,6 +196,9 @@ function SongInfoPopup() {
   const selectedKey = normalizeKeyForSelect(songKeyRaw);
   const transposeSelectedKey = normalizeKeyForSelect(transposeRaw);
   const capoSelectedValue = capoRaw.trim();
+  const baseKey = transposeRaw
+    ? SongKey.fromRaw(transposeRaw)
+    : SongKey.fromRaw(songKeyRaw);
 
   function updateDirective(directive: string, value: string) {
     let updatedText = updateDirectiveInText(activeText, directive, value);
@@ -353,9 +357,15 @@ function SongInfoPopup() {
                 <option value="">Select</option>
                 {Array.from({ length: 12 }, (_, index) => {
                   const value = String(index + 1);
+                  const capoKey = baseKey
+                    ? transposeSongKeyByHalfSteps(baseKey, -(index + 1))
+                    : null;
+                  const label = capoKey
+                    ? `${value} - ${capoKey.display}`
+                    : value;
                   return (
                     <option key={value} value={value}>
-                      {value}
+                      {label}
                     </option>
                   );
                 })}
