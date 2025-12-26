@@ -267,6 +267,7 @@ function updateDirectiveInText(
   directive: string,
   value: string,
 ) {
+  const trimmedValue = value.trim();
   const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
   const directiveRegex = new RegExp(`^(\\s*)\\{${directive}\\s*:(.*)\\}\\s*$`);
@@ -280,14 +281,20 @@ function updateDirectiveInText(
       return line;
     }
     updated = true;
+    if (trimmedValue.length === 0) {
+      return null;
+    }
     return `${match[1]}{${directive}: ${value}}`;
   });
 
   if (!updated) {
+    if (trimmedValue.length === 0) {
+      return text;
+    }
     return [`{${directive}: ${value}}`, ...lines].join(lineEnding);
   }
 
-  return nextLines.join(lineEnding);
+  return nextLines.filter((line) => line !== null).join(lineEnding);
 }
 
 function KeyManager() {
