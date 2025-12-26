@@ -1,0 +1,30 @@
+.viewChoproSongKeyWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.viewChoproSongKey {
+  background: none;
+  border: none;
+  font-size: inherit;
+  padding-left: 19px;
+  position: relative;
+  cursor: pointer;
+  padding: 3px 0 3px 19px;
+}
+
+.viewChoproSongKey:hover {
+  text-decoration: underline;
+}
+
+.viewChoproSongKey::before {
+  content: "";
+  position: absolute;
+  border-width: var(--arrow-size) var(--arrow-size) 0 var(--arrow-size);
+  border-color: #000a transparent transparent transparent;
+  border-style: solid;
+  --arrow-size: 7px;
+  left: 1px;
+  top: 10px;
+}

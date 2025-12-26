@@ -2,15 +2,21 @@ import * as React from 'react';
 import { EditorView } from '@codemirror/view';
 import { A, $$, Hooks } from 'frontend';
 import { ChordPro } from 'frontend/logic/chordpo-lang';
+import { SongKey } from 'frontend/logic/parse-chords';
+import { overlayPortal } from 'frontend/hooks';
+import { ensureExists, UnhandledCaseError } from 'frontend/utils';
 import { useRetainScroll } from '../hooks';
 import {
   getChordLineRatio,
   ultimateGuitarToChordPro,
 } from '../logic/parse-chords';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
-import { RenderedSong, RenderedSongKey } from './RenderedSong';
+import { RenderedSong } from './RenderedSong';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
+import { Menu } from './Menus';
+
+import './ViewChopro.css';
 
 export function ViewChopro() {
   useRetainScroll();
@@ -79,7 +85,7 @@ export function ViewChopro() {
       textFile={textFile}
       language={ChordPro}
       enableAutocomplete={editorAutocomplete.chordpro}
-      header={<RenderedSongKey />}
+      header={<KeyManager />}
       editorExtensions={[
         EditorView.domEventHandlers({
           paste(event, view) {
@@ -150,5 +156,132 @@ export function ViewChopro() {
       end={<RenderedSong />}
       persistLocalStorage="viewChoproSplitterOffset"
     />
+  );
+}
+
+function KeyManager() {
+  const path = $$.getPath();
+  const songKey = $$.getActiveFileSongKey();
+  const songKeyRaw = $$.getActiveFileSongKeyRaw();
+  const songKeySettings = $$.getActiveSongKeySettings();
+  const dispatch = Hooks.useDispatch();
+
+  if (!songKey) {
+    if (!songKeyRaw) {
+      return null;
+    }
+    return <div className="viewChoproSongKeyWrapper">Key: {songKeyRaw}</div>;
+  }
+
+  const songKeyType = songKeySettings?.type;
+  switch (songKeyType) {
+    case 'capo':
+      return <div className="viewChoproSongKeyWrapper">Capo</div>;
+    case 'transpose': {
+      function onChange(event: any) {
+        dispatch(
+          A.transposeKey(
+            path,
+            ensureExists(
+              SongKey.fromRaw(event.target.value),
+              'Could not parse song key',
+            ),
+          ),
+        );
+      }
+
+      // Remove the enharmonic keys.
+      let adjustedKey = songKey.key;
+      switch (songKey.key) {
+        case 'Db':
+          adjustedKey = 'C#';
+          break;
+        case 'Gb':
+          adjustedKey = 'F#';
+          break;
+        case 'B':
+          adjustedKey = 'Cb';
+          break;
+        default:
+        // Do nothing.
+      }
+
+      return (
+        <div className="viewChoproSongKeyWrapper">
+          <label htmlFor="select-transpose">Transpose: </label>
+          <select id="select-transpose" onChange={onChange} value={adjustedKey}>
+            <option>C</option>
+            <option>Db</option>
+            <option>D</option>
+            <option>Eb</option>
+            <option>E</option>
+            <option>F</option>
+            <option>Gb</option>
+            <option>G</option>
+            <option>Ab</option>
+            <option>A</option>
+            <option>Bb</option>
+            <option>B</option>
+          </select>
+        </div>
+      );
+    }
+    case undefined: {
+      return <SongKeyMenu songKey={songKey} />;
+    }
+    default:
+      throw new UnhandledCaseError(songKeyType, 'Unhandled song key setting');
+  }
+}
+
+interface SongKeyMenu {
+  songKey: SongKey;
+}
+
+function SongKeyMenu({ songKey }: SongKeyMenu) {
+  const dispatch = Hooks.useDispatch();
+  const path = $$.getPath();
+  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+  const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const [openGeneration, setOpenGeneration] = React.useState(0);
+
+  return (
+    <div className="viewChoproSongKeyWrapper">
+      <button
+        type="button"
+        className="viewChoproSongKey"
+        ref={buttonRef}
+        onClick={(event) => {
+          setOpenGeneration((generation) => generation + 1);
+          setOpenEventDetail(event.detail);
+        }}
+      >
+        Key: {songKey.display}
+      </button>
+      {overlayPortal(
+        <Menu
+          clickedElement={buttonRef}
+          openEventDetail={openEventDetail}
+          openGeneration={openGeneration}
+          buttons={[
+            {
+              key: 'Transpose',
+              children: 'Transpose',
+              onClick() {
+                dispatch(A.transposeKey(path, ensureExists(songKey)));
+              },
+            },
+            // TODO
+            // {
+            //   key: 'Apply Capo',
+            //   children: 'Apply Capo',
+            //   onClick() {
+            //     dispatch(A.transposeKey(path, ensureExists(songKey)));
+            //   },
+            // },
+          ]}
+        />,
+      )}
+    </div>
   );
 }
