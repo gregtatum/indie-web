@@ -7,6 +7,7 @@ import {
   UnhandledCaseError,
   htmlElementOrNull,
 } from 'frontend/utils';
+import { SongKey } from 'frontend/logic/parse-chords';
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
@@ -171,33 +172,21 @@ export function RenderedSong() {
 function RenderedSongKeyReadOnly() {
   const songKey = $$.getActiveFileSongKey();
   const songKeyRaw = $$.getActiveFileSongKeyRaw();
-  const songKeySettings = $$.getActiveSongKeySettings();
+  const transposeRaw = $$.getActiveFileTransposeRaw();
+  const transposeKey = transposeRaw ? SongKey.fromRaw(transposeRaw) : null;
 
-  if (!songKey && !songKeyRaw) {
+  if (!songKey && !songKeyRaw && !transposeRaw) {
     return null;
   }
 
-  const songKeyType = songKeySettings?.type;
-  switch (songKeyType) {
-    case 'capo':
-      return (
-        <div className="renderedSongStickyHeaderRow">
-          <span>Capo</span>
-        </div>
-      );
-    case 'transpose':
-      if (songKeyRaw && songKey) {
-        return (
-          <div className="renderedSongStickyHeaderRow">
-            <span>
-              Key: {songKeyRaw} (Transposed: {songKey.display})
-            </span>
-          </div>
-        );
-      }
-      break;
-    default:
-      break;
+  if (songKeyRaw && transposeRaw) {
+    return (
+      <div className="renderedSongStickyHeaderRow">
+        <span>
+          Key: {songKeyRaw} (Transposed: {transposeKey?.display ?? transposeRaw})
+        </span>
+      </div>
+    );
   }
 
   if (songKeyRaw) {
@@ -210,7 +199,7 @@ function RenderedSongKeyReadOnly() {
 
   return (
     <div className="renderedSongStickyHeaderRow">
-      <span>Key: {songKey?.display}</span>
+      <span>Key: {songKey?.display ?? transposeKey?.display ?? transposeRaw}</span>
     </div>
   );
 }

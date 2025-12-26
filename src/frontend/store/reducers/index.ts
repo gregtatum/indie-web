@@ -606,37 +606,6 @@ function currentFileStoreName(
   }
 }
 
-/**
- * Adjust the capo or transpose a song.
- */
-export function songKeySettings(
-  state: Map<string, T.SongKeySettings> = new Map(),
-  action: T.Action,
-): Map<string, T.SongKeySettings> {
-  switch (action.type) {
-    case 'apply-capo': {
-      const { path, capo } = action;
-      const newKeys = new Map(state);
-      newKeys.set(path, { type: 'capo', capo });
-      return newKeys;
-    }
-    case 'transpose-key': {
-      const { path, songKey } = action;
-      const newKeys = new Map(state);
-      newKeys.set(path, { type: 'transpose', songKey });
-      return newKeys;
-    }
-    case 'remove-key-settings': {
-      const { path } = action;
-      const newKeys = new Map(state);
-      newKeys.delete(path);
-      return newKeys;
-    }
-    default:
-      return state;
-  }
-}
-
 function renameFile(
   state: T.RenameFileState = { phase: 'none', path: null },
   action: T.Action,
@@ -841,7 +810,6 @@ export const reducers = combineReducers({
   renameFile,
   searchString,
   shouldHideHeader,
-  songKeySettings,
   view,
   openAIApiKey,
   fileFocusByPath,

@@ -4,7 +4,6 @@ import {
   BROWSER_FILES_DB_NAME,
   IDBFS,
 } from 'frontend/logic/file-store/indexeddb-fs';
-import { SongKey } from 'frontend/logic/parse-chords';
 
 export function removeDropboxAccessToken() {
   localStorage.clear();
@@ -194,18 +193,6 @@ export function stopRenameFile() {
 
 export function setSearchString(search: string) {
   return { type: 'set-search-string' as const, search };
-}
-
-export function transposeKey(path: string, songKey: SongKey) {
-  return { type: 'transpose-key' as const, path, songKey };
-}
-
-export function applyCapo(path: string, capo: number) {
-  return { type: 'apply-capo' as const, path, capo };
-}
-
-export function removeKeySettings(path: string) {
-  return { type: 'remove-key-settings' as const, path };
 }
 
 export function setCopyFile(path: string, isCut: boolean) {

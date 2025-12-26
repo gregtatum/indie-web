@@ -35,12 +35,13 @@ export function completeChords(context: CompletionContext) {
 }
 
 const valueDirectives = [
-  'title',
-  'subtitle',
-  'artist',
   'album',
+  'artist',
   'comment',
   'key',
+  'subtitle',
+  'transpose',
+  'title',
 ];
 const mediaDirectives = ['image', 'audio', 'video'];
 

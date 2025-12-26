@@ -321,14 +321,32 @@ describe('<ViewChopro>', () => {
       await user.selectOptions(transposeSelect, 'F');
     });
 
+    await waitFor(() => {
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.transpose).toBe('F');
+
+      const songText = $.getActiveFileText(store.getState());
+      expect(songText.split(/\r?\n/).slice(0, 5)).toEqual([
+        '{title: Clocks}',
+        '{artist: Coldplay}',
+        '{key: D}',
+        '{transpose: F}',
+        '',
+      ]);
+    });
+
     const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
     await act(async () => {
       await user.selectOptions(keySelect, 'F');
     });
 
     await waitFor(() => {
-      const settings = $.getActiveSongKeySettings(store.getState());
-      expect(settings?.type).toBeUndefined();
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.transpose).toBeUndefined();
     });
   });
 
@@ -440,13 +458,23 @@ describe('<ViewChopro>', () => {
         'F',
       );
     });
+
+    await waitFor(() => {
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.transpose).toBe('F');
+    });
+
     await act(async () => {
       await user.selectOptions(keySelect, 'F');
     });
 
     await waitFor(() => {
-      const settings = $.getActiveSongKeySettings(store.getState());
-      expect(settings?.type).toBeUndefined();
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.transpose).toBeUndefined();
     });
   });
 

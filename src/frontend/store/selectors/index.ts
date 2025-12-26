@@ -129,10 +129,6 @@ export function getSearchString(state: State) {
   return state.searchString;
 }
 
-export function getSongKeySettings(state: State) {
-  return state.songKeySettings;
-}
-
 export function getIDBFSOrNull(state: State) {
   return state.idbfs;
 }
@@ -402,6 +398,16 @@ export const getActiveFileSongKeyRaw = createSelector(
   },
 );
 
+export const getActiveFileTransposeRaw = createSelector(
+  getActiveFileParsedOrNull,
+  (activeFile): string | null => {
+    if (typeof activeFile?.directives.transpose === 'string') {
+      return activeFile?.directives.transpose;
+    }
+    return null;
+  },
+);
+
 export const getActiveFileSongTitleOrNull = createSelector(
   getActiveFileParsedOrNull,
   (parsedFile): string | null => {
@@ -452,43 +458,37 @@ export const getActiveFileDisplayPath = createSelector(
   },
 );
 
-export const getActiveSongKeySettings = createSelector(
-  getActiveFileOrNull,
-  getSongKeySettings,
-  (activeFile, settings): T.SongKeySettings | null => {
-    if (!activeFile) {
-      return null;
-    }
-    return settings.get(activeFile.metadata.path) ?? null;
-  },
-);
-
 export const getActiveFileSongKey = createSelector(
   getActiveFileSongKeyRaw,
-  getActiveSongKeySettings,
-  (text, settings): SongKey | null => {
-    if (settings?.type === 'transpose') {
-      return settings.songKey;
+  getActiveFileTransposeRaw,
+  (text, transposeRaw): SongKey | null => {
+    if (transposeRaw) {
+      return SongKey.fromRaw(transposeRaw);
     }
-
     return SongKey.fromRaw(text);
   },
 );
 
 export const getActiveFileParsedTransformedOrNull = createSelector(
   getActiveFileParsedOrNull,
-  getActiveFileSongKey,
-  (parsed, songKey) => {
+  getActiveFileSongKeyRaw,
+  getActiveFileTransposeRaw,
+  (parsed, songKeyRaw, transposeRaw) => {
     if (!parsed) {
       return null;
     }
-    if (!songKey) {
+    if (!songKeyRaw || !transposeRaw) {
       return parsed;
     }
-    if (parsed.directives.key?.trim() === songKey.display) {
+    const songKey = SongKey.fromRaw(songKeyRaw);
+    const transposeKey = SongKey.fromRaw(transposeRaw);
+    if (!songKey || !transposeKey) {
       return parsed;
     }
-    return transposeParsedSong(parsed, songKey);
+    if (songKey.display === transposeKey.display) {
+      return parsed;
+    }
+    return transposeParsedSong(parsed, transposeKey);
   },
 );
 

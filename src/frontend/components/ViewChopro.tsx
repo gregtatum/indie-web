@@ -8,7 +8,6 @@ import {
   ultimateGuitarToChordPro,
 } from 'frontend/logic/parse-chords';
 import { overlayPortal, useRetainScroll } from 'frontend/hooks';
-import { ensureExists, UnhandledCaseError } from 'frontend/utils';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { RenderedSong } from './RenderedSong';
 import { Splitter } from './Splitter';
@@ -171,9 +170,9 @@ function SongInfoPopup() {
   const path = $$.getPath();
   const activeText = $$.getActiveFileText();
   const directives = $$.getActiveFileParsedOrNull()?.directives;
-  const songKey = $$.getActiveFileSongKey();
-  const songKeySettings = $$.getActiveSongKeySettings();
   const songKeyRaw = typeof directives?.key === 'string' ? directives.key : '';
+  const transposeRaw =
+    typeof directives?.transpose === 'string' ? directives.transpose : '';
   const title = typeof directives?.title === 'string' ? directives.title : '';
   const artist = typeof directives?.artist === 'string' ? directives.artist : '';
   const subtitle =
@@ -193,22 +192,20 @@ function SongInfoPopup() {
     'B',
   ];
   const selectedKey = normalizeKeyForSelect(songKeyRaw);
-  const transposeSelectedKey =
-    songKey && songKeySettings?.type === 'transpose'
-      ? normalizeKeyForSelect(songKey.key)
-      : '';
+  const transposeSelectedKey = normalizeKeyForSelect(transposeRaw);
 
   function updateDirective(directive: string, value: string) {
-    const updatedText = updateDirectiveInText(activeText, directive, value);
+    let updatedText = updateDirectiveInText(activeText, directive, value);
+    if (directive === 'key') {
+      const nextKey = normalizeKeyForSelect(value.trim());
+      const shouldClearTranspose =
+        !nextKey || (transposeSelectedKey && nextKey === transposeSelectedKey);
+      if (shouldClearTranspose) {
+        updatedText = updateDirectiveInText(updatedText, 'transpose', '');
+      }
+    }
     if (updatedText !== activeText) {
       dispatch(A.modifyActiveFile(updatedText, path, true));
-    }
-    if (
-      directive === 'key' &&
-      songKeySettings?.type === 'transpose' &&
-      normalizeKeyForSelect(value) === transposeSelectedKey
-    ) {
-      dispatch(A.removeKeySettings(path));
     }
   }
 
@@ -303,7 +300,7 @@ function SongInfoPopup() {
               ))}
             </select>
           </div>
-          {songKey ? (
+          {songKeyRaw ? (
             <div className="viewChoproSongInfoRow">
               <label
                 className="viewChoproSongInfoLabel"
@@ -315,16 +312,9 @@ function SongInfoPopup() {
                 className="viewChoproSongInfoSelect"
                 id="song-info-transpose"
                 value={transposeSelectedKey}
-                onChange={(event) => {
-                  if (!event.currentTarget.value) {
-                    return;
-                  }
-                  const nextKey = ensureExists(
-                    SongKey.fromRaw(event.currentTarget.value),
-                    'Could not parse song key',
-                  );
-                  dispatch(A.transposeKey(path, nextKey));
-                }}
+                onChange={(event) =>
+                  updateDirective('transpose', event.currentTarget.value)
+                }
               >
                 <option value="">Select</option>
                 {keyOptions.map((option) => (
@@ -353,7 +343,7 @@ function updateDirectiveInText(
 ) {
   const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
-  const directivesOrder = ['title', 'artist', 'subtitle', 'key'];
+  const directivesOrder = ['title', 'artist', 'subtitle', 'key', 'transpose'];
   const directiveValues = new Map<string, string>();
 
   for (const entry of directivesOrder) {
@@ -413,78 +403,29 @@ function normalizeKeyForSelect(value: string) {
 }
 
 function KeyManager() {
-  const path = $$.getPath();
-  const songKey = $$.getActiveFileSongKey();
   const songKeyRaw = $$.getActiveFileSongKeyRaw();
-  const songKeySettings = $$.getActiveSongKeySettings();
-  const dispatch = Hooks.useDispatch();
+  const transposeRaw = $$.getActiveFileTransposeRaw();
+  const transposeKey = transposeRaw ? SongKey.fromRaw(transposeRaw) : null;
 
-  if (!songKey) {
-    if (!songKeyRaw) {
-      return null;
-    }
+  if (!songKeyRaw && !transposeRaw) {
+    return null;
+  }
+
+  if (songKeyRaw && transposeRaw) {
+    return (
+      <div className="viewChoproSongKeyWrapper">
+        Key: {songKeyRaw} (Transposed: {transposeKey?.display ?? transposeRaw})
+      </div>
+    );
+  }
+
+  if (songKeyRaw) {
     return <div className="viewChoproSongKeyWrapper">Key: {songKeyRaw}</div>;
   }
 
-  const songKeyType = songKeySettings?.type;
-  switch (songKeyType) {
-    case 'capo':
-      return <div className="viewChoproSongKeyWrapper">Capo</div>;
-    case 'transpose': {
-      function onChange(event: any) {
-        dispatch(
-          A.transposeKey(
-            path,
-            ensureExists(
-              SongKey.fromRaw(event.target.value),
-              'Could not parse song key',
-            ),
-          ),
-        );
-      }
-
-      // Remove the enharmonic keys.
-      let adjustedKey = songKey.key;
-      switch (songKey.key) {
-        case 'Db':
-          adjustedKey = 'C#';
-          break;
-        case 'Gb':
-          adjustedKey = 'F#';
-          break;
-        case 'B':
-          adjustedKey = 'Cb';
-          break;
-        default:
-        // Do nothing.
-      }
-
-      return (
-        <div className="viewChoproSongKeyWrapper">
-          <label htmlFor="select-transpose">Transpose: </label>
-          <select id="select-transpose" onChange={onChange} value={adjustedKey}>
-            <option>C</option>
-            <option>Db</option>
-            <option>D</option>
-            <option>Eb</option>
-            <option>E</option>
-            <option>F</option>
-            <option>Gb</option>
-            <option>G</option>
-            <option>Ab</option>
-            <option>A</option>
-            <option>Bb</option>
-            <option>B</option>
-          </select>
-        </div>
-      );
-    }
-    case undefined: {
-      return (
-        <div className="viewChoproSongKeyWrapper">Key: {songKey.display}</div>
-      );
-    }
-    default:
-      throw new UnhandledCaseError(songKeyType, 'Unhandled song key setting');
-  }
+  return (
+    <div className="viewChoproSongKeyWrapper">
+      Key: {transposeKey?.display ?? transposeRaw}
+    </div>
+  );
 }

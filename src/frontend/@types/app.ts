@@ -1,6 +1,5 @@
 import type * as idb from 'idb';
 import * as Dropbox from 'dropbox';
-import { SongKey } from 'frontend/logic/parse-chords';
 import {
   FileMetadata,
   FolderMetadata,
@@ -227,10 +226,6 @@ export type SongKeyLetters =
   | 'G#'
   | 'Ab'
   | 'Cb';
-
-export type SongKeySettings =
-  | { type: 'capo'; capo: number }
-  | { type: 'transpose'; songKey: SongKey };
 
 export type FileStoreName = 'dropbox' | 'browser' | 'server';
 
