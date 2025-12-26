@@ -716,7 +716,8 @@ function transpose(
   note: T.SongKeyLetters,
   halfSteps: number,
 ) {
-  return scaleToChord[(halfStepScale[note] + halfSteps) % 12];
+  const offset = (halfStepScale[note] + halfSteps) % 12;
+  return scaleToChord[(offset + 12) % 12];
 }
 
 /**

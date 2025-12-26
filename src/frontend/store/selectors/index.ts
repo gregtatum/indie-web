@@ -494,7 +494,7 @@ export const getActiveFileSongKey = createSelector(
     if (text && capoValue !== null) {
       const originalKey = SongKey.fromRaw(text);
       if (originalKey) {
-        return transposeSongKeyByHalfSteps(originalKey, capoValue);
+        return transposeSongKeyByHalfSteps(originalKey, -capoValue);
       }
     }
     return SongKey.fromRaw(text);
@@ -520,7 +520,7 @@ export const getActiveFileParsedTransformedOrNull = createSelector(
     const targetKey = transposeRaw
       ? SongKey.fromRaw(transposeRaw)
       : capoValue !== null
-        ? transposeSongKeyByHalfSteps(originalKey, capoValue)
+        ? transposeSongKeyByHalfSteps(originalKey, -capoValue)
         : null;
     if (!targetKey) {
       return parsed;
