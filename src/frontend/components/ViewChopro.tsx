@@ -172,6 +172,7 @@ function SongInfoPopup() {
   const activeText = $$.getActiveFileText();
   const directives = $$.getActiveFileParsedOrNull()?.directives;
   const songKey = $$.getActiveFileSongKey();
+  const songKeySettings = $$.getActiveSongKeySettings();
   const songKeyRaw = typeof directives?.key === 'string' ? directives.key : '';
   const title = typeof directives?.title === 'string' ? directives.title : '';
   const artist = typeof directives?.artist === 'string' ? directives.artist : '';
@@ -191,31 +192,23 @@ function SongInfoPopup() {
     'Bb',
     'B',
   ];
-  let selectedKey = songKeyRaw;
-  switch (songKeyRaw) {
-    case 'C#':
-      selectedKey = 'Db';
-      break;
-    case 'D#':
-      selectedKey = 'Eb';
-      break;
-    case 'F#':
-      selectedKey = 'Gb';
-      break;
-    case 'G#':
-      selectedKey = 'Ab';
-      break;
-    case 'A#':
-      selectedKey = 'Bb';
-      break;
-    default:
-    // Use the key as-is.
-  }
+  const selectedKey = normalizeKeyForSelect(songKeyRaw);
+  const transposeSelectedKey =
+    songKey && songKeySettings?.type === 'transpose'
+      ? normalizeKeyForSelect(songKey.key)
+      : '';
 
   function updateDirective(directive: string, value: string) {
     const updatedText = updateDirectiveInText(activeText, directive, value);
     if (updatedText !== activeText) {
       dispatch(A.modifyActiveFile(updatedText, path, true));
+    }
+    if (
+      directive === 'key' &&
+      songKeySettings?.type === 'transpose' &&
+      normalizeKeyForSelect(value) === transposeSelectedKey
+    ) {
+      dispatch(A.removeKeySettings(path));
     }
   }
 
@@ -310,18 +303,42 @@ function SongInfoPopup() {
               ))}
             </select>
           </div>
-          <button
-            className="viewChoproSongInfoButton"
-            type="button"
-            disabled={!songKey}
-            onClick={() => {
-              if (songKey) {
-                dispatch(A.transposeKey(path, ensureExists(songKey)));
-              }
-            }}
-          >
-            Transpose
-          </button>
+          {songKey ? (
+            <div className="viewChoproSongInfoRow">
+              <label
+                className="viewChoproSongInfoLabel"
+                htmlFor="song-info-transpose"
+              >
+                Transpose
+              </label>
+              <select
+                className="viewChoproSongInfoSelect"
+                id="song-info-transpose"
+                value={transposeSelectedKey}
+                onChange={(event) => {
+                  if (!event.currentTarget.value) {
+                    return;
+                  }
+                  const nextKey = ensureExists(
+                    SongKey.fromRaw(event.currentTarget.value),
+                    'Could not parse song key',
+                  );
+                  dispatch(A.transposeKey(path, nextKey));
+                }}
+              >
+                <option value="">Select</option>
+                {keyOptions.map((option) => (
+                  <option
+                    key={option}
+                    value={option}
+                    disabled={option === selectedKey}
+                  >
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </Popup>,
         'song-info-menu',
       )}
@@ -376,6 +393,23 @@ function updateDirectiveInText(
   }
 
   return [...directiveLines, ...nextLines].join(lineEnding);
+}
+
+function normalizeKeyForSelect(value: string) {
+  switch (value) {
+    case 'C#':
+      return 'Db';
+    case 'D#':
+      return 'Eb';
+    case 'F#':
+      return 'Gb';
+    case 'G#':
+      return 'Ab';
+    case 'A#':
+      return 'Bb';
+    default:
+      return value;
+  }
 }
 
 function KeyManager() {
