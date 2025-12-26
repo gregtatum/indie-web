@@ -181,22 +181,31 @@ function RenderedSongKeyReadOnly() {
     return null;
   }
 
-  if (songKeyRaw && transposeRaw) {
+  if (capoValue && transposeKey) {
     return (
       <div className="renderedSongStickyHeaderRow">
         <span>
-          Key: {songKeyRaw} (Transposed: {transposeKey?.display ?? transposeRaw})
+          Transposed: {transposeRaw} (Capo: {capoValue})
         </span>
       </div>
     );
   }
 
-  if (songKeyRaw && capoRaw) {
+  if (songKeyRaw && transposeKey) {
     return (
       <div className="renderedSongStickyHeaderRow">
         <span>
-          Key: {songKeyRaw}
-          {capoValue !== null ? ` (Capo: ${capoValue})` : ' (Capo)'}
+          Key: {songKeyRaw} (Transposed: {transposeKey.display})
+        </span>
+      </div>
+    );
+  }
+
+  if (songKeyRaw && capoValue) {
+    return (
+      <div className="renderedSongStickyHeaderRow">
+        <span>
+          Key: {songKeyRaw} (Capo: {capoValue})
         </span>
       </div>
     );
@@ -213,7 +222,8 @@ function RenderedSongKeyReadOnly() {
   return (
     <div className="renderedSongStickyHeaderRow">
       <span>
-        Key: {songKey?.display ?? transposeKey?.display ?? transposeRaw ?? capoRaw}
+        Key:{' '}
+        {songKey?.display ?? transposeKey?.display ?? transposeRaw ?? capoRaw}
       </span>
     </div>
   );
