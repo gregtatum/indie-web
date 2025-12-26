@@ -86,7 +86,6 @@ export function ViewChopro() {
       enableAutocomplete={editorAutocomplete.chordpro}
       header={
         <div className="viewChoproHeaderContent">
-          <KeyManager />
           <SongInfoPopup />
         </div>
       }
@@ -450,44 +449,4 @@ function normalizeKeyForSelect(value: string) {
     default:
       return value;
   }
-}
-
-function KeyManager() {
-  const songKeyRaw = $$.getActiveFileSongKeyRaw();
-  const transposeRaw = $$.getActiveFileTransposeRaw();
-  const capoRaw = $$.getActiveFileCapoRaw();
-  const transposeKey = transposeRaw ? SongKey.fromRaw(transposeRaw) : null;
-  const capoValue = capoRaw ? Number.parseInt(capoRaw, 10) : null;
-  const songKey = $$.getActiveFileSongKey();
-
-  if (!songKeyRaw && !transposeRaw && !capoRaw) {
-    return null;
-  }
-
-  if (songKeyRaw && transposeRaw) {
-    return (
-      <div className="viewChoproSongKeyWrapper">
-        Key: {songKeyRaw} (Transposed: {transposeKey?.display ?? transposeRaw})
-      </div>
-    );
-  }
-
-  if (songKeyRaw && capoRaw) {
-    return (
-      <div className="viewChoproSongKeyWrapper">
-        Key: {songKeyRaw}
-        {capoValue !== null ? ` (Capo: ${capoValue})` : ' (Capo)'}
-      </div>
-    );
-  }
-
-  if (songKeyRaw) {
-    return <div className="viewChoproSongKeyWrapper">Key: {songKeyRaw}</div>;
-  }
-
-  return (
-    <div className="viewChoproSongKeyWrapper">
-      Key: {songKey?.display ?? transposeKey?.display ?? transposeRaw ?? capoRaw}
-    </div>
-  );
 }
