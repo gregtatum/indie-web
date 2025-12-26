@@ -13,7 +13,6 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { RenderedSong } from './RenderedSong';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
-import { Menu } from './Menus';
 import { Popup } from './Popup';
 
 import './ViewChopro.css';
@@ -172,10 +171,46 @@ function SongInfoPopup() {
   const path = $$.getPath();
   const activeText = $$.getActiveFileText();
   const directives = $$.getActiveFileParsedOrNull()?.directives;
+  const songKey = $$.getActiveFileSongKey();
+  const songKeyRaw = typeof directives?.key === 'string' ? directives.key : '';
   const title = typeof directives?.title === 'string' ? directives.title : '';
   const artist = typeof directives?.artist === 'string' ? directives.artist : '';
   const subtitle =
     typeof directives?.subtitle === 'string' ? directives.subtitle : '';
+  const keyOptions = [
+    'C',
+    'Db',
+    'D',
+    'Eb',
+    'E',
+    'F',
+    'Gb',
+    'G',
+    'Ab',
+    'A',
+    'Bb',
+    'B',
+  ];
+  let selectedKey = songKeyRaw;
+  switch (songKeyRaw) {
+    case 'C#':
+      selectedKey = 'Db';
+      break;
+    case 'D#':
+      selectedKey = 'Eb';
+      break;
+    case 'F#':
+      selectedKey = 'Gb';
+      break;
+    case 'G#':
+      selectedKey = 'Ab';
+      break;
+    case 'A#':
+      selectedKey = 'Bb';
+      break;
+    default:
+    // Use the key as-is.
+  }
 
   function updateDirective(directive: string, value: string) {
     const updatedText = updateDirectiveInText(activeText, directive, value);
@@ -255,6 +290,38 @@ function SongInfoPopup() {
               }
             />
           </div>
+          <div className="viewChoproSongInfoRow">
+            <label className="viewChoproSongInfoLabel" htmlFor="song-info-key">
+              Key
+            </label>
+            <select
+              className="viewChoproSongInfoSelect"
+              id="song-info-key"
+              value={selectedKey}
+              onChange={(event) =>
+                updateDirective('key', event.currentTarget.value)
+              }
+            >
+              <option value="">Select</option>
+              {keyOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="viewChoproSongInfoButton"
+            type="button"
+            disabled={!songKey}
+            onClick={() => {
+              if (songKey) {
+                dispatch(A.transposeKey(path, ensureExists(songKey)));
+              }
+            }}
+          >
+            Transpose
+          </button>
         </Popup>,
         'song-info-menu',
       )}
@@ -269,7 +336,7 @@ function updateDirectiveInText(
 ) {
   const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
-  const directivesOrder = ['title', 'artist', 'subtitle'];
+  const directivesOrder = ['title', 'artist', 'subtitle', 'key'];
   const directiveValues = new Map<string, string>();
 
   for (const entry of directivesOrder) {
@@ -379,61 +446,11 @@ function KeyManager() {
       );
     }
     case undefined: {
-      return <SongKeyMenu songKey={songKey} />;
+      return (
+        <div className="viewChoproSongKeyWrapper">Key: {songKey.display}</div>
+      );
     }
     default:
       throw new UnhandledCaseError(songKeyType, 'Unhandled song key setting');
   }
-}
-
-interface SongKeyMenu {
-  songKey: SongKey;
-}
-
-function SongKeyMenu({ songKey }: SongKeyMenu) {
-  const dispatch = Hooks.useDispatch();
-  const path = $$.getPath();
-  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
-  const [openEventDetail, setOpenEventDetail] = React.useState(-1);
-  const [openGeneration, setOpenGeneration] = React.useState(0);
-
-  return (
-    <div className="viewChoproSongKeyWrapper">
-      <button
-        type="button"
-        className="viewChoproSongKey"
-        ref={buttonRef}
-        onClick={(event) => {
-          setOpenGeneration((generation) => generation + 1);
-          setOpenEventDetail(event.detail);
-        }}
-      >
-        Key: {songKey.display}
-      </button>
-      {overlayPortal(
-        <Menu
-          clickedElement={buttonRef}
-          openEventDetail={openEventDetail}
-          openGeneration={openGeneration}
-          buttons={[
-            {
-              key: 'Transpose',
-              children: 'Transpose',
-              onClick() {
-                dispatch(A.transposeKey(path, ensureExists(songKey)));
-              },
-            },
-            // TODO
-            // {
-            //   key: 'Apply Capo',
-            //   children: 'Apply Capo',
-            //   onClick() {
-            //     dispatch(A.transposeKey(path, ensureExists(songKey)));
-            //   },
-            // },
-          ]}
-        />,
-      )}
-    </div>
-  );
 }

@@ -80,3 +80,10 @@
   padding: 6px 8px;
   font-size: 12px;
 }
+
+.viewChoproSongInfoSelect {
+  border: 1px solid #bfb8b2;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
