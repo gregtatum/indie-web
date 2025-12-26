@@ -1,17 +1,24 @@
-import { createStore } from 'frontend/store/create-store';
-import { AppRoutes } from 'frontend/components/App';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
+import { stripIndent } from 'common-tags';
+import { MemoryRouter } from 'react-router-dom';
+import { AppRoutes } from 'frontend/components/App';
+import { createStore } from 'frontend/store/create-store';
+import { T, A, $ } from 'frontend';
+import { ensureExists } from 'frontend/utils';
 import {
   mockDropboxAccessToken,
   mockDropboxFilesDownload,
   mockDropboxListFolder,
 } from './utils/fixtures';
-import { T, A } from 'frontend';
-import { ensureExists } from 'frontend/utils';
-import { stripIndent } from 'common-tags';
-import { MemoryRouter } from 'react-router-dom';
 
 const coldplayChordProText = stripIndent`
   {title: Clocks}
@@ -91,17 +98,10 @@ describe('<ViewChopro>', () => {
             <div
               class="renderedSongStickyHeaderRow"
             >
-              <div
-                class="renderedSongStickyHeaderRow"
-              >
-                <button
-                  class="renderedSongKey"
-                  type="button"
-                >
-                  Key: 
-                  D
-                </button>
-              </div>
+              <span>
+                Key: 
+                D
+              </span>
             </div>
             <button
               class="button"
@@ -210,6 +210,45 @@ describe('<ViewChopro>', () => {
         </div>
       </div>
     `);
+  });
+
+  it('updates song info directives from the UI', async () => {
+    const { store } = setup();
+    const user = userEvent.setup();
+    await waitFor(() => screen.getByText(/Lights go out and/));
+
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Edit' }));
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
+    });
+
+    const artistInput = screen.getByLabelText<HTMLInputElement>('Artist');
+    const subtitleInput = screen.getByLabelText<HTMLInputElement>('Subtitle');
+
+    await act(async () => {
+      await user.clear(artistInput);
+    });
+    await act(async () => {
+      await user.type(subtitleInput, 'Live');
+    });
+
+    await waitFor(() => {
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.artist).toBeUndefined();
+      expect(directives?.subtitle).toBe('Live');
+
+      const songText = $.getActiveFileText(store.getState());
+      expect(songText.split(/\r?\n/).slice(0, 4)).toEqual([
+        '{title: Clocks}',
+        '{subtitle: Live}',
+        '{key: D}',
+        '',
+      ]);
+    });
   });
 
   // I can't figure out why this test doesn't work.
