@@ -63,12 +63,15 @@
 
 .viewChoproSongInfoRow {
   display: grid;
-  gap: 4px;
+  grid-template-columns: 70px 1fr;
+  align-items: center;
+  gap: 8px;
 }
 
 .viewChoproSongInfoLabel {
   font-size: 12px;
   color: #4b4743;
+  text-align: right;
 }
 
 .viewChoproSongInfoInput {

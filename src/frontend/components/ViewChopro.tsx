@@ -2,14 +2,13 @@ import * as React from 'react';
 import { EditorView } from '@codemirror/view';
 import { A, $$, Hooks } from 'frontend';
 import { ChordPro } from 'frontend/logic/chordpo-lang';
-import { SongKey } from 'frontend/logic/parse-chords';
-import { overlayPortal } from 'frontend/hooks';
-import { ensureExists, UnhandledCaseError } from 'frontend/utils';
-import { useRetainScroll } from '../hooks';
 import {
+  SongKey,
   getChordLineRatio,
   ultimateGuitarToChordPro,
-} from '../logic/parse-chords';
+} from 'frontend/logic/parse-chords';
+import { overlayPortal, useRetainScroll } from 'frontend/hooks';
+import { ensureExists, UnhandledCaseError } from 'frontend/utils';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { RenderedSong } from './RenderedSong';
 import { Splitter } from './Splitter';
@@ -169,6 +168,11 @@ function SongInfoPopup() {
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const directives = $$.getActiveFileParsedOrNull()?.directives;
+  const title = typeof directives?.title === 'string' ? directives.title : '';
+  const artist = typeof directives?.artist === 'string' ? directives.artist : '';
+  const subtitle =
+    typeof directives?.subtitle === 'string' ? directives.subtitle : '';
 
   return (
     <>
@@ -191,14 +195,18 @@ function SongInfoPopup() {
           className="viewChoproSongInfoMenu"
         >
           <div className="viewChoproSongInfoRow">
-            <label className="viewChoproSongInfoLabel" htmlFor="song-info-title">
+            <label
+              className="viewChoproSongInfoLabel"
+              htmlFor="song-info-title"
+            >
               Title
             </label>
             <input
               className="viewChoproSongInfoInput"
               id="song-info-title"
               type="text"
-              placeholder="Song title"
+              value={title}
+              readOnly
             />
           </div>
           <div className="viewChoproSongInfoRow">
@@ -212,7 +220,8 @@ function SongInfoPopup() {
               className="viewChoproSongInfoInput"
               id="song-info-artist"
               type="text"
-              placeholder="Artist"
+              value={artist}
+              readOnly
             />
           </div>
           <div className="viewChoproSongInfoRow">
@@ -226,7 +235,8 @@ function SongInfoPopup() {
               className="viewChoproSongInfoInput"
               id="song-info-subtitle"
               type="text"
-              placeholder="Subtitle"
+              value={subtitle}
+              readOnly
             />
           </div>
         </Popup>,
