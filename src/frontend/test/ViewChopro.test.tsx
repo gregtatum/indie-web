@@ -73,7 +73,9 @@ describe('<ViewChopro>', () => {
 
   it('view a chordpro file', async () => {
     setup();
-    await waitFor(() => screen.getByText(/Lights go out and/));
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
 
     expect(screen.getByTestId('viewChopro')).toMatchInlineSnapshot(`
       <div
@@ -217,9 +219,12 @@ describe('<ViewChopro>', () => {
     const user = userEvent.setup();
     await waitFor(() => screen.getByText(/Lights go out and/));
 
-    await act(async () => {
-      await user.click(screen.getByRole('button', { name: 'Edit' }));
-    });
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
+    if (editButton) {
+      await act(async () => {
+        await user.click(editButton);
+      });
+    }
     await act(async () => {
       await user.click(screen.getByRole('button', { name: 'Song Info' }));
     });
@@ -245,6 +250,48 @@ describe('<ViewChopro>', () => {
       expect(songText.split(/\r?\n/).slice(0, 4)).toEqual([
         '{title: Clocks}',
         '{subtitle: Live}',
+        '{key: D}',
+        '',
+      ]);
+    });
+  });
+
+  it('removes directives when cleared in the UI', async () => {
+    const { store } = setup();
+    const user = userEvent.setup();
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
+
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
+    if (editButton) {
+      await act(async () => {
+        await user.click(editButton);
+      });
+    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
+    });
+
+    const subtitleInput = screen.getByLabelText<HTMLInputElement>('Subtitle');
+
+    await act(async () => {
+      await user.type(subtitleInput, 'Live');
+    });
+    await act(async () => {
+      await user.clear(subtitleInput);
+    });
+
+    await waitFor(() => {
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.subtitle).toBeUndefined();
+
+      const songText = $.getActiveFileText(store.getState());
+      expect(songText.split(/\r?\n/).slice(0, 4)).toEqual([
+        '{title: Clocks}',
+        '{artist: Coldplay}',
         '{key: D}',
         '',
       ]);
