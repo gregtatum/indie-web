@@ -488,16 +488,16 @@ export const getActiveFileSongKey = createSelector(
   getActiveFileTransposeRaw,
   getActiveFileCapoValue,
   (text, transposeRaw, capoValue): SongKey | null => {
-    if (transposeRaw) {
-      return SongKey.fromRaw(transposeRaw);
+    const baseKey = transposeRaw
+      ? SongKey.fromRaw(transposeRaw)
+      : SongKey.fromRaw(text);
+    if (!baseKey) {
+      return null;
     }
-    if (text && capoValue !== null) {
-      const originalKey = SongKey.fromRaw(text);
-      if (originalKey) {
-        return transposeSongKeyByHalfSteps(originalKey, -capoValue);
-      }
+    if (capoValue !== null) {
+      return transposeSongKeyByHalfSteps(baseKey, -capoValue);
     }
-    return SongKey.fromRaw(text);
+    return baseKey;
   },
 );
 
@@ -517,11 +517,13 @@ export const getActiveFileParsedTransformedOrNull = createSelector(
     if (!originalKey) {
       return parsed;
     }
-    const targetKey = transposeRaw
+    const baseKey = transposeRaw
       ? SongKey.fromRaw(transposeRaw)
-      : capoValue !== null
-        ? transposeSongKeyByHalfSteps(originalKey, -capoValue)
-        : null;
+      : SongKey.fromRaw(songKeyRaw);
+    const targetKey =
+      baseKey && capoValue !== null
+        ? transposeSongKeyByHalfSteps(baseKey, -capoValue)
+        : baseKey;
     if (!targetKey) {
       return parsed;
     }
