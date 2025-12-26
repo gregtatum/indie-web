@@ -34,7 +34,14 @@ export function completeChords(context: CompletionContext) {
   };
 }
 
-const valueDirectives = ['title', 'subtitle', 'artist', 'album', 'comment'];
+const valueDirectives = [
+  'title',
+  'subtitle',
+  'artist',
+  'album',
+  'comment',
+  'key',
+];
 const mediaDirectives = ['image', 'audio', 'video'];
 
 // image src
