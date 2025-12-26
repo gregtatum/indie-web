@@ -18,6 +18,7 @@ export function ViewMarkdown() {
   const textFile = $$.getDownloadFileCache().get(path);
   const error = $$.getDownloadFileErrors().get(path);
   const hideEditor = $$.getHideEditor();
+  const editorOnly = $$.getEditorOnly();
   const displayPath = $$.getActiveFileDisplayPath();
   const editorAutocomplete = $$.getEditorAutocompleteSettings();
 
@@ -143,25 +144,40 @@ export function ViewMarkdown() {
     );
   }
 
+  const textArea = (
+    <TextArea
+      path={path}
+      textFile={textFile}
+      language={markdown}
+      enableAutocomplete={editorAutocomplete.markdown}
+      editorExtensions={[
+        EditorView.lineWrapping,
+        EditorView.domEventHandlers({
+          paste,
+          drop,
+        }),
+      ]}
+    />
+  );
+
+  if (editorOnly) {
+    return (
+      <div
+        className="splitterSolo"
+        ref={containerRef}
+        key={path}
+        data-testid="viewMarkdown"
+      >
+        {textArea}
+      </div>
+    );
+  }
+
   return (
     <Splitter
       data-testid="viewMarkdown"
       className="splitterSplit"
-      start={
-        <TextArea
-          path={path}
-          textFile={textFile}
-          language={markdown}
-          enableAutocomplete={editorAutocomplete.markdown}
-          editorExtensions={[
-            EditorView.lineWrapping,
-            EditorView.domEventHandlers({
-              paste,
-              drop,
-            }),
-          ]}
-        />
-      }
+      start={textArea}
       end={<RenderedMarkdown view="split" />}
       persistLocalStorage="viewMarkdownSplitterOffset"
     />

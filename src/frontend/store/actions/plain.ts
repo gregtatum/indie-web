@@ -168,6 +168,14 @@ export function hideEditor(flag: boolean) {
   };
 }
 
+export function setEditorOnly(isEditorOnly: boolean) {
+  localStorage.setItem('appEditorOnly', isEditorOnly.toString());
+  return {
+    type: 'set-editor-only' as const,
+    isEditorOnly,
+  };
+}
+
 export function invalidatePath(path: string) {
   return { type: 'invalidate-path' as const, path };
 }

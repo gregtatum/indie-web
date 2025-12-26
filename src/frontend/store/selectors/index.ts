@@ -89,6 +89,10 @@ export function getHideEditor(state: State) {
   return state.hideEditor;
 }
 
+export function getEditorOnly(state: State) {
+  return state.editorOnly;
+}
+
 export function getIsDraggingSplitter(state: State) {
   return state.isDraggingSplitter;
 }

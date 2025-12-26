@@ -506,6 +506,38 @@ function hideEditor(
     case 'hide-editor':
       localStorage.setItem('appHideEditor', action.flag.toString());
       return action.flag;
+    case 'set-editor-only':
+      if (action.isEditorOnly) {
+        localStorage.setItem('appHideEditor', 'false');
+        return false;
+      }
+      return state;
+    default:
+      return state;
+  }
+}
+
+function getDefaultEditorOnly() {
+  const value = localStorage.getItem('appEditorOnly');
+  if (!value) {
+    return window.innerWidth <= 500;
+  }
+  return value === 'true';
+}
+
+function editorOnly(
+  state: boolean = getDefaultEditorOnly(),
+  action: T.Action,
+): boolean {
+  switch (action.type) {
+    case 'set-editor-only':
+      return action.isEditorOnly;
+    case 'hide-editor':
+      if (action.flag) {
+        localStorage.setItem('appEditorOnly', 'false');
+        return false;
+      }
+      return state;
     default:
       return state;
   }
@@ -716,7 +748,10 @@ function experimentalFeatures(
 }
 
 function editorAutocompleteSettings(
-  state: { markdown: boolean; chordpro: boolean } = getEditorAutocompleteDefaults(),
+  state: {
+    markdown: boolean;
+    chordpro: boolean;
+  } = getEditorAutocompleteDefaults(),
   action: T.Action,
 ): { markdown: boolean; chordpro: boolean } {
   switch (action.type) {
@@ -788,6 +823,7 @@ export const reducers = combineReducers({
   dropboxOauth,
   copyFile,
   editorAutocompleteSettings,
+  editorOnly,
   experimentalFeatures,
   filesIndex,
   serverId,

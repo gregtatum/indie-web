@@ -12,43 +12,44 @@
 .textAreaHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   padding: 4px;
   background: #fff;
   justify-content: end;
 }
 
-.textAreaHeaderDismiss {
+.textAreaHeaderDismiss,
+.textAreaHeaderToggle {
   width: 26px;
   height: 26px;
   margin: 0;
   padding: 0;
   border: 1px solid #bfb8b2;
   border-radius: 6px;
-  background: #f7f4f2;
+  background-color: #f7f4f2;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
   font-size: 0;
   cursor: pointer;
   position: relative;
 }
 
-.textAreaHeaderDismiss:hover {
-  background: #eee7e3;
+.textAreaHeaderToggle {
+  background-image: url("/data/common/svg/caret-right-to-line.svg");
 }
 
-.textAreaHeaderDismiss::after,
-.textAreaHeaderDismiss::before {
-  content: "";
-  height: 0;
-  width: 14px;
-  top: 11.5px;
-  left: 5.5px;
-  border-bottom: 2px solid #000;
-  position: absolute;
-  transform: rotate(45deg);
+.textAreaHeaderToggleEditorOnly {
+  background-image: url("/data/common/svg/caret-left-to-line.svg");
 }
 
-.textAreaHeaderDismiss::before {
-  transform: rotate(-45deg);
+.textAreaHeaderDismiss {
+  background-image: url("/data/common/svg/xmark.svg");
+}
+
+.textAreaHeaderDismiss:hover,
+.textAreaHeaderToggle:hover {
+  background-color: #eee7e3;
 }
 
 .textAreaMount {

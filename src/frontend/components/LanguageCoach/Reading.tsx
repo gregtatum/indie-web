@@ -176,6 +176,7 @@ export function ViewReadingFile() {
   const textFile = $$.getDownloadFileCache().get(path);
   const error = $$.getDownloadFileErrors().get(path);
   const hideEditor = $$.getHideEditor();
+  const editorOnly = $$.getEditorOnly();
   const swipeDiv = React.useRef(null);
 
   useNextPrevSwipe(swipeDiv);
@@ -215,22 +216,32 @@ export function ViewReadingFile() {
     );
   }
 
+  const textArea = (
+    <TextArea
+      path={path}
+      textFile={textFile}
+      editorExtensions={[
+        EditorView.lineWrapping,
+        placeholder(
+          'Paste your reading here… Mark sentences with a # if they are in English.',
+        ),
+      ]}
+      autoSave={true}
+    />
+  );
+
+  if (editorOnly) {
+    return (
+      <div className="splitterSolo" ref={swipeDiv}>
+        {textArea}
+      </div>
+    );
+  }
+
   return (
     <Splitter
       className="splitterSplit"
-      start={
-        <TextArea
-          path={path}
-          textFile={textFile}
-          editorExtensions={[
-            EditorView.lineWrapping,
-            placeholder(
-              'Paste your reading here… Mark sentences with a # if they are in English.',
-            ),
-          ]}
-          autoSave={true}
-        />
-      }
+      start={textArea}
       end={<RenderedReading />}
       persistLocalStorage="lcReadingSplitterOffset"
     />

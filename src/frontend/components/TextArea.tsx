@@ -30,15 +30,30 @@ export function TextAreaHeader(props: {
   children?: React.ReactNode;
 }) {
   const dispatch = Hooks.useDispatch();
+  const editorOnly = $$.getEditorOnly();
   const onHideEditor =
     props.onHideEditor ?? (() => dispatch(A.hideEditor(true)));
+  const onToggleEditorOnly = () => dispatch(A.setEditorOnly(!editorOnly));
+  const toggleAriaLabel = editorOnly
+    ? 'Show the split view'
+    : 'Hide the split view';
 
   return (
     <div className="textAreaHeader">
       <button
+        className={`textAreaHeaderToggle${
+          editorOnly ? ' textAreaHeaderToggleEditorOnly' : ''
+        }`}
+        type="button"
+        aria-label={toggleAriaLabel}
+        title={toggleAriaLabel}
+        onClick={onToggleEditorOnly}
+      />
+      <button
         className="textAreaHeaderDismiss"
         type="button"
-        aria-label="Hide Editor"
+        aria-label="Hide the editor"
+        title="Hide the editor"
         onClick={onHideEditor}
       />
       {props.children}

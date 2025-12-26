@@ -20,6 +20,7 @@ export function ViewChopro() {
   const error = $$.getDownloadFileErrors().get(path);
   const songTitle = $$.getActiveFileSongTitleOrNull();
   const hideEditor = $$.getHideEditor();
+  const editorOnly = $$.getEditorOnly();
   const editorAutocomplete = $$.getEditorAutocompleteSettings();
   const swipeDiv = React.useRef(null);
   useNextPrevSwipe(swipeDiv);
@@ -72,64 +73,79 @@ export function ViewChopro() {
     );
   }
 
+  const textArea = (
+    <TextArea
+      path={path}
+      textFile={textFile}
+      language={ChordPro}
+      enableAutocomplete={editorAutocomplete.chordpro}
+      editorExtensions={[
+        EditorView.domEventHandlers({
+          paste(event, view) {
+            const { clipboardData } = event;
+            if (!clipboardData) {
+              return;
+            }
+
+            // Skip the conversion if it's just HTML.
+            const hasHtmlPaste = clipboardData.getData('text/html');
+            const text = clipboardData.getData('text/plain');
+
+            if (hasHtmlPaste && getChordLineRatio(text) > 0.15) {
+              // Treat this as an ultimate guitar file.
+              event.preventDefault();
+              const insert = ultimateGuitarToChordPro(text);
+              const [range] = view.state.selection.ranges;
+              const anchor = range.from + insert.length;
+              const from = range.from;
+              const to = range.to;
+
+              view.dispatch({
+                changes: {
+                  from,
+                  to,
+                  insert,
+                },
+                selection: { anchor },
+                effects: EditorView.scrollIntoView(anchor),
+              });
+
+              const modifier = window.navigator.platform
+                .toLowerCase()
+                .includes('mac')
+                ? 'cmd'
+                : 'ctrl';
+              dispatch(
+                A.addMessage({
+                  message: `Converted from Ultimate Guitar tab to ChordPro. Paste with ${modifier}+shift+v to avoid this conversion.`,
+                  timeout: true,
+                }),
+              );
+            }
+          },
+        }),
+      ]}
+    />
+  );
+
+  if (editorOnly) {
+    return (
+      <div
+        className="splitterSolo"
+        ref={swipeDiv}
+        key={path}
+        data-testid="viewChopro"
+      >
+        {textArea}
+      </div>
+    );
+  }
+
   return (
     <Splitter
       data-testid="viewChopro"
       className="splitterSplit"
-      start={
-        <TextArea
-          path={path}
-          textFile={textFile}
-          language={ChordPro}
-          enableAutocomplete={editorAutocomplete.chordpro}
-          editorExtensions={[
-            EditorView.domEventHandlers({
-              paste(event, view) {
-                const { clipboardData } = event;
-                if (!clipboardData) {
-                  return;
-                }
-
-                // Skip the conversion if it's just HTML.
-                const hasHtmlPaste = clipboardData.getData('text/html');
-                const text = clipboardData.getData('text/plain');
-
-                if (hasHtmlPaste && getChordLineRatio(text) > 0.15) {
-                  // Treat this as an ultimate guitar file.
-                  event.preventDefault();
-                  const insert = ultimateGuitarToChordPro(text);
-                  const [range] = view.state.selection.ranges;
-                  const anchor = range.from + insert.length;
-                  const from = range.from;
-                  const to = range.to;
-
-                  view.dispatch({
-                    changes: {
-                      from,
-                      to,
-                      insert,
-                    },
-                    selection: { anchor },
-                    effects: EditorView.scrollIntoView(anchor),
-                  });
-
-                  const modifier = window.navigator.platform
-                    .toLowerCase()
-                    .includes('mac')
-                    ? 'cmd'
-                    : 'ctrl';
-                  dispatch(
-                    A.addMessage({
-                      message: `Converted from Ultimate Guitar tab to ChordPro. Paste with ${modifier}+shift+v to avoid this conversion.`,
-                      timeout: true,
-                    }),
-                  );
-                }
-              },
-            }),
-          ]}
-        />
-      }
+      start={textArea}
       end={<RenderedSong />}
       persistLocalStorage="viewChoproSplitterOffset"
     />
