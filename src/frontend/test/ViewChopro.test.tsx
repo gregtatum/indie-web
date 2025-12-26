@@ -298,6 +298,158 @@ describe('<ViewChopro>', () => {
     });
   });
 
+  it('clears transpose when key matches the transposed key', async () => {
+    const { store } = setup();
+    const user = userEvent.setup();
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
+
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
+    if (editButton) {
+      await act(async () => {
+        await user.click(editButton);
+      });
+    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
+    });
+
+    const transposeSelect =
+      screen.getByLabelText<HTMLSelectElement>('Transpose');
+    await act(async () => {
+      await user.selectOptions(transposeSelect, 'F');
+    });
+
+    const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
+    await act(async () => {
+      await user.selectOptions(keySelect, 'F');
+    });
+
+    await waitFor(() => {
+      const settings = $.getActiveSongKeySettings(store.getState());
+      expect(settings?.type).toBeUndefined();
+    });
+  });
+
+  it('hides transpose dropdown when no key directive exists', async () => {
+    const { store } = setup();
+    const user = userEvent.setup();
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
+
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
+    if (editButton) {
+      await act(async () => {
+        await user.click(editButton);
+      });
+    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
+    });
+
+    const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
+    await act(async () => {
+      await user.selectOptions(keySelect, '');
+    });
+
+    await waitFor(() => {
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.key).toBeUndefined();
+    });
+
+    expect(screen.queryByLabelText('Transpose')).toBeNull();
+  });
+
+  it('updates the key directive from the dropdown', async () => {
+    const { store } = setup();
+    const user = userEvent.setup();
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
+
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
+    if (editButton) {
+      await act(async () => {
+        await user.click(editButton);
+      });
+    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
+    });
+
+    const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
+    await act(async () => {
+      await user.selectOptions(keySelect, 'D');
+    });
+
+    await waitFor(() => {
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.key).toBe('D');
+
+      const songText = $.getActiveFileText(store.getState());
+      expect(songText.split(/\r?\n/).slice(0, 4)).toEqual([
+        '{title: Clocks}',
+        '{artist: Coldplay}',
+        '{key: D}',
+        '',
+      ]);
+    });
+  });
+
+  it('clears transpose when adding a key to match the transposed key', async () => {
+    const { store } = setup();
+    const user = userEvent.setup();
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
+
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
+    if (editButton) {
+      await act(async () => {
+        await user.click(editButton);
+      });
+    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
+    });
+
+    const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
+    await act(async () => {
+      await user.selectOptions(keySelect, '');
+    });
+
+    await waitFor(() => {
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.key).toBeUndefined();
+    });
+
+    await act(async () => {
+      await user.selectOptions(keySelect, 'C');
+    });
+    await act(async () => {
+      await user.selectOptions(
+        screen.getByLabelText<HTMLSelectElement>('Transpose'),
+        'F',
+      );
+    });
+    await act(async () => {
+      await user.selectOptions(keySelect, 'F');
+    });
+
+    await waitFor(() => {
+      const settings = $.getActiveSongKeySettings(store.getState());
+      expect(settings?.type).toBeUndefined();
+    });
+  });
+
   // I can't figure out why this test doesn't work.
   xit('can generate tabs', async () => {
     setup();
