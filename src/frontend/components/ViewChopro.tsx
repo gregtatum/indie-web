@@ -168,11 +168,21 @@ function SongInfoPopup() {
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const dispatch = Hooks.useDispatch();
+  const path = $$.getPath();
+  const activeText = $$.getActiveFileText();
   const directives = $$.getActiveFileParsedOrNull()?.directives;
   const title = typeof directives?.title === 'string' ? directives.title : '';
   const artist = typeof directives?.artist === 'string' ? directives.artist : '';
   const subtitle =
     typeof directives?.subtitle === 'string' ? directives.subtitle : '';
+
+  function updateDirective(directive: string, value: string) {
+    const updatedText = updateDirectiveInText(activeText, directive, value);
+    if (updatedText !== activeText) {
+      dispatch(A.modifyActiveFile(updatedText, path, true));
+    }
+  }
 
   return (
     <>
@@ -206,7 +216,9 @@ function SongInfoPopup() {
               id="song-info-title"
               type="text"
               value={title}
-              readOnly
+              onChange={(event) =>
+                updateDirective('title', event.currentTarget.value)
+              }
             />
           </div>
           <div className="viewChoproSongInfoRow">
@@ -221,7 +233,9 @@ function SongInfoPopup() {
               id="song-info-artist"
               type="text"
               value={artist}
-              readOnly
+              onChange={(event) =>
+                updateDirective('artist', event.currentTarget.value)
+              }
             />
           </div>
           <div className="viewChoproSongInfoRow">
@@ -236,7 +250,9 @@ function SongInfoPopup() {
               id="song-info-subtitle"
               type="text"
               value={subtitle}
-              readOnly
+              onChange={(event) =>
+                updateDirective('subtitle', event.currentTarget.value)
+              }
             />
           </div>
         </Popup>,
@@ -244,6 +260,34 @@ function SongInfoPopup() {
       )}
     </>
   );
+}
+
+function updateDirectiveInText(
+  text: string,
+  directive: string,
+  value: string,
+) {
+  const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
+  const lines = text.split(/\r?\n/);
+  const directiveRegex = new RegExp(`^(\\s*)\\{${directive}\\s*:(.*)\\}\\s*$`);
+  let updated = false;
+  const nextLines = lines.map((line) => {
+    if (updated) {
+      return line;
+    }
+    const match = line.match(directiveRegex);
+    if (!match) {
+      return line;
+    }
+    updated = true;
+    return `${match[1]}{${directive}: ${value}}`;
+  });
+
+  if (!updated) {
+    return [`{${directive}: ${value}}`, ...lines].join(lineEnding);
+  }
+
+  return nextLines.join(lineEnding);
 }
 
 function KeyManager() {
