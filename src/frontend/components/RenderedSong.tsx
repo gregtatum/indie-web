@@ -79,6 +79,7 @@ export function RenderedSong() {
               Spotify
             </a>
           </h1>
+          {directives.artist ? <h2>{directives.artist}</h2> : null}
           {directives.subtitle ? <h2>{directives.subtitle}</h2> : null}
         </div>
       </div>
