@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { A, $$, Hooks } from 'frontend';
 import { ChordPro } from 'frontend/logic/chordpo-lang';
 import { SongKey } from 'frontend/logic/parse-chords';
-import { overlayPortal } from 'frontend/hooks';
+import { overlayPortal, useEscape } from 'frontend/hooks';
 import { ensureExists, UnhandledCaseError } from 'frontend/utils';
 import { useRetainScroll } from '../hooks';
 import {
@@ -85,7 +85,12 @@ export function ViewChopro() {
       textFile={textFile}
       language={ChordPro}
       enableAutocomplete={editorAutocomplete.chordpro}
-      header={<KeyManager />}
+      header={
+        <div className="viewChoproHeaderContent">
+          <KeyManager />
+          <SongInfoMenu />
+        </div>
+      }
       editorExtensions={[
         EditorView.domEventHandlers({
           paste(event, view) {
@@ -156,6 +161,114 @@ export function ViewChopro() {
       end={<RenderedSong />}
       persistLocalStorage="viewChoproSplitterOffset"
     />
+  );
+}
+
+function SongInfoMenu() {
+  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+  const menuRef = React.useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const dismiss = () => setIsOpen(false);
+  useEscape(dismiss, isOpen);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return () => {};
+    }
+
+    function onClick(event: MouseEvent) {
+      const button = buttonRef.current;
+      const menu = menuRef.current;
+      if (!menu || !button) {
+        return;
+      }
+      if (!menu.contains(event.target as Node | null)) {
+        dismiss();
+      }
+    }
+
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [isOpen]);
+
+  const menu = isOpen
+    ? overlayPortal(
+        <div className="viewChoproSongInfoMenu" ref={menuRef}>
+          <div className="viewChoproSongInfoRow">
+            <label className="viewChoproSongInfoLabel" htmlFor="song-info-title">
+              Title
+            </label>
+            <input
+              className="viewChoproSongInfoInput"
+              id="song-info-title"
+              type="text"
+              placeholder="Song title"
+            />
+          </div>
+          <div className="viewChoproSongInfoRow">
+            <label
+              className="viewChoproSongInfoLabel"
+              htmlFor="song-info-artist"
+            >
+              Artist
+            </label>
+            <input
+              className="viewChoproSongInfoInput"
+              id="song-info-artist"
+              type="text"
+              placeholder="Artist"
+            />
+          </div>
+          <div className="viewChoproSongInfoRow">
+            <label
+              className="viewChoproSongInfoLabel"
+              htmlFor="song-info-subtitle"
+            >
+              Subtitle
+            </label>
+            <input
+              className="viewChoproSongInfoInput"
+              id="song-info-subtitle"
+              type="text"
+              placeholder="Subtitle"
+            />
+          </div>
+        </div>,
+        'song-info-menu',
+      )
+    : null;
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const button = buttonRef.current;
+    const menuElement = menuRef.current;
+    if (!button || !menuElement) {
+      return;
+    }
+
+    const rect = button.getBoundingClientRect();
+    const docRect = document.body.getBoundingClientRect();
+    const top = rect.bottom - docRect.top + 6;
+    const left = rect.left - docRect.left;
+    menuElement.style.top = `${top}px`;
+    menuElement.style.left = `${left}px`;
+  }, [isOpen]);
+
+  return (
+    <>
+      <button
+        className="viewChoproSongInfoButton"
+        type="button"
+        ref={buttonRef}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        Song Info
+      </button>
+      {menu}
+    </>
   );
 }
 
