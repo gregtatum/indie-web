@@ -173,6 +173,7 @@ function SongInfoPopup() {
   const songKeyRaw = typeof directives?.key === 'string' ? directives.key : '';
   const transposeRaw =
     typeof directives?.transpose === 'string' ? directives.transpose : '';
+  const capoRaw = typeof directives?.capo === 'string' ? directives.capo : '';
   const title = typeof directives?.title === 'string' ? directives.title : '';
   const artist = typeof directives?.artist === 'string' ? directives.artist : '';
   const subtitle =
@@ -193,6 +194,7 @@ function SongInfoPopup() {
   ];
   const selectedKey = normalizeKeyForSelect(songKeyRaw);
   const transposeSelectedKey = normalizeKeyForSelect(transposeRaw);
+  const capoSelectedValue = capoRaw.trim();
 
   function updateDirective(directive: string, value: string) {
     let updatedText = updateDirectiveInText(activeText, directive, value);
@@ -202,6 +204,9 @@ function SongInfoPopup() {
         !nextKey || (transposeSelectedKey && nextKey === transposeSelectedKey);
       if (shouldClearTranspose) {
         updatedText = updateDirectiveInText(updatedText, 'transpose', '');
+      }
+      if (!nextKey) {
+        updatedText = updateDirectiveInText(updatedText, 'capo', '');
       }
     }
     if (updatedText !== activeText) {
@@ -329,6 +334,34 @@ function SongInfoPopup() {
               </select>
             </div>
           ) : null}
+          {songKeyRaw ? (
+            <div className="viewChoproSongInfoRow">
+              <label
+                className="viewChoproSongInfoLabel"
+                htmlFor="song-info-capo"
+              >
+                Capo
+              </label>
+              <select
+                className="viewChoproSongInfoSelect"
+                id="song-info-capo"
+                value={capoSelectedValue}
+                onChange={(event) =>
+                  updateDirective('capo', event.currentTarget.value)
+                }
+              >
+                <option value="">Select</option>
+                {Array.from({ length: 12 }, (_, index) => {
+                  const value = String(index + 1);
+                  return (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          ) : null}
         </Popup>,
         'song-info-menu',
       )}
@@ -343,7 +376,14 @@ function updateDirectiveInText(
 ) {
   const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
-  const directivesOrder = ['title', 'artist', 'subtitle', 'key', 'transpose'];
+  const directivesOrder = [
+    'title',
+    'artist',
+    'subtitle',
+    'key',
+    'transpose',
+    'capo',
+  ];
   const directiveValues = new Map<string, string>();
 
   for (const entry of directivesOrder) {
@@ -405,9 +445,12 @@ function normalizeKeyForSelect(value: string) {
 function KeyManager() {
   const songKeyRaw = $$.getActiveFileSongKeyRaw();
   const transposeRaw = $$.getActiveFileTransposeRaw();
+  const capoRaw = $$.getActiveFileCapoRaw();
   const transposeKey = transposeRaw ? SongKey.fromRaw(transposeRaw) : null;
+  const capoValue = capoRaw ? Number.parseInt(capoRaw, 10) : null;
+  const songKey = $$.getActiveFileSongKey();
 
-  if (!songKeyRaw && !transposeRaw) {
+  if (!songKeyRaw && !transposeRaw && !capoRaw) {
     return null;
   }
 
@@ -419,13 +462,22 @@ function KeyManager() {
     );
   }
 
+  if (songKeyRaw && capoRaw) {
+    return (
+      <div className="viewChoproSongKeyWrapper">
+        Key: {songKeyRaw}
+        {capoValue !== null ? ` (Capo: ${capoValue})` : ' (Capo)'}
+      </div>
+    );
+  }
+
   if (songKeyRaw) {
     return <div className="viewChoproSongKeyWrapper">Key: {songKeyRaw}</div>;
   }
 
   return (
     <div className="viewChoproSongKeyWrapper">
-      Key: {transposeKey?.display ?? transposeRaw}
+      Key: {songKey?.display ?? transposeKey?.display ?? transposeRaw ?? capoRaw}
     </div>
   );
 }

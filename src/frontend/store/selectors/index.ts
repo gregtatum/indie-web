@@ -12,6 +12,7 @@ import {
 import {
   parseChordPro,
   SongKey,
+  transposeSongKeyByHalfSteps,
   transposeParsedSong,
 } from 'frontend/logic/parse-chords';
 import { parseSearchString } from 'frontend/logic/search';
@@ -408,6 +409,30 @@ export const getActiveFileTransposeRaw = createSelector(
   },
 );
 
+export const getActiveFileCapoRaw = createSelector(
+  getActiveFileParsedOrNull,
+  (activeFile): string | null => {
+    if (typeof activeFile?.directives.capo === 'string') {
+      return activeFile?.directives.capo;
+    }
+    return null;
+  },
+);
+
+export const getActiveFileCapoValue = createSelector(
+  getActiveFileCapoRaw,
+  (capoRaw): number | null => {
+    if (!capoRaw) {
+      return null;
+    }
+    const value = Number.parseInt(capoRaw, 10);
+    if (!Number.isFinite(value) || value < 0) {
+      return null;
+    }
+    return value;
+  },
+);
+
 export const getActiveFileSongTitleOrNull = createSelector(
   getActiveFileParsedOrNull,
   (parsedFile): string | null => {
@@ -461,9 +486,16 @@ export const getActiveFileDisplayPath = createSelector(
 export const getActiveFileSongKey = createSelector(
   getActiveFileSongKeyRaw,
   getActiveFileTransposeRaw,
-  (text, transposeRaw): SongKey | null => {
+  getActiveFileCapoValue,
+  (text, transposeRaw, capoValue): SongKey | null => {
     if (transposeRaw) {
       return SongKey.fromRaw(transposeRaw);
+    }
+    if (text && capoValue !== null) {
+      const originalKey = SongKey.fromRaw(text);
+      if (originalKey) {
+        return transposeSongKeyByHalfSteps(originalKey, capoValue);
+      }
     }
     return SongKey.fromRaw(text);
   },
@@ -473,22 +505,30 @@ export const getActiveFileParsedTransformedOrNull = createSelector(
   getActiveFileParsedOrNull,
   getActiveFileSongKeyRaw,
   getActiveFileTransposeRaw,
-  (parsed, songKeyRaw, transposeRaw) => {
+  getActiveFileCapoValue,
+  (parsed, songKeyRaw, transposeRaw, capoValue) => {
     if (!parsed) {
       return null;
     }
-    if (!songKeyRaw || !transposeRaw) {
+    if (!songKeyRaw) {
       return parsed;
     }
-    const songKey = SongKey.fromRaw(songKeyRaw);
-    const transposeKey = SongKey.fromRaw(transposeRaw);
-    if (!songKey || !transposeKey) {
+    const originalKey = SongKey.fromRaw(songKeyRaw);
+    if (!originalKey) {
       return parsed;
     }
-    if (songKey.display === transposeKey.display) {
+    const targetKey = transposeRaw
+      ? SongKey.fromRaw(transposeRaw)
+      : capoValue !== null
+        ? transposeSongKeyByHalfSteps(originalKey, capoValue)
+        : null;
+    if (!targetKey) {
       return parsed;
     }
-    return transposeParsedSong(parsed, transposeKey);
+    if (originalKey.display === targetKey.display) {
+      return parsed;
+    }
+    return transposeParsedSong(parsed, targetKey);
   },
 );
 

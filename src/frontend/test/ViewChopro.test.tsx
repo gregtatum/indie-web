@@ -420,6 +420,45 @@ describe('<ViewChopro>', () => {
     });
   });
 
+  it('updates the capo directive from the dropdown', async () => {
+    const { store } = setup();
+    const user = userEvent.setup();
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
+
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
+    if (editButton) {
+      await act(async () => {
+        await user.click(editButton);
+      });
+    }
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
+    });
+
+    const capoSelect = screen.getByLabelText<HTMLSelectElement>('Capo');
+    await act(async () => {
+      await user.selectOptions(capoSelect, '5');
+    });
+
+    await waitFor(() => {
+      const directives = $.getActiveFileParsedOrNull(
+        store.getState(),
+      )?.directives;
+      expect(directives?.capo).toBe('5');
+
+      const songText = $.getActiveFileText(store.getState());
+      expect(songText.split(/\r?\n/).slice(0, 5)).toEqual([
+        '{title: Clocks}',
+        '{artist: Coldplay}',
+        '{key: D}',
+        '{capo: 5}',
+        '',
+      ]);
+    });
+  });
+
   it('clears transpose when adding a key to match the transposed key', async () => {
     const { store } = setup();
     const user = userEvent.setup();

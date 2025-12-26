@@ -630,6 +630,18 @@ export function transposeParsedSong(
   return { ...song, lines };
 }
 
+export function transposeSongKeyByHalfSteps(
+  originalKey: SongKey,
+  halfSteps: number,
+): SongKey | null {
+  const scaleToChord = sharpKeys.has(originalKey.key)
+    ? scaleToChordSharp
+    : scaleToChordFlat;
+  const transposedKey = transpose(scaleToChord, originalKey.key, halfSteps);
+  const display = `${transposedKey}${originalKey.minor ? 'm' : ''}`;
+  return SongKey.fromRaw(display);
+}
+
 const halfStepScale: Record<T.SongKeyLetters, number> = {
   A: 0,
   'A#': 1,

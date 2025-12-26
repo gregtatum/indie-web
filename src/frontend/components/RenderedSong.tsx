@@ -173,9 +173,11 @@ function RenderedSongKeyReadOnly() {
   const songKey = $$.getActiveFileSongKey();
   const songKeyRaw = $$.getActiveFileSongKeyRaw();
   const transposeRaw = $$.getActiveFileTransposeRaw();
+  const capoRaw = $$.getActiveFileCapoRaw();
   const transposeKey = transposeRaw ? SongKey.fromRaw(transposeRaw) : null;
+  const capoValue = capoRaw ? Number.parseInt(capoRaw, 10) : null;
 
-  if (!songKey && !songKeyRaw && !transposeRaw) {
+  if (!songKey && !songKeyRaw && !transposeRaw && !capoRaw) {
     return null;
   }
 
@@ -184,6 +186,17 @@ function RenderedSongKeyReadOnly() {
       <div className="renderedSongStickyHeaderRow">
         <span>
           Key: {songKeyRaw} (Transposed: {transposeKey?.display ?? transposeRaw})
+        </span>
+      </div>
+    );
+  }
+
+  if (songKeyRaw && capoRaw) {
+    return (
+      <div className="renderedSongStickyHeaderRow">
+        <span>
+          Key: {songKeyRaw}
+          {capoValue !== null ? ` (Capo: ${capoValue})` : ' (Capo)'}
         </span>
       </div>
     );
@@ -199,7 +212,9 @@ function RenderedSongKeyReadOnly() {
 
   return (
     <div className="renderedSongStickyHeaderRow">
-      <span>Key: {songKey?.display ?? transposeKey?.display ?? transposeRaw}</span>
+      <span>
+        Key: {songKey?.display ?? transposeKey?.display ?? transposeRaw ?? capoRaw}
+      </span>
     </div>
   );
 }
