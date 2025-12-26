@@ -267,34 +267,48 @@ function updateDirectiveInText(
   directive: string,
   value: string,
 ) {
-  const trimmedValue = value.trim();
   const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
-  const directiveRegex = new RegExp(`^(\\s*)\\{${directive}\\s*:(.*)\\}\\s*$`);
-  let updated = false;
-  const nextLines = lines.map((line) => {
-    if (updated) {
-      return line;
-    }
-    const match = line.match(directiveRegex);
-    if (!match) {
-      return line;
-    }
-    updated = true;
-    if (trimmedValue.length === 0) {
-      return null;
-    }
-    return `${match[1]}{${directive}: ${value}}`;
-  });
+  const directivesOrder = ['title', 'artist', 'subtitle'];
+  const directiveValues = new Map<string, string>();
 
-  if (!updated) {
-    if (trimmedValue.length === 0) {
-      return text;
+  for (const entry of directivesOrder) {
+    const match = lines.find((line) =>
+      new RegExp(`^\\s*\\{${entry}\\s*:(.*)\\}\\s*$`).test(line),
+    );
+    if (match) {
+      const valueMatch = match.match(
+        new RegExp(`^\\s*\\{${entry}\\s*:(.*)\\}\\s*$`),
+      );
+      const rawValue = valueMatch?.[1] ?? '';
+      directiveValues.set(entry, rawValue.trim());
     }
-    return [`{${directive}: ${value}}`, ...lines].join(lineEnding);
   }
 
-  return nextLines.filter((line) => line !== null).join(lineEnding);
+  directiveValues.set(directive, value.trim());
+
+  const nextLines = lines.filter(
+    (line) =>
+      !directivesOrder.some((entry) =>
+        new RegExp(`^\\s*\\{${entry}\\s*:(.*)\\}\\s*$`).test(line),
+      ),
+  );
+
+  const directiveLines = directivesOrder
+    .map((entry) => {
+      const entryValue = directiveValues.get(entry);
+      if (!entryValue) {
+        return null;
+      }
+      return `{${entry}: ${entryValue}}`;
+    })
+    .filter((line) => line !== null);
+
+  if (directiveLines.length === 0) {
+    return nextLines.join(lineEnding);
+  }
+
+  return [...directiveLines, ...nextLines].join(lineEnding);
 }
 
 function KeyManager() {
