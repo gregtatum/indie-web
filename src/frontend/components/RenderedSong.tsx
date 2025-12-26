@@ -58,9 +58,6 @@ export function RenderedSong() {
     >
       {hideEditor ? <NextPrevLinks /> : null}
       <div className="renderedSongStickyHeader">
-        <div className="renderedSongStickyHeaderRow">
-          <RenderedSongKey />
-        </div>
         {hideEditor ? (
           <button
             className="button"
@@ -174,7 +171,7 @@ export function RenderedSong() {
   );
 }
 
-function RenderedSongKey() {
+export function RenderedSongKey() {
   const path = $$.getPath();
   const songKey = $$.getActiveFileSongKey();
   const songKeyRaw = $$.getActiveFileSongKeyRaw();
@@ -185,13 +182,13 @@ function RenderedSongKey() {
     if (!songKeyRaw) {
       return null;
     }
-    return <div className="renderedSongStickyHeaderRow">Key: {songKeyRaw}</div>;
+    return <div className="renderedSongKeyWrapper">Key: {songKeyRaw}</div>;
   }
 
   const songKeyType = songKeySettings?.type;
   switch (songKeyType) {
     case 'capo':
-      return <div className="renderedSongStickyHeaderRow">Capo</div>;
+      return <div className="renderedSongKeyWrapper">Capo</div>;
     case 'transpose': {
       function onChange(event: any) {
         dispatch(
@@ -222,7 +219,7 @@ function RenderedSongKey() {
       }
 
       return (
-        <div className="renderedSongStickyHeaderRow">
+        <div className="renderedSongKeyWrapper">
           <label htmlFor="select-transpose">Transpose: </label>
           <select id="select-transpose" onChange={onChange} value={adjustedKey}>
             <option>C</option>
@@ -261,7 +258,7 @@ function SongKeyMenu({ songKey }: SongKeyMenu) {
   const [openGeneration, setOpenGeneration] = React.useState(0);
 
   return (
-    <div className="renderedSongStickyHeaderRow">
+    <div className="renderedSongKeyWrapper">
       <button
         type="button"
         className="renderedSongKey"

@@ -8,7 +8,7 @@ import {
   ultimateGuitarToChordPro,
 } from '../logic/parse-chords';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
-import { RenderedSong } from './RenderedSong';
+import { RenderedSong, RenderedSongKey } from './RenderedSong';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
 
@@ -79,6 +79,7 @@ export function ViewChopro() {
       textFile={textFile}
       language={ChordPro}
       enableAutocomplete={editorAutocomplete.chordpro}
+      header={<RenderedSongKey />}
       editorExtensions={[
         EditorView.domEventHandlers({
           paste(event, view) {

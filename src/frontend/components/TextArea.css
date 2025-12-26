@@ -10,18 +10,27 @@
 }
 
 .textAreaHeader {
+  --text-area-header-height: 26px;
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 4px;
   background: #fff;
-  justify-content: end;
+  height: var(--text-area-header-height)
+}
+
+.textAreaHeaderContent {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 4px;
 }
 
 .textAreaHeaderDismiss,
 .textAreaHeaderToggle {
-  width: 26px;
-  height: 26px;
+  width: var(--text-area-header-height);
+  height: var(--text-area-header-height);
   margin: 0;
   padding: 0;
   border: 1px solid #bfb8b2;

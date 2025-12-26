@@ -40,6 +40,7 @@ export function TextAreaHeader(props: {
 
   return (
     <div className="textAreaHeader">
+      <div className="textAreaHeaderContent">{props.children}</div>
       <button
         className={`textAreaHeaderToggle${
           editorOnly ? ' textAreaHeaderToggleEditorOnly' : ''
@@ -56,7 +57,6 @@ export function TextAreaHeader(props: {
         title="Hide the editor"
         onClick={onHideEditor}
       />
-      {props.children}
     </div>
   );
 }
@@ -68,6 +68,7 @@ export function TextArea(props: {
   editorExtensions?: EditorStateConfig['extensions'];
   autoSave?: boolean;
   enableAutocomplete?: boolean;
+  header?: React.ReactNode;
 }) {
   const isDragging = $$.getIsDraggingSplitter();
   const modifiedText = $$.getModifiedText();
@@ -200,7 +201,7 @@ export function TextArea(props: {
 
   return (
     <div className="textArea" key={props.path}>
-      <TextAreaHeader />
+      <TextAreaHeader>{props.header}</TextAreaHeader>
       <div
         className="textAreaMount"
         data-testid="textAreaMount"
