@@ -35,31 +35,45 @@ export function completeChords(context: CompletionContext) {
 }
 
 const valueDirectives = ['title', 'subtitle', 'artist', 'album', 'comment'];
+const mediaDirectives = ['image', 'audio', 'video'];
+
+// image src
+// audio src
+// video src
 
 /**
  * Complete the directives while inside of a { brace.
  */
-const completeDirectivesInner = completeFromList(
-  valueDirectives.map((label) =>
-    snippetCompletion('' + label + ': ${}}', {
-      label,
-      type: 'directive',
+const completeDirectivesInner = completeFromList([
+  ...valueDirectives.map((directive) =>
+    snippetCompletion('' + directive + ': ${}}', {
+      label: directive,
     }),
   ),
-);
+  ...mediaDirectives.map((directive) =>
+    snippetCompletion('' + directive + ': src="./assets/${}"}', {
+      label: directive,
+    }),
+  ),
+]);
 
 /**
  * Complete the directives whenever the first { is provided.
  */
-const completeDirectivesOuter = completeFromList(
-  valueDirectives.map((label) =>
-    snippetCompletion('{' + label + ': ${}}', {
-      label: '{' + label,
-      displayLabel: label,
-      type: 'directive',
+const completeDirectivesOuter = completeFromList([
+  ...valueDirectives.map((directive) =>
+    snippetCompletion('{' + directive + ': ${}}', {
+      label: '{' + directive,
+      displayLabel: directive,
     }),
   ),
-);
+  ...mediaDirectives.map((directive) =>
+    snippetCompletion('{' + directive + ': src="./assets/${}"}', {
+      label: '{' + directive,
+      displayLabel: directive,
+    }),
+  ),
+]);
 
 export function chordproCompletionSource(context: CompletionContext) {
   const node = syntaxTree(context.state).resolveInner(context.pos, -1);
