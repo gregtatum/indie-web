@@ -313,7 +313,7 @@ export function AddFileMenu(props: AddFileMenuProps) {
 
 function choproDefaultContents(fileName: string): string {
   const title = fileName.replace(/\.chopro$/, '');
-  let contents = `{title: ${title}}\n{subtitle: Unknown}`;
+  let contents = `{title: ${title}}\n{artist: Unknown}`;
   const match = /^(.*) - (.*).*$/.exec(title);
   if (match) {
     contents = `{title: ${match[1]}}\n{subtitle: ${match[2]}}`;
