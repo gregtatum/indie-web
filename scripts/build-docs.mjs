@@ -41,6 +41,7 @@ if (!allowedSites.has(site)) {
 }
 
 const docsRoot = path.join(projectRoot, 'docs');
+const templatePath = path.join(docsRoot, 'template.html');
 const outputRoot = path.join(projectRoot, 'dist', 'docs');
 const sourceDirs = [path.join(docsRoot, 'common'), path.join(docsRoot, site)];
 
@@ -101,19 +102,29 @@ async function writeMarkdown(targetPath, markdownText, sourceName) {
   const title = titleFromTokens(tokens, sourceName);
   const description = descriptionFromTokens(tokens);
   const htmlBody = marked.parse(markdownText);
-  const html = `<!doctype html>
+  const templateExists = await pathExists(templatePath);
+  const template = templateExists
+    ? await fs.readFile(templatePath, 'utf-8')
+    : `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeHtml(title)}</title>
-    ${description ? `<meta name="description" content="${escapeHtml(description)}" />` : ''}
+    <title>{{title}}</title>
+    {{metaDescription}}
   </head>
   <body>
-    ${htmlBody}
+    {{content}}
   </body>
 </html>
 `;
+  const metaDescription = description
+    ? `<meta name="description" content="${escapeHtml(description)}" />`
+    : '';
+  const html = template
+    .replace('{{title}}', escapeHtml(title))
+    .replace('{{metaDescription}}', metaDescription)
+    .replace('{{content}}', htmlBody);
 
   await ensureDir(path.dirname(targetPath));
   await fs.writeFile(targetPath, html);

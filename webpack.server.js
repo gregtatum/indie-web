@@ -1,10 +1,19 @@
 #!/usr/bin/env node
+import path from 'path';
 import webpack from 'webpack';
 import WebpackDevServer from 'webpack-dev-server';
+import { fileURLToPath } from 'url';
 import config from './webpack.config.mjs';
 
 const port = process.env.SITE === 'floppydisk' ? 2345 : 1234;
 const host = 'localhost';
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const site = process.env.SITE;
+const staticDocsDirs = [
+  path.join(rootDir, 'dist', 'docs'),
+  path.join(rootDir, 'docs', 'common'),
+  ...(site ? [path.join(rootDir, 'docs', site)] : []),
+];
 
 const serverConfig = {
   host,
@@ -33,7 +42,11 @@ const serverConfig = {
   //     "frame-ancestors 'self'; " +
   //     "form-action 'none' ",
   // },
-  static: false,
+  static: staticDocsDirs.map((directory) => ({
+    directory,
+    publicPath: '/docs',
+    watch: true,
+  })),
 };
 
 const server = new WebpackDevServer(serverConfig, webpack(config));
