@@ -305,9 +305,10 @@ function getChordDisplayParts(
     if (!nashvilleText) {
       return null;
     }
-    const match = nashvilleText.match(/^([b#]?[1-7])/);
+    const formattedText = formatChordDisplayText(nashvilleText);
+    const match = formattedText.match(/^([♭♯]?[1-7])/);
     const baseRoot = match?.[1] ?? nashvilleText;
-    const decoration = nashvilleText.slice(baseRoot.length);
+    const decoration = formattedText.slice(baseRoot.length);
     return splitChordDecoration(baseRoot, decoration);
   }
 
@@ -316,12 +317,15 @@ function getChordDisplayParts(
     if (!romanText) {
       return null;
     }
-    const match = romanText.match(/^([b#]?)([ivIV]+)/);
+    const formattedText = formatChordDisplayText(romanText, {
+      useJazzMaj7: true,
+    });
+    const match = formattedText.match(/^([♭♯]?)([ivIV]+)/);
     if (!match) {
-      return { base: romanText, decoration: '' };
+      return { base: formattedText, decoration: '' };
     }
     const baseRoot = match[1] + match[2];
-    const decoration = romanText.slice(baseRoot.length);
+    const decoration = formattedText.slice(baseRoot.length);
     return { base: baseRoot, decoration };
   }
 
@@ -354,6 +358,18 @@ function splitChordDecoration(baseRoot: string, decoration: string) {
     base: baseRoot,
     decoration,
   };
+}
+
+function formatChordDisplayText(
+  text: string,
+  options: { useJazzMaj7?: boolean } = {},
+) {
+  let formatted = text.replace(/b(?=[0-9IV])/g, '♭').replace(/#(?=[0-9IV])/g, '♯');
+  formatted = formatted.replace(/dim/g, '°');
+  if (options.useJazzMaj7) {
+    formatted = formatted.replace(/maj7/g, '△').replace(/\^7/g, '△');
+  }
+  return formatted;
 }
 
 /**
