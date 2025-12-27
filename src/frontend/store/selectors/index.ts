@@ -484,10 +484,17 @@ export const getActiveFileDisplayPath = createSelector(
 );
 
 export const getActiveFileSongKey = createSelector(
+  getActiveFileParsedOrNull,
   getActiveFileSongKeyRaw,
   getActiveFileTransposeRaw,
   getActiveFileCapoValue,
-  (text, transposeRaw, capoValue): SongKey | null => {
+  (parsed, text, transposeRaw, capoValue): SongKey | null => {
+    if (
+      parsed?.directives.chords === 'nashville' ||
+      parsed?.directives.chords === 'roman'
+    ) {
+      return SongKey.fromRaw(text);
+    }
     const baseKey = transposeRaw
       ? SongKey.fromRaw(transposeRaw)
       : SongKey.fromRaw(text);
@@ -509,6 +516,12 @@ export const getActiveFileParsedTransformedOrNull = createSelector(
   (parsed, songKeyRaw, transposeRaw, capoValue) => {
     if (!parsed) {
       return null;
+    }
+    if (
+      parsed.directives.chords === 'nashville' ||
+      parsed.directives.chords === 'roman'
+    ) {
+      return parsed;
     }
     if (!songKeyRaw) {
       return parsed;
