@@ -637,6 +637,33 @@ describe('<ViewChopro>', () => {
     `);
   });
 
+  it('renders the song display as text after capo and transpose', async () => {
+    const { getSongText } = setup({
+      text: stripIndent`
+        {transpose: D}
+        {capo: 2}
+        ${kokomoChordProText}
+      `,
+      path: '/Kokomo - Beach Boys (Capo + Transpose).chordpro',
+    });
+    await waitFor(() => {
+      screen.findByText(/Aruba/);
+    });
+
+    expect(getSongText()).toMatchInlineSnapshot(`
+      "ArCuba, Jamaica, ooh I wanna take ya
+      BerFmuda, Bahama, come on pretty mama
+      Key CLargo, Montego, baby why don't we go, JaFmaica
+      Off the Florida CKeysCmaj7
+      Gm7   There's a place called FKokomo
+      Fm   That's where you Cwanna go to get awD7ay from it allG7
+      C  Bodies in the Cmaj7sand
+      Gm7  Tropical drink melting Fin your hand
+      Fm  We'll be falling in Clove to the rhythm of a D7steel drum band
+      G7  Down in KokomCo"
+    `);
+  });
+
   // I can't figure out why this test doesn't work.
   xit('can generate tabs', async () => {
     setupColdplay();
