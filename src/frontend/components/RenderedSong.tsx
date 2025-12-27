@@ -7,7 +7,11 @@ import {
   UnhandledCaseError,
   htmlElementOrNull,
 } from 'frontend/utils';
-import { SongKey, nashvilleChordText } from 'frontend/logic/parse-chords';
+import {
+  SongKey,
+  nashvilleChordText,
+  romanChordText,
+} from 'frontend/logic/parse-chords';
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
@@ -43,7 +47,7 @@ export function RenderedSong() {
   const hideEditor = $$.getHideEditor();
   const songKey = $$.getActiveFileSongKey();
   const { directives, lines } = $$.getActiveFileParsedTransformed();
-  const useNashville = directives.chords === 'nashville';
+  const chordDisplay = directives.chords;
   const dispatch = Hooks.useDispatch();
   uploadFileHook(renderedSongRef, path, folderPath);
 
@@ -110,7 +114,7 @@ export function RenderedSong() {
                       key={`${span.chord.text}-${spanIndex}`}
                     >
                       <span className="renderedSongLineChordText">
-                        {renderChordText(span.chord, songKey, useNashville)}
+                        {renderChordText(span.chord, songKey, chordDisplay)}
                       </span>
                       <span className="renderedSongLineChordExtras">
                         {span.chord.extras}
@@ -277,9 +281,9 @@ function getLineTypeKey(line: T.LineType): string {
 function renderChordText(
   chord: T.Chord,
   songKey: SongKey | null,
-  useNashville: boolean,
+  chordDisplay: string | undefined,
 ) {
-  const parts = getChordDisplayParts(chord, songKey, useNashville);
+  const parts = getChordDisplayParts(chord, songKey, chordDisplay);
   if (!parts) {
     return chord.chordText ?? chord.text;
   }
@@ -294,9 +298,9 @@ function renderChordText(
 function getChordDisplayParts(
   chord: T.Chord,
   songKey: SongKey | null,
-  useNashville: boolean,
+  chordDisplay: string | undefined,
 ) {
-  if (useNashville && songKey) {
+  if (chordDisplay === 'nashville' && songKey) {
     const nashvilleText = nashvilleChordText(chord, songKey);
     if (!nashvilleText) {
       return null;
@@ -305,6 +309,20 @@ function getChordDisplayParts(
     const baseRoot = match?.[1] ?? nashvilleText;
     const decoration = nashvilleText.slice(baseRoot.length);
     return splitChordDecoration(baseRoot, decoration);
+  }
+
+  if (chordDisplay === 'roman' && songKey) {
+    const romanText = romanChordText(chord, songKey);
+    if (!romanText) {
+      return null;
+    }
+    const match = romanText.match(/^([b#]?)([ivIV]+)/);
+    if (!match) {
+      return { base: romanText, decoration: '' };
+    }
+    const baseRoot = match[1] + match[2];
+    const decoration = romanText.slice(baseRoot.length);
+    return { base: baseRoot, decoration };
   }
 
   if (chord.baseNote && chord.chordText) {

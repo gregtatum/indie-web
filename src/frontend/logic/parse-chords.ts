@@ -754,10 +754,62 @@ export function nashvilleChordText(
   return baseNumber + rest;
 }
 
+export function romanChordText(
+  chord: T.Chord,
+  songKey: SongKey,
+): string | null {
+  if (!chord.baseNote || !chord.chordText) {
+    return null;
+  }
+
+  const baseRoman = noteToRoman(chord.baseNote, songKey);
+  let rest = chord.chordText.slice(chord.baseNote.length);
+  const isMinor =
+    chord.type === 'minor' ||
+    (rest &&
+      (rest.startsWith('m') || rest.startsWith('-')) &&
+      !rest.toLowerCase().startsWith('maj') &&
+      !rest.toLowerCase().startsWith('mj'));
+
+  if (isMinor) {
+    rest = rest.slice(1);
+  }
+
+  if (chord.slash) {
+    const slashRoman = noteToRoman(chord.slash, songKey);
+    rest = rest.replace(/\/[A-G][b#]?/, '/' + slashRoman.toUpperCase());
+  }
+
+  const romanBase = isMinor ? baseRoman.toLowerCase() : baseRoman;
+  return romanBase + rest;
+}
+
 function noteToNashville(note: T.Note, songKey: SongKey) {
   const normalizedNote = normalizeNoteForScale(note);
   const interval = getHalfSteps(songKey.key, normalizedNote);
   return nashvilleDegreeByHalfStep.get(interval) ?? '1';
+}
+
+function noteToRoman(note: T.Note, songKey: SongKey) {
+  const normalizedNote = normalizeNoteForScale(note);
+  const interval = getHalfSteps(songKey.key, normalizedNote);
+  const degree = nashvilleDegreeByHalfStep.get(interval) ?? '1';
+  const match = degree.match(/^([b#]?)([1-7])$/);
+  if (!match) {
+    return 'I';
+  }
+  const [, accidental, numeral] = match;
+  const romanNumerals = [
+    '',
+    'I',
+    'II',
+    'III',
+    'IV',
+    'V',
+    'VI',
+    'VII',
+  ];
+  return accidental + romanNumerals[Number(numeral)];
 }
 
 function normalizeNoteForScale(note: T.Note): T.SongKeyLetters {

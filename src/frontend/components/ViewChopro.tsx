@@ -395,7 +395,10 @@ function ChordViewSelect() {
   const directives = $$.getActiveFileParsedOrNull()?.directives;
   const chordViewRaw =
     typeof directives?.chords === 'string' ? directives.chords : '';
-  const selectedView = chordViewRaw === 'nashville' ? 'nashville' : 'names';
+  const selectedView =
+    chordViewRaw === 'nashville' || chordViewRaw === 'roman'
+      ? chordViewRaw
+      : 'names';
 
   function updateChordDisplay(value: string) {
     const updatedText = updateDirectiveInText(activeText, 'chords', value);
@@ -412,6 +415,7 @@ function ChordViewSelect() {
       onChange={(event) => updateChordDisplay(event.currentTarget.value)}
     >
       <option value="names">Chord Names</option>
+      <option value="roman">Roman Numerals</option>
       <option value="nashville">Nashville Numbers</option>
     </select>
   );
