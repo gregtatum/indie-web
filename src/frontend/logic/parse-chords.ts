@@ -720,6 +720,59 @@ function transpose(
   return scaleToChord[(offset + 12) % 12];
 }
 
+const nashvilleDegreeByHalfStep = new Map<number, string>([
+  [0, '1'],
+  [1, 'b2'],
+  [2, '2'],
+  [3, 'b3'],
+  [4, '3'],
+  [5, '4'],
+  [6, '#4'],
+  [7, '5'],
+  [8, 'b6'],
+  [9, '6'],
+  [10, 'b7'],
+  [11, '7'],
+]);
+
+export function nashvilleChordText(
+  chord: T.Chord,
+  songKey: SongKey,
+): string | null {
+  if (!chord.baseNote || !chord.chordText) {
+    return null;
+  }
+
+  const baseNumber = noteToNashville(chord.baseNote, songKey);
+  let rest = chord.chordText.slice(chord.baseNote.length);
+
+  if (chord.slash) {
+    const slashNumber = noteToNashville(chord.slash, songKey);
+    rest = rest.replace(/\/[A-G][b#]?/, '/' + slashNumber);
+  }
+
+  return baseNumber + rest;
+}
+
+function noteToNashville(note: T.Note, songKey: SongKey) {
+  const normalizedNote = normalizeNoteForScale(note);
+  const interval = getHalfSteps(songKey.key, normalizedNote);
+  return nashvilleDegreeByHalfStep.get(interval) ?? '1';
+}
+
+function normalizeNoteForScale(note: T.Note): T.SongKeyLetters {
+  switch (note) {
+    case 'B#':
+      return 'C';
+    case 'E#':
+      return 'F';
+    case 'Fb':
+      return 'E';
+    default:
+      return note;
+  }
+}
+
 /**
  * In order to detect Ultimate Guitar files, we need to count how many lines contain
  * just chords.

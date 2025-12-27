@@ -7,7 +7,7 @@ import {
   UnhandledCaseError,
   htmlElementOrNull,
 } from 'frontend/utils';
-import { SongKey } from 'frontend/logic/parse-chords';
+import { SongKey, nashvilleChordText } from 'frontend/logic/parse-chords';
 import './RenderedSong.css';
 import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
@@ -41,7 +41,9 @@ export function RenderedSong() {
   const renderedSongRef = React.useRef(null);
   const path = $$.getPath();
   const hideEditor = $$.getHideEditor();
+  const songKey = $$.getActiveFileSongKey();
   const { directives, lines } = $$.getActiveFileParsedTransformed();
+  const useNashville = directives.chords === 'nashville';
   const dispatch = Hooks.useDispatch();
   uploadFileHook(renderedSongRef, path, folderPath);
 
@@ -108,7 +110,10 @@ export function RenderedSong() {
                       key={`${span.chord.text}-${spanIndex}`}
                     >
                       <span className="renderedSongLineChordText">
-                        {span.chord.chordText}
+                        {useNashville && songKey
+                          ? nashvilleChordText(span.chord, songKey) ??
+                            span.chord.chordText
+                          : span.chord.chordText}
                       </span>
                       <span className="renderedSongLineChordExtras">
                         {span.chord.extras}
