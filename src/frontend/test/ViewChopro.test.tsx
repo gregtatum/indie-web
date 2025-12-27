@@ -49,14 +49,22 @@ const kokomoChordProText = stripIndent`
 
 describe('<ViewChopro>', () => {
   function setupColdplay() {
-    return setup(
-      coldplayChordProText,
-      '/Clocks - Coldplay.chordpro',
-      '/Mellow Yellow - Donovan.chordpro',
-    );
+    return setup({
+      text: coldplayChordProText,
+      path: '/Clocks - Coldplay.chordpro',
+      siblingPath: '/Mellow Yellow - Donovan.chordpro',
+    });
   }
 
-  function setup(text: string, path: string, siblingPath?: string) {
+  function setup({
+    text,
+    path,
+    siblingPath,
+  }: {
+    text: string;
+    path: string;
+    siblingPath?: string;
+  }) {
     const store = createStore();
     store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
@@ -555,10 +563,36 @@ describe('<ViewChopro>', () => {
   });
 
   it('renders the song display as text', async () => {
-    const { getSongText } = setup(
-      kokomoChordProText,
-      '/Kokomo - Beach Boys.chordpro',
-    );
+    const { getSongText } = setup({
+      text: kokomoChordProText,
+      path: '/Kokomo - Beach Boys.chordpro',
+    });
+    await waitFor(() => {
+      screen.findByText(/Aruba/);
+    });
+
+    expect(getSongText()).toMatchInlineSnapshot(`
+      "ArCuba, Jamaica, ooh I wanna take ya
+      BerFmuda, Bahama, come on pretty mama
+      Key CLargo, Montego, baby why don't we go, JaFmaica
+      Off the Florida CKeysCmaj7
+      Gm7   There's a place called FKokomo
+      Fm   That's where you Cwanna go to get awD7ay from it allG7
+      C  Bodies in the Cmaj7sand
+      Gm7  Tropical drink melting Fin your hand
+      Fm  We'll be falling in Clove to the rhythm of a D7steel drum band
+      G7  Down in KokomCo"
+    `);
+  });
+
+  it('renders the song display as text after transpose', async () => {
+    const { getSongText } = setup({
+      text: stripIndent`
+        {transpose: D}
+        ${kokomoChordProText}
+      `,
+      path: '/Kokomo - Beach Boys (Transpose).chordpro',
+    });
     await waitFor(() => {
       screen.findByText(/Aruba/);
     });
