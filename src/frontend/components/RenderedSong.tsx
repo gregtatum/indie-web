@@ -110,10 +110,7 @@ export function RenderedSong() {
                       key={`${span.chord.text}-${spanIndex}`}
                     >
                       <span className="renderedSongLineChordText">
-                        {useNashville && songKey
-                          ? nashvilleChordText(span.chord, songKey) ??
-                            span.chord.chordText
-                          : span.chord.chordText}
+                        {renderChordText(span.chord, songKey, useNashville)}
                       </span>
                       <span className="renderedSongLineChordExtras">
                         {span.chord.extras}
@@ -275,6 +272,55 @@ function getLineTypeKey(line: T.LineType): string {
     default:
       throw new UnhandledCaseError(line, 'LineType');
   }
+}
+
+function renderChordText(
+  chord: T.Chord,
+  songKey: SongKey | null,
+  useNashville: boolean,
+) {
+  const parts = getChordDisplayParts(chord, songKey, useNashville);
+  if (!parts) {
+    return chord.chordText ?? chord.text;
+  }
+  return (
+    <>
+      {parts.base}
+      {parts.decoration ? <sup>{parts.decoration}</sup> : null}
+    </>
+  );
+}
+
+function getChordDisplayParts(
+  chord: T.Chord,
+  songKey: SongKey | null,
+  useNashville: boolean,
+) {
+  if (useNashville && songKey) {
+    const nashvilleText = nashvilleChordText(chord, songKey);
+    if (!nashvilleText) {
+      return null;
+    }
+    const match = nashvilleText.match(/^([b#]?\d+)/);
+    const base = match?.[1] ?? nashvilleText;
+    return {
+      base,
+      decoration: nashvilleText.slice(base.length),
+    };
+  }
+
+  if (chord.baseNote && chord.chordText) {
+    return {
+      base: chord.baseNote,
+      decoration: chord.chordText.slice(chord.baseNote.length),
+    };
+  }
+
+  if (chord.chordText) {
+    return { base: chord.chordText, decoration: '' };
+  }
+
+  return null;
 }
 
 /**

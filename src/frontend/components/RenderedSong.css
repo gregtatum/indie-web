@@ -96,6 +96,13 @@
   font-weight: normal;
 }
 
+.renderedSongLineChordText {
+  & sup {
+    padding-inline-start: 1px;
+    font-weight: normal;
+  }
+}
+
 .renderedSongLine-chords .renderedSongLineChord {
   /* Maybe restore this, spacing was weird. */
   /* margin-inline-end: 5px;
