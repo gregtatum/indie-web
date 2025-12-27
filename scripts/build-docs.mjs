@@ -1,13 +1,40 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import readline from 'readline';
 import { fileURLToPath } from 'url';
 import { marked } from 'marked';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(rootDir, '..');
 
-const site = process.env.SITE;
-if (!site || (site !== 'floppydisk' && site !== 'browserchords')) {
+const allowedSites = new Set(['floppydisk', 'browserchords']);
+
+async function pickSiteFromPrompt() {
+  if (!process.stdin.isTTY) {
+    throw new Error(
+      'SITE must be set to either "floppydisk" or "browserchords" for docs build.',
+    );
+  }
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const choice = await new Promise((resolve) => {
+    rl.question('Pick a site (floppydisk/browserchords): ', resolve);
+  });
+
+  rl.close();
+  return String(choice || '').trim().toLowerCase();
+}
+
+let site = process.env.SITE;
+if (!site) {
+  site = await pickSiteFromPrompt();
+}
+
+if (!allowedSites.has(site)) {
   throw new Error(
     'SITE must be set to either "floppydisk" or "browserchords" for docs build.',
   );
@@ -94,9 +121,11 @@ async function writeMarkdown(targetPath, markdownText, sourceName) {
 
 async function copyDocsFrom(sourceDir) {
   if (!(await pathExists(sourceDir))) {
+    console.log(`[docs] skip missing directory: ${sourceDir}`);
     return;
   }
 
+  console.log(`[docs] reading ${sourceDir}`);
   const files = await listFiles(sourceDir);
   for (const filePath of files) {
     const relativePath = path.relative(sourceDir, filePath);
@@ -106,17 +135,26 @@ async function copyDocsFrom(sourceDir) {
       const htmlPath = targetPath.replace(/\.md$/i, '.html');
       const fallbackTitle = path.basename(filePath, path.extname(filePath));
       await writeMarkdown(htmlPath, markdownText, fallbackTitle);
+      console.log(
+        `[docs] render ${relativePath} -> ${path.relative(projectRoot, htmlPath)}`,
+      );
     } else {
       await ensureDir(path.dirname(targetPath));
       await fs.copyFile(filePath, targetPath);
+      console.log(
+        `[docs] copy ${relativePath} -> ${path.relative(projectRoot, targetPath)}`,
+      );
     }
   }
 }
 
 async function buildDocs() {
+  console.log(`[docs] site=${site}`);
+  console.log(`[docs] output=${outputRoot}`);
   await ensureDir(outputRoot);
   await copyDocsFrom(sourceDirs[0]);
   await copyDocsFrom(sourceDirs[1]);
+  console.log('[docs] done');
 }
 
 await buildDocs();
