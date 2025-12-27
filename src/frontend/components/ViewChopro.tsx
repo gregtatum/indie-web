@@ -174,6 +174,10 @@ function SongInfoPopup() {
   const transposeRaw =
     typeof directives?.transpose === 'string' ? directives.transpose : '';
   const capoRaw = typeof directives?.capo === 'string' ? directives.capo : '';
+  const chordViewRaw =
+    typeof directives?.chords === 'string' ? directives.chords : '';
+  const hideTransposeAndCapo =
+    chordViewRaw === 'nashville' || chordViewRaw === 'roman';
   const title = typeof directives?.title === 'string' ? directives.title : '';
   const artist =
     typeof directives?.artist === 'string' ? directives.artist : '';
@@ -325,7 +329,7 @@ function SongInfoPopup() {
                 ))}
               </select>
             </div>
-            {songKeyRaw ? (
+            {songKeyRaw && !hideTransposeAndCapo ? (
               <div className="viewChoproSongInfoRow">
                 <label
                   className="viewChoproSongInfoLabel"
@@ -354,7 +358,7 @@ function SongInfoPopup() {
                 </select>
               </div>
             ) : null}
-            {songKeyRaw ? (
+            {songKeyRaw && !hideTransposeAndCapo ? (
               <div className="viewChoproSongInfoRow">
                 <label
                   className="viewChoproSongInfoLabel"
