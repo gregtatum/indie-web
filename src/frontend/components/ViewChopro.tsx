@@ -238,149 +238,157 @@ function SongInfoPopup() {
           openGeneration={openGeneration}
           className="viewChoproSongInfoMenu"
         >
-          <div className="viewChoproSongInfoRow">
-            <label
-              className="viewChoproSongInfoLabel"
-              htmlFor="song-info-title"
-            >
-              Title
-            </label>
-            <input
-              className="viewChoproSongInfoInput"
-              id="song-info-title"
-              type="text"
-              value={title}
-              onChange={(event) =>
-                updateDirective('title', event.currentTarget.value)
-              }
-            />
-          </div>
-          <div className="viewChoproSongInfoRow">
-            <label
-              className="viewChoproSongInfoLabel"
-              htmlFor="song-info-artist"
-            >
-              Artist
-            </label>
-            <input
-              className="viewChoproSongInfoInput"
-              id="song-info-artist"
-              type="text"
-              value={artist}
-              onChange={(event) =>
-                updateDirective('artist', event.currentTarget.value)
-              }
-            />
-          </div>
-          <div className="viewChoproSongInfoRow">
-            <label
-              className="viewChoproSongInfoLabel"
-              htmlFor="song-info-subtitle"
-            >
-              Subtitle
-            </label>
-            <input
-              className="viewChoproSongInfoInput"
-              id="song-info-subtitle"
-              type="text"
-              value={subtitle}
-              onChange={(event) =>
-                updateDirective('subtitle', event.currentTarget.value)
-              }
-            />
-          </div>
-          <div className="viewChoproSongInfoRow">
-            <label
-              className="viewChoproSongInfoLabel"
-              htmlFor="chord-view-select"
-            >
-              Display
-            </label>
-            <ChordViewSelect />
-          </div>
-          <div className="viewChoproSongInfoRow">
-            <label className="viewChoproSongInfoLabel" htmlFor="song-info-key">
-              Key
-            </label>
-            <select
-              className="viewChoproSongInfoSelect"
-              id="song-info-key"
-              value={selectedKey}
-              onChange={(event) =>
-                updateDirective('key', event.currentTarget.value)
-              }
-            >
-              <option value="">Select</option>
-              {keyOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-          {songKeyRaw ? (
+          <div className="viewChoproSongInfoGroup">
             <div className="viewChoproSongInfoRow">
               <label
                 className="viewChoproSongInfoLabel"
-                htmlFor="song-info-transpose"
+                htmlFor="song-info-title"
               >
-                Transpose
+                Title
+              </label>
+              <input
+                className="viewChoproSongInfoInput"
+                id="song-info-title"
+                type="text"
+                value={title}
+                onChange={(event) =>
+                  updateDirective('title', event.currentTarget.value)
+                }
+              />
+            </div>
+            <div className="viewChoproSongInfoRow">
+              <label
+                className="viewChoproSongInfoLabel"
+                htmlFor="song-info-subtitle"
+              >
+                Subtitle
+              </label>
+              <input
+                className="viewChoproSongInfoInput"
+                id="song-info-subtitle"
+                type="text"
+                value={subtitle}
+                onChange={(event) =>
+                  updateDirective('subtitle', event.currentTarget.value)
+                }
+              />
+            </div>
+            <div className="viewChoproSongInfoRow">
+              <label
+                className="viewChoproSongInfoLabel"
+                htmlFor="song-info-artist"
+              >
+                Artist
+              </label>
+              <input
+                className="viewChoproSongInfoInput"
+                id="song-info-artist"
+                type="text"
+                value={artist}
+                onChange={(event) =>
+                  updateDirective('artist', event.currentTarget.value)
+                }
+              />
+            </div>
+          </div>
+          <div className="viewChoproSongInfoGroup">
+            <div className="viewChoproSongInfoGroupTitle">Display</div>
+            <div className="viewChoproSongInfoRow">
+              <label
+                className="viewChoproSongInfoLabel"
+                htmlFor="chord-view-select"
+              >
+                Chords
+              </label>
+              <ChordViewSelect />
+            </div>
+            <div className="viewChoproSongInfoRow">
+              <label
+                className="viewChoproSongInfoLabel"
+                htmlFor="song-info-key"
+              >
+                Key
               </label>
               <select
                 className="viewChoproSongInfoSelect"
-                id="song-info-transpose"
-                value={transposeSelectedKey}
+                id="song-info-key"
+                value={selectedKey}
                 onChange={(event) =>
-                  updateDirective('transpose', event.currentTarget.value)
+                  updateDirective('key', event.currentTarget.value)
                 }
               >
-                <option value="">Select</option>
+                <option value="">–</option>
                 {keyOptions.map((option) => (
-                  <option
-                    key={option}
-                    value={option}
-                    disabled={option === selectedKey}
-                  >
+                  <option key={option} value={option}>
                     {option}
                   </option>
                 ))}
               </select>
             </div>
-          ) : null}
-          {songKeyRaw ? (
-            <div className="viewChoproSongInfoRow">
-              <label
-                className="viewChoproSongInfoLabel"
-                htmlFor="song-info-capo"
-              >
-                Capo
-              </label>
-              <select
-                className="viewChoproSongInfoSelect"
-                id="song-info-capo"
-                value={capoSelectedValue}
-                onChange={(event) =>
-                  updateDirective('capo', event.currentTarget.value)
-                }
-              >
-                <option value="">Select</option>
-                {Array.from({ length: 12 }, (_, index) => {
-                  const value = String(index + 1);
-                  const capoKey = baseKey
-                    ? transposeSongKeyByHalfSteps(baseKey, -(index + 1))
-                    : null;
-                  const label = capoKey
-                    ? `${value} - ${capoKey.display}`
-                    : value;
-                  return (
-                    <option key={value} value={value}>
-                      {label}
+            {songKeyRaw ? (
+              <div className="viewChoproSongInfoRow">
+                <label
+                  className="viewChoproSongInfoLabel"
+                  htmlFor="song-info-transpose"
+                >
+                  Transpose
+                </label>
+                <select
+                  className="viewChoproSongInfoSelect"
+                  id="song-info-transpose"
+                  value={transposeSelectedKey}
+                  onChange={(event) =>
+                    updateDirective('transpose', event.currentTarget.value)
+                  }
+                >
+                  <option value="">–</option>
+                  {keyOptions.map((option) => (
+                    <option
+                      key={option}
+                      value={option}
+                      disabled={option === selectedKey}
+                    >
+                      {option}
                     </option>
-                  );
-                })}
-              </select>
-            </div>
-          ) : null}
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            {songKeyRaw ? (
+              <div className="viewChoproSongInfoRow">
+                <label
+                  className="viewChoproSongInfoLabel"
+                  htmlFor="song-info-capo"
+                >
+                  Capo
+                </label>
+                <select
+                  className="viewChoproSongInfoSelect"
+                  id="song-info-capo"
+                  value={capoSelectedValue}
+                  onChange={(event) =>
+                    updateDirective('capo', event.currentTarget.value)
+                  }
+                >
+                  <option value="">–</option>
+                  {Array.from({ length: 12 }, (_, index) => {
+                    const value = String(index + 1);
+                    const capoKey = baseKey
+                      ? transposeSongKeyByHalfSteps(baseKey, -(index + 1))
+                      : null;
+                    const label = capoKey
+                      ? `${value} - ${capoKey.display}`
+                      : value;
+                    return (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            ) : null}
+          </div>
         </Popup>,
         'song-info-menu',
       )}
