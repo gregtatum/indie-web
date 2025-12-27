@@ -14,6 +14,15 @@ tasks:
     cmds:
       - rm -rf dist
       - SITE=browserchords NODE_ENV=production webpack
+      - SITE=browserchords node scripts/build-docs.mjs
+
+  build-docs:
+    desc: |
+      Build static docs into dist/docs. The site must be specified.
+      SITE=floppydisk task build-docs
+      SITE=browserchords task build-docs
+    cmds:
+      - node scripts/build-docs.mjs
 
   check-updates:
     desc: Check for package updates
