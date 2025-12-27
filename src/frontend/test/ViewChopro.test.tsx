@@ -29,20 +29,49 @@ const coldplayChordProText = stripIndent`
   tides that I tried to sw[Em]im against
 `;
 
+const kokomoChordProText = stripIndent`
+  {title: Kokomo}
+  {artist: Beach Boys}
+  {chords: names}
+  {key: C}
+
+  Ar[C]uba, Jamaica, ooh I wanna take ya
+  Ber[F]muda, Bahama, come on pretty mama
+  Key [C]Largo, Montego, baby why don't we go, Ja[F]maica
+  Off the Florida [C]Keys[Cmaj7]
+  [Gm7]   There's a place called [F]Kokomo
+  [Fm]   That's where you [C]wanna go to get aw[D7]ay from it all[G7]
+  [C]  Bodies in the [Cmaj7]sand
+  [Gm7]  Tropical drink melting [F]in your hand
+  [Fm]  We'll be falling in [C]love to the rhythm of a [D7]steel drum band
+  [G7]  Down in Kokom[C]o
+`;
+
 describe('<ViewChopro>', () => {
-  function setup() {
+  function setupColdplay() {
+    return setup(
+      coldplayChordProText,
+      '/Clocks - Coldplay.chordpro',
+      '/Mellow Yellow - Donovan.chordpro',
+    );
+  }
+
+  function setup(text: string, path: string, siblingPath?: string) {
     const store = createStore();
     store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
-    const listFiles = mockDropboxListFolder([
-      { type: 'folder', path: '/My Cool Band' },
-      { type: 'file', path: '/Clocks - Coldplay.chordpro' },
-      { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
-    ]);
+    const files = [
+      { type: 'folder' as const, path: '/My Cool Band' },
+      { type: 'file' as const, path },
+    ];
+    if (siblingPath) {
+      files.push({ type: 'file' as const, path: siblingPath });
+    }
+    const listFiles = mockDropboxListFolder(files);
 
-    function getFileMetadata(path: string): T.FileMetadata {
+    function getFileMetadata(filePath: string): T.FileMetadata {
       const file = ensureExists(
-        listFiles.find((file) => file.path === path),
+        listFiles.find((item) => item.path === filePath),
         'Failed to find the file.',
       );
       if (file.type !== 'file') {
@@ -53,26 +82,31 @@ describe('<ViewChopro>', () => {
 
     mockDropboxFilesDownload([
       {
-        metadata: getFileMetadata('/Clocks - Coldplay.chordpro'),
-        text: coldplayChordProText,
+        metadata: getFileMetadata(path),
+        text,
       },
     ]);
 
     const renderResults = render(
-      <MemoryRouter
-        initialEntries={['/dropbox/file/Clocks - Coldplay.chordpro']}
-      >
+      <MemoryRouter initialEntries={[`/dropbox/file${path}`]}>
         <Provider store={store as any}>
           <AppRoutes />
         </Provider>
       </MemoryRouter>,
     );
 
-    return { store, ...renderResults };
+    function getSongText() {
+      return screen
+        .getAllByTestId('renderedSongLine')
+        .map((line) => line.textContent)
+        .join('\n');
+    }
+
+    return { store, getSongText, ...renderResults };
   }
 
   it('view a chordpro file', async () => {
-    setup();
+    setupColdplay();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
     });
@@ -218,7 +252,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('updates song info directives from the UI', async () => {
-    const { store } = setup();
+    const { store } = setupColdplay();
     const user = userEvent.setup();
     await waitFor(() => screen.getByText(/Lights go out and/));
 
@@ -260,7 +294,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('removes directives when cleared in the UI', async () => {
-    const { store } = setup();
+    const { store } = setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -302,7 +336,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('clears transpose when key matches the transposed key', async () => {
-    const { store } = setup();
+    const { store } = setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -354,7 +388,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('hides transpose dropdown when no key directive exists', async () => {
-    const { store } = setup();
+    const { store } = setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -386,7 +420,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('updates the key directive from the dropdown', async () => {
-    const { store } = setup();
+    const { store } = setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -424,7 +458,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('updates the capo directive from the dropdown', async () => {
-    const { store } = setup();
+    const { store } = setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -463,7 +497,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('clears transpose when adding a key to match the transposed key', async () => {
-    const { store } = setup();
+    const { store } = setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -520,9 +554,32 @@ describe('<ViewChopro>', () => {
     });
   });
 
+  it('renders the song display as text', async () => {
+    const { getSongText } = setup(
+      kokomoChordProText,
+      '/Kokomo - Beach Boys.chordpro',
+    );
+    await waitFor(() => {
+      screen.findByText(/Aruba/);
+    });
+
+    expect(getSongText()).toMatchInlineSnapshot(`
+      "ArCuba, Jamaica, ooh I wanna take ya
+      BerFmuda, Bahama, come on pretty mama
+      Key CLargo, Montego, baby why don't we go, JaFmaica
+      Off the Florida CKeysCmaj7
+      Gm7   There's a place called FKokomo
+      Fm   That's where you Cwanna go to get awD7ay from it allG7
+      C  Bodies in the Cmaj7sand
+      Gm7  Tropical drink melting Fin your hand
+      Fm  We'll be falling in Clove to the rhythm of a D7steel drum band
+      G7  Down in KokomCo"
+    `);
+  });
+
   // I can't figure out why this test doesn't work.
   xit('can generate tabs', async () => {
-    setup();
+    setupColdplay();
     await waitFor(() => screen.getByText(/Lights go out and/));
 
     const getSong = () =>
