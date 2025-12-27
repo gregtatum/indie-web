@@ -56,3 +56,23 @@
   padding: 4px 6px;
   font-size: 12px;
 }
+
+.viewChoproChordViewLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #4b4743;
+}
+
+.viewChoproChordViewText {
+  white-space: nowrap;
+}
+
+.viewChoproChordViewSelect {
+  border: 1px solid #bfb8b2;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  background-color: #f7f4f2;
+}

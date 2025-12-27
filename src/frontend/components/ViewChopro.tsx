@@ -87,6 +87,7 @@ export function ViewChopro() {
       header={
         <div className="viewChoproHeaderContent">
           <SongInfoPopup />
+          <ChordViewSelect />
         </div>
       }
       editorExtensions={[
@@ -378,6 +379,42 @@ function SongInfoPopup() {
   );
 }
 
+function ChordViewSelect() {
+  const dispatch = Hooks.useDispatch();
+  const path = $$.getPath();
+  const activeText = $$.getActiveFileText();
+  const directives = $$.getActiveFileParsedOrNull()?.directives;
+  const chordViewRaw =
+    typeof directives?.chords === 'string' ? directives.chords : '';
+  const selectedView = chordViewRaw === 'nashville' ? 'nashville' : 'names';
+
+  function updateChordDisplay(value: string) {
+    const updatedText = updateDirectiveInText(
+      activeText,
+      'chords',
+      value,
+    );
+    if (updatedText !== activeText) {
+      dispatch(A.modifyActiveFile(updatedText, path, true));
+    }
+  }
+
+  return (
+    <label className="viewChoproChordViewLabel" htmlFor="chord-view-select">
+      <span className="viewChoproChordViewText">Chord View</span>
+      <select
+        className="viewChoproChordViewSelect"
+        id="chord-view-select"
+        value={selectedView}
+        onChange={(event) => updateChordDisplay(event.currentTarget.value)}
+      >
+        <option value="names">Chord Names</option>
+        <option value="nashville">Nashville Numbers</option>
+      </select>
+    </label>
+  );
+}
+
 function updateDirectiveInText(
   text: string,
   directive: string,
@@ -389,6 +426,7 @@ function updateDirectiveInText(
     'title',
     'artist',
     'subtitle',
+    'chords',
     'key',
     'transpose',
     'capo',

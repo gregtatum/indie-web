@@ -38,6 +38,7 @@ const valueDirectives = [
   'album',
   'artist',
   'comment',
+  'chords',
   'key',
   'subtitle',
   'transpose',
