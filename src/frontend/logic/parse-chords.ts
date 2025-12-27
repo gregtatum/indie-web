@@ -823,9 +823,9 @@ function getDiatonicDegree(note: T.Note, songKey: SongKey) {
 
   const noteLetter = noteMatch[1];
   const keyLetter = keyMatch[1];
-  const letters: Array<T.SongKeyLetter> = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-  const noteIndex = letters.indexOf(noteLetter as T.SongKeyLetter);
-  const keyIndex = letters.indexOf(keyLetter as T.SongKeyLetter);
+  const letters: Array<T.SongKeyLetters> = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const noteIndex = letters.indexOf(noteLetter as T.SongKeyLetters);
+  const keyIndex = letters.indexOf(keyLetter as T.SongKeyLetters);
   if (noteIndex < 0 || keyIndex < 0) {
     return null;
   }

@@ -1,24 +1,24 @@
-import userEvent from "@testing-library/user-event";
+import userEvent from '@testing-library/user-event';
 import {
   act,
   fireEvent,
   render,
   screen,
   waitFor,
-} from "@testing-library/react";
-import * as React from "react";
-import { Provider } from "react-redux";
-import { stripIndent } from "common-tags";
-import { MemoryRouter } from "react-router-dom";
-import { AppRoutes } from "frontend/components/App";
-import { createStore } from "frontend/store/create-store";
-import { T, A, $ } from "frontend";
-import { ensureExists } from "frontend/utils";
+} from '@testing-library/react';
+import * as React from 'react';
+import { Provider } from 'react-redux';
+import { stripIndent } from 'common-tags';
+import { MemoryRouter } from 'react-router-dom';
+import { AppRoutes } from 'frontend/components/App';
+import { createStore } from 'frontend/store/create-store';
+import { T, A, $ } from 'frontend';
+import { ensureExists } from 'frontend/utils';
 import {
   mockDropboxAccessToken,
   mockDropboxFilesDownload,
   mockDropboxListFolder,
-} from "./utils/fixtures";
+} from './utils/fixtures';
 
 const coldplayChordProText = stripIndent`
   {title: Clocks}
@@ -29,55 +29,55 @@ const coldplayChordProText = stripIndent`
   tides that I tried to sw[Em]im against
 `;
 
-describe("<ViewChopro>", () => {
+describe('<ViewChopro>', () => {
   function setup() {
     const store = createStore();
-    store.dispatch(A.changeFileStore("dropbox"));
+    store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
     const listFiles = mockDropboxListFolder([
-      { type: "folder", path: "/My Cool Band" },
-      { type: "file", path: "/Clocks - Coldplay.chordpro" },
-      { type: "file", path: "/Mellow Yellow - Donovan.chordpro" },
+      { type: 'folder', path: '/My Cool Band' },
+      { type: 'file', path: '/Clocks - Coldplay.chordpro' },
+      { type: 'file', path: '/Mellow Yellow - Donovan.chordpro' },
     ]);
 
     function getFileMetadata(path: string): T.FileMetadata {
       const file = ensureExists(
         listFiles.find((file) => file.path === path),
-        "Failed to find the file."
+        'Failed to find the file.',
       );
-      if (file.type !== "file") {
-        throw new Error("Found a folder not a file.");
+      if (file.type !== 'file') {
+        throw new Error('Found a folder not a file.');
       }
       return file;
     }
 
     mockDropboxFilesDownload([
       {
-        metadata: getFileMetadata("/Clocks - Coldplay.chordpro"),
+        metadata: getFileMetadata('/Clocks - Coldplay.chordpro'),
         text: coldplayChordProText,
       },
     ]);
 
     const renderResults = render(
       <MemoryRouter
-        initialEntries={["/dropbox/file/Clocks - Coldplay.chordpro"]}
+        initialEntries={['/dropbox/file/Clocks - Coldplay.chordpro']}
       >
         <Provider store={store as any}>
           <AppRoutes />
         </Provider>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     return { store, ...renderResults };
   }
 
-  it("view a chordpro file", async () => {
+  it('view a chordpro file', async () => {
     setup();
     await screen.findByText(/Lights go out and/, {
-      selector: "span.renderedSongLineText",
+      selector: 'span.renderedSongLineText',
     });
 
-    expect(screen.getByTestId("viewChopro")).toMatchInlineSnapshot(`
+    expect(screen.getByTestId('viewChopro')).toMatchInlineSnapshot(`
       <div
         class="splitterSolo viewChoproSolo"
         data-testid="viewChopro"
@@ -217,69 +217,69 @@ describe("<ViewChopro>", () => {
     `);
   });
 
-  it("updates song info directives from the UI", async () => {
+  it('updates song info directives from the UI', async () => {
     const { store } = setup();
     const user = userEvent.setup();
     await waitFor(() => screen.getByText(/Lights go out and/));
 
-    const editButton = screen.queryByRole("button", { name: "Edit" });
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
     if (editButton) {
       await act(async () => {
         await user.click(editButton);
       });
     }
     await act(async () => {
-      await user.click(screen.getByRole("button", { name: "Song Info" }));
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
     });
 
-    const artistInput = screen.getByLabelText<HTMLInputElement>("Artist");
-    const subtitleInput = screen.getByLabelText<HTMLInputElement>("Subtitle");
+    const artistInput = screen.getByLabelText<HTMLInputElement>('Artist');
+    const subtitleInput = screen.getByLabelText<HTMLInputElement>('Subtitle');
 
     await act(async () => {
       await user.clear(artistInput);
     });
     await act(async () => {
-      await user.type(subtitleInput, "Live");
+      await user.type(subtitleInput, 'Live');
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
       expect(directives?.artist).toBeUndefined();
-      expect(directives?.subtitle).toBe("Live");
+      expect(directives?.subtitle).toBe('Live');
 
       const songText = $.getActiveFileText(store.getState());
       expect(songText.split(/\r?\n/).slice(0, 4)).toEqual([
-        "{title: Clocks}",
-        "{subtitle: Live}",
-        "{key: D}",
-        "",
+        '{title: Clocks}',
+        '{subtitle: Live}',
+        '{key: D}',
+        '',
       ]);
     });
   });
 
-  it("removes directives when cleared in the UI", async () => {
+  it('removes directives when cleared in the UI', async () => {
     const { store } = setup();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
-      selector: "span.renderedSongLineText",
+      selector: 'span.renderedSongLineText',
     });
 
-    const editButton = screen.queryByRole("button", { name: "Edit" });
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
     if (editButton) {
       await act(async () => {
         await user.click(editButton);
       });
     }
     await act(async () => {
-      await user.click(screen.getByRole("button", { name: "Song Info" }));
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
     });
 
-    const subtitleInput = screen.getByLabelText<HTMLInputElement>("Subtitle");
+    const subtitleInput = screen.getByLabelText<HTMLInputElement>('Subtitle');
 
     await act(async () => {
-      await user.type(subtitleInput, "Live");
+      await user.type(subtitleInput, 'Live');
     });
     await act(async () => {
       await user.clear(subtitleInput);
@@ -287,249 +287,249 @@ describe("<ViewChopro>", () => {
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
       expect(directives?.subtitle).toBeUndefined();
 
       const songText = $.getActiveFileText(store.getState());
       expect(songText.split(/\r?\n/).slice(0, 4)).toEqual([
-        "{title: Clocks}",
-        "{artist: Coldplay}",
-        "{key: D}",
-        "",
+        '{title: Clocks}',
+        '{artist: Coldplay}',
+        '{key: D}',
+        '',
       ]);
     });
   });
 
-  it("clears transpose when key matches the transposed key", async () => {
+  it('clears transpose when key matches the transposed key', async () => {
     const { store } = setup();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
-      selector: "span.renderedSongLineText",
+      selector: 'span.renderedSongLineText',
     });
 
-    const editButton = screen.queryByRole("button", { name: "Edit" });
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
     if (editButton) {
       await act(async () => {
         await user.click(editButton);
       });
     }
     await act(async () => {
-      await user.click(screen.getByRole("button", { name: "Song Info" }));
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
     });
 
     const transposeSelect =
-      screen.getByLabelText<HTMLSelectElement>("Transpose");
+      screen.getByLabelText<HTMLSelectElement>('Transpose');
     await act(async () => {
-      await user.selectOptions(transposeSelect, "F");
+      await user.selectOptions(transposeSelect, 'F');
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
-      expect(directives?.transpose).toBe("F");
+      expect(directives?.transpose).toBe('F');
 
       const songText = $.getActiveFileText(store.getState());
       expect(songText.split(/\r?\n/).slice(0, 5)).toEqual([
-        "{title: Clocks}",
-        "{artist: Coldplay}",
-        "{key: D}",
-        "{transpose: F}",
-        "",
+        '{title: Clocks}',
+        '{artist: Coldplay}',
+        '{key: D}',
+        '{transpose: F}',
+        '',
       ]);
     });
 
-    const keySelect = screen.getByLabelText<HTMLSelectElement>("Key");
+    const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
     await act(async () => {
-      await user.selectOptions(keySelect, "F");
+      await user.selectOptions(keySelect, 'F');
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
       expect(directives?.transpose).toBeUndefined();
     });
   });
 
-  it("hides transpose dropdown when no key directive exists", async () => {
+  it('hides transpose dropdown when no key directive exists', async () => {
     const { store } = setup();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
-      selector: "span.renderedSongLineText",
+      selector: 'span.renderedSongLineText',
     });
 
-    const editButton = screen.queryByRole("button", { name: "Edit" });
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
     if (editButton) {
       await act(async () => {
         await user.click(editButton);
       });
     }
     await act(async () => {
-      await user.click(screen.getByRole("button", { name: "Song Info" }));
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
     });
 
-    const keySelect = screen.getByLabelText<HTMLSelectElement>("Key");
+    const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
     await act(async () => {
-      await user.selectOptions(keySelect, "");
+      await user.selectOptions(keySelect, '');
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
       expect(directives?.key).toBeUndefined();
     });
 
-    expect(screen.queryByLabelText("Transpose")).toBeNull();
+    expect(screen.queryByLabelText('Transpose')).toBeNull();
   });
 
-  it("updates the key directive from the dropdown", async () => {
+  it('updates the key directive from the dropdown', async () => {
     const { store } = setup();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
-      selector: "span.renderedSongLineText",
+      selector: 'span.renderedSongLineText',
     });
 
-    const editButton = screen.queryByRole("button", { name: "Edit" });
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
     if (editButton) {
       await act(async () => {
         await user.click(editButton);
       });
     }
     await act(async () => {
-      await user.click(screen.getByRole("button", { name: "Song Info" }));
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
     });
 
-    const keySelect = screen.getByLabelText<HTMLSelectElement>("Key");
+    const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
     await act(async () => {
-      await user.selectOptions(keySelect, "D");
+      await user.selectOptions(keySelect, 'D');
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
-      expect(directives?.key).toBe("D");
+      expect(directives?.key).toBe('D');
 
       const songText = $.getActiveFileText(store.getState());
       expect(songText.split(/\r?\n/).slice(0, 4)).toEqual([
-        "{title: Clocks}",
-        "{artist: Coldplay}",
-        "{key: D}",
-        "",
+        '{title: Clocks}',
+        '{artist: Coldplay}',
+        '{key: D}',
+        '',
       ]);
     });
   });
 
-  it("updates the capo directive from the dropdown", async () => {
+  it('updates the capo directive from the dropdown', async () => {
     const { store } = setup();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
-      selector: "span.renderedSongLineText",
+      selector: 'span.renderedSongLineText',
     });
 
-    const editButton = screen.queryByRole("button", { name: "Edit" });
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
     if (editButton) {
       await act(async () => {
         await user.click(editButton);
       });
     }
     await act(async () => {
-      await user.click(screen.getByRole("button", { name: "Song Info" }));
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
     });
 
-    const capoSelect = screen.getByLabelText<HTMLSelectElement>("Capo");
+    const capoSelect = screen.getByLabelText<HTMLSelectElement>('Capo');
     await act(async () => {
-      await user.selectOptions(capoSelect, "5");
+      await user.selectOptions(capoSelect, '5');
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
-      expect(directives?.capo).toBe("5");
+      expect(directives?.capo).toBe('5');
 
       const songText = $.getActiveFileText(store.getState());
       expect(songText.split(/\r?\n/).slice(0, 5)).toEqual([
-        "{title: Clocks}",
-        "{artist: Coldplay}",
-        "{key: D}",
-        "{capo: 5}",
-        "",
+        '{title: Clocks}',
+        '{artist: Coldplay}',
+        '{key: D}',
+        '{capo: 5}',
+        '',
       ]);
     });
   });
 
-  it("clears transpose when adding a key to match the transposed key", async () => {
+  it('clears transpose when adding a key to match the transposed key', async () => {
     const { store } = setup();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
-      selector: "span.renderedSongLineText",
+      selector: 'span.renderedSongLineText',
     });
 
-    const editButton = screen.queryByRole("button", { name: "Edit" });
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
     if (editButton) {
       await act(async () => {
         await user.click(editButton);
       });
     }
     await act(async () => {
-      await user.click(screen.getByRole("button", { name: "Song Info" }));
+      await user.click(screen.getByRole('button', { name: 'Song Info' }));
     });
 
-    const keySelect = screen.getByLabelText<HTMLSelectElement>("Key");
+    const keySelect = screen.getByLabelText<HTMLSelectElement>('Key');
     await act(async () => {
-      await user.selectOptions(keySelect, "");
+      await user.selectOptions(keySelect, '');
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
       expect(directives?.key).toBeUndefined();
     });
 
     await act(async () => {
-      await user.selectOptions(keySelect, "C");
+      await user.selectOptions(keySelect, 'C');
     });
     await act(async () => {
       await user.selectOptions(
-        screen.getByLabelText<HTMLSelectElement>("Transpose"),
-        "F"
+        screen.getByLabelText<HTMLSelectElement>('Transpose'),
+        'F',
       );
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
-      expect(directives?.transpose).toBe("F");
+      expect(directives?.transpose).toBe('F');
     });
 
     await act(async () => {
-      await user.selectOptions(keySelect, "F");
+      await user.selectOptions(keySelect, 'F');
     });
 
     await waitFor(() => {
       const directives = $.getActiveFileParsedOrNull(
-        store.getState()
+        store.getState(),
       )?.directives;
       expect(directives?.transpose).toBeUndefined();
     });
   });
 
   // I can't figure out why this test doesn't work.
-  xit("can generate tabs", async () => {
+  xit('can generate tabs', async () => {
     setup();
     await waitFor(() => screen.getByText(/Lights go out and/));
 
     const getSong = () =>
       screen
-        .getAllByTestId("renderedSongLine")
+        .getAllByTestId('renderedSongLine')
         .map((line) => line.textContent)
-        .join("\n");
+        .join('\n');
 
     expect(getSong()).toMatchInlineSnapshot(`
       "DLights go out and I caAmn't be saved
@@ -542,18 +542,18 @@ describe("<ViewChopro>", () => {
     const transpose = screen.getByText(/Transpose/);
     fireEvent.click(transpose);
 
-    const d = screen.getByRole<HTMLOptionElement>("option", { name: "D" });
+    const d = screen.getByRole<HTMLOptionElement>('option', { name: 'D' });
     expect(d.selected).toBeTruthy();
 
     const select = screen.getByLabelText<HTMLSelectElement>(/Transpose:/);
     fireEvent.change(select, {
-      target: { value: "Eb" },
+      target: { value: 'Eb' },
     });
 
     // TODO - This should re-render React here, but it doesn't. The store event fires.
 
-    await screen.findByText("Dm");
-    const eb = screen.getByRole<HTMLOptionElement>("option", { name: "Eb" });
+    await screen.findByText('Dm');
+    const eb = screen.getByRole<HTMLOptionElement>('option', { name: 'Eb' });
     expect(eb.selected).toBeTruthy();
 
     expect(getSong()).toMatchInlineSnapshot(`
