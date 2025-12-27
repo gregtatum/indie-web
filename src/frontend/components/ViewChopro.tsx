@@ -87,7 +87,6 @@ export function ViewChopro() {
       header={
         <div className="viewChoproHeaderContent">
           <SongInfoPopup />
-          <ChordViewSelect />
         </div>
       }
       editorExtensions={[
@@ -291,6 +290,15 @@ function SongInfoPopup() {
             />
           </div>
           <div className="viewChoproSongInfoRow">
+            <label
+              className="viewChoproSongInfoLabel"
+              htmlFor="chord-view-select"
+            >
+              Display
+            </label>
+            <ChordViewSelect />
+          </div>
+          <div className="viewChoproSongInfoRow">
             <label className="viewChoproSongInfoLabel" htmlFor="song-info-key">
               Key
             </label>
@@ -397,17 +405,15 @@ function ChordViewSelect() {
   }
 
   return (
-    <label className="viewChoproChordViewLabel" htmlFor="chord-view-select">
-      <select
-        className="viewChoproChordViewSelect"
-        id="chord-view-select"
-        value={selectedView}
-        onChange={(event) => updateChordDisplay(event.currentTarget.value)}
-      >
-        <option value="names">Chord Names</option>
-        <option value="nashville">Nashville Numbers</option>
-      </select>
-    </label>
+    <select
+      className="viewChoproSongInfoSelect"
+      id="chord-view-select"
+      value={selectedView}
+      onChange={(event) => updateChordDisplay(event.currentTarget.value)}
+    >
+      <option value="names">Chord Names</option>
+      <option value="nashville">Nashville Numbers</option>
+    </select>
   );
 }
 
