@@ -176,7 +176,8 @@ function SongInfoPopup() {
     typeof directives?.transpose === 'string' ? directives.transpose : '';
   const capoRaw = typeof directives?.capo === 'string' ? directives.capo : '';
   const title = typeof directives?.title === 'string' ? directives.title : '';
-  const artist = typeof directives?.artist === 'string' ? directives.artist : '';
+  const artist =
+    typeof directives?.artist === 'string' ? directives.artist : '';
   const subtitle =
     typeof directives?.subtitle === 'string' ? directives.subtitle : '';
   const keyOptions = [
@@ -389,11 +390,7 @@ function ChordViewSelect() {
   const selectedView = chordViewRaw === 'nashville' ? 'nashville' : 'names';
 
   function updateChordDisplay(value: string) {
-    const updatedText = updateDirectiveInText(
-      activeText,
-      'chords',
-      value,
-    );
+    const updatedText = updateDirectiveInText(activeText, 'chords', value);
     if (updatedText !== activeText) {
       dispatch(A.modifyActiveFile(updatedText, path, true));
     }
@@ -401,7 +398,6 @@ function ChordViewSelect() {
 
   return (
     <label className="viewChoproChordViewLabel" htmlFor="chord-view-select">
-      <span className="viewChoproChordViewText">Chord View</span>
       <select
         className="viewChoproChordViewSelect"
         id="chord-view-select"
@@ -415,11 +411,7 @@ function ChordViewSelect() {
   );
 }
 
-function updateDirectiveInText(
-  text: string,
-  directive: string,
-  value: string,
-) {
+function updateDirectiveInText(text: string, directive: string, value: string) {
   const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
   const directivesOrder = [

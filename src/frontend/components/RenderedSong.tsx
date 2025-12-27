@@ -301,19 +301,15 @@ function getChordDisplayParts(
     if (!nashvilleText) {
       return null;
     }
-    const match = nashvilleText.match(/^([b#]?\d+)/);
-    const base = match?.[1] ?? nashvilleText;
-    return {
-      base,
-      decoration: nashvilleText.slice(base.length),
-    };
+    const match = nashvilleText.match(/^([b#]?[1-7])/);
+    const baseRoot = match?.[1] ?? nashvilleText;
+    const decoration = nashvilleText.slice(baseRoot.length);
+    return splitChordDecoration(baseRoot, decoration);
   }
 
   if (chord.baseNote && chord.chordText) {
-    return {
-      base: chord.baseNote,
-      decoration: chord.chordText.slice(chord.baseNote.length),
-    };
+    const decoration = chord.chordText.slice(chord.baseNote.length);
+    return splitChordDecoration(chord.baseNote, decoration);
   }
 
   if (chord.chordText) {
@@ -321,6 +317,25 @@ function getChordDisplayParts(
   }
 
   return null;
+}
+
+function splitChordDecoration(baseRoot: string, decoration: string) {
+  if (
+    decoration &&
+    (decoration.startsWith('m') || decoration.startsWith('-')) &&
+    !decoration.toLowerCase().startsWith('maj') &&
+    !decoration.toLowerCase().startsWith('mj')
+  ) {
+    return {
+      base: baseRoot + decoration[0],
+      decoration: decoration.slice(1),
+    };
+  }
+
+  return {
+    base: baseRoot,
+    decoration,
+  };
 }
 
 /**
