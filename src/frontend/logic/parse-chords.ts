@@ -63,6 +63,8 @@ const extensions = [
   '9-5',
   '9sus',
   '9add6',
+  'dim',
+  'dim7',
   'maj7',
   'maj711',
   'maj7#11',

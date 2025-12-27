@@ -6,6 +6,9 @@ import {
   Parser,
   ultimateGuitarToChordPro,
   getChordLineRatio,
+  nashvilleChordText,
+  romanChordText,
+  SongKey,
 } from 'frontend/logic/parse-chords';
 import { stripIndent } from 'common-tags';
 
@@ -461,6 +464,58 @@ describe('parseChordPro', () => {
         ],
       }
     `);
+  });
+});
+
+describe('chord display helpers', () => {
+  const keyC = SongKey.fromRaw('C')!;
+
+  it('formats Nashville numbers', () => {
+    const baseCases = [
+      ['A', '6'],
+      ['B', '7'],
+      ['C', '1'],
+      ['D', '2'],
+      ['E', '3'],
+      ['F', '4'],
+      ['G', '5'],
+    ] as const;
+
+    for (const [chord, expected] of baseCases) {
+      expect(nashvilleChordText(parseChord(chord), keyC)).toEqual(expected);
+    }
+
+    expect(nashvilleChordText(parseChord('Dm'), keyC)).toEqual('2m');
+    expect(nashvilleChordText(parseChord('D7'), keyC)).toEqual('27');
+    expect(nashvilleChordText(parseChord('Cmaj7'), keyC)).toEqual('1maj7');
+    expect(nashvilleChordText(parseChord('Bdim'), keyC)).toEqual('7dim');
+    expect(nashvilleChordText(parseChord('Bdim7'), keyC)).toEqual('7dim7');
+    expect(nashvilleChordText(parseChord('D/F#'), keyC)).toEqual('2/#4');
+    expect(nashvilleChordText(parseChord('Db'), keyC)).toEqual('b2');
+  });
+
+  it('formats Roman numerals', () => {
+    const baseCases = [
+      ['A', 'VI'],
+      ['B', 'VII'],
+      ['C', 'I'],
+      ['D', 'II'],
+      ['E', 'III'],
+      ['F', 'IV'],
+      ['G', 'V'],
+    ] as const;
+
+    for (const [chord, expected] of baseCases) {
+      expect(romanChordText(parseChord(chord), keyC)).toEqual(expected);
+    }
+
+    expect(romanChordText(parseChord('Dm'), keyC)).toEqual('ii');
+    expect(romanChordText(parseChord('Cmaj7'), keyC)).toEqual('Imaj7');
+    expect(romanChordText(parseChord('C7'), keyC)).toEqual('I7');
+    expect(romanChordText(parseChord('Bdim'), keyC)).toEqual('VIIdim');
+    expect(romanChordText(parseChord('Bdim7'), keyC)).toEqual('VIIdim7');
+    expect(romanChordText(parseChord('D/F#'), keyC)).toEqual('II/#IV');
+    expect(romanChordText(parseChord('Db'), keyC)).toEqual('bII');
   });
 });
 
