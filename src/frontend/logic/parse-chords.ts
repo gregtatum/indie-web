@@ -137,6 +137,7 @@ export function parseChord(text: string): T.Chord {
   }
   return chord;
 }
+
 function parseChordImpl(text: string): T.Chord {
   text = text.trim();
   if (text === '') {
@@ -787,31 +788,67 @@ export function romanChordText(
 }
 
 function noteToNashville(note: T.Note, songKey: SongKey) {
+  const degreeInfo = getDiatonicDegree(note, songKey);
+  if (degreeInfo) {
+    return degreeInfo.accidental + degreeInfo.degree;
+  }
+
   const normalizedNote = normalizeNoteForScale(note);
   const interval = getHalfSteps(songKey.key, normalizedNote);
   return nashvilleDegreeByHalfStep.get(interval) ?? '1';
 }
 
 function noteToRoman(note: T.Note, songKey: SongKey) {
-  const normalizedNote = normalizeNoteForScale(note);
-  const interval = getHalfSteps(songKey.key, normalizedNote);
-  const degree = nashvilleDegreeByHalfStep.get(interval) ?? '1';
+  const degreeInfo = getDiatonicDegree(note, songKey);
+  const degree = degreeInfo
+    ? degreeInfo.accidental + degreeInfo.degree
+    : (nashvilleDegreeByHalfStep.get(
+        getHalfSteps(songKey.key, normalizeNoteForScale(note)),
+      ) ?? '1');
   const match = degree.match(/^([b#]?)([1-7])$/);
   if (!match) {
     return 'I';
   }
   const [, accidental, numeral] = match;
-  const romanNumerals = [
-    '',
-    'I',
-    'II',
-    'III',
-    'IV',
-    'V',
-    'VI',
-    'VII',
-  ];
+  const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
   return accidental + romanNumerals[Number(numeral)];
+}
+
+function getDiatonicDegree(note: T.Note, songKey: SongKey) {
+  const noteMatch = note.match(/^([A-G])([b#])?$/);
+  const keyMatch = songKey.key.match(/^([A-G])([b#])?$/);
+  if (!noteMatch || !keyMatch) {
+    return null;
+  }
+
+  const noteLetter = noteMatch[1];
+  const keyLetter = keyMatch[1];
+  const letters: Array<T.SongKeyLetter> = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const noteIndex = letters.indexOf(noteLetter as T.SongKeyLetter);
+  const keyIndex = letters.indexOf(keyLetter as T.SongKeyLetter);
+  if (noteIndex < 0 || keyIndex < 0) {
+    return null;
+  }
+
+  const degree = ((noteIndex - keyIndex + 7) % 7) + 1;
+  const keyHalfSteps = halfStepScale[songKey.key];
+  const diatonicOffsets = [0, 2, 4, 5, 7, 9, 11];
+  const diatonicHalf = (keyHalfSteps + diatonicOffsets[degree - 1]) % 12;
+  const normalizedNote = normalizeNoteForScale(note);
+  const targetHalf = halfStepScale[normalizedNote];
+  const diff = (targetHalf - diatonicHalf + 12) % 12;
+
+  if (diff === 0) {
+    return { degree, accidental: '' };
+  }
+  if (diff === 1) {
+    return { degree, accidental: '#' };
+  }
+  if (diff === 11) {
+    return { degree, accidental: 'b' };
+  }
+
+  return null;
 }
 
 function normalizeNoteForScale(note: T.Note): T.SongKeyLetters {

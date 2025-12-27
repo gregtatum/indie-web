@@ -485,13 +485,31 @@ describe('chord display helpers', () => {
       expect(nashvilleChordText(parseChord(chord), keyC)).toEqual(expected);
     }
 
+    const accidentalCases = [
+      ['C#', '#1'],
+      ['Db', 'b2'],
+      ['D#', '#2'],
+      ['Eb', 'b3'],
+      ['E#', '#3'],
+      ['Fb', 'b4'],
+      ['F#', '#4'],
+      ['Gb', 'b5'],
+      ['G#', '#5'],
+      ['Ab', 'b6'],
+      ['A#', '#6'],
+      ['Bb', 'b7'],
+    ] as const;
+
+    for (const [chord, expected] of accidentalCases) {
+      expect(nashvilleChordText(parseChord(chord), keyC)).toEqual(expected);
+    }
+
     expect(nashvilleChordText(parseChord('Dm'), keyC)).toEqual('2m');
     expect(nashvilleChordText(parseChord('D7'), keyC)).toEqual('27');
     expect(nashvilleChordText(parseChord('Cmaj7'), keyC)).toEqual('1maj7');
     expect(nashvilleChordText(parseChord('Bdim'), keyC)).toEqual('7dim');
     expect(nashvilleChordText(parseChord('Bdim7'), keyC)).toEqual('7dim7');
     expect(nashvilleChordText(parseChord('D/F#'), keyC)).toEqual('2/#4');
-    expect(nashvilleChordText(parseChord('Db'), keyC)).toEqual('b2');
   });
 
   it('formats Roman numerals', () => {
@@ -509,13 +527,31 @@ describe('chord display helpers', () => {
       expect(romanChordText(parseChord(chord), keyC)).toEqual(expected);
     }
 
+    const accidentalCases = [
+      ['C#', '#I'],
+      ['Db', 'bII'],
+      ['D#', '#II'],
+      ['Eb', 'bIII'],
+      ['E#', '#III'],
+      ['Fb', 'bIV'],
+      ['F#', '#IV'],
+      ['Gb', 'bV'],
+      ['G#', '#V'],
+      ['Ab', 'bVI'],
+      ['A#', '#VI'],
+      ['Bb', 'bVII'],
+    ] as const;
+
+    for (const [chord, expected] of accidentalCases) {
+      expect(romanChordText(parseChord(chord), keyC)).toEqual(expected);
+    }
+
     expect(romanChordText(parseChord('Dm'), keyC)).toEqual('ii');
     expect(romanChordText(parseChord('Cmaj7'), keyC)).toEqual('Imaj7');
     expect(romanChordText(parseChord('C7'), keyC)).toEqual('I7');
     expect(romanChordText(parseChord('Bdim'), keyC)).toEqual('VIIdim');
     expect(romanChordText(parseChord('Bdim7'), keyC)).toEqual('VIIdim7');
     expect(romanChordText(parseChord('D/F#'), keyC)).toEqual('II/#IV');
-    expect(romanChordText(parseChord('Db'), keyC)).toEqual('bII');
   });
 });
 
