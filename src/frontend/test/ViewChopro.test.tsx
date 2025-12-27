@@ -32,7 +32,6 @@ const coldplayChordProText = stripIndent`
 const kokomoChordProText = stripIndent`
   {title: Kokomo}
   {artist: Beach Boys}
-  {chords: names}
   {key: C}
 
   Ar[C]uba, Jamaica, ooh I wanna take ya
@@ -661,6 +660,58 @@ describe('<ViewChopro>', () => {
       Gm7  Tropical drink melting Fin your hand
       Fm  We'll be falling in Clove to the rhythm of a D7steel drum band
       G7  Down in KokomCo"
+    `);
+  });
+
+  it('renders the song display as text with Nashville chords', async () => {
+    const { getSongText } = setup({
+      text: stripIndent`
+        {chords: nashville}
+        ${kokomoChordProText}
+      `,
+      path: '/Kokomo - Beach Boys (Nashville).chordpro',
+    });
+    await waitFor(() => {
+      screen.findByText(/Aruba/);
+    });
+
+    expect(getSongText()).toMatchInlineSnapshot(`
+      "Ar1uba, Jamaica, ooh I wanna take ya
+      Ber4muda, Bahama, come on pretty mama
+      Key 1Largo, Montego, baby why don't we go, Ja4maica
+      Off the Florida 1Keys1maj7
+      5m7   There's a place called 4Kokomo
+      4m   That's where you 1wanna go to get aw27ay from it all57
+      1  Bodies in the 1maj7sand
+      5m7  Tropical drink melting 4in your hand
+      4m  We'll be falling in 1love to the rhythm of a 27steel drum band
+      57  Down in Kokom1o"
+    `);
+  });
+
+  it('renders the song display as text with Roman numerals', async () => {
+    const { getSongText } = setup({
+      text: stripIndent`
+        {chords: roman}
+        ${kokomoChordProText}
+      `,
+      path: '/Kokomo - Beach Boys (Roman).chordpro',
+    });
+    await waitFor(() => {
+      screen.findByText(/Aruba/);
+    });
+
+    expect(getSongText()).toMatchInlineSnapshot(`
+      "ArIuba, Jamaica, ooh I wanna take ya
+      BerIVmuda, Bahama, come on pretty mama
+      Key ILargo, Montego, baby why don't we go, JaIVmaica
+      Off the Florida IKeysI△
+      v7   There's a place called IVKokomo
+      iv   That's where you Iwanna go to get awII7ay from it allV7
+      I  Bodies in the I△sand
+      v7  Tropical drink melting IVin your hand
+      iv  We'll be falling in Ilove to the rhythm of a II7steel drum band
+      V7  Down in KokomIo"
     `);
   });
 
