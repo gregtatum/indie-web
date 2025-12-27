@@ -598,16 +598,16 @@ describe('<ViewChopro>', () => {
     });
 
     expect(getSongText()).toMatchInlineSnapshot(`
-      "ArCuba, Jamaica, ooh I wanna take ya
-      BerFmuda, Bahama, come on pretty mama
-      Key CLargo, Montego, baby why don't we go, JaFmaica
-      Off the Florida CKeysCmaj7
-      Gm7   There's a place called FKokomo
-      Fm   That's where you Cwanna go to get awD7ay from it allG7
-      C  Bodies in the Cmaj7sand
-      Gm7  Tropical drink melting Fin your hand
-      Fm  We'll be falling in Clove to the rhythm of a D7steel drum band
-      G7  Down in KokomCo"
+      "ArDuba, Jamaica, ooh I wanna take ya
+      BerGmuda, Bahama, come on pretty mama
+      Key DLargo, Montego, baby why don't we go, JaGmaica
+      Off the Florida DKeysDmaj7
+      Am7   There's a place called GKokomo
+      Gm   That's where you Dwanna go to get awE7ay from it allA7
+      D  Bodies in the Dmaj7sand
+      Am7  Tropical drink melting Gin your hand
+      Gm  We'll be falling in Dlove to the rhythm of a E7steel drum band
+      A7  Down in KokomDo"
     `);
   });
 

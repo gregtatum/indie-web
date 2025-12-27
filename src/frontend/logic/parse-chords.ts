@@ -611,15 +611,29 @@ export function transposeParsedSong(
         return span;
       }
 
-      const newChordText =
-        transpose(
-          scaleToChord,
-          // @ts-expect-error - Sort out the type issues here.
-          baseNote,
-          halfSteps,
-        ) + chordText.slice(baseNote.length);
+      const newBaseNote = transpose(
+        scaleToChord,
+        // @ts-expect-error - Sort out the type issues here.
+        baseNote,
+        halfSteps,
+      );
+      let newChordText = newBaseNote + chordText.slice(baseNote.length);
+      let newSlash = span.chord.slash;
+      if (newSlash) {
+        const nextSlash = transpose(scaleToChord, newSlash, halfSteps);
+        newSlash = nextSlash;
+        newChordText = newChordText.replace(
+          /\/[A-G][b#]?/,
+          '/' + nextSlash,
+        );
+      }
 
-      const chord = { ...span.chord, chordText: newChordText };
+      const chord = {
+        ...span.chord,
+        baseNote: newBaseNote,
+        chordText: newChordText,
+        slash: newSlash,
+      };
       return {
         ...span,
         chord,
