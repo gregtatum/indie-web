@@ -422,9 +422,7 @@ function Path({
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
         <SiteName isOpen={!hideSiteName && !(songTitle ?? fileName)} />
-        {showFileStoreSelection ? (
-          <FileStoreSelection key="fileStore" />
-        ) : null}
+        {showFileStoreSelection ? <FileStoreSelection key="fileStore" /> : null}
         <div className="headerPathBreadcrumbs">
           {breadcrumbs}
           <span>»</span>

@@ -625,10 +625,7 @@ export function transposeParsedSong(
           halfSteps,
         );
         newSlash = nextSlash;
-        newChordText = newChordText.replace(
-          /\/[A-G][b#]?/,
-          '/' + nextSlash,
-        );
+        newChordText = newChordText.replace(/\/[A-G][b#]?/, '/' + nextSlash);
       }
 
       const chord = {

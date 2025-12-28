@@ -72,6 +72,11 @@ tasks:
     cmds:
       - eslint "*.{js,mjs}" 'src'
 
+  lint-fix:
+    desc: Run ESLint linter with fixes
+    cmds:
+      - eslint "*.{js,mjs}" 'src' --fix
+
   bundle-size:
     desc: Calculate the bundle size
     cmds:
