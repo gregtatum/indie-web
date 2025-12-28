@@ -187,6 +187,7 @@ export function AppRoutes() {
         <Router.Route path="/" element={<ListFilesRouter />} />
         <Router.Route path="settings" element={<SettingsRouter />} />
         <Router.Route path="connect" element={<ConnectRouter />} />
+        <Router.Route path="dropbox" element={<ConnectRouter />} />
         <Router.Route path="add-file-storage" element={<FileStorageRouter />} />
         <Router.Route path="privacy" element={<PrivacyRouter />} />
         <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
