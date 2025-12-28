@@ -1,6 +1,6 @@
 ---
 section: Privacy
-order: 1
+order: 4
 ---
 
 # Privacy

@@ -99,6 +99,7 @@ main {
   margin: 0 auto;
   padding: var(--page-padding);
   line-height: 1.5;
+  width: 100%;
 }
 
 .docsLayout {
@@ -184,7 +185,7 @@ pre {
   overflow-x: auto;
 
   & code {
-    padding: none;
+    padding: 0;
     background: none;
     border: none;
   }
