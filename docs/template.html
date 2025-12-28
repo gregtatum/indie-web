@@ -5,11 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{title}}</title>
     {{metaDescription}}
+    <link rel="stylesheet" href="/shared.css" />
     <link rel="stylesheet" href="/docs/styles.css" />
   </head>
   <body>
-    <main>
-      {{content}}
-    </main>
+    <div class="docsLayout">
+      <aside class="docsSidebar">
+        {{sidebar}}
+      </aside>
+      <main>
+        {{content}}
+      </main>
+    </div>
   </body>
 </html>

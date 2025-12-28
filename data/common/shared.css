@@ -1,0 +1,36 @@
+:root {
+  --header-padding: 41px;
+  --header-gap: 9px;
+  --header-transform-y: -50px;
+  --header-height: 40px;
+  --font-size-normal: 16px;
+  --font-size-small: 13px;
+  --font-size-editor: 14px;
+  --page-max-width: 900px;
+  --page-padding: 50px;
+  --icon-size: 16px;
+
+  --button-border: #888;
+  --button-background: #eee;
+  --button-color: #000;
+  --button-border-radius: 4px;
+  --button-opacity: 0.9;
+
+  --modal-border-color: #ddd;
+  --modal-background: #eee;
+  --modal-shadow: 7px 6px 6px #0001;
+  --modal-radius: 4px;
+
+  --outline-active: 2px solid #0040ff;
+  --outline-focus: 2px solid #0040ffaa;
+
+  --accent-color: #ce1ebb;
+  --accent-color-light: #ce1ebb52;
+
+  --primary-color-dim: #2062cb;
+  --primary-color: #004eca;
+  --primary-color-hover: #0062ff;
+
+  --text-border: #555;
+  --light-border: #ddd;
+}

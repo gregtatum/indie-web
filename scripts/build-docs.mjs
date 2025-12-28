@@ -97,7 +97,7 @@ async function listFiles(dirPath) {
   return files;
 }
 
-async function writeMarkdown(targetPath, markdownText, sourceName) {
+async function writeMarkdown(targetPath, markdownText, sourceName, sidebarHtml) {
   const tokens = marked.lexer(markdownText);
   const title = titleFromTokens(tokens, sourceName);
   const description = descriptionFromTokens(tokens);
@@ -124,13 +124,14 @@ async function writeMarkdown(targetPath, markdownText, sourceName) {
   const html = template
     .replace('{{title}}', escapeHtml(title))
     .replace('{{metaDescription}}', metaDescription)
+    .replace('{{sidebar}}', sidebarHtml)
     .replace('{{content}}', htmlBody);
 
   await ensureDir(path.dirname(targetPath));
   await fs.writeFile(targetPath, html);
 }
 
-async function copyDocsFrom(sourceDir) {
+async function copyDocsFrom(sourceDir, sidebarHtml) {
   if (!(await pathExists(sourceDir))) {
     console.log(`[docs] skip missing directory: ${sourceDir}`);
     return;
@@ -145,7 +146,7 @@ async function copyDocsFrom(sourceDir) {
       const markdownText = await fs.readFile(filePath, 'utf-8');
       const htmlPath = targetPath.replace(/\.md$/i, '.html');
       const fallbackTitle = path.basename(filePath, path.extname(filePath));
-      await writeMarkdown(htmlPath, markdownText, fallbackTitle);
+      await writeMarkdown(htmlPath, markdownText, fallbackTitle, sidebarHtml);
       console.log(
         `[docs] render ${relativePath} -> ${path.relative(projectRoot, htmlPath)}`,
       );
@@ -159,12 +160,59 @@ async function copyDocsFrom(sourceDir) {
   }
 }
 
+async function buildSidebarEntries() {
+  const entries = [];
+  for (const sourceDir of sourceDirs) {
+    if (!(await pathExists(sourceDir))) {
+      continue;
+    }
+    const files = await listFiles(sourceDir);
+    for (const filePath of files) {
+      if (!filePath.toLowerCase().endsWith('.md')) {
+        continue;
+      }
+      const relativePath = path.relative(sourceDir, filePath);
+      const outputPath = relativePath.replace(/\.md$/i, '.html');
+      const markdownText = await fs.readFile(filePath, 'utf-8');
+      const tokens = marked.lexer(markdownText);
+      const title = titleFromTokens(tokens, path.basename(filePath, '.md'));
+      entries.push({
+        title,
+        outputPath,
+      });
+    }
+  }
+
+  const seen = new Set();
+  const uniqueEntries = entries.filter((entry) => {
+    if (seen.has(entry.outputPath)) {
+      return false;
+    }
+    seen.add(entry.outputPath);
+    return true;
+  });
+
+  uniqueEntries.sort((a, b) => a.title.localeCompare(b.title));
+  return uniqueEntries;
+}
+
+function renderSidebarHtml(entries) {
+  const listItems = entries
+    .map((entry) => {
+      return `<li><a href="/docs/${entry.outputPath}">${escapeHtml(entry.title)}</a></li>`;
+    })
+    .join('');
+  return `<h2>Docs</h2><ul>${listItems}</ul>`;
+}
+
 async function buildDocs() {
+  const sidebarEntries = await buildSidebarEntries();
+  const sidebarHtml = renderSidebarHtml(sidebarEntries);
   console.log(`[docs] site=${site}`);
   console.log(`[docs] output=${outputRoot}`);
   await ensureDir(outputRoot);
-  await copyDocsFrom(sourceDirs[0]);
-  await copyDocsFrom(sourceDirs[1]);
+  await copyDocsFrom(sourceDirs[0], sidebarHtml);
+  await copyDocsFrom(sourceDirs[1], sidebarHtml);
   console.log('[docs] done');
 }
 
