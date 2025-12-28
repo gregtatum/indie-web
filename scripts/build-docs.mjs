@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 import { marked } from 'marked';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
@@ -26,7 +27,9 @@ async function pickSiteFromPrompt() {
   });
 
   rl.close();
-  return String(choice || '').trim().toLowerCase();
+  return String(choice || '')
+    .trim()
+    .toLowerCase();
 }
 
 let site = process.env.SITE;
@@ -40,10 +43,17 @@ if (!allowedSites.has(site)) {
   );
 }
 
+if (site === 'floppydisk') {
+  dotenv.config({ path: './.env.floppydisk' });
+} else if (site === 'browserchords') {
+  dotenv.config({ path: './.env.browserchords' });
+}
+
 const docsRoot = path.join(projectRoot, 'docs');
 const templatePath = path.join(docsRoot, 'template.html');
 const outputRoot = path.join(projectRoot, 'dist', 'docs');
 const sourceDirs = [path.join(docsRoot, 'common'), path.join(docsRoot, site)];
+const siteName = process.env.SITE_DISPLAY_NAME ?? site;
 
 function escapeHtml(value) {
   return value
@@ -97,35 +107,29 @@ async function listFiles(dirPath) {
   return files;
 }
 
-async function writeMarkdown(targetPath, markdownText, sourceName, sidebarHtml) {
+async function writeMarkdown(
+  targetPath,
+  markdownText,
+  sourceName,
+  sidebarHtml,
+) {
   const tokens = marked.lexer(markdownText);
   const title = titleFromTokens(tokens, sourceName);
   const description = descriptionFromTokens(tokens);
   const htmlBody = marked.parse(markdownText);
-  const templateExists = await pathExists(templatePath);
-  const template = templateExists
-    ? await fs.readFile(templatePath, 'utf-8')
-    : `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{title}}</title>
-    {{metaDescription}}
-  </head>
-  <body>
-    {{content}}
-  </body>
-</html>
-`;
+  if (!(await pathExists(templatePath))) {
+    throw new Error('Could not find the template.');
+  }
+  const template = await fs.readFile(templatePath, 'utf-8');
   const metaDescription = description
     ? `<meta name="description" content="${escapeHtml(description)}" />`
     : '';
   const html = template
-    .replace('{{title}}', escapeHtml(title))
-    .replace('{{metaDescription}}', metaDescription)
-    .replace('{{sidebar}}', sidebarHtml)
-    .replace('{{content}}', htmlBody);
+    .replaceAll('{{title}}', escapeHtml(title))
+    .replaceAll('{{metaDescription}}', metaDescription)
+    .replaceAll('{{siteName}}', escapeHtml(siteName))
+    .replaceAll('{{sidebar}}', sidebarHtml)
+    .replaceAll('{{content}}', htmlBody);
 
   await ensureDir(path.dirname(targetPath));
   await fs.writeFile(targetPath, html);

@@ -3,12 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{title}}</title>
+    <title>{{title}} | {{siteName}}</title>
     {{metaDescription}}
     <link rel="stylesheet" href="/shared.css" />
     <link rel="stylesheet" href="/docs/styles.css" />
   </head>
   <body>
+    <div class="header">
+      <div class="headerSiteName">
+        <div class="headerSlideIn headerSlideInAnimate">
+          <div class="headerSlideInContents">
+            <a class="docsHeaderHome" href="/docs/">
+              <span><img src="/favicon-48x48.png" class="headerFloppyDiskImg" alt="" /></span>
+              <span class="headerSiteNameTitle">{{siteName}} Docs</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="headerStart"></div>
+      <div class="headerEnd">
+        <a href="/" class="button">Back to Files</a>
+      </div>
+    </div>
     <div class="docsLayout">
       <aside class="docsSidebar">
         {{sidebar}}

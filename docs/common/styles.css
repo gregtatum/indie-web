@@ -28,6 +28,72 @@ body {
   color: #000;
 }
 
+.header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: var(--header-height);
+  display: flex;
+  border-bottom: 2px solid #ccc;
+  box-shadow: 0 0 7px #00000045;
+  background-color: #fff;
+  align-items: center;
+  line-height: 1;
+  z-index: 1;
+}
+
+.headerStart {
+  flex: 1;
+}
+
+.headerSiteName,
+.headerEnd {
+  display: flex;
+  align-items: center;
+}
+
+.headerSlideIn {
+  display: inline-block;
+  overflow: hidden;
+}
+
+.headerSlideInAnimate {
+  transition: width 200ms;
+}
+
+.headerSlideInContents {
+  padding: 8px var(--header-gap);
+  display: inline-flex;
+  overflow: hidden;
+}
+
+.headerSiteNameTitle {
+  padding-inline-start: 5px;
+}
+
+.headerSiteNameSuffix {
+  opacity: 0.5;
+}
+
+.headerFloppyDiskImg {
+  width: 24px;
+  height: 24px;
+  margin-block: -5px;
+}
+
+.headerEnd {
+  flex-shrink: 0;
+  padding: var(--header-gap);
+  gap: var(--header-gap);
+}
+
+.docsHeaderHome {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
 main {
   max-width: var(--page-max-width);
   margin: 0 auto;
@@ -40,7 +106,8 @@ main {
   gap: 24px;
   max-width: calc(var(--page-max-width) + 220px);
   margin: 0 auto;
-  padding: var(--page-padding);
+  padding: calc(var(--page-padding) + var(--header-height)) var(--page-padding)
+    var(--page-padding);
 }
 
 .docsSidebar {
