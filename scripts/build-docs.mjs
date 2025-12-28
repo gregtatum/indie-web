@@ -131,6 +131,17 @@ function parseNumber(value) {
   return parsed;
 }
 
+function applyEnv(template) {
+  let result = template;
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value !== 'string' || value.length === 0) {
+      continue;
+    }
+    result = result.replaceAll(`{{${key}}}`, value);
+  }
+  return result;
+}
+
 async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }
@@ -164,7 +175,7 @@ async function writeMarkdown(
   sourceName,
   sidebarHtml,
 ) {
-  const { frontmatter, body } = parseFrontmatter(markdownText);
+  const { frontmatter, body } = parseFrontmatter(applyEnv(markdownText));
   const tokens = marked.lexer(body);
   const title = frontmatter.title || titleFromTokens(tokens, sourceName);
   const description = descriptionFromTokens(tokens);
@@ -233,7 +244,7 @@ async function buildSidebarEntries() {
         continue;
       }
       const markdownText = await fs.readFile(filePath, 'utf-8');
-      const { frontmatter, body } = parseFrontmatter(markdownText);
+      const { frontmatter, body } = parseFrontmatter(applyEnv(markdownText));
       const tokens = marked.lexer(body);
       const title =
         frontmatter.title || titleFromTokens(tokens, path.basename(filePath, '.md'));
