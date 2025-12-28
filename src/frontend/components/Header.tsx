@@ -146,7 +146,7 @@ export function Header() {
       <div className="headerEnd">
         <SaveFileButton />
         <RequestFullScreen />
-        <SettingsButton />
+        <HeaderMenu />
       </div>
     </div>
   );
@@ -206,15 +206,60 @@ function RequestFullScreen() {
   );
 }
 
-function SettingsButton() {
-  const view = $$.getView();
-  if (view === 'settings') {
-    return null;
-  }
+function HeaderMenu() {
+  const button = React.useRef<null | HTMLButtonElement>(null);
+  const [openGeneration, setOpenGeneration] = React.useState(0);
+  const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const navigate = Router.useNavigate();
+  const buttons = React.useMemo<MenuButton[]>(
+    () => [
+      {
+        key: 'Settings',
+        onClick: () => {
+          navigate('/settings');
+        },
+        children: 'Settings',
+      },
+      {
+        key: 'Docs',
+        onClick: () => {
+          window.location.assign('/docs/');
+        },
+        children: 'Docs',
+      },
+      {
+        key: 'Privacy',
+        onClick: () => {
+          navigate('/privacy');
+        },
+        children: 'Privacy',
+      },
+    ],
+    [navigate],
+  );
+
   return (
-    <a href="/settings" className="button headerSettings">
-      Settings
-    </a>
+    <>
+      <button
+        type="button"
+        className="button"
+        ref={button}
+        onClick={(event) => {
+          setOpenGeneration((generation) => generation + 1);
+          setOpenEventDetail(event.detail);
+        }}
+      >
+        Menu
+      </button>
+      {overlayPortal(
+        <Menu
+          clickedElement={button}
+          openEventDetail={openEventDetail}
+          openGeneration={openGeneration}
+          buttons={buttons}
+        />,
+      )}
+    </>
   );
 }
 
