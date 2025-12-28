@@ -1,3 +1,8 @@
+---
+section: Overview
+order: 1
+---
+
 # Browser Chords Docs
 
 Browser Chords is focused on working with chord sheets and song files directly

@@ -80,6 +80,57 @@ function descriptionFromTokens(tokens) {
   return '';
 }
 
+function parseFrontmatter(markdownText) {
+  const lines = markdownText.split(/\r?\n/);
+  if (lines[0]?.trim() !== '---') {
+    return { frontmatter: {}, body: markdownText };
+  }
+
+  let endIndex = -1;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === '---') {
+      endIndex = i;
+      break;
+    }
+  }
+
+  if (endIndex === -1) {
+    return { frontmatter: {}, body: markdownText };
+  }
+
+  const frontmatter = {};
+  for (const line of lines.slice(1, endIndex)) {
+    const match = line.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+    if (!match) {
+      continue;
+    }
+    let value = match[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1).trim();
+    }
+    frontmatter[match[1]] = value;
+  }
+
+  return {
+    frontmatter,
+    body: lines.slice(endIndex + 1).join('\n'),
+  };
+}
+
+function parseNumber(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
 async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }
@@ -113,10 +164,11 @@ async function writeMarkdown(
   sourceName,
   sidebarHtml,
 ) {
-  const tokens = marked.lexer(markdownText);
-  const title = titleFromTokens(tokens, sourceName);
+  const { frontmatter, body } = parseFrontmatter(markdownText);
+  const tokens = marked.lexer(body);
+  const title = frontmatter.title || titleFromTokens(tokens, sourceName);
   const description = descriptionFromTokens(tokens);
-  const htmlBody = marked.parse(markdownText);
+  const htmlBody = marked.parse(body);
   if (!(await pathExists(templatePath))) {
     throw new Error('Could not find the template.');
   }
@@ -178,11 +230,19 @@ async function buildSidebarEntries() {
       const relativePath = path.relative(sourceDir, filePath);
       const outputPath = relativePath.replace(/\.md$/i, '.html');
       const markdownText = await fs.readFile(filePath, 'utf-8');
-      const tokens = marked.lexer(markdownText);
-      const title = titleFromTokens(tokens, path.basename(filePath, '.md'));
+      const { frontmatter, body } = parseFrontmatter(markdownText);
+      const tokens = marked.lexer(body);
+      const title =
+        frontmatter.title || titleFromTokens(tokens, path.basename(filePath, '.md'));
+      const order = parseNumber(frontmatter.order) ?? 1000;
+      const section = frontmatter.section || 'Docs';
+      const sectionOrder = parseNumber(frontmatter.sectionOrder);
       entries.push({
         title,
         outputPath,
+        order,
+        section,
+        sectionOrder,
       });
     }
   }
@@ -196,17 +256,63 @@ async function buildSidebarEntries() {
     return true;
   });
 
-  uniqueEntries.sort((a, b) => a.title.localeCompare(b.title));
+  uniqueEntries.sort((a, b) => {
+    if (a.section !== b.section) {
+      return a.section.localeCompare(b.section);
+    }
+    if (a.order !== b.order) {
+      return a.order - b.order;
+    }
+    return a.title.localeCompare(b.title);
+  });
   return uniqueEntries;
 }
 
 function renderSidebarHtml(entries) {
-  const listItems = entries
-    .map((entry) => {
-      return `<li><a href="/docs/${entry.outputPath}">${escapeHtml(entry.title)}</a></li>`;
+  const sections = new Map();
+  for (const entry of entries) {
+    const sectionName = entry.section || 'Docs';
+    const existing = sections.get(sectionName);
+    if (existing) {
+      existing.entries.push(entry);
+      if (
+        typeof entry.sectionOrder === 'number' &&
+        entry.sectionOrder < existing.order
+      ) {
+        existing.order = entry.sectionOrder;
+      }
+      continue;
+    }
+    sections.set(sectionName, {
+      name: sectionName,
+      order: typeof entry.sectionOrder === 'number' ? entry.sectionOrder : 1000,
+      entries: [entry],
+    });
+  }
+
+  const sortedSections = Array.from(sections.values()).sort((a, b) => {
+    if (a.order !== b.order) {
+      return a.order - b.order;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  return sortedSections
+    .map((section) => {
+      const listItems = section.entries
+        .sort((a, b) => {
+          if (a.order !== b.order) {
+            return a.order - b.order;
+          }
+          return a.title.localeCompare(b.title);
+        })
+        .map((entry) => {
+          return `<li><a href="/docs/${entry.outputPath}">${escapeHtml(entry.title)}</a></li>`;
+        })
+        .join('');
+      return `<h2>${escapeHtml(section.name)}</h2><ul>${listItems}</ul>`;
     })
     .join('');
-  return `<h2>Docs</h2><ul>${listItems}</ul>`;
 }
 
 async function buildDocs() {

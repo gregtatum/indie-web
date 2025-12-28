@@ -1,3 +1,8 @@
+---
+section: Getting started
+order: 2
+---
+
 # File stores
 
 ## Local browser storage

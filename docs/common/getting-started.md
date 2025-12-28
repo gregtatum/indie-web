@@ -1,3 +1,8 @@
+---
+section: Getting started
+order: 1
+---
+
 # Getting started
 
 ## Choose a file store

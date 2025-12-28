@@ -1,3 +1,8 @@
+---
+section: Working with files
+order: 1
+---
+
 # Working with files
 
 ## Create

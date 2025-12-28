@@ -1,3 +1,8 @@
+---
+section: Working with files
+order: 2
+---
+
 # Markdown tips
 
 ## Formatting

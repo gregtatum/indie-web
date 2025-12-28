@@ -1,3 +1,8 @@
+---
+section: Overview
+order: 1
+---
+
 # Floppy Disk Docs
 
 Floppy Disk is a lightweight file workspace for notes, docs, and creative files

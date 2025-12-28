@@ -1,4 +1,9 @@
-# ChordPro basics
+---
+section: Working with files
+order: 1
+---
+
+# ChordPro Files
 
 ## What is ChordPro?
 

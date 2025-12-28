@@ -1,3 +1,8 @@
+---
+section: Privacy
+order: 1
+---
+
 # Privacy
 
 ## What stays local
