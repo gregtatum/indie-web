@@ -223,12 +223,12 @@ export function LinkDropbox(props: { children: any }) {
   }, [isLogin]);
 
   switch (view) {
+    case 'file-storage':
     case 'settings':
     case 'connect':
     case 'privacy':
       return props.children;
     case null:
-    case 'file-storage':
     case 'list-files':
     case 'view-file':
     case 'view-pdf':
