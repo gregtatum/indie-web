@@ -97,6 +97,7 @@ export function Header() {
           key={key}
           title="Host Your Own Storage"
           hideSiteName={true}
+          showFileStoreSelection={false}
         />
       );
       break;
@@ -322,10 +323,12 @@ function Path({
   path,
   title,
   hideSiteName,
+  showFileStoreSelection = true,
 }: {
   path: string;
   title?: any;
   hideSiteName?: boolean;
+  showFileStoreSelection?: boolean;
 }) {
   const songTitle = $$.getActiveFileSongTitleOrNull();
   const fsSlug = $$.getCurrentFileStoreSlug();
@@ -374,7 +377,9 @@ function Path({
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
         <SiteName isOpen={!hideSiteName && !(songTitle ?? fileName)} />
-        <FileStoreSelection key="fileStore" />
+        {showFileStoreSelection ? (
+          <FileStoreSelection key="fileStore" />
+        ) : null}
         <div className="headerPathBreadcrumbs">
           {breadcrumbs}
           <span>»</span>
