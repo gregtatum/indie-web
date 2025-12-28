@@ -45,34 +45,30 @@ These are the ChordPro directives currently supported.
 ### Metadata
 
 - `{title: ...}`
+- `{subtitle: ...}`
 - `{artist: ...}`
-- `{album: ...}`
-- `{year: ...}`
 - `{key: ...}`
-- `{tempo: ...}`
 - `{capo: ...}`
-- `{time: ...}`
 
-### Sections and comments
+### Comments and Formatting
 
 - `{comment: ...}`
 - `{c: ...}` (short form comment)
-- `{chorus}` and `{end_of_chorus}`
-- `{verse}` and `{end_of_verse}`
-- `{bridge}` and `{end_of_bridge}`
-- `{tab}` and `{end_of_tab}`
 
 ### Formatting
 
-- `{meta: ...}`
-- `{subtitle: ...}`
 - `{comment_italic: ...}`
 - `{comment_bold: ...}`
 - `{comment_box: ...}`
 
+### Media
+
+- `{image: src="/path/to/score.png"}`
+- `{audio: src="/path/to/song.mp3" mimetype="audio/mp3"}`
+
 ### Audio playback
 
-You can drag and drop an audio files such as mp3s directly onto a rendered song.
+You can drag and drop audio files such as MP3s directly onto a rendered song.
 The file is saved alongside the song and a ChordPro directive is inserted for you.
 This makes it easy to practice with a backing track while viewing chords.
 
@@ -80,6 +76,44 @@ The inserted directive looks like this:
 
 ```
 {audio: src="/path/to/song.mp3" mimetype="audio/mp3"}
+```
+
+### Spotify links
+
+When a title is available, the header includes a Spotify search link for the
+song title and artist to quickly jump to recordings.
+
+### Images and sheet music exports
+
+For creating and exporting sheet music, I recommend
+[MuseScore](https://musescore.org/en). It is great for engraving, and it can
+export PDFs or images that you can mix and match with your ChordPro files.
+
+You can drag and drop images directly into a rendered song. The file is saved
+next to the song and an image directive is inserted automatically:
+
+```
+{image: src="/path/to/score.png"}
+```
+
+A simple workflow is to keep the original MuseScore files in a relative
+`./assets` folder, then export PDFs or images into the main song folder for
+easy playing and browsing.
+
+Example folder layout:
+
+```
+Folk Music
+├── Amazing Grace.pdf
+├── Scarborough Fair.chopro
+├── House of the Rising Sun.chopro
+├── Greensleeves.png
+├── Shenandoah.pdf
+└── assets
+    ├── Amazing Grace.mscz
+    ├── Scarborough Fair.mscz
+    ├── Scarborough Fair (lead 1).png
+    └── Scarborough Fair (lead 2).png
 ```
 
 ### Display modes

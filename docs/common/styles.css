@@ -104,10 +104,13 @@ main {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 24px;
+  width: 100%;
   max-width: calc(var(--page-max-width) + 220px);
   margin: 0 auto;
   padding: calc(var(--page-padding) + var(--header-height)) var(--page-padding)
     var(--page-padding);
+  box-sizing: border-box;
+  min-height: 100vh;
 }
 
 .docsSidebar {
@@ -140,22 +143,13 @@ main {
   color: var(--primary-color-hover);
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  margin: 0 0 0.5rem;
-  font-weight: 600;
+h1 {
+  padding-bottom: .3em;
+  font-size: 2em;
 }
 
-h2,
-h3,
-h4,
-h5,
-h6 {
-  margin-top: 1.75rem;
+h1, h2 {
+  border-bottom: 1px solid #ddd;
 }
 
 p {

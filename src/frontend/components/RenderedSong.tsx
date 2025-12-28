@@ -17,18 +17,19 @@ import { NextPrevLinks } from './NextPrev';
 import { MediaAudio, MediaImage, MediaVideo } from './Media';
 
 function getSpotifyLink(
-  { title, subtitle }: Record<string, string>,
+  { title, artist, subtitle }: Record<string, string>,
   fileName: string,
 ) {
   let search: string = '';
   if (title) {
     search = title;
   }
-  if (subtitle) {
+  const postfix = artist || subtitle;
+  if (postfix) {
     if (search) {
       search += ' ';
     }
-    search += subtitle;
+    search += postfix;
   }
   if (!search) {
     search = fileName;
@@ -364,7 +365,9 @@ function formatChordDisplayText(
   text: string,
   options: { useJazzMaj7?: boolean } = {},
 ) {
-  let formatted = text.replace(/b(?=[0-9IV])/g, '♭').replace(/#(?=[0-9IV])/g, '♯');
+  let formatted = text
+    .replace(/b(?=[0-9IV])/g, '♭')
+    .replace(/#(?=[0-9IV])/g, '♯');
   formatted = formatted.replace(/dim/g, '°');
   if (options.useJazzMaj7) {
     formatted = formatted.replace(/maj7/g, '△').replace(/\^7/g, '△');
