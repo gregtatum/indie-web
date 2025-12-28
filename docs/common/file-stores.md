@@ -7,9 +7,8 @@ your browser data will remove all files. The files are tied to your browser.
 
 ## Dropbox
 
-Connecting Dropbox lets you access files across devices. You can work offline
-and sync changes when you reconnect.
+[/dropbox](Connecting Dropbox) lets you access files across devices. Your files will be sandbox to the Dropbox/Apps folder, so that the rest of your files remain private.
 
 ## Server store
 
-If configured, a server-backed store can keep files in a shared location.
+If configured, a [server-backed store](/add-file-storage) can keep files in a shared location, for instance on your same computer, or on an external storage such as a NAS (Network Attached Storage). The server only has access the folder where you mount it. You can mount multiple folders.
