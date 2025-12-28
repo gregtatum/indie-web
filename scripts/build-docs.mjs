@@ -229,6 +229,9 @@ async function buildSidebarEntries() {
       }
       const relativePath = path.relative(sourceDir, filePath);
       const outputPath = relativePath.replace(/\.md$/i, '.html');
+      if (outputPath.toLowerCase() === 'index.html') {
+        continue;
+      }
       const markdownText = await fs.readFile(filePath, 'utf-8');
       const { frontmatter, body } = parseFrontmatter(markdownText);
       const tokens = marked.lexer(body);
@@ -236,13 +239,11 @@ async function buildSidebarEntries() {
         frontmatter.title || titleFromTokens(tokens, path.basename(filePath, '.md'));
       const order = parseNumber(frontmatter.order) ?? 1000;
       const section = frontmatter.section || 'Docs';
-      const sectionOrder = parseNumber(frontmatter.sectionOrder);
       entries.push({
         title,
         outputPath,
         order,
         section,
-        sectionOrder,
       });
     }
   }
@@ -275,17 +276,12 @@ function renderSidebarHtml(entries) {
     const existing = sections.get(sectionName);
     if (existing) {
       existing.entries.push(entry);
-      if (
-        typeof entry.sectionOrder === 'number' &&
-        entry.sectionOrder < existing.order
-      ) {
-        existing.order = entry.sectionOrder;
-      }
+      existing.order = Math.min(existing.order, entry.order);
       continue;
     }
     sections.set(sectionName, {
       name: sectionName,
-      order: typeof entry.sectionOrder === 'number' ? entry.sectionOrder : 1000,
+      order: entry.order,
       entries: [entry],
     });
   }
