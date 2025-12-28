@@ -12,9 +12,11 @@ tasks:
       SITE=floppydisk task build
       SITE=browserchords task build
     cmds:
-      - rm -rf dist
-      - SITE=browserchords NODE_ENV=production webpack
-      - SITE=browserchords node scripts/build-docs.mjs
+      - |
+        eval "$(node scripts/select-site.mjs)"
+        rm -rf dist
+        NODE_ENV=production SITE="$SITE" webpack
+        SITE="$SITE" node scripts/build-docs.mjs
 
   build-docs:
     desc: |
@@ -22,7 +24,9 @@ tasks:
       SITE=floppydisk task build-docs
       SITE=browserchords task build-docs
     cmds:
-      - node scripts/build-docs.mjs
+      - |
+        eval "$(node scripts/select-site.mjs)"
+        SITE="$SITE" node scripts/build-docs.mjs
 
   check-updates:
     desc: Check for package updates
@@ -33,46 +37,28 @@ tasks:
     desc: Start one of the Indie Web projects.
     cmds:
       - |
-        options=("Floppy Disk" "Browser Chords")
-        echo "Select an option:"
-        select choice in "${options[@]}"; do
-          case $choice in
-            "Floppy Disk")
-              task start-floppy
-              break
-              ;;
-            "Browser Chords")
-              task start-chords
-              break
-              ;;
-          esac
-        done
+        eval "$(node scripts/select-site.mjs)"
+        SITE="$SITE" task --parallel start-ts start-webpack start-docs-watch
 
   start-ts:
     desc: Start TypeScript in watch mode
     cmds:
       - tsc --noEmit --watch --project src/tsconfig.json
 
-  start-webpack-chords:
-    desc: Start Webpack server for browserchords
+  start-webpack:
+    desc: Start Webpack server for the selected site
     cmds:
-      - NODE_ENV=development SITE=browserchords ./webpack.server.js
+      - NODE_ENV=development SITE=$SITE ./webpack.server.js
 
-  start-webpack-floppy:
-    desc: Start Webpack server for floppydisk
+  start-docs-watch:
+    desc: Watch docs and rebuild static output on changes
     cmds:
-      - NODE_ENV=development SITE=floppydisk ./webpack.server.js
-
-  start-chords:
-    desc: Start TypeScript watch and Webpack server
-    cmds:
-      - task: start-ts
-      - task --parallel start-ts start-webpack-floppy
-
-  start-floppy:
-    desc: Start TypeScript watch and Webpack server for floppydisk
-    cmds:
-      - task --parallel start-ts start-webpack-floppy
+      - |
+        SITE="$SITE" nodemon \
+          --watch docs \
+          --watch data/common/shared.css \
+          --ext md,html,css \
+          --exec "node scripts/build-docs.mjs"
 
   start-server:
     desc: Start the server in development mode
