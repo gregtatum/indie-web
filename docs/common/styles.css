@@ -98,6 +98,7 @@ main {
   max-width: var(--page-max-width);
   margin: 0 auto;
   padding: var(--page-padding);
+  line-height: 1.5;
 }
 
 .docsLayout {
@@ -181,6 +182,12 @@ pre {
   background-color: #eee;
   border-radius: 3px;
   overflow-x: auto;
+
+  & code {
+    padding: none;
+    background: none;
+    border: none;
+  }
 }
 
 blockquote {
