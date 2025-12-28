@@ -15,6 +15,10 @@ service or a closed database. With plain files (ChordPro, PDFs, images), your
 music stays yours. You can back it up, sync it, edit it with other tools, and
 move it between devices without losing structure.
 
+That lines up with the indie web mindset: own your data, use formats that stay
+open, and keep the collection portable so it can live on whatever storage you
+trust.
+
 ChordPro is a great fit for this because it is readable in a text editor but
 structured enough for software to do useful work like transposition. It means
 your collection is durable, searchable, and future-proof.
