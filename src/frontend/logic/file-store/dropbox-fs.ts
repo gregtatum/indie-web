@@ -13,7 +13,7 @@ export class DropboxError extends FileStoreError {
     const name = this.error?.name;
     if (typeof name === 'string') {
       if (name === 'TypeError') {
-        return 'Unable to connect to the internet. Try again?';
+        return 'This resource is not available offline. Try again when your network is available.';
       }
     }
 

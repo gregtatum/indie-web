@@ -209,7 +209,7 @@ export function dropboxErrorMessage(error: any): string {
   const name = error?.name;
   if (typeof name === 'string') {
     if (name === 'TypeError') {
-      return 'Unable to connect to the internet. Try again?';
+      return 'This file is not available offline. Try again when your network is available.';
     }
   }
 
