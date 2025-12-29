@@ -45,6 +45,7 @@ export function ListFiles() {
   }
   Hooks.useUploadOnFileDrop(filesBackRef, backPath);
   Hooks.useUploadOnFileDrop(listFilesRef, path);
+  const cachedFolderListing = Hooks.useCachedFolderListing();
 
   React.useEffect(() => {
     if (path === '/') {
@@ -146,6 +147,7 @@ export function ListFiles() {
                 key={file.id}
                 file={file}
                 fileFocus={fileFocus}
+                isCached={cachedFolderListing.has(file.path)}
                 index={fileIndex}
               />
             );
@@ -175,6 +177,7 @@ interface FileProps {
   file: T.FileMetadata | T.FolderMetadata;
   index: number;
   fileFocus: string | undefined | null;
+  isCached: boolean;
   hideExtension?: boolean;
   linkOverride?: string;
 }
@@ -203,9 +206,8 @@ function keepFileInView(div: HTMLElement) {
 }
 
 export function File(props: FileProps) {
-  const { fileFocus, file } = props;
+  const { fileFocus, file, isCached } = props;
   const { name, path, type } = file;
-  const isCached = Hooks.useIsFileCached(file);
   const renameFile = $$.getRenameFile();
   const fsSlug = $$.getCurrentFileStoreSlug();
   const divRef = React.useRef<null | HTMLDivElement>(null);

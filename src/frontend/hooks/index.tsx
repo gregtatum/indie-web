@@ -650,3 +650,44 @@ export function useIsFileCached(
 
   return isCached;
 }
+
+const _emptySet = new Set<string>();
+
+/**
+ * Determine if a file is cached or not in the local IndexedDB file cache.
+ */
+export function useCachedFolderListing(): Set<string> {
+  const path = $$.getPath();
+  const folderListing = $$.getListFilesCache().get(path);
+  const fileStore = $$.getCurrentFSOrNull();
+  const [cachedFolderListing, setCached] =
+    React.useState<Set<string>>(_emptySet);
+
+  // Track if the component is already destroyed, or else the cache lookup promise may
+  // fire after the component has already been unmounted.
+  const isDestroyed = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!fileStore?.cache || !folderListing) {
+      setCached(_emptySet);
+      return undefined;
+    }
+    fileStore.cache.getCachedFolderListing(folderListing).then(
+      (cachedListing) => {
+        if (!isDestroyed.current) {
+          setCached(cachedListing);
+        }
+      },
+      () => {
+        if (!isDestroyed.current) {
+          setCached(_emptySet);
+        }
+      },
+    );
+    return () => {
+      isDestroyed.current = true;
+    };
+  }, [fileStore, folderListing]);
+
+  return cachedFolderListing;
+}

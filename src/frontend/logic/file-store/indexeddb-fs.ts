@@ -150,6 +150,24 @@ export class IDBFS extends FileStoreCache {
     return Boolean(row);
   }
 
+  /**
+   * Determines which items in a folder listing are cached or not.
+   */
+  async getCachedFolderListing(files: T.FolderListing): Promise<Set<string>> {
+    const tx = this.#getReadWriteTX();
+    const store = tx.objectStore('files');
+    const cached = new Set<string>();
+    for (const file of files) {
+      if (file.type !== 'folder') {
+        if (await store.getKey(file.path)) {
+          cached.add(file.path);
+        }
+      }
+    }
+    await tx.done;
+    return cached;
+  }
+
   async createFolder(path: string): Promise<T.FolderMetadata> {
     const listingRow = await this.addFolderListing(path, []);
     return createFolderMetadata(listingRow.path);
