@@ -164,7 +164,7 @@ describe('<ViewChopro>', () => {
                  
                 <a
                   class="button renderedSongHeaderSpotify"
-                  href="https://open.spotify.com/search/Clocks"
+                  href="https://open.spotify.com/search/Clocks%20Coldplay"
                   rel="noreferrer"
                   target="_blank"
                 >
