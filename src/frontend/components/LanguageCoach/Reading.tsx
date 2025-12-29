@@ -83,6 +83,7 @@ function ReadingList() {
             <File
               file={file}
               hideExtension={true}
+              isCached={false} // This isn't wired in, so just set it to false.
               linkOverride={`${fsSlug}/language-coach${file.path}?section=reading`}
               index={index}
               fileFocus={undefined}
