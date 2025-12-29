@@ -716,6 +716,30 @@ function experimentalFeatures(
   }
 }
 
+function fileStoreCacheEnabled(
+  state: boolean = getFileStoreCacheEnabledDefault(),
+  action: T.Action,
+): boolean {
+  switch (action.type) {
+    case 'set-file-store-cache-enabled':
+      localStorage.setItem(
+        'fileStoreCacheEnabled',
+        JSON.stringify(action.value),
+      );
+      return action.value;
+    default:
+      return state;
+  }
+}
+
+function getFileStoreCacheEnabledDefault(): boolean {
+  const stored = localStorage.getItem('fileStoreCacheEnabled');
+  if (stored === null) {
+    return true;
+  }
+  return stored === 'true';
+}
+
 function editorAutocompleteSettings(
   state: {
     markdown: boolean;
@@ -794,6 +818,7 @@ export const reducers = combineReducers({
   editorAutocompleteSettings,
   editorOnly,
   experimentalFeatures,
+  fileStoreCacheEnabled,
   filesIndex,
   serverId,
   servers,

@@ -296,6 +296,13 @@ export function setExperimentalFeatures(value: boolean) {
   };
 }
 
+export function setFileStoreCacheEnabled(value: boolean) {
+  return {
+    type: 'set-file-store-cache-enabled' as const,
+    value,
+  };
+}
+
 export function setEditorAutocomplete(
   editor: 'markdown' | 'chordpro',
   value: boolean,

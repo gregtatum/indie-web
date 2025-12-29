@@ -82,6 +82,10 @@ export function getExperimentalFeatures(state: State) {
   return state.experimentalFeatures;
 }
 
+export function getFileStoreCacheEnabled(state: State) {
+  return state.fileStoreCacheEnabled;
+}
+
 export function getEditorAutocompleteSettings(state: State) {
   return state.editorAutocompleteSettings;
 }
@@ -203,8 +207,11 @@ export const getDropboxOrNull = createSelector(
   },
 );
 
-export const getDropboxFSOrNull = createSelector(getDropboxOrNull, (dropbox) =>
-  dropbox ? new DropboxFS(dropbox) : null,
+export const getDropboxFSOrNull = createSelector(
+  getDropboxOrNull,
+  getFileStoreCacheEnabled,
+  (dropbox, cacheEnabled) =>
+    dropbox ? new DropboxFS(dropbox, cacheEnabled) : null,
 );
 
 export const getIsDropboxInitiallyExpired = createSelector(
@@ -230,11 +237,12 @@ export const getCurrentServerOrNull = createSelector(
 
 export const getServerFSOrNull = createSelector(
   getCurrentServerOrNull,
-  (server) => {
+  getFileStoreCacheEnabled,
+  (server, cacheEnabled) => {
     if (!server) {
       return null;
     }
-    return new ServerFS(server);
+    return new ServerFS(server, cacheEnabled);
   },
 );
 

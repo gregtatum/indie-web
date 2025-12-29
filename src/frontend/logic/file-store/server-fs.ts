@@ -13,7 +13,7 @@ export class ServerFS extends FileStore {
   apiBaseUrl: string;
   cachePromise?: Promise<void>;
 
-  constructor(server: T.FileStoreServer) {
+  constructor(server: T.FileStoreServer, cacheEnabled: boolean) {
     super();
     let apiBaseUrl = server.url;
     if (!apiBaseUrl.endsWith('/')) {
@@ -21,11 +21,15 @@ export class ServerFS extends FileStore {
     }
     this.apiBaseUrl = apiBaseUrl + 'file-store';
 
-    this.cachePromise = openIDBFS(`server-fs-cache(${server.id})`).then(
-      (IDBFS) => {
-        this.cache = IDBFS;
-      },
-    );
+    if (cacheEnabled) {
+      this.cachePromise = openIDBFS(`server-fs-cache(${server.id})`).then(
+        (IDBFS) => {
+          this.cache = IDBFS;
+        },
+      );
+    } else {
+      this.cachePromise = Promise.resolve();
+    }
   }
 
   async fetchJSON<T>(endpoint: string, body: Record<string, any>): Promise<T> {

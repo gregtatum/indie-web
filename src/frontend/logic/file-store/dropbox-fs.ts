@@ -47,10 +47,10 @@ export class DropboxFS extends FileStore {
   #dropbox: Dropbox;
   cachePromise?: Promise<void>;
 
-  constructor(dropbox: Dropbox) {
+  constructor(dropbox: Dropbox, cacheEnabled: boolean) {
     super();
     this.#dropbox = dropbox;
-    if (process.env.NODE_ENV === 'test') {
+    if (!cacheEnabled || process.env.NODE_ENV === 'test') {
       this.cachePromise = Promise.resolve();
     } else {
       this.cachePromise = void openIDBFS(IDB_CACHE_NAME).then((IDBFS) => {

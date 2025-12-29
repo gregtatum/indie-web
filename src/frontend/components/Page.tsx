@@ -12,6 +12,7 @@ import './Page.css';
 export function Settings() {
   const experimentalFeatures = $$.getExperimentalFeatures();
   const editorAutocomplete = $$.getEditorAutocompleteSettings();
+  const fileStoreCacheEnabled = $$.getFileStoreCacheEnabled();
   const dispatch = Hooks.useDispatch();
   Hooks.useRetainScroll();
   return (
@@ -36,6 +37,25 @@ export function Settings() {
           <label htmlFor="experimental-features">
             Enable experimental features
           </label>
+        </p>
+        <h2>Offline files</h2>
+        <p>
+          While you passively view your files, {getEnv('SITE_DISPLAY_NAME')} can
+          cache the files to your browser allowing for faster retrieval and
+          offline support for your files.
+        </p>
+        <p>
+          <input
+            type="checkbox"
+            id="file-store-cache"
+            defaultChecked={fileStoreCacheEnabled}
+            onChange={(event) => {
+              dispatch(
+                A.setFileStoreCacheEnabled(Boolean(event.target.checked)),
+              );
+            }}
+          />
+          <label htmlFor="file-store-cache">Enable offline file caching</label>
         </p>
         <h2>Editor Settings</h2>
         <p>
