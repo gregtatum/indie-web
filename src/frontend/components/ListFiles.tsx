@@ -203,8 +203,9 @@ function keepFileInView(div: HTMLElement) {
 }
 
 export function File(props: FileProps) {
-  const { fileFocus } = props;
-  const { name, path, type } = props.file;
+  const { fileFocus, file } = props;
+  const { name, path, type } = file;
+  const isCached = Hooks.useIsFileCached(file);
   const renameFile = $$.getRenameFile();
   const fsSlug = $$.getCurrentFileStoreSlug();
   const divRef = React.useRef<null | HTMLDivElement>(null);
@@ -245,10 +246,15 @@ export function File(props: FileProps) {
   const isImage = !isFolder && imageExtensions.has(extension);
   const isMarkdown = !isFolder && extension === 'md';
   const isLanguageCoach = isFolder && extension === 'coach';
+  let title: string | undefined;
 
   // https://www.svgrepo.com/collection/dazzle-line-icons/
   let icon = '/svg/file.svg';
   let iconClassName = 'listFilesIcon';
+  if (isCached) {
+    iconClassName += ' listFilesIconCached';
+    title = 'Available Offline';
+  }
   if (isFolder) {
     icon = '/svg/folder.svg';
     if (!isLanguageCoach) {
@@ -325,7 +331,7 @@ export function File(props: FileProps) {
           data-file-path={path}
           tabIndex={-1}
         >
-          <span className={iconClassName}>
+          <span className={iconClassName} title={title}>
             <img src={icon} />
           </span>
           {fileDisplayName}

@@ -54,6 +54,8 @@ export abstract class FileStoreCache extends FileStore {
     path: string,
     files: T.FolderListing,
   ): Promise<T.FolderListingRow>;
+
+  abstract isCached(path: string): Promise<boolean>;
 }
 
 /**

@@ -10,7 +10,7 @@ import {
   pathJoin,
   setScrollTop,
 } from 'frontend/utils';
-import { T, $, A } from 'frontend';
+import { T, $, A, $$ } from 'frontend';
 import { FileStoreError } from 'frontend/logic/file-store';
 
 export function useStore(): T.Store {
@@ -605,4 +605,48 @@ export function useError() {
     );
   }
   return { error, setError };
+}
+
+/**
+ * Determine if a file is cached or not in the local IndexedDB file cache.
+ */
+export function useIsFileCached(
+  file: T.FileMetadata | T.FolderMetadata,
+): boolean {
+  const fileStore = $$.getCurrentFSOrNull();
+  const [isCached, setIsCached] = React.useState(false);
+
+  // Track if the component is already destroyed, or else the cache lookup promise may
+  // fire after the component has already been unmounted.
+  const isDestroyed = React.useRef(false);
+
+  React.useEffect(() => {
+    if (file.type === 'folder' || !fileStore) {
+      setIsCached(false);
+      return undefined;
+    }
+    const { cache } = fileStore;
+    if (!cache) {
+      setIsCached(false);
+      return undefined;
+    }
+
+    cache.isCached(file.path).then(
+      (isCached) => {
+        if (!isDestroyed.current) {
+          setIsCached(Boolean(isCached));
+        }
+      },
+      () => {
+        if (!isDestroyed.current) {
+          setIsCached(false);
+        }
+      },
+    );
+    return () => {
+      isDestroyed.current = true;
+    };
+  }, [fileStore, file]);
+
+  return isCached;
 }

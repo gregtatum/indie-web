@@ -71,6 +71,10 @@
   }
 }
 
+.listFilesIconCached {
+  box-shadow: inset 0 0 0 1px #2a6bdb66;
+}
+
 .listFilesFile {
   display: flex;
   border-bottom: 1px solid #ddd;

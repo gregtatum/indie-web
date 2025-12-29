@@ -144,6 +144,12 @@ export class IDBFS extends FileStoreCache {
     return Promise.reject(IDBError.notFound('No files found at ' + path));
   }
 
+  async isCached(path: string): Promise<boolean> {
+    path = normalizePath(path);
+    const row = await this.#db.get('files', path);
+    return Boolean(row);
+  }
+
   async createFolder(path: string): Promise<T.FolderMetadata> {
     const listingRow = await this.addFolderListing(path, []);
     return createFolderMetadata(listingRow.path);
