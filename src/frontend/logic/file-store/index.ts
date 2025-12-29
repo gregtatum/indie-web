@@ -58,6 +58,11 @@ export abstract class FileStoreCache extends FileStore {
   abstract isCached(path: string): Promise<boolean>;
 
   /**
+   * Returns the approximate byte size of cached files.
+   */
+  abstract getApproximateSize(): Promise<number>;
+
+  /**
    * Determines which items in a folder listing are cached or not.
    */
   abstract getCachedFolderListing(files: T.FolderListing): Promise<Set<string>>;

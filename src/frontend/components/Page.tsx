@@ -5,16 +5,100 @@ import {
   getBrowserName,
   getFileStoreDisplayName,
 } from 'frontend/logic/app-logic';
-import { getEnv } from 'frontend/utils';
+import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
+import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import { formatBytes, getEnv } from 'frontend/utils';
 import { UnlinkDropbox } from './LinkDropbox';
 import './Page.css';
+
+type CacheEstimate = {
+  status: 'loading' | 'ready' | 'error';
+  size: number | null;
+  error: string | null;
+};
 
 export function Settings() {
   const experimentalFeatures = $$.getExperimentalFeatures();
   const editorAutocomplete = $$.getEditorAutocompleteSettings();
   const fileStoreCacheEnabled = $$.getFileStoreCacheEnabled();
+  const dropboxOauth = $$.getDropboxOauth();
+  const servers = $$.getServers();
   const dispatch = Hooks.useDispatch();
+  const [cacheEstimates, setCacheEstimates] = React.useState<
+    Record<string, CacheEstimate>
+  >({});
   Hooks.useRetainScroll();
+
+  const cacheTargets = React.useMemo(() => {
+    const targets: Array<{ id: string; label: string; dbName: string }> = [];
+    if (dropboxOauth) {
+      targets.push({
+        id: 'dropbox',
+        label: 'Dropbox',
+        dbName: IDB_CACHE_NAME,
+      });
+    }
+    for (const server of servers) {
+      targets.push({
+        id: `server:${server.id}`,
+        label: server.name,
+        dbName: `server-fs-cache(${server.id})`,
+      });
+    }
+    return targets;
+  }, [dropboxOauth, servers]);
+  React.useEffect(() => {
+    if (cacheTargets.length === 0 || !fileStoreCacheEnabled) {
+      setCacheEstimates({});
+      return undefined;
+    }
+    let isMounted = true;
+    const startingEstimates: Record<string, CacheEstimate> = {};
+    for (const target of cacheTargets) {
+      startingEstimates[target.id] = {
+        status: 'loading',
+        size: null,
+        error: null,
+      };
+    }
+    setCacheEstimates(startingEstimates);
+    void Promise.all(
+      cacheTargets.map(async (target) => {
+        try {
+          const idbfs = await openIDBFS(target.dbName);
+          const size = await idbfs.getApproximateSize();
+          if (!isMounted) {
+            return;
+          }
+          setCacheEstimates((prev) => ({
+            ...prev,
+            [target.id]: {
+              status: 'ready',
+              size,
+              error: null,
+            },
+          }));
+        } catch (error) {
+          console.error(error);
+          if (!isMounted) {
+            return;
+          }
+          setCacheEstimates((prev) => ({
+            ...prev,
+            [target.id]: {
+              status: 'error',
+              size: null,
+              error: 'Could not estimate cache size.',
+            },
+          }));
+        }
+      }),
+    );
+    return () => {
+      isMounted = false;
+    };
+  }, [cacheTargets, fileStoreCacheEnabled]);
+
   return (
     <div className="page">
       <div className="pageInner">
@@ -57,6 +141,32 @@ export function Settings() {
           />
           <label htmlFor="file-store-cache">Enable offline file caching</label>
         </p>
+        {fileStoreCacheEnabled ? (
+          cacheTargets.length === 0 ? (
+            <p>No offline caches available yet.</p>
+          ) : (
+            <ul>
+              {cacheTargets.map((target) => {
+                const estimate = cacheEstimates[target.id];
+                if (!estimate || estimate.status === 'loading') {
+                  return <li key={target.id}>{target.label}: Estimating...</li>;
+                }
+                if (estimate.status === 'error') {
+                  return (
+                    <li key={target.id}>
+                      {target.label}: {estimate.error}
+                    </li>
+                  );
+                }
+                return (
+                  <li key={target.id}>
+                    {target.label}: {formatBytes(estimate.size ?? 0)}
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : null}
         <h2>Editor Settings</h2>
         <p>
           <input

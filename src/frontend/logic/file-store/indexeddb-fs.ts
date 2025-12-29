@@ -150,6 +150,26 @@ export class IDBFS extends FileStoreCache {
     return Boolean(row);
   }
 
+  async getApproximateSize(): Promise<number> {
+    const tx = this.#db.transaction('files', 'readonly');
+    const store = tx.objectStore('files');
+    let total = 0;
+    let cursor = await store.openCursor();
+    while (cursor) {
+      const row = cursor.value as T.StoredBlobFile | T.StoredTextFile;
+      if (typeof row.metadata?.size === 'number') {
+        total += row.metadata.size;
+      } else if ('blob' in row && row.blob instanceof Blob) {
+        total += row.blob.size;
+      } else if ('text' in row && typeof row.text === 'string') {
+        total += row.text.length;
+      }
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+    return total;
+  }
+
   /**
    * Determines which items in a folder listing are cached or not.
    */
