@@ -38,6 +38,11 @@ export function removeBrowserFiles() {
   return { type: 'remove-browser-files' as const };
 }
 
+export function clearOfflineCache(dbName: string) {
+  indexedDB.deleteDatabase(dbName);
+  return { type: 'clear-offline-cache' as const, dbName };
+}
+
 export function addFileStoreServer(server: T.FileStoreServer) {
   return { type: 'add-server' as const, server };
 }

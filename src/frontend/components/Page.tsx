@@ -27,6 +27,7 @@ export function Settings() {
   const [cacheEstimates, setCacheEstimates] = React.useState<
     Record<string, CacheEstimate>
   >({});
+  const isMountedRef = React.useRef(true);
   Hooks.useRetainScroll();
 
   const cacheTargets = React.useMemo(() => {
@@ -47,12 +48,51 @@ export function Settings() {
     }
     return targets;
   }, [dropboxOauth, servers]);
+  const estimateCacheSizeForTarget = React.useCallback(
+    async (target: { id: string; dbName: string }) => {
+      try {
+        const idbfs = await openIDBFS(target.dbName);
+        const size = await idbfs.getApproximateSize();
+        if (!isMountedRef.current) {
+          return;
+        }
+        setCacheEstimates((prev) => ({
+          ...prev,
+          [target.id]: {
+            status: 'ready',
+            size,
+            error: null,
+          },
+        }));
+      } catch (error) {
+        console.error(error);
+        if (!isMountedRef.current) {
+          return;
+        }
+        setCacheEstimates((prev) => ({
+          ...prev,
+          [target.id]: {
+            status: 'error',
+            size: null,
+            error: 'Could not estimate cache size.',
+          },
+        }));
+      }
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   React.useEffect(() => {
     if (cacheTargets.length === 0 || !fileStoreCacheEnabled) {
       setCacheEstimates({});
       return undefined;
     }
-    let isMounted = true;
     const startingEstimates: Record<string, CacheEstimate> = {};
     for (const target of cacheTargets) {
       startingEstimates[target.id] = {
@@ -64,40 +104,11 @@ export function Settings() {
     setCacheEstimates(startingEstimates);
     void Promise.all(
       cacheTargets.map(async (target) => {
-        try {
-          const idbfs = await openIDBFS(target.dbName);
-          const size = await idbfs.getApproximateSize();
-          if (!isMounted) {
-            return;
-          }
-          setCacheEstimates((prev) => ({
-            ...prev,
-            [target.id]: {
-              status: 'ready',
-              size,
-              error: null,
-            },
-          }));
-        } catch (error) {
-          console.error(error);
-          if (!isMounted) {
-            return;
-          }
-          setCacheEstimates((prev) => ({
-            ...prev,
-            [target.id]: {
-              status: 'error',
-              size: null,
-              error: 'Could not estimate cache size.',
-            },
-          }));
-        }
+        await estimateCacheSizeForTarget(target);
       }),
     );
-    return () => {
-      isMounted = false;
-    };
-  }, [cacheTargets, fileStoreCacheEnabled]);
+    return undefined;
+  }, [cacheTargets, estimateCacheSizeForTarget, fileStoreCacheEnabled]);
 
   return (
     <div className="page">
@@ -145,26 +156,39 @@ export function Settings() {
           cacheTargets.length === 0 ? (
             <p>No offline caches available yet.</p>
           ) : (
-            <ul>
+            <div>
               {cacheTargets.map((target) => {
                 const estimate = cacheEstimates[target.id];
-                if (!estimate || estimate.status === 'loading') {
-                  return <li key={target.id}>{target.label}: Estimating...</li>;
-                }
-                if (estimate.status === 'error') {
-                  return (
-                    <li key={target.id}>
-                      {target.label}: {estimate.error}
-                    </li>
-                  );
+                let label = `${target.label}: Estimating...`;
+                if (estimate?.status === 'error') {
+                  label = `${target.label}: ${estimate.error}`;
+                } else if (estimate?.status === 'ready') {
+                  label = `${target.label}: ${formatBytes(estimate.size ?? 0)}`;
                 }
                 return (
-                  <li key={target.id}>
-                    {target.label}: {formatBytes(estimate.size ?? 0)}
-                  </li>
+                  <div key={target.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch(A.clearOfflineCache(target.dbName));
+                        setCacheEstimates((prev) => ({
+                          ...prev,
+                          [target.id]: {
+                            status: 'loading',
+                            size: null,
+                            error: null,
+                          },
+                        }));
+                        void estimateCacheSizeForTarget(target);
+                      }}
+                    >
+                      Clear Cache
+                    </button>{' '}
+                    {label}
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           )
         ) : null}
         <h2>Editor Settings</h2>
