@@ -58,7 +58,7 @@ function ReadingList() {
   const fsSlug = $$.getCurrentFileStoreSlug();
   const listFilesCache = $$.getListFilesCache();
   const readingPath = pathJoin($$.getLanguageCoachPath(), 'reading');
-  const files = listFilesCache.get(readingPath);
+  const files = listFilesCache.get(readingPath)?.files;
   const dispatch = Hooks.useDispatch();
 
   React.useEffect(() => {

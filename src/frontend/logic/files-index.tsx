@@ -172,7 +172,7 @@ export class FilesIndex {
     // Update based on reducer actions.
     switch (action.type) {
       case 'files-index-received': {
-        for (const [, files] of $.getListFilesCache(state)) {
+        for (const [, { files }] of $.getListFilesCache(state)) {
           for (const file of files) {
             this.synchronizeFile(file);
           }

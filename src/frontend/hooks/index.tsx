@@ -658,7 +658,7 @@ const _emptySet = new Set<string>();
  */
 export function useCachedFolderListing(): Set<string> {
   const path = $$.getPath();
-  const folderListing = $$.getListFilesCache().get(path);
+  const folderListing = $$.getListFilesCache().get(path)?.files;
   const fileStore = $$.getCurrentFSOrNull();
   const [cachedFolderListing, setCached] =
     React.useState<Set<string>>(_emptySet);

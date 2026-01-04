@@ -471,7 +471,7 @@ export const getActiveFileDisplayPath = createSelector(
       return downloadedTextFile.metadata.path;
     }
 
-    const files = listFilesCache.get(path);
+    const files = listFilesCache.get(path)?.files;
     if (files) {
       const file = files.find((file) => file.path === path);
       if (file?.path) {
@@ -602,7 +602,7 @@ export const getNextPrevSong = createSelector(
     const folder = getDirName(path);
 
     // Only return values if the folders are requested.
-    const listFiles = listFilesCache.get(folder);
+    const listFiles = listFilesCache.get(folder)?.files;
     if (!listFiles) {
       return results;
     }
@@ -668,7 +668,7 @@ export const getSearchFilteredFiles = createSelector(
     path,
     filesIndex,
   ): (T.FileMetadata | T.FolderMetadata)[] | null => {
-    const listFiles = listFilesCache.get(path)?.filter(
+    const listFiles = listFilesCache.get(path)?.files.filter(
       // Remove any dot files.
       (entry) => entry.name[0] !== '.',
     );

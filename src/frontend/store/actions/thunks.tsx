@@ -25,7 +25,7 @@ function getMetadataFromCache(
   folder: string,
   path: string,
 ) {
-  return cache.get(folder)?.find((entry) => entry.path === path);
+  return cache.get(folder)?.files.find((entry) => entry.path === path);
 }
 
 /**
@@ -63,8 +63,12 @@ export namespace PlainInternal {
     return { type: 'list-files-requested' as const, path };
   }
 
-  export function listFilesReceived(path: string, files: T.FolderListing) {
-    return { type: 'list-files-received' as const, path, files };
+  export function listFilesReceived(
+    path: string,
+    files: T.FolderListing,
+    isCache: boolean,
+  ) {
+    return { type: 'list-files-received' as const, path, files, isCache };
   }
 
   export function listFilesError(path: string, error: string) {
@@ -146,7 +150,13 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
       try {
         const offlineListing = await fileStore.cache.listFiles(path);
         if (offlineListing) {
-          dispatch(PlainInternal.listFilesReceived(path, offlineListing));
+          dispatch(
+            PlainInternal.listFilesReceived(
+              path,
+              offlineListing,
+              /* isCache */ true,
+            ),
+          );
         }
       } catch (error) {
         (error as IDBError)?.cacheLog();
@@ -155,7 +165,9 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
 
     try {
       const files = await fileStore.listFiles(dropboxPath);
-      dispatch(PlainInternal.listFilesReceived(path, files));
+      dispatch(
+        PlainInternal.listFilesReceived(path, files, /* isCache */ false),
+      );
     } catch (response) {
       dispatch(PlainInternal.listFilesError(path, String(response)));
     }
@@ -378,7 +390,7 @@ export function pasteCopyFile(
         await dispatch(listFiles(folder));
         state = getState();
       }
-      return $.getListFilesCache(getState()).get(folder) ?? null;
+      return $.getListFilesCache(getState()).get(folder)?.files ?? null;
     };
 
     if (!(await ensureFolderListing(sourceFolder))) {

@@ -190,14 +190,14 @@ function listFilesCache(
 
       if (metadata.type === 'folder') {
         const newState: T.ListFilesCache = new Map();
-        for (const [path, files] of state) {
+        for (const [path, { isCache, files }] of state) {
           let key = path;
           if (path === oldPath || path.startsWith(oldPath + '/')) {
             key = updatePathRoot(path, oldPath, metadata.path);
           }
-          newState.set(
-            key,
-            files.map((file) => {
+          newState.set(key, {
+            isCache,
+            files: files.map((file) => {
               if (file.path === oldPath) {
                 return metadata;
               }
@@ -209,7 +209,7 @@ function listFilesCache(
               }
               return file;
             }),
-          );
+          });
         }
         return newState;
       }
@@ -217,14 +217,14 @@ function listFilesCache(
       // This is a file.
       const newState: T.ListFilesCache = new Map(state);
       const folder = getDirName(metadata.path);
-      const files = newState.get(folder);
-      if (files) {
-        for (let i = 0; i < files.length; i++) {
-          const otherMetadata = files[i];
+      const entry = newState.get(folder);
+      if (entry) {
+        for (let i = 0; i < entry.files.length; i++) {
+          const otherMetadata = entry.files[i];
           if (otherMetadata.path === oldPath) {
-            const newFiles = files.slice();
+            const newFiles = entry.files.slice();
             newFiles[i] = metadata;
-            newState.set(folder, newFiles);
+            newState.set(folder, { ...entry, files: newFiles });
             return newState;
           }
         }
@@ -240,10 +240,10 @@ function listFilesCache(
       const listing = state.get(containingFolder);
       if (listing) {
         // Filter out this folder or file.
-        newState.set(
-          containingFolder,
-          listing.filter((file) => file.path !== metadata.path),
-        );
+        newState.set(containingFolder, {
+          ...listing,
+          files: listing.files.filter((file) => file.path !== metadata.path),
+        });
       }
 
       if (metadata.type === 'folder') {
@@ -258,9 +258,9 @@ function listFilesCache(
       return newState;
     }
     case 'list-files-received': {
-      const { path, files } = action;
+      const { path, files, isCache } = action;
       const newState = new Map(state);
-      newState.set(path, files);
+      newState.set(path, { files, isCache });
       return newState;
     }
     case 'change-file-system':

@@ -291,7 +291,7 @@ export async function setupDBWithFiles(paths: string[]) {
     await dispatch(A.listFiles(path));
     return $.getListFilesCache(getState())
       .get(path)
-      ?.map((listing) => listing.path);
+      ?.files.map((listing) => listing.path);
   }
 
   return { dispatch, getState, fetchTextFile, fetchFileListing, idbfs };

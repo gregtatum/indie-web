@@ -131,7 +131,13 @@ export interface IDBFSSchema extends idb.DBSchema {
   };
 }
 
-export type ListFilesCache = Map<string, Array<FileMetadata | FolderMetadata>>;
+export type ListFilesCache = Map<
+  string,
+  {
+    files: Array<FileMetadata | FolderMetadata>;
+    isCache: boolean;
+  }
+>;
 export type DownloadFileCache = Map<string, DownloadedTextFile>;
 export type DownloadBlobCache = Map<string, DownloadedBlob>;
 

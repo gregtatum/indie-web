@@ -25,6 +25,7 @@ export function ListFiles() {
   const dispatch = Hooks.useDispatch();
   const files = $$.getSearchFilteredFiles();
   const error = $$.getListFilesErrors().get(path);
+  const listFilesCache = $$.getListFilesCache();
   const parsedSearch = $$.getParsedSearch();
   const fsName = $$.getCurrentFileStoreName();
   const fsSlug = $$.getCurrentFileStoreSlug();
@@ -71,11 +72,12 @@ export function ListFiles() {
       activeFileDisplayPath === '/' &&
       files &&
       files.length === 0 &&
-      !parsedSearch
+      !parsedSearch &&
+      listFilesCache.get(path)?.isCache === false
     ) {
       void dispatch(A.createInitialFiles());
     }
-  }, [activeFileDisplayPath, files]);
+  }, [activeFileDisplayPath, files, listFilesCache, path, parsedSearch]);
 
   // Any time the focused file changes, don't focus the file menu.
   React.useEffect(() => {
