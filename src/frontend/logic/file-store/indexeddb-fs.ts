@@ -170,6 +170,15 @@ export class IDBFS extends FileStoreCache {
     return total;
   }
 
+  async clear(): Promise<void> {
+    const tx = this.#db.transaction(['files', 'folderListings'], 'readwrite');
+    await Promise.all([
+      tx.objectStore('files').clear(),
+      tx.objectStore('folderListings').clear(),
+    ]);
+    await tx.done;
+  }
+
   /**
    * Determines which items in a folder listing are cached or not.
    */

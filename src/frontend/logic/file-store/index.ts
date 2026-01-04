@@ -66,6 +66,11 @@ export abstract class FileStoreCache extends FileStore {
    * Determines which items in a folder listing are cached or not.
    */
   abstract getCachedFolderListing(files: T.FolderListing): Promise<Set<string>>;
+
+  /**
+   * Clears the cache.
+   */
+  abstract clear(): Promise<void>;
 }
 
 /**

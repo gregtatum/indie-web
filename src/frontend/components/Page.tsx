@@ -51,8 +51,8 @@ export function Settings() {
   const estimateCacheSizeForTarget = React.useCallback(
     async (target: { id: string; dbName: string }) => {
       try {
-        const idbfs = await openIDBFS(target.dbName);
-        const size = await idbfs.getApproximateSize();
+        const cache = await openIDBFS(target.dbName);
+        const size = await cache.getApproximateSize();
         if (!isMountedRef.current) {
           return;
         }
@@ -169,8 +169,7 @@ export function Settings() {
                   <div key={target.id}>
                     <button
                       type="button"
-                      onClick={() => {
-                        dispatch(A.clearOfflineCache(target.dbName));
+                      onClick={async () => {
                         setCacheEstimates((prev) => ({
                           ...prev,
                           [target.id]: {
@@ -179,7 +178,24 @@ export function Settings() {
                             error: null,
                           },
                         }));
-                        void estimateCacheSizeForTarget(target);
+                        try {
+                          const cache = await openIDBFS(target.dbName);
+                          await cache.clear();
+                          await estimateCacheSizeForTarget(target);
+                        } catch (error) {
+                          console.error(error);
+                          if (!isMountedRef.current) {
+                            return;
+                          }
+                          setCacheEstimates((prev) => ({
+                            ...prev,
+                            [target.id]: {
+                              status: 'error',
+                              size: null,
+                              error: 'Could not clear cache.',
+                            },
+                          }));
+                        }
                       }}
                     >
                       Clear Cache
