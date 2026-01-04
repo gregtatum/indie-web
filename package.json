@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "task start",
-    "build": "NODE_ENV=production webpack"
+    "build": "NODE_ENV=production webpack && node scripts/build-docs.mjs"
   },
   "alias": {
     "frontend": "./src/frontend"

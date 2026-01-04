@@ -6,6 +6,7 @@ tasks:
     cmds:
       - node src/frontend/logic/chordpo-lang/build.js
 
+  # Keep this in sync with `npm run build` which is invoked for the netlify build.
   build:
     desc: |
       Build the project for distribution. The site must be specified.
