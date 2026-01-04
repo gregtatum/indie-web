@@ -1,6 +1,7 @@
 import { type T } from 'frontend';
 import { FileStore } from 'frontend/logic/file-store';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import type { WorkerClient } from 'frontend/worker/client';
 
 function log(key: string, ...args: any[]) {
   const style = 'color: #006DFF; font-weight: bold';
@@ -13,8 +14,12 @@ export class ServerFS extends FileStore {
   apiBaseUrl: string;
   cachePromise?: Promise<void>;
 
-  constructor(server: T.FileStoreServer, cacheEnabled: boolean) {
-    super();
+  constructor(
+    server: T.FileStoreServer,
+    cacheEnabled: boolean,
+    workerClient: WorkerClient | null,
+  ) {
+    super(workerClient);
     let apiBaseUrl = server.url;
     if (!apiBaseUrl.endsWith('/')) {
       apiBaseUrl += '/';
@@ -22,11 +27,12 @@ export class ServerFS extends FileStore {
     this.apiBaseUrl = apiBaseUrl + 'file-store';
 
     if (cacheEnabled) {
-      this.cachePromise = openIDBFS(`server-fs-cache(${server.id})`).then(
-        (IDBFS) => {
-          this.cache = IDBFS;
-        },
-      );
+      this.cachePromise = openIDBFS(
+        `server-fs-cache(${server.id})`,
+        workerClient,
+      ).then((IDBFS) => {
+        this.cache = IDBFS;
+      });
     } else {
       this.cachePromise = Promise.resolve();
     }

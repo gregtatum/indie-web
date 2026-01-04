@@ -1,8 +1,14 @@
 import { T } from 'frontend';
+import type { WorkerClient } from 'frontend/worker/client';
 
 export abstract class FileStore {
   // Await on this during initialization.
   cachePromise?: Promise<void>;
+  workerClient: WorkerClient | null;
+
+  constructor(workerClient: WorkerClient | null = null) {
+    this.workerClient = workerClient;
+  }
 
   abstract saveBlob(
     pathOrMetadata: string | T.FileMetadata,

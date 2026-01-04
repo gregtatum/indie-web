@@ -23,6 +23,7 @@ export function Settings() {
   const fileStoreCacheEnabled = $$.getFileStoreCacheEnabled();
   const dropboxOauth = $$.getDropboxOauth();
   const servers = $$.getServers();
+  const workerClient = $$.getWorkerClient();
   const dispatch = Hooks.useDispatch();
   const [cacheEstimates, setCacheEstimates] = React.useState<
     Record<string, CacheEstimate>
@@ -51,7 +52,7 @@ export function Settings() {
   const estimateCacheSizeForTarget = React.useCallback(
     async (target: { id: string; dbName: string }) => {
       try {
-        const cache = await openIDBFS(target.dbName);
+        const cache = await openIDBFS(target.dbName, workerClient);
         const size = await cache.getApproximateSize();
         if (!isMountedRef.current) {
           return;
@@ -79,7 +80,7 @@ export function Settings() {
         }));
       }
     },
-    [],
+    [workerClient],
   );
 
   React.useEffect(() => {
@@ -179,7 +180,10 @@ export function Settings() {
                           },
                         }));
                         try {
-                          const cache = await openIDBFS(target.dbName);
+                          const cache = await openIDBFS(
+                            target.dbName,
+                            workerClient,
+                          );
                           await cache.clear();
                           await estimateCacheSizeForTarget(target);
                         } catch (error) {

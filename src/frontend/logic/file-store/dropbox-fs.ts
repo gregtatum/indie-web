@@ -1,6 +1,7 @@
 import { Dropbox, files } from 'dropbox';
 import { FileStoreError, FileStore } from 'frontend/logic/file-store';
 import { T } from 'frontend';
+import type { WorkerClient } from 'frontend/worker/client';
 import { openIDBFS } from './indexeddb-fs';
 
 export const IDB_CACHE_NAME = 'dropbox-fs-cache';
@@ -47,15 +48,21 @@ export class DropboxFS extends FileStore {
   #dropbox: Dropbox;
   cachePromise?: Promise<void>;
 
-  constructor(dropbox: Dropbox, cacheEnabled: boolean) {
-    super();
+  constructor(
+    dropbox: Dropbox,
+    cacheEnabled: boolean,
+    workerClient: WorkerClient | null,
+  ) {
+    super(workerClient);
     this.#dropbox = dropbox;
     if (!cacheEnabled || process.env.NODE_ENV === 'test') {
       this.cachePromise = Promise.resolve();
     } else {
-      this.cachePromise = void openIDBFS(IDB_CACHE_NAME).then((IDBFS) => {
-        this.cache = IDBFS;
-      });
+      this.cachePromise = void openIDBFS(IDB_CACHE_NAME, workerClient).then(
+        (IDBFS) => {
+          this.cache = IDBFS;
+        },
+      );
     }
   }
 

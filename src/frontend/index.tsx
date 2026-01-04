@@ -91,7 +91,7 @@ export async function initializeFrontend(): Promise<void> {
   if (cachePromise) {
     await cachePromise;
   }
-  const ipdbfs = await openIDBFS(BROWSER_FILES_DB_NAME);
+  const ipdbfs = await openIDBFS(BROWSER_FILES_DB_NAME, workerClient);
   store.dispatch(A.connectIDBFS(ipdbfs));
 
   mountReact(store);

@@ -214,8 +214,9 @@ export const getDropboxOrNull = createSelector(
 export const getDropboxFSOrNull = createSelector(
   getDropboxOrNull,
   getFileStoreCacheEnabled,
-  (dropbox, cacheEnabled) =>
-    dropbox ? new DropboxFS(dropbox, cacheEnabled) : null,
+  getWorkerClient,
+  (dropbox, cacheEnabled, workerClient) =>
+    dropbox ? new DropboxFS(dropbox, cacheEnabled, workerClient) : null,
 );
 
 export const getIsDropboxInitiallyExpired = createSelector(
@@ -242,11 +243,12 @@ export const getCurrentServerOrNull = createSelector(
 export const getServerFSOrNull = createSelector(
   getCurrentServerOrNull,
   getFileStoreCacheEnabled,
-  (server, cacheEnabled) => {
+  getWorkerClient,
+  (server, cacheEnabled, workerClient) => {
     if (!server) {
       return null;
     }
-    return new ServerFS(server, cacheEnabled);
+    return new ServerFS(server, cacheEnabled, workerClient);
   },
 );
 
@@ -255,12 +257,16 @@ export const getCurrentFSOrNull = createSelector(
   getDropboxFSOrNull,
   getIDBFSOrNull,
   getServerFSOrNull,
-  (fsName, dropbox, idbfs, server): FileStore | null => {
+  getWorkerClient,
+  (fsName, dropbox, idbfs, server, workerClient): FileStore | null => {
     switch (fsName) {
       case 'dropbox': {
         return dropbox;
       }
       case 'browser': {
+        if (idbfs) {
+          idbfs.workerClient = workerClient;
+        }
         return idbfs;
       }
       case 'server': {

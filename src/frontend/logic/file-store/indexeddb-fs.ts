@@ -2,6 +2,7 @@ import * as idb from 'idb';
 import * as uuid from 'uuid';
 import { FileStoreCache, FileStoreError } from 'frontend/logic/file-store';
 import { type T } from 'frontend';
+import type { WorkerClient } from 'frontend/worker/client';
 import { getPathFileName, getDirName, updatePathRoot } from 'frontend/utils';
 import * as AppLogic from 'frontend/logic/app-logic';
 
@@ -60,7 +61,10 @@ function log(key: string, ...args: any[]) {
 /**
  * Manage the life cycle of the IndexedDB instance.
  */
-export async function openIDBFS(name: string): Promise<IDBFS> {
+export async function openIDBFS(
+  name: string,
+  workerClient: WorkerClient | null = null,
+): Promise<IDBFS> {
   let idbfs: IDBFS | null = null;
 
   const db = await idb.openDB<T.IDBFSSchema>(name, 1, {
@@ -113,7 +117,7 @@ export async function openIDBFS(name: string): Promise<IDBFS> {
     },
   });
 
-  idbfs = new IDBFS(db);
+  idbfs = new IDBFS(db, workerClient);
 
   return idbfs;
 }
@@ -124,8 +128,11 @@ export async function openIDBFS(name: string): Promise<IDBFS> {
 export class IDBFS extends FileStoreCache {
   #db: idb.IDBPDatabase<T.IDBFSSchema>;
   open = true;
-  constructor(db: idb.IDBPDatabase<T.IDBFSSchema>) {
-    super();
+  constructor(
+    db: idb.IDBPDatabase<T.IDBFSSchema>,
+    workerClient: WorkerClient | null,
+  ) {
+    super(workerClient);
     this.#db = db;
   }
 
