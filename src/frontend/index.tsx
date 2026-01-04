@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { Provider, useSelector } from 'react-redux';
-import { createStore } from './store/create-store';
+import { createRoot } from 'react-dom/client';
 import * as T from 'frontend/@types';
 import { App } from 'frontend/components/App';
+import { WorkerClient } from 'frontend/worker/client';
 import { ensureExists, maybeMockGoogleAnalytics } from 'frontend/utils';
-import { createRoot } from 'react-dom/client';
+import { createStore } from './store/create-store';
 
 import * as A from 'frontend/store/actions';
 import * as $ from 'frontend/store/selectors/index';
@@ -12,6 +13,7 @@ import {
   BROWSER_FILES_DB_NAME,
   openIDBFS,
 } from './logic/file-store/indexeddb-fs';
+import { WorkerServer } from './worker/server';
 
 export * as A from 'frontend/store/actions';
 export * as $ from 'frontend/store/selectors/index';
@@ -39,21 +41,27 @@ for (const [name, fn] of Object.entries($)) {
   ($$ as any)[name] = () => useSelector(fn as any);
 }
 
-if (process.env.NODE_ENV !== 'test') {
+if (isWorkerContext()) {
+  new WorkerServer();
+} else if (process.env.NODE_ENV !== 'test') {
+  // This script has been loaded in a real browser, trigger the initialization
+  // of the frontent.
   document.addEventListener('DOMContentLoaded', () => {
-    init().catch((error) => {
+    initializeFrontend().catch((error) => {
       console.error('Error during initialization', error);
     });
   });
 }
 
-export async function init(): Promise<void> {
+export async function initializeFrontend(): Promise<void> {
   maybeMockGoogleAnalytics();
   initServiceWorker();
 
   const store = createStore();
 
   validateFileStoreSelection(store);
+  const workerClient = initSharedWorker();
+  console.log(`!!! workerClient`, workerClient);
 
   // Expose the $$ as a global for the webconsole.
   const $$ = {};
@@ -105,6 +113,21 @@ function mountReact(store: T.Store): void {
   );
   const root = createRoot(mountElement);
   root.render(createRootApp(store));
+}
+
+function initSharedWorker(): WorkerClient | null {
+  if (typeof SharedWorker === 'undefined') {
+    // SharedWorker isn't supported on some systems like Chrome Android.
+    // https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker#browser_compatibility
+    return null;
+  }
+  const client = new WorkerClient();
+  client.ping();
+  return client;
+}
+
+function isWorkerContext(): boolean {
+  return typeof document === 'undefined' && typeof self !== 'undefined';
 }
 
 function initServiceWorker() {
