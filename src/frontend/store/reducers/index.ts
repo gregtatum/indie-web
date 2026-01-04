@@ -9,6 +9,7 @@ import {
 } from 'frontend/utils';
 import { FilesIndex } from 'frontend/logic/files-index';
 import { IDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import type { WorkerClient } from 'frontend/worker/client';
 import { toFileStoreName } from 'frontend/logic/app-logic';
 import { languageCoachReducer } from './language-coach';
 
@@ -655,6 +656,18 @@ function idbfs(state: IDBFS | null = null, action: T.Action): IDBFS | null {
   }
 }
 
+function workerClient(
+  state: WorkerClient | null = null,
+  action: T.Action,
+): WorkerClient | null {
+  switch (action.type) {
+    case 'set-worker-client':
+      return action.workerClient;
+    default:
+      return state;
+  }
+}
+
 function openAIApiKey(
   state: string | null = localStorage.getItem('openAIAPIKey'),
   action: T.Action,
@@ -837,6 +850,7 @@ export const reducers = combineReducers({
   shouldHideHeader,
   view,
   openAIApiKey,
+  workerClient,
   fileFocusByPath,
 });
 

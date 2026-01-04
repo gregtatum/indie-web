@@ -4,6 +4,7 @@ import {
   BROWSER_FILES_DB_NAME,
   IDBFS,
 } from 'frontend/logic/file-store/indexeddb-fs';
+import type { WorkerClient } from 'frontend/worker/client';
 
 export function removeDropboxAccessToken() {
   localStorage.clear();
@@ -216,6 +217,10 @@ export function changeFileStore(
 
 export function connectIDBFS(idbfs: IDBFS) {
   return { type: 'connect-idbfs' as const, idbfs };
+}
+
+export function setWorkerClient(workerClient: WorkerClient | null) {
+  return { type: 'set-worker-client' as const, workerClient };
 }
 
 export function stemFrequencyAnalysis(stems: T.Stem[]) {

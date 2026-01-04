@@ -138,6 +138,10 @@ export function getIDBFSOrNull(state: State) {
   return state.idbfs;
 }
 
+export function getWorkerClient(state: State) {
+  return state.workerClient;
+}
+
 export function getOpenAIApiKey(state: State) {
   return state.openAIApiKey;
 }

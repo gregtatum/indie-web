@@ -3,17 +3,16 @@ import { Provider, useSelector } from 'react-redux';
 import { createRoot } from 'react-dom/client';
 import * as T from 'frontend/@types';
 import { App } from 'frontend/components/App';
-import { WorkerClient } from 'frontend/worker/client';
-import { ensureExists, maybeMockGoogleAnalytics } from 'frontend/utils';
-import { createStore } from './store/create-store';
-
 import * as A from 'frontend/store/actions';
 import * as $ from 'frontend/store/selectors/index';
+import { ensureExists, maybeMockGoogleAnalytics } from 'frontend/utils';
+import { WorkerClient } from 'frontend/worker/client';
+import { WorkerServer } from 'frontend/worker/server';
+import { createStore } from './store/create-store';
 import {
   BROWSER_FILES_DB_NAME,
   openIDBFS,
 } from './logic/file-store/indexeddb-fs';
-import { WorkerServer } from './worker/server';
 
 export * as A from 'frontend/store/actions';
 export * as $ from 'frontend/store/selectors/index';
@@ -61,7 +60,7 @@ export async function initializeFrontend(): Promise<void> {
 
   validateFileStoreSelection(store);
   const workerClient = initSharedWorker();
-  console.log(`!!! workerClient`, workerClient);
+  store.dispatch(A.setWorkerClient(workerClient));
 
   // Expose the $$ as a global for the webconsole.
   const $$ = {};
