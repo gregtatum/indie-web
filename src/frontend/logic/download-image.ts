@@ -31,7 +31,11 @@ export async function downloadImage(
         const objectURL = (imageCache[src] = URL.createObjectURL(file.blob));
         return objectURL;
       } catch (error) {
-        (error as IDBError)?.cacheLog();
+        if (error instanceof IDBError) {
+          error.cacheLog();
+        } else {
+          console.error(error);
+        }
       }
     }
 

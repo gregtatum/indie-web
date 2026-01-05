@@ -8,7 +8,7 @@ import {
   sluggify,
 } from 'frontend/utils';
 import { FilesIndex } from 'frontend/logic/files-index';
-import { IDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 import { toFileStoreName } from 'frontend/logic/app-logic';
 import { languageCoachReducer } from './language-coach';
@@ -645,7 +645,10 @@ function searchString(state = '', action: T.Action) {
   }
 }
 
-function idbfs(state: IDBFS | null = null, action: T.Action): IDBFS | null {
+function idbfs(
+  state: FileStoreCache | null = null,
+  action: T.Action,
+): FileStoreCache | null {
   switch (action.type) {
     case 'connect-idbfs':
       return action.idbfs;

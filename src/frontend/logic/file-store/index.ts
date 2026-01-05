@@ -77,6 +77,11 @@ export abstract class FileStoreCache extends FileStore {
    * Clears the cache.
    */
   abstract clear(): Promise<void>;
+
+  /**
+   * Returns the total number of files stored in the cache.
+   */
+  abstract getFileCount(): Promise<number>;
 }
 
 /**

@@ -1,9 +1,7 @@
 import { T } from 'frontend';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
-import {
-  BROWSER_FILES_DB_NAME,
-  IDBFS,
-} from 'frontend/logic/file-store/indexeddb-fs';
+import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
+import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 
 export function removeDropboxAccessToken() {
@@ -215,7 +213,7 @@ export function changeFileStore(
   };
 }
 
-export function connectIDBFS(idbfs: IDBFS) {
+export function connectIDBFS(idbfs: FileStoreCache) {
   return { type: 'connect-idbfs' as const, idbfs };
 }
 

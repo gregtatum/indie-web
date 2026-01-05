@@ -61,10 +61,18 @@ function log(key: string, ...args: any[]) {
 /**
  * Manage the life cycle of the IndexedDB instance.
  */
+export async function openIDBFS(name: string): Promise<IDBFS>;
+export async function openIDBFS(
+  name: string,
+  workerClient: WorkerClient | null,
+): Promise<FileStoreCache>;
 export async function openIDBFS(
   name: string,
   workerClient: WorkerClient | null = null,
-): Promise<IDBFS> {
+): Promise<FileStoreCache> {
+  if (workerClient) {
+    return new WorkerIDBFS(name, workerClient);
+  }
   let idbfs: IDBFS | null = null;
 
   const db = await idb.openDB<T.IDBFSSchema>(name, 1, {
@@ -120,6 +128,116 @@ export async function openIDBFS(
   idbfs = new IDBFS(db, workerClient);
 
   return idbfs;
+}
+
+class WorkerIDBFS extends FileStoreCache {
+  #name: string;
+  #workerClient: WorkerClient;
+
+  constructor(name: string, workerClient: WorkerClient) {
+    super(workerClient);
+    this.#name = name;
+    this.#workerClient = workerClient;
+  }
+
+  async listFiles(path: string): Promise<T.FolderListing> {
+    return this.#request('listFiles', path);
+  }
+
+  async isCached(path: string): Promise<boolean> {
+    return this.#request('isCached', path);
+  }
+
+  async getApproximateSize(): Promise<number> {
+    return this.#request('getApproximateSize');
+  }
+
+  async clear(): Promise<void> {
+    await this.#request('clear');
+  }
+
+  async getCachedFolderListing(listing: T.FolderListing): Promise<Set<string>> {
+    const cached = await this.#request<string[]>(
+      'getCachedFolderListing',
+      listing,
+    );
+    return new Set(cached);
+  }
+
+  async createFolder(path: string): Promise<T.FolderMetadata> {
+    return this.#request('createFolder', path);
+  }
+
+  async addFolderListing(
+    path: string,
+    files: T.FolderListing,
+  ): Promise<T.FolderListingRow> {
+    return this.#request('addFolderListing', path, files);
+  }
+
+  async fileExists(path: string): Promise<boolean> {
+    return this.#request('fileExists', path);
+  }
+
+  async loadBlob(path: string): Promise<T.BlobFile> {
+    return this.#request('loadBlob', path);
+  }
+
+  async compressFolder(path: string): Promise<Blob> {
+    return this.#request('compressFolder', path);
+  }
+
+  async getFileCount(): Promise<number> {
+    return this.#request('getFileCount');
+  }
+
+  async saveBlob(
+    pathOrMetadata: string | T.FileMetadata,
+    mode: T.SaveMode,
+    blob: Blob,
+  ): Promise<T.FileMetadata> {
+    return this.#request('saveBlob', pathOrMetadata, mode, blob);
+  }
+
+  async delete(path: string): Promise<void> {
+    await this.#request('delete', path);
+  }
+
+  async move(
+    fromPath: string,
+    toPath: string,
+  ): Promise<T.FileMetadata | T.FolderMetadata> {
+    return this.#request('move', fromPath, toPath);
+  }
+
+  async updateMetadata(
+    path: string,
+    metadata: Partial<T.FileMetadata>,
+  ): Promise<void> {
+    await this.#request('updateMetadata', path, metadata);
+  }
+
+  async #request<T = unknown>(method: string, ...args: unknown[]): Promise<T> {
+    try {
+      return await this.#workerClient.requestIDBFS<T>(this.#name, method, args);
+    } catch (error) {
+      const payload = error as {
+        kind?: 'idb-error';
+        message?: string;
+        isNotFound?: boolean;
+      };
+      if (payload?.kind === 'idb-error') {
+        if (payload.isNotFound) {
+          throw IDBError.notFound(payload.message);
+        }
+        throw new IDBError(payload.message);
+      }
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(String(payload?.message ?? error));
+    }
+  }
 }
 
 /**

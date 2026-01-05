@@ -5,6 +5,20 @@ type WorkerMessage = {
   connectionCount?: number;
 };
 
+type WorkerError = {
+  kind?: 'idb-error';
+  message: string;
+  isNotFound?: boolean;
+};
+
+type WorkerResponse = {
+  type: 'idbfs-response';
+  id: string;
+  ok: boolean;
+  result?: unknown;
+  error?: WorkerError;
+};
+
 type WorkerPing = {
   type: 'ping';
   source: string;
@@ -13,6 +27,14 @@ type WorkerPing = {
 
 export class WorkerClient {
   #worker: SharedWorker;
+  #pending = new Map<
+    string,
+    {
+      resolve: (value: any) => void;
+      reject: (error: WorkerError) => void;
+    }
+  >();
+  #requestId = 0;
 
   constructor() {
     const scripts = document.querySelectorAll('script[src$="bundle.js"]');
@@ -35,10 +57,41 @@ export class WorkerClient {
       if (!data || typeof data !== 'object') {
         return;
       }
-      const message = data as WorkerMessage;
+      const message = data as WorkerMessage | WorkerResponse;
+      if (message.type === 'idbfs-response' && 'id' in message) {
+        const response = message as WorkerResponse;
+        const pending = this.#pending.get(response.id);
+        if (!pending) {
+          return;
+        }
+        this.#pending.delete(response.id);
+        if (response.ok) {
+          pending.resolve(response.result);
+        } else {
+          pending.reject(
+            response.error ?? { message: 'Unknown worker error.' },
+          );
+        }
+        return;
+      }
       if (message.type === 'worker-ready' || message.type === 'pong') {
         console.log('[worker.client]', message);
       }
+    });
+  }
+
+  requestIDBFS<T>(name: string, method: string, args: unknown[]): Promise<T> {
+    const id = `${Date.now()}-${this.#requestId++}`;
+    this.#worker.port.postMessage({
+      type: 'idbfs-request',
+      id,
+      name,
+      method,
+      args,
+    });
+
+    return new Promise((resolve, reject) => {
+      this.#pending.set(id, { resolve, reject });
     });
   }
 

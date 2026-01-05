@@ -159,7 +159,11 @@ export function listFiles(path = ''): Thunk<Promise<void>> {
           );
         }
       } catch (error) {
-        (error as IDBError)?.cacheLog();
+        if (error instanceof IDBError) {
+          error.cacheLog();
+        } else {
+          console.error(error);
+        }
       }
     }
 
@@ -200,7 +204,11 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
         cachedFile = await fileStore.cache.loadText(path);
         handleFile(cachedFile);
       } catch (error) {
-        (error as IDBError)?.cacheLog();
+        if (error instanceof IDBError) {
+          error.cacheLog();
+        } else {
+          console.error(error);
+        }
       }
     }
 
