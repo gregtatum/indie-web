@@ -1,133 +1,37 @@
 import * as React from 'react';
-import { A, T, $$, Hooks } from 'frontend';
 import * as Router from 'react-router-dom';
-
-import './LinkDropbox.css';
+import { A, $$, Hooks } from 'frontend';
 import {
   getEnv,
   UnhandledCaseError,
   getStringProp,
   getNumberProp,
-  dropboxErrorMessage,
   ensureNever,
 } from 'frontend/utils';
 import { Privacy } from './Page';
 import { getRedirectUri, useCodeVerifier } from '../hooks/pcse';
 import { MainView } from './App';
+import './LinkDropbox.css';
 
 const dropboxClientId = getEnv('DROPBOX_CLIENT_ID');
 
 type AuthState = 'no-auth' | 'await-auth' | 'auth-failed' | 'refreshing';
 
 export function LinkDropbox(props: { children: any }) {
-  const isDropboxInitiallyExpired = $$.getIsDropboxInitiallyExpired();
   const oauth = $$.getDropboxOauth();
   const fsName = $$.getCurrentFileStoreName();
   const view = $$.getView();
 
   const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
 
-  const oauthRef = React.useRef<T.DropboxOauth | null>(null);
-
-  oauthRef.current = oauth;
   let defaultAuthState: AuthState = 'no-auth';
   const isLogin = window.location.pathname === '/login';
   if (isLogin) {
     defaultAuthState = 'await-auth';
   }
-  if (oauth && oauth.expires < Date.now()) {
-    defaultAuthState = 'refreshing';
-  }
   const [authState, setAuthState] = React.useState<AuthState>(defaultAuthState);
-  const [authError, setAuthError] = React.useState('');
   const dispatch = Hooks.useDispatch();
   const navigate = Router.useNavigate();
-
-  React.useEffect(() => {
-    if (!oauth) {
-      return;
-    }
-    if (oauth.expires === Infinity) {
-      // This is most likely a test that is opting out of refresh token behavior.
-      return;
-    }
-    if (oauth.expires > Date.now()) {
-      setTimeout(useRefreshToken, oauth.expires - Date.now());
-      return;
-    }
-    useRefreshToken();
-
-    function useRefreshToken() {
-      if (
-        !oauth ||
-        oauthRef.current !== oauth ||
-        process.env.NODE_ENV === 'test'
-      ) {
-        return;
-      }
-      console.log('Refresh token is out of date, fetching a new one.');
-      setAuthState('refreshing');
-      fetch(
-        'https://www.dropbox.com/oauth2/token' +
-          '?' +
-          new URLSearchParams({
-            grant_type: 'refresh_token',
-            client_id: dropboxClientId,
-            refresh_token: oauth.refreshToken,
-          }).toString(),
-        { method: 'POST' },
-      )
-        .then(async (response) => {
-          if (response.status === 200) {
-            const text = await response.text();
-            try {
-              const json: unknown = JSON.parse(text);
-              // {
-              //   "access_token": "sl...-...",
-              //   "token_type": "bearer",
-              //   "expires_in": 14400
-              // }
-              const accessToken = getStringProp(json, 'access_token');
-              const expiresIn = getNumberProp(json, 'expires_in');
-              if (accessToken && expiresIn) {
-                dispatch(
-                  A.setDropboxAccessToken(
-                    accessToken,
-                    expiresIn,
-                    oauth.refreshToken,
-                  ),
-                );
-                setAuthState('no-auth');
-              } else {
-                console.error(
-                  'Did not receive all expected data from refreshing the Dropbox access token',
-                  { json, accessToken, expiresIn },
-                );
-                setAuthState('auth-failed');
-              }
-            } catch {
-              console.error('Could not parse response', text);
-              setAuthError('Dropbox returned strange data.');
-              setAuthState('auth-failed');
-            }
-          } else {
-            console.error(
-              'The Dropbox API returned an error.',
-              await response.text(),
-            );
-            setAuthError(
-              'Dropbox replied with information that could not be understood.',
-            );
-            setAuthState('auth-failed');
-          }
-        })
-        .catch((error) => {
-          console.error(`Error with refresh token:`, error);
-          setAuthError(dropboxErrorMessage(error));
-          setAuthState('auth-failed');
-        });
-    }
-  }, [oauth]);
 
   React.useEffect(() => {
     if (authState === 'no-auth') {
@@ -217,7 +121,7 @@ export function LinkDropbox(props: { children: any }) {
         }
       })
       .then(null, (error) => {
-        setAuthError(dropboxErrorMessage(error));
+        console.error('Dropbox login failed.', error);
         setAuthState('auth-failed');
       });
   }, [isLogin]);
@@ -242,22 +146,6 @@ export function LinkDropbox(props: { children: any }) {
 
   if (fsName !== 'dropbox') {
     return props.children;
-  }
-
-  if (isDropboxInitiallyExpired) {
-    return (
-      <MainView>
-        <div className="linkDropboxAuth centered">
-          <img
-            src="/logo.png"
-            width="148"
-            height="179"
-            alt="Accessing Your Dropbox…"
-          />
-          <p>{authError ? authError : null}</p>
-        </div>
-      </MainView>
-    );
   }
 
   if (!oauth) {
@@ -385,110 +273,14 @@ export function UnlinkDropbox() {
  */
 export function DropboxLogin(props: { children: any }) {
   const isLogin = window.location.pathname === '/login';
-  const isDropboxInitiallyExpired = $$.getIsDropboxInitiallyExpired();
   const oauth = $$.getDropboxOauth();
-  const oauthRef = React.useRef<T.DropboxOauth | null>(null);
-  oauthRef.current = oauth;
   let defaultAuthState: AuthState = 'no-auth';
   if (isLogin) {
     defaultAuthState = 'await-auth';
   }
-  if (oauth && oauth.expires < Date.now()) {
-    defaultAuthState = 'refreshing';
-  }
   const [authState, setAuthState] = React.useState<AuthState>(defaultAuthState);
-  const [authError, setAuthError] = React.useState('');
   const dispatch = Hooks.useDispatch();
   const navigate = Router.useNavigate();
-
-  React.useEffect(() => {
-    if (!oauth) {
-      return;
-    }
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
-    if (oauth.expires === Infinity) {
-      // This is most likely a test that is opting out of refresh token behavior.
-      return;
-    }
-    if (oauth.expires > Date.now()) {
-      setTimeout(useRefreshToken, oauth.expires - Date.now());
-      return;
-    }
-    useRefreshToken();
-
-    function useRefreshToken() {
-      if (
-        !oauth ||
-        oauthRef.current !== oauth ||
-        process.env.NODE_ENV === 'test'
-      ) {
-        return;
-      }
-      console.log('Refresh token is out of date, fetching a new one.');
-      setAuthState('refreshing');
-      fetch(
-        'https://www.dropbox.com/oauth2/token' +
-          '?' +
-          new URLSearchParams({
-            grant_type: 'refresh_token',
-            client_id: dropboxClientId,
-            refresh_token: oauth.refreshToken,
-          }).toString(),
-        { method: 'POST' },
-      )
-        .then(async (response) => {
-          if (response.status === 200) {
-            const text = await response.text();
-            try {
-              const json: unknown = JSON.parse(text);
-              // {
-              //   "access_token": "sl...-...",
-              //   "token_type": "bearer",
-              //   "expires_in": 14400
-              // }
-              const accessToken = getStringProp(json, 'access_token');
-              const expiresIn = getNumberProp(json, 'expires_in');
-              if (accessToken && expiresIn) {
-                dispatch(
-                  A.setDropboxAccessToken(
-                    accessToken,
-                    expiresIn,
-                    oauth.refreshToken,
-                  ),
-                );
-                setAuthState('no-auth');
-              } else {
-                console.error(
-                  'Did not receive all expected data from refreshing the Dropbox access token',
-                  { json, accessToken, expiresIn },
-                );
-                setAuthState('auth-failed');
-              }
-            } catch {
-              console.error('Could not parse response', text);
-              setAuthError('Dropbox returned strange data.');
-              setAuthState('auth-failed');
-            }
-          } else {
-            console.error(
-              'The Dropbox API returned an error.',
-              await response.text(),
-            );
-            setAuthError(
-              'Dropbox replied with information that could not be understood.',
-            );
-            setAuthState('auth-failed');
-          }
-        })
-        .catch((error) => {
-          console.error(`Error with refresh token:`, error);
-          setAuthError(dropboxErrorMessage(error));
-          setAuthState('auth-failed');
-        });
-    }
-  }, [oauth]);
 
   React.useEffect(() => {
     if (authState === 'no-auth') {
@@ -578,27 +370,13 @@ export function DropboxLogin(props: { children: any }) {
         }
       })
       .then(null, (error) => {
-        setAuthError(dropboxErrorMessage(error));
+        console.error('Dropbox login failed.', error);
         setAuthState('auth-failed');
       });
   }, [isLogin]);
 
   const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
   const view = $$.getView();
-
-  if (isDropboxInitiallyExpired) {
-    return (
-      <div className="linkDropboxAuth centered">
-        <img
-          src="/logo.png"
-          width="148"
-          height="179"
-          alt="Accessing Your Dropbox…"
-        />
-        <p>{authError ? authError : null}</p>
-      </div>
-    );
-  }
 
   if (!oauth) {
     switch (authState) {

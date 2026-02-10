@@ -1,7 +1,8 @@
-import * as T from 'frontend/@types';
 import { Dropbox } from 'dropbox';
 import OpenAI from 'openai';
 import { createSelector } from 'reselect';
+import { marked } from 'marked';
+import * as T from 'frontend/@types';
 import {
   ensureExists,
   getDirName,
@@ -16,7 +17,7 @@ import {
   transposeParsedSong,
 } from 'frontend/logic/parse-chords';
 import { parseSearchString } from 'frontend/logic/search';
-import { marked } from 'marked';
+import { createDropboxClient } from 'frontend/logic/file-store/dropbox-client';
 import { DropboxFS } from 'frontend/logic/file-store/dropbox-fs';
 import { FileStore } from 'frontend/logic/file-store';
 import { ServerFS } from 'frontend/logic/file-store/server-fs';
@@ -173,41 +174,7 @@ export const getDropboxOrNull = createSelector(
     if (!oauth) {
       return null;
     }
-    const { accessToken } = oauth;
-    // Initiate dropbox.
-    const dropbox = new Dropbox({ accessToken });
-    // Intercept all calls to dropbox and log them.
-    const fakeDropbox: Record<string, any> = {};
-
-    for (const key in dropbox) {
-      fakeDropbox[key] = (...args: any[]) => {
-        // First log the request.
-        const style = 'color: #006DFF; font-weight: bold';
-        if (process.env.NODE_ENV !== 'test') {
-          console.log(`[dropbox] calling %c"${key}"`, style, ...args);
-        }
-
-        // Monitor the response, and pass on the promise result.
-        return new Promise((resolve, reject) => {
-          const result = (dropbox as any)[key](...args);
-          result.then(
-            (response: any) => {
-              if (process.env.NODE_ENV !== 'test') {
-                console.log(`[dropbox] response %c"${key}"`, style, response);
-              }
-              resolve(response);
-            },
-            (error: any) => {
-              if (process.env.NODE_ENV !== 'test') {
-                console.log(`[dropbox] error %c"${key}"`, style, args, error);
-              }
-              reject(error);
-            },
-          );
-        });
-      };
-    }
-    return fakeDropbox as any;
+    return createDropboxClient(oauth);
   },
 );
 
@@ -217,16 +184,6 @@ export const getDropboxFSOrNull = createSelector(
   getWorkerClient,
   (dropbox, cacheEnabled, workerClient) =>
     dropbox ? new DropboxFS(dropbox, cacheEnabled, workerClient) : null,
-);
-
-export const getIsDropboxInitiallyExpired = createSelector(
-  getDropboxOauth,
-  (oauth) => {
-    if (!oauth) {
-      return false;
-    }
-    return oauth.expires < Date.now();
-  },
 );
 
 export const getCurrentServerOrNull = createSelector(

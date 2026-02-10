@@ -9,6 +9,7 @@ import { ensureExists, maybeMockGoogleAnalytics } from 'frontend/utils';
 import { WorkerClient } from 'frontend/worker/client';
 import { WorkerServer } from 'frontend/worker/server';
 import { createStore } from './store/create-store';
+import { setStore } from './store/store-instance';
 import {
   BROWSER_FILES_DB_NAME,
   openIDBFS,
@@ -57,6 +58,7 @@ export async function initializeFrontend(): Promise<void> {
   initServiceWorker();
 
   const store = createStore();
+  setStore(store);
 
   validateFileStoreSelection(store);
   const workerClient = initSharedWorker();
