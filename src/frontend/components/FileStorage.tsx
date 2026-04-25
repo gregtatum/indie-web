@@ -7,10 +7,13 @@ import { sluggify } from 'frontend/utils';
 
 export function FileStorage() {
   const fileStoreServers = $$.getServers();
+  const experimentalFeatures = $$.getExperimentalFeatures();
   const { dispatch, getState } = Hooks.useStore();
   const nameRef = React.useRef<null | HTMLInputElement>(null);
   const urlRef = React.useRef<null | HTMLInputElement>(null);
   const { error, setError } = Hooks.useError();
+  const [storeType, setStoreType] =
+    React.useState<T.FileStoreServer['storeType']>('files');
 
   function addFileServer(event: Event) {
     event.preventDefault();
@@ -18,7 +21,13 @@ export function FileStorage() {
     const servers = $.getServers(getState());
     const name = nameRef.current?.value;
     const url = urlRef.current?.value;
-    const server = validateFileStoreServer(name, url, servers, setError);
+    const server = validateFileStoreServer(
+      name,
+      url,
+      servers,
+      setError,
+      storeType,
+    );
     if (server) {
       dispatch(A.setHasOnboarded(true));
       dispatch(A.addFileStoreServer(server));
@@ -74,6 +83,43 @@ export function FileStorage() {
               defaultValue="http://localhost:6543"
             ></input>
           </div>
+          {experimentalFeatures ? (
+            <div className="file-storage-input">
+              <label>Storage Type</label>
+              <div className="file-storage-radio-group">
+                <label>
+                  <input
+                    type="radio"
+                    name="storeType"
+                    value="files"
+                    checked={storeType === 'files'}
+                    onChange={() => setStoreType('files')}
+                  />
+                  {' File Storage'}
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="storeType"
+                    value="music"
+                    checked={storeType === 'music'}
+                    onChange={() => setStoreType('music')}
+                  />
+                  {' Music Storage '}
+                  <span className="pageBeta pageExperimental">
+                    Experimental
+                  </span>
+                </label>
+              </div>
+              {storeType === 'music' ? (
+                <p className="file-storage-note">
+                  Point the server&apos;s mount at your music folder. To use
+                  multiple music folders, run a separate server instance for
+                  each one.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {error}
           <button type="submit">Add File Server</button>
         </form>
@@ -120,6 +166,7 @@ function FileStorageList({ fileStoreServers }: FileStorageListProps) {
       urlInput.value,
       otherServers,
       setError,
+      oldServer.storeType,
     );
     if (server) {
       dispatch(A.updateFileStoreServer(oldServer, server));
@@ -178,6 +225,7 @@ function validateFileStoreServer(
   url: string | undefined,
   servers: T.FileStoreServer[],
   setError: (error: string) => void,
+  storeType: T.FileStoreServer['storeType'] = 'files',
 ): null | T.FileStoreServer {
   // Make sure all the values are set.
   if (!name) {
@@ -219,5 +267,5 @@ function validateFileStoreServer(
     return null;
   }
 
-  return { name, url, id, storeType: 'files' };
+  return { name, url, id, storeType };
 }
