@@ -7,6 +7,7 @@ import Express, {
 } from 'express';
 import { colors } from './utils.ts';
 import { fileStoreRoute } from './route-file-store.ts';
+import { musicRoute } from './route-music.ts';
 import cors from 'cors';
 import * as url from 'url';
 import path from 'path';
@@ -30,9 +31,10 @@ export function startServer(): ExpressApp {
   const mountPath = path.join(dirname, '../../mount');
 
   app.use('/file-store', fileStoreRoute(mountPath));
+  app.use('/music', musicRoute(mountPath));
   app.get('/', (_request, response) => {
     response.json({
-      routes: ['/file-store'],
+      routes: ['/file-store', '/music'],
     });
   });
 
