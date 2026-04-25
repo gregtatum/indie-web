@@ -13,3 +13,17 @@ services:
     volumes:
       # Choose what folder you want to serve.
       - ./mount:/app/mount
+
+  # To serve a second folder (e.g. a music library) add another service.
+  # Each mount point requires its own server instance on a different port.
+  # In the app, add it as a separate "Music Storage" server pointing to
+  # http://your-host:6544
+  #
+  # floppydisk-music:
+  #   image: tatumcreative/floppydisk.link:latest
+  #   container_name: floppydisk-music
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6544:6543"
+  #   volumes:
+  #     - /path/to/your/music:/app/mount
