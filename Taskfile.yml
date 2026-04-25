@@ -103,12 +103,18 @@ tasks:
       - "env NODE_ENV=test jest --coverage"
       - "echo 'View coverage report at: ./coverage/lcov-report/'"
 
+  test-server:
+    desc: Run server integration tests (requires Node 22+)
+    cmds:
+      - node --disable-warning=ExperimentalWarning --test src/server/test/*.test.ts
+
   test-all:
     desc: Run lint, TypeScript check, and tests
     cmds:
       - task: lint
       - task: ts
       - task: test
+      - task: test-server
 
   docker-server:
     desc: Run the server from docker.
