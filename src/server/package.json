@@ -12,7 +12,8 @@
   "dependencies": {
     "archiver": "^7.0.1",
     "cors": "^2.8.5",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "music-metadata": "^11.12.3"
   },
   "devDependencies": {
     "@types/archiver": "^6.0.3",
