@@ -1,6 +1,12 @@
-import { ApiRoute, NotFoundError, RequestConflict } from './utils.ts';
-import { Dirent, promises as fs } from 'node:fs';
-import { join, extname } from 'node:path';
+import {
+  ApiRoute,
+  ClientError,
+  NotFoundError,
+  RequestConflict,
+} from './utils.ts';
+import { createReadStream, Dirent, promises as fs } from 'node:fs';
+import { join, extname, resolve } from 'node:path';
+import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 
 export interface TrackMetadata {
@@ -135,7 +141,96 @@ export function musicRoute(mountPath: string) {
     }
   });
 
+  /**
+   * Streams an audio file with HTTP range request support so the browser
+   * <audio> element can seek. Accepts a ?path= query parameter.
+   */
+  route.addBlobRoute('GET', '/stream-audio', async (req, res) => {
+    const clientPath = req.query.path;
+    if (typeof clientPath !== 'string' || !clientPath) {
+      res.status(400).send('Missing path query parameter.');
+      return;
+    }
+
+    const resolvedPath = resolveMountedPath(clientPath, mountPath);
+
+    let stats: Awaited<ReturnType<typeof fs.stat>>;
+    try {
+      stats = await fs.stat(resolvedPath);
+    } catch (error: any) {
+      if (error?.code === 'ENOENT') {
+        res.status(404).send('File not found.');
+        return;
+      }
+      throw error;
+    }
+
+    const fileSize = stats.size;
+    res.setHeader('Accept-Ranges', 'bytes');
+
+    const rangeHeader = req.headers.range;
+    if (!rangeHeader) {
+      res.status(200);
+      res.setHeader('Content-Length', fileSize);
+      const stream = createReadStream(resolvedPath);
+      stream.pipe(res);
+      await finished(stream);
+      return;
+    }
+
+    // Parse RFC 7233 byte ranges. Two distinct forms:
+    //   bytes=<start>-[<end>]  (start required, end optional)
+    //   bytes=-<suffix-length> (last N bytes; suffix-length required)
+    const byteRangeMatch = /^bytes=(\d+)-(\d*)$/.exec(rangeHeader);
+    const suffixMatch = /^bytes=-(\d+)$/.exec(rangeHeader);
+
+    if (!byteRangeMatch && !suffixMatch) {
+      res.status(416).setHeader('Content-Range', `bytes */${fileSize}`).send();
+      return;
+    }
+
+    let start: number;
+    let end: number;
+
+    if (suffixMatch) {
+      const suffixLength = parseInt(suffixMatch[1], 10);
+      start = Math.max(0, fileSize - suffixLength);
+      end = fileSize - 1;
+    } else {
+      start = parseInt(byteRangeMatch![1], 10);
+      end = byteRangeMatch![2]
+        ? parseInt(byteRangeMatch![2], 10)
+        : fileSize - 1;
+    }
+
+    if (start > end || end >= fileSize || start < 0) {
+      res.status(416).setHeader('Content-Range', `bytes */${fileSize}`).send();
+      return;
+    }
+
+    const chunkSize = end - start + 1;
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+    res.setHeader('Content-Length', chunkSize);
+    const stream = createReadStream(resolvedPath, { start, end });
+    stream.pipe(res);
+    await finished(stream);
+  });
+
   return route.router;
+}
+
+function resolveMountedPath(clientPath: string, mountPath: string): string {
+  if (!clientPath.startsWith('/')) {
+    clientPath = '/' + clientPath;
+  }
+  const resolvedPath = resolve(mountPath, '.' + clientPath);
+  if (!resolvedPath.startsWith(mountPath + '/') && resolvedPath !== mountPath) {
+    throw new ClientError(
+      'Invalid path: Access outside of the mount is not allowed.',
+    );
+  }
+  return resolvedPath;
 }
 
 async function findAudioFiles(
