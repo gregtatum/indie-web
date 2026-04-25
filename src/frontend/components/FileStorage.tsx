@@ -219,5 +219,5 @@ function validateFileStoreServer(
     return null;
   }
 
-  return { name, url, id };
+  return { name, url, id, storeType: 'files' };
 }

@@ -82,11 +82,14 @@ function getServers(): T.FileStoreServer[] {
       const url = getStringProp(serverUnknown, 'url');
       const name = getStringProp(serverUnknown, 'name');
       let id = getStringProp(serverUnknown, 'id');
+      const rawStoreType = getStringProp(serverUnknown, 'storeType');
+      const storeType: T.FileStoreServer['storeType'] =
+        rawStoreType === 'music' ? 'music' : 'files';
       if (url && name) {
         if (!id) {
           id = sluggify(name);
         }
-        servers.push({ url, name, id });
+        servers.push({ url, name, id, storeType });
       }
     }
   }

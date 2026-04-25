@@ -93,6 +93,7 @@ export interface FileStoreServer {
   name: string;
   // Unique kebab case name.
   id: string;
+  storeType: 'files' | 'music';
 }
 
 export interface FolderListingRow {
