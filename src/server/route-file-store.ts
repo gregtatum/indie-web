@@ -295,7 +295,7 @@ function resolveMountedPath(
     resolvedPath += '/';
   }
 
-  if (!resolvedPath.startsWith(mountPath)) {
+  if (!resolvedPath.startsWith(mountPath + '/') && resolvedPath !== mountPath) {
     console.error('Resolved path:', resolvedPath);
     throw new ClientError(
       'Invalid path: Access outside of the mount is not allowed.',

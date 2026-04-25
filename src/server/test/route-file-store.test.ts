@@ -109,7 +109,6 @@ describe('POST /file-store/list-files', () => {
     const names = listing.map((e: { name: string }) => e.name);
     assert.ok(!names.includes('.DS_Store'));
   });
-
 });
 
 describe('POST /file-store/save-blob', () => {
@@ -210,6 +209,11 @@ describe('POST /file-store/load-blob', () => {
     });
     assert.equal(res.status, 400);
   });
+
+  it('rejects path traversal attempts', async () => {
+    const res = await loadBlob(server.baseUrl, '/../../etc/passwd');
+    assert.equal(res.status, 400);
+  });
 });
 
 describe('POST /file-store/create-folder', () => {
@@ -254,6 +258,15 @@ describe('POST /file-store/create-folder', () => {
     });
     assert.equal(res.status, 400);
   });
+
+  it('rejects path traversal attempts', async () => {
+    const res = await fetch(`${server.baseUrl}/file-store/create-folder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderPath: '/../../evil' }),
+    });
+    assert.equal(res.status, 400);
+  });
 });
 
 describe('POST /file-store/move', () => {
@@ -290,6 +303,31 @@ describe('POST /file-store/move', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fromPath: '/something.txt' }),
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it('rejects path traversal in fromPath', async () => {
+    const res = await fetch(`${server.baseUrl}/file-store/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fromPath: '/../../etc/passwd',
+        toPath: '/stolen.txt',
+      }),
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it('rejects path traversal in toPath', async () => {
+    await writeFile(join(server.mountDir, 'source.txt'), 'data');
+    const res = await fetch(`${server.baseUrl}/file-store/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fromPath: '/source.txt',
+        toPath: '/../../tmp/escaped.txt',
+      }),
     });
     assert.equal(res.status, 400);
   });
@@ -331,5 +369,14 @@ describe('POST /file-store/compress-folder', () => {
       body: JSON.stringify({ path: '/nonexistent-folder' }),
     });
     assert.equal(res.status, 409);
+  });
+
+  it('rejects path traversal attempts', async () => {
+    const res = await fetch(`${server.baseUrl}/file-store/compress-folder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: '/../../etc' }),
+    });
+    assert.equal(res.status, 400);
   });
 });
