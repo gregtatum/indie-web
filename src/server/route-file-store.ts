@@ -4,7 +4,7 @@ import {
   RequestConflict,
   ServerError,
 } from './utils.ts';
-import { type T } from './index.ts';
+import type { T } from './index.ts';
 import { resolve, join, basename } from 'node:path';
 import { createReadStream, promises as fs, type Stats } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
@@ -157,10 +157,10 @@ export function fileStoreRoute(mountPath: string) {
       }
 
       const fromResolved = resolveMountedPath(fromPath, mountPath);
-      const toResolved = resolveMountedPath(fromPath, toPath);
+      const toResolved = resolveMountedPath(toPath, mountPath);
       await rename(fromResolved, toResolved);
       const stats = await fs.stat(toResolved);
-      return getMetadata(toResolved, stats);
+      return getMetadata(toPath, stats);
     },
   );
 
