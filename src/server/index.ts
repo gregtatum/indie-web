@@ -28,7 +28,7 @@ export function startServer(): ExpressApp {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - For some reason this is erroring only when live serving the files.
   const dirname = url.fileURLToPath(new URL('.', import.meta.url));
-  const mountPath = path.join(dirname, '../../mount');
+  const mountPath = process.env.MOUNT_PATH ?? path.join(dirname, '../../mount');
 
   app.use('/file-store', fileStoreRoute(mountPath));
   app.use('/music', musicRoute(mountPath));
