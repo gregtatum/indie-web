@@ -64,3 +64,41 @@ The [image formats](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Fo
 ## License
 
 The code is open source licensed as GPLv3.
+
+## Testing strategy
+
+I prefer to do tests as end to end as possible. Unit tests are limited in scope to things like server routes and file system implementations. For testing front-end components I subscribe to the [Testing Library Guiding Principles](https://testing-library.com/docs/guiding-principles):
+
+> Principles
+>
+> The more your tests resemble the way your software is used, the more confidence they can give you.
+>
+> We try to only expose methods and utilities that encourage you to write tests that closely resemble how your web pages are used.
+>
+> Utilities are included in this project based on the following guiding principles:
+>
+> 1. If it relates to rendering components, then it should deal with DOM nodes rather than component instances, and it should not encourage dealing with component instances.
+> 2. It should be generally useful for testing the application components in the way the user would use it. We are making some trade-offs here because we're using a computer and often a simulated browser environment, but in general, utilities should encourage tests that use the components the way they're intended to be used.
+> 3. Utility implementations and APIs should be simple and flexible.
+
+What this means for this project is that component tests create store and dispatch actions for the setup.
+
+```js
+function setup() {
+  const store = createStore();
+  store.dispatch(A.addFileStoreServer(testServer));
+  return { store }
+}
+
+describe("example component", () => {
+  it('can render', () => {
+    const { store } = setup();
+    render(
+      <MemoryRouter>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+  });
+```
