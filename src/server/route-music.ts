@@ -71,71 +71,7 @@ export function musicRoute(mountPath: string) {
     }
     scanInProgress = true;
     try {
-      const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
-      const tmpPath = indexPath + '.tmp';
-
-      // Load the existing index for incremental scanning.
-      const existingTracks = new Map<string, TrackMetadata>();
-      try {
-        const contents = await fs.readFile(indexPath, 'utf-8');
-        const existing = JSON.parse(contents) as MusicIndex;
-        for (const track of existing.tracks) {
-          existingTracks.set(track.path, track);
-        }
-      } catch {
-        // No existing index — start fresh.
-      }
-
-      const audioFiles = await findAudioFiles(mountPath, mountPath);
-
-      const tracks: TrackMetadata[] = [];
-      for (const { clientPath, fullPath } of audioFiles) {
-        const stats = await fs.stat(fullPath);
-        const mtime = stats.mtime.toISOString();
-        const size = stats.size;
-
-        const cached = existingTracks.get(clientPath);
-        if (cached && cached.mtime === mtime && cached.size === size) {
-          tracks.push(cached);
-          continue;
-        }
-
-        let title: string | null = null;
-        let artist: string | null = null;
-        let album: string | null = null;
-        let duration: number | null = null;
-        try {
-          const meta = await parseFile(fullPath, { duration: true });
-          title = meta.common.title ?? null;
-          artist = meta.common.artist ?? null;
-          album = meta.common.album ?? null;
-          duration = meta.format.duration ?? null;
-        } catch {
-          // If tag reading fails, store what we have.
-        }
-
-        tracks.push({
-          path: clientPath,
-          title,
-          artist,
-          album,
-          duration,
-          size,
-          mtime,
-        });
-      }
-
-      const index: MusicIndex = {
-        version: 1,
-        scannedAt: new Date().toISOString(),
-        tracks,
-      };
-
-      // Atomic write: write to a temp file then rename to avoid partial reads.
-      await fs.writeFile(tmpPath, JSON.stringify(index, null, '\t'));
-      await fs.rename(tmpPath, indexPath);
-
-      return index;
+      return await performScan(mountPath);
     } finally {
       scanInProgress = false;
     }
@@ -163,71 +99,12 @@ export function musicRoute(mountPath: string) {
 
     scanInProgress = true;
     try {
-      const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
-      const tmpPath = indexPath + '.tmp';
-
-      const existingTracks = new Map<string, TrackMetadata>();
-      try {
-        const contents = await fs.readFile(indexPath, 'utf-8');
-        const existing = JSON.parse(contents) as MusicIndex;
-        for (const track of existing.tracks) {
-          existingTracks.set(track.path, track);
-        }
-      } catch {
-        // No existing index — start fresh.
-      }
-
-      const audioFiles = await findAudioFiles(mountPath, mountPath);
-      send({ type: 'total', count: audioFiles.length });
-
-      const tracks: TrackMetadata[] = [];
-      for (let i = 0; i < audioFiles.length; i++) {
-        const { clientPath, fullPath } = audioFiles[i];
-        const stats = await fs.stat(fullPath);
-        const mtime = stats.mtime.toISOString();
-        const size = stats.size;
-
-        const cached = existingTracks.get(clientPath);
-        if (cached && cached.mtime === mtime && cached.size === size) {
-          tracks.push(cached);
-        } else {
-          let title: string | null = null;
-          let artist: string | null = null;
-          let album: string | null = null;
-          let duration: number | null = null;
-          try {
-            const meta = await parseFile(fullPath, { duration: true });
-            title = meta.common.title ?? null;
-            artist = meta.common.artist ?? null;
-            album = meta.common.album ?? null;
-            duration = meta.format.duration ?? null;
-          } catch {
-            // If tag reading fails, store what we have.
-          }
-          tracks.push({
-            path: clientPath,
-            title,
-            artist,
-            album,
-            duration,
-            size,
-            mtime,
-          });
-        }
-
-        send({ type: 'progress', scanned: i + 1, path: clientPath });
-      }
-
-      const index: MusicIndex = {
-        version: 1,
-        scannedAt: new Date().toISOString(),
-        tracks,
-      };
-
-      await fs.writeFile(tmpPath, JSON.stringify(index, null, '\t'));
-      await fs.rename(tmpPath, indexPath);
-
-      send({ type: 'done', tracks });
+      const index = await performScan(mountPath, {
+        onTotal: (count) => send({ type: 'total', count }),
+        onProgress: (scanned, path) =>
+          send({ type: 'progress', scanned, path }),
+      });
+      send({ type: 'done', tracks: index.tracks });
       res.end();
     } catch (err: any) {
       send({ type: 'error', message: err?.message ?? 'Scan failed.' });
@@ -314,6 +191,89 @@ export function musicRoute(mountPath: string) {
   });
 
   return route.router;
+}
+
+interface ScanCallbacks {
+  onTotal?: (count: number) => void;
+  onProgress?: (scanned: number, path: string) => void;
+}
+
+/**
+ * Core scan implementation shared by the POST and SSE routes.
+ * Walks the mount directory, reads metadata (incrementally), writes the index
+ * atomically, and fires optional progress callbacks.
+ */
+async function performScan(
+  mountPath: string,
+  callbacks: ScanCallbacks = {},
+): Promise<MusicIndex> {
+  const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
+  const tmpPath = indexPath + '.tmp';
+
+  // Load the existing index for incremental scanning.
+  const existingTracks = new Map<string, TrackMetadata>();
+  try {
+    const contents = await fs.readFile(indexPath, 'utf-8');
+    const existing = JSON.parse(contents) as MusicIndex;
+    for (const track of existing.tracks) {
+      existingTracks.set(track.path, track);
+    }
+  } catch {
+    // No existing index — start fresh.
+  }
+
+  const audioFiles = await findAudioFiles(mountPath, mountPath);
+  callbacks.onTotal?.(audioFiles.length);
+
+  const tracks: TrackMetadata[] = [];
+  for (let i = 0; i < audioFiles.length; i++) {
+    const { clientPath, fullPath } = audioFiles[i];
+    const stats = await fs.stat(fullPath);
+    const mtime = stats.mtime.toISOString();
+    const size = stats.size;
+
+    const cached = existingTracks.get(clientPath);
+    if (cached && cached.mtime === mtime && cached.size === size) {
+      tracks.push(cached);
+    } else {
+      let title: string | null = null;
+      let artist: string | null = null;
+      let album: string | null = null;
+      let duration: number | null = null;
+      try {
+        const meta = await parseFile(fullPath, { duration: true });
+        title = meta.common.title ?? null;
+        artist = meta.common.artist ?? null;
+        album = meta.common.album ?? null;
+        duration = meta.format.duration ?? null;
+      } catch {
+        // If tag reading fails, store what we have.
+      }
+      tracks.push({
+        path: clientPath,
+        title,
+        artist,
+        album,
+        duration,
+        size,
+        mtime,
+      });
+    }
+
+    callbacks.onProgress?.(i + 1, clientPath);
+  }
+
+  const index: MusicIndex = {
+    version: 1,
+    scannedAt: new Date().toISOString(),
+    tracks,
+  };
+
+  // Atomic write: write to a temp file then rename to avoid partial reads.
+  await fs.writeFile(tmpPath, JSON.stringify(index, null, '\t'));
+  await fs.rename(tmpPath, indexPath);
+
+  return index;
 }
 
 function resolveMountedPath(clientPath: string, mountPath: string): string {
