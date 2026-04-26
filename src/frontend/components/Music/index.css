@@ -55,8 +55,74 @@
 
 .musicLibraryView {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   flex: 1;
+  overflow: hidden;
+}
+
+.musicFilterPanels {
+  display: flex;
+  flex-direction: row;
+  height: 200px;
+  border-bottom: 1px solid var(--border-color, #ddd);
+}
+
+.musicFilterPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  & + & {
+    border-left: 1px solid var(--border-color, #ddd);
+  }
+}
+
+.musicFilterPanelHeader {
+  padding: 6px 12px;
+  font-size: 0.75em;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color, #ddd);
+}
+
+.musicFilterPanelList {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.musicFilterPanelItem {
+  padding: 6px 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: #eee;
+  }
+}
+
+.musicSongs {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.musicSong {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #ddd);
+  align-items: baseline;
+}
+
+.musicSongTitle {
+  flex: 1;
+}
+
+.musicSongArtist,
+.musicSongAlbum {
+  font-size: 0.85em;
+  opacity: 0.6;
 }
 

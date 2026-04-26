@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { $$ } from 'frontend';
 import { ListFiles } from '../ListFiles';
+import { MusicLibraryView } from './MusicLibraryView';
 import './index.css';
 
 type ScanPhase = 'idle' | 'scanning' | 'done' | 'error';
@@ -127,8 +128,4 @@ export function Music() {
       {isFilesView ? <ListFiles /> : <MusicLibraryView />}
     </div>
   );
-}
-
-function MusicLibraryView() {
-  return <div className="musicLibraryView">Music View</div>;
 }
