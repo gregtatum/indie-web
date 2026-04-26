@@ -46,12 +46,14 @@ beforeEach(() => {
     input: RequestInfo | URL,
     init?: RequestInit,
   ) => {
-    const url =
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : (input as Request).url;
+    let url: string;
+    if (typeof input === 'string') {
+      url = input;
+    } else if (input instanceof URL) {
+      url = input.toString();
+    } else {
+      url = (input as Request).url;
+    }
     if (url.startsWith(server.baseUrl)) {
       return nodeFetch(url, init as any) as any;
     }
@@ -85,7 +87,7 @@ function setup() {
   return { store, testServer };
 }
 
-describe('<Music> (integration)', () => {
+describe('<Music> with real server', () => {
   it('renders the Scan Library button', async () => {
     setup();
     await screen.findByRole('button', { name: 'Scan Library' });
@@ -112,7 +114,9 @@ describe('<Music> (integration)', () => {
     setup();
 
     await act(async () => {
-      await userEvent.click(await screen.findByRole('button', { name: 'Scan Library' }));
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
     });
 
     // The scan found the two MP3s we wrote.
@@ -125,7 +129,9 @@ describe('<Music> (integration)', () => {
     const button = await screen.findByRole('button', { name: 'Scan Library' });
     void userEvent.click(button);
 
-    const scanningButton = await screen.findByRole('button', { name: 'Scanning…' });
+    const scanningButton = await screen.findByRole('button', {
+      name: 'Scanning…',
+    });
     expect((scanningButton as HTMLButtonElement).disabled).toBe(true);
 
     // Wait for the scan to finish so the process doesn't leak into the next test.
@@ -136,7 +142,9 @@ describe('<Music> (integration)', () => {
     setup();
 
     await act(async () => {
-      await userEvent.click(await screen.findByRole('button', { name: 'Scan Library' }));
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
     });
 
     await waitFor(() => {

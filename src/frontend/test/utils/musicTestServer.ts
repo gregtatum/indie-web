@@ -40,19 +40,15 @@ export async function startMusicTestServer(): Promise<MusicTestServer> {
   const port = await getFreePort();
   const serverDir = join(__dirname, '../../../../src/server');
 
-  const child = spawn(
-    'node',
-    ['--disable-warning=ExperimentalWarning', '.'],
-    {
-      cwd: serverDir,
-      env: {
-        ...process.env,
-        PORT: String(port),
-        HOST: '127.0.0.1',
-        MOUNT_PATH: mountDir,
-      },
+  const child = spawn('node', ['--disable-warning=ExperimentalWarning', '.'], {
+    cwd: serverDir,
+    env: {
+      ...process.env,
+      PORT: String(port),
+      HOST: '127.0.0.1',
+      MOUNT_PATH: mountDir,
     },
-  );
+  });
 
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
