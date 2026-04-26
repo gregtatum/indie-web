@@ -110,7 +110,16 @@ export function ListFiles() {
 
   let parent = null;
   if (path !== '/') {
-    const url = backPath === '/' ? '/' : `${fsSlug}/folder${backPath}`;
+    let url: string;
+    if (backPath === '/') {
+      if (server?.storeType === 'music') {
+        url = `/${fsSlug}/music?view=files`;
+      } else {
+        url = '/';
+      }
+    } else {
+      url = `${fsSlug}/folder${backPath}`;
+    }
 
     parent = (
       <Router.Link
