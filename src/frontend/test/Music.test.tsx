@@ -30,76 +30,97 @@ function buildMinimalMp3(): Buffer {
   return header;
 }
 
-let server: MusicTestServer;
+/**
+ * Handles the lifecycle of starting and stopping the real music test server,
+ * and installs the EventSource polyfill + fetch routing needed by each test.
+ */
+function useMusicTestServer() {
+  let server: MusicTestServer | null = null;
 
-beforeAll(async () => {
-  server = await startMusicTestServer();
-}, 15_000);
+  beforeAll(async () => {
+    server = await startMusicTestServer();
+  }, 15_000);
 
-beforeEach(() => {
-  // Install the NodeEventSource polyfill so the Music component can use
-  // EventSource in jsdom (which has no native implementation).
-  (global as any).EventSource = NodeEventSource;
+  beforeEach(() => {
+    // Install the NodeEventSource polyfill so the Music component can use
+    // EventSource in jsdom (which has no native implementation).
+    (global as any).EventSource = NodeEventSource;
 
-  // setupAfterEnv replaces window.fetch with a fetch-mock sandbox. We replace
-  // it again with a wrapper that routes requests to the real test server through
-  // node-fetch (direct HTTP), while everything else still goes to the sandbox
-  // (returning 404 by default for unrelated calls).
-  const sandbox = window.fetch as FetchMockSandbox;
-  sandbox.config.fallbackToNetwork = false;
-  (global as any).fetch = async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ) => {
-    let url: string;
-    if (typeof input === 'string') {
-      url = input;
-    } else if (input instanceof URL) {
-      url = input.toString();
-    } else {
-      url = (input as Request).url;
+    // setupAfterEnv replaces window.fetch with a fetch-mock sandbox. We replace
+    // it again with a wrapper that routes requests to the real test server through
+    // node-fetch (direct HTTP), while everything else still goes to the sandbox
+    // (returning 404 by default for unrelated calls).
+    const sandbox = window.fetch as FetchMockSandbox;
+    sandbox.config.fallbackToNetwork = false;
+    (global as any).fetch = async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      let url: string;
+      if (typeof input === 'string') {
+        url = input;
+      } else if (input instanceof URL) {
+        url = input.toString();
+      } else {
+        url = (input as Request).url;
+      }
+      if (url.startsWith(getServer().baseUrl)) {
+        return nodeFetch(url, init as any) as any;
+      }
+      return sandbox(input, init);
+    };
+  });
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  function getServer(): MusicTestServer {
+    if (!server) {
+      throw new Error('Music test server not started');
     }
-    if (url.startsWith(server.baseUrl)) {
-      return nodeFetch(url, init as any) as any;
-    }
-    return sandbox(input, init);
-  };
-});
+    return server;
+  }
 
-afterAll(async () => {
-  await server.close();
-});
-
-function setup() {
-  const testServer: T.FileStoreServer = {
-    url: server.baseUrl,
-    name: 'Test Music',
-    id: 'test-music',
-    storeType: 'music',
-  };
-
-  const store = createStore();
-  store.dispatch(A.addFileStoreServer(testServer));
-
-  render(
-    <MemoryRouter initialEntries={[`/${testServer.id}/music`]}>
-      <Provider store={store as any}>
-        <AppRoutes />
-      </Provider>
-    </MemoryRouter>,
-  );
-
-  return { store, testServer };
+  return { getServer };
 }
 
 describe('<Music> with real server', () => {
+  const { getServer } = useMusicTestServer();
+
+  function setup() {
+    const server = getServer();
+    const testServer: T.FileStoreServer = {
+      url: server.baseUrl,
+      name: 'Test Music',
+      id: 'test-music',
+      storeType: 'music',
+    };
+
+    const store = createStore();
+    store.dispatch(A.addFileStoreServer(testServer));
+
+    render(
+      <MemoryRouter initialEntries={[`/${testServer.id}/music`]}>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    return { store, testServer };
+  }
+
   it('renders the Scan Library button', async () => {
     setup();
     await screen.findByRole('button', { name: 'Scan Library' });
   });
 
   it('shows files from the server in the listing', async () => {
-    await writeFile(join(server.mountDir, 'Blue.mp3'), buildMinimalMp3());
+    await writeFile(
+      join(getServer().mountDir, 'Blue.mp3'),
+      buildMinimalMp3(),
+    );
 
     setup();
 
@@ -113,8 +134,14 @@ describe('<Music> with real server', () => {
   });
 
   it('scans and reports the track count', async () => {
-    await writeFile(join(server.mountDir, 'Track1.mp3'), buildMinimalMp3());
-    await writeFile(join(server.mountDir, 'Track2.mp3'), buildMinimalMp3());
+    await writeFile(
+      join(getServer().mountDir, 'Track1.mp3'),
+      buildMinimalMp3(),
+    );
+    await writeFile(
+      join(getServer().mountDir, 'Track2.mp3'),
+      buildMinimalMp3(),
+    );
 
     setup();
 
@@ -124,7 +151,6 @@ describe('<Music> with real server', () => {
       );
     });
 
-    // The scan found the two MP3s we wrote.
     await screen.findByText(/Found \d+ tracks\./);
   });
 
@@ -141,6 +167,39 @@ describe('<Music> with real server', () => {
 
     // Wait for the scan to finish so the process doesn't leak into the next test.
     await screen.findByRole('button', { name: 'Scan Library' });
+  });
+
+  it('picks up a newly added file on a second scan', async () => {
+    await writeFile(
+      join(getServer().mountDir, 'IncrA.mp3'),
+      buildMinimalMp3(),
+    );
+
+    setup();
+
+    // First scan — establishes the baseline count.
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    const firstResult = await screen.findByText(/Found \d+ tracks\./);
+    const firstCount = parseInt(firstResult.textContent!.match(/\d+/)![0], 10);
+
+    // Add another file, then scan again.
+    await writeFile(
+      join(getServer().mountDir, 'IncrB.mp3'),
+      buildMinimalMp3(),
+    );
+
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Scan Library' }),
+      );
+    });
+
+    // The count must have gone up by exactly one.
+    await screen.findByText(`Found ${firstCount + 1} tracks.`);
   });
 
   it('re-enables the Scan Library button after a scan completes', async () => {
