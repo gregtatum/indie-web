@@ -142,6 +142,102 @@ export function musicRoute(mountPath: string) {
   });
 
   /**
+   * SSE endpoint that streams scan progress in real time.
+   * Events: total → progress × N → done (or error).
+   */
+  route.addBlobRoute('GET', '/music-index/scan', async (_req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    function send(event: Record<string, unknown>) {
+      res.write('data: ' + JSON.stringify(event) + '\n\n');
+    }
+
+    if (scanInProgress) {
+      send({ type: 'error', message: 'A scan is already in progress.' });
+      res.end();
+      return;
+    }
+
+    scanInProgress = true;
+    try {
+      const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
+      const tmpPath = indexPath + '.tmp';
+
+      const existingTracks = new Map<string, TrackMetadata>();
+      try {
+        const contents = await fs.readFile(indexPath, 'utf-8');
+        const existing = JSON.parse(contents) as MusicIndex;
+        for (const track of existing.tracks) {
+          existingTracks.set(track.path, track);
+        }
+      } catch {
+        // No existing index — start fresh.
+      }
+
+      const audioFiles = await findAudioFiles(mountPath, mountPath);
+      send({ type: 'total', count: audioFiles.length });
+
+      const tracks: TrackMetadata[] = [];
+      for (let i = 0; i < audioFiles.length; i++) {
+        const { clientPath, fullPath } = audioFiles[i];
+        const stats = await fs.stat(fullPath);
+        const mtime = stats.mtime.toISOString();
+        const size = stats.size;
+
+        const cached = existingTracks.get(clientPath);
+        if (cached && cached.mtime === mtime && cached.size === size) {
+          tracks.push(cached);
+        } else {
+          let title: string | null = null;
+          let artist: string | null = null;
+          let album: string | null = null;
+          let duration: number | null = null;
+          try {
+            const meta = await parseFile(fullPath, { duration: true });
+            title = meta.common.title ?? null;
+            artist = meta.common.artist ?? null;
+            album = meta.common.album ?? null;
+            duration = meta.format.duration ?? null;
+          } catch {
+            // If tag reading fails, store what we have.
+          }
+          tracks.push({
+            path: clientPath,
+            title,
+            artist,
+            album,
+            duration,
+            size,
+            mtime,
+          });
+        }
+
+        send({ type: 'progress', scanned: i + 1, path: clientPath });
+      }
+
+      const index: MusicIndex = {
+        version: 1,
+        scannedAt: new Date().toISOString(),
+        tracks,
+      };
+
+      await fs.writeFile(tmpPath, JSON.stringify(index, null, '\t'));
+      await fs.rename(tmpPath, indexPath);
+
+      send({ type: 'done', tracks });
+      res.end();
+    } catch (err: any) {
+      send({ type: 'error', message: err?.message ?? 'Scan failed.' });
+      res.end();
+    } finally {
+      scanInProgress = false;
+    }
+  });
+
+  /**
    * Streams an audio file with HTTP range request support so the browser
    * <audio> element can seek. Accepts a ?path= query parameter.
    */

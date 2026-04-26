@@ -4,11 +4,25 @@ import { ListFiles } from '../ListFiles';
 import './index.css';
 
 type ScanPhase = 'idle' | 'scanning' | 'done' | 'error';
+interface ScanProgress {
+  scanned: number;
+  total: number | null;
+}
 
 export function Music() {
   const server = $$.getCurrentServerOrNull();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [scanProgress, setScanProgress] = React.useState<ScanProgress | null>(
+    null,
+  );
+  const eventSourceRef = React.useRef<EventSource | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      eventSourceRef.current?.close();
+    };
+  }, []);
 
   if (!server) {
     return null;
@@ -19,24 +33,58 @@ export function Music() {
       return;
     }
     setScanPhase('scanning');
+    setScanProgress({ scanned: 0, total: null });
     setStatusMessage(null);
-    fetch(`${server.url}/music/music-index/scan`, { method: 'POST' })
-      .then((res) => {
-        if (!res.ok) {
-          return res.text().then((text) => {
-            setScanPhase('error');
-            setStatusMessage(text || 'Scan failed.');
-          });
-        }
-        return res.json().then((index: { tracks: unknown[] }) => {
+
+    const eventSource = new EventSource(`${server.url}/music/music-index/scan`);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      switch (data.type) {
+        case 'total':
+          setScanProgress({ scanned: 0, total: data.count });
+          break;
+        case 'progress':
+          setScanProgress((p) => ({
+            total: p?.total ?? null,
+            scanned: data.scanned,
+          }));
+          break;
+        case 'done':
+          eventSource.close();
           setScanPhase('done');
-          setStatusMessage(`Found ${index.tracks.length} tracks.`);
-        });
-      })
-      .catch(() => {
-        setScanPhase('error');
-        setStatusMessage('Could not connect to the server.');
-      });
+          setScanProgress(null);
+          setStatusMessage(`Found ${data.tracks.length} tracks.`);
+          break;
+        case 'error':
+          eventSource.close();
+          setScanPhase('error');
+          setScanProgress(null);
+          setStatusMessage(data.message || 'Scan failed.');
+          break;
+        default:
+          break;
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      setScanPhase('error');
+      setScanProgress(null);
+      setStatusMessage('Could not connect to the server.');
+    };
+  }
+
+  let displayMessage: string | null = null;
+  if (scanPhase === 'scanning') {
+    if (scanProgress?.total !== null && scanProgress?.total !== undefined) {
+      displayMessage = `Scanning… ${scanProgress.scanned} / ${scanProgress.total} files`;
+    } else {
+      displayMessage = 'Scanning…';
+    }
+  } else {
+    displayMessage = statusMessage;
   }
 
   return (
@@ -50,9 +98,9 @@ export function Music() {
         >
           {scanPhase === 'scanning' ? 'Scanning…' : 'Scan Library'}
         </button>
-        {statusMessage ? (
+        {displayMessage ? (
           <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
-            {statusMessage}
+            {displayMessage}
           </span>
         ) : null}
       </div>

@@ -13,6 +13,7 @@ import {
   startMusicTestServer,
   type MusicTestServer,
 } from './utils/musicTestServer';
+import { NodeEventSource } from './utils/nodeEventSource';
 // node-fetch provides real HTTP for the fetch-mock sandbox's fallbackToNetwork.
 import nodeFetch from 'node-fetch';
 
@@ -36,6 +37,10 @@ beforeAll(async () => {
 }, 15_000);
 
 beforeEach(() => {
+  // Install the NodeEventSource polyfill so the Music component can use
+  // EventSource in jsdom (which has no native implementation).
+  (global as any).EventSource = NodeEventSource;
+
   // setupAfterEnv replaces window.fetch with a fetch-mock sandbox. We replace
   // it again with a wrapper that routes requests to the real test server through
   // node-fetch (direct HTTP), while everything else still goes to the sandbox

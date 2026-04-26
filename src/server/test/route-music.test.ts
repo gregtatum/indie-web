@@ -177,6 +177,82 @@ describe('POST /music/music-index/scan incremental behavior', () => {
   });
 });
 
+describe('GET /music/music-index/scan (SSE)', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountDir) => {
+      app.use('/music', musicRoute(mountDir));
+    });
+  });
+
+  after(() => server.close());
+
+  async function collectSseEvents(
+    url: string,
+  ): Promise<Array<Record<string, unknown>>> {
+    const res = await fetch(url);
+    const text = await res.text();
+    return text
+      .split('\n\n')
+      .filter((chunk) => chunk.startsWith('data: '))
+      .map((chunk) => JSON.parse(chunk.slice(6)));
+  }
+
+  it('emits total=0 and done with empty tracks for an empty mount', async () => {
+    const events = await collectSseEvents(
+      `${server.baseUrl}/music/music-index/scan`,
+    );
+    assert.deepEqual(events[0], { type: 'total', count: 0 });
+    const done = events[events.length - 1];
+    assert.equal(done.type, 'done');
+    assert.deepEqual((done as any).tracks, []);
+  });
+
+  it('emits total=1, one progress event, and done with 1 track for one mp3', async () => {
+    await writeFile(
+      join(server.mountDir, 'sse-song.mp3'),
+      buildMp3WithTags({}),
+    );
+
+    const events = await collectSseEvents(
+      `${server.baseUrl}/music/music-index/scan`,
+    );
+
+    const total = events.find((e) => e.type === 'total') as any;
+    assert.ok(total.count >= 1);
+
+    const progress = events.filter((e) => e.type === 'progress');
+    assert.ok(progress.length >= 1);
+
+    const done = events[events.length - 1] as any;
+    assert.equal(done.type, 'done');
+    assert.ok(
+      done.tracks.some((t: { path: string }) => t.path === '/sse-song.mp3'),
+    );
+  });
+
+  it('total event comes before any progress event and done event is last', async () => {
+    await writeFile(join(server.mountDir, 'order.mp3'), buildMp3WithTags({}));
+
+    const events = await collectSseEvents(
+      `${server.baseUrl}/music/music-index/scan`,
+    );
+
+    const types = events.map((e) => e.type);
+    const totalIdx = types.indexOf('total');
+    const firstProgressIdx = types.indexOf('progress');
+    const lastType = types[types.length - 1];
+
+    assert.ok(totalIdx !== -1, 'total event must exist');
+    assert.ok(
+      firstProgressIdx === -1 || firstProgressIdx > totalIdx,
+      'total must precede progress',
+    );
+    assert.equal(lastType, 'done', 'done must be last event');
+  });
+});
+
 describe('GET /music/music-index after scan', () => {
   let server: TestServer;
 
