@@ -1,31 +1,38 @@
 import * as React from 'react';
-import { $$ } from 'frontend';
-
-interface Track {
-  path: string;
-  title: string | null;
-  artist: string | null;
-  album: string | null;
-  duration: number | null;
-}
-
-type FilterType = 'artist' | 'album';
+import { $$, T } from 'frontend';
 
 export function MusicLibraryView() {
   const server = $$.getCurrentServerOrNull();
-  const [tracks, setTracks] = React.useState<Track[]>([]);
+  const [tracks, setTracks] = React.useState<T.TrackMetadata[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!server) return;
-    fetch(`${server.url}/music/music-index`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((index) => {
-        if (index?.tracks) {
-          setTracks(index.tracks);
+    if (!server) {
+      return;
+    }
+
+    async function loadIndex() {
+      try {
+        const res = await fetch(`${server!.url}/music/music-index`);
+        if (!res.ok) {
+          setError('Music library not found. Run a scan first.');
+          return;
         }
-      })
-      .catch(() => {});
+        const index: T.MusicIndex = await res.json();
+        setTracks(index.tracks);
+      } catch {
+        setError('Could not connect to the server.');
+      }
+    }
+
+    void loadIndex();
   }, [server?.url]);
+
+  if (error) {
+    return (
+      <div className="musicLibraryView musicLibraryViewError">{error}</div>
+    );
+  }
 
   return (
     <div className="musicLibraryView">
@@ -35,7 +42,7 @@ export function MusicLibraryView() {
   );
 }
 
-function FilterPanels({ tracks }: { tracks: Track[] }) {
+function FilterPanels({ tracks }: { tracks: T.TrackMetadata[] }) {
   return (
     <div className="musicFilterPanels">
       <FilterPanel filter="artist" tracks={tracks} />
@@ -48,8 +55,8 @@ function FilterPanel({
   filter,
   tracks,
 }: {
-  filter: FilterType;
-  tracks: Track[];
+  filter: T.MusicFilterType;
+  tracks: T.TrackMetadata[];
 }) {
   const values = [
     ...new Set(tracks.map((t) => t[filter]).filter(Boolean)),
@@ -69,7 +76,7 @@ function FilterPanel({
   );
 }
 
-function Songs({ tracks }: { tracks: Track[] }) {
+function Songs({ tracks }: { tracks: T.TrackMetadata[] }) {
   return (
     <div className="musicSongs">
       {tracks.map((track) => (
@@ -79,7 +86,7 @@ function Songs({ tracks }: { tracks: Track[] }) {
   );
 }
 
-function Song({ track }: { track: Track }) {
+function Song({ track }: { track: T.TrackMetadata }) {
   return (
     <div className="musicSong">
       <span className="musicSongTitle">{track.title ?? track.path}</span>

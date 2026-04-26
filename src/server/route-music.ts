@@ -4,28 +4,11 @@ import {
   NotFoundError,
   RequestConflict,
 } from './utils.ts';
+import type { T } from './index.ts';
 import { createReadStream, Dirent, promises as fs } from 'node:fs';
 import { join, extname, resolve } from 'node:path';
 import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
-
-export interface TrackMetadata {
-  path: string;
-  title: string | null;
-  artist: string | null;
-  album: string | null;
-  // Duration in seconds.
-  duration: number | null;
-  size: number;
-  // ISO timestamp — used for incremental re-scan.
-  mtime: string;
-}
-
-export interface MusicIndex {
-  version: 1;
-  scannedAt: string;
-  tracks: TrackMetadata[];
-}
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
 
@@ -45,11 +28,11 @@ export function musicRoute(mountPath: string) {
   /**
    * Returns the current music index, or 404 if no scan has been run yet.
    */
-  route.get('/music-index', async (): Promise<MusicIndex> => {
+  route.get('/music-index', async (): Promise<T.MusicIndex> => {
     const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
     try {
       const contents = await fs.readFile(indexPath, 'utf-8');
-      return JSON.parse(contents) as MusicIndex;
+      return JSON.parse(contents) as T.MusicIndex;
     } catch (error: any) {
       if (error?.code === 'ENOENT') {
         throw new NotFoundError('Music index not found. Run a scan first.');
@@ -65,7 +48,7 @@ export function musicRoute(mountPath: string) {
    *
    * Returns 409 if a scan is already in progress.
    */
-  route.post('/music-index/scan', async (): Promise<MusicIndex> => {
+  route.post('/music-index/scan', async (): Promise<T.MusicIndex> => {
     if (scanInProgress) {
       throw new RequestConflict('A scan is already in progress.');
     }
@@ -206,15 +189,15 @@ interface ScanCallbacks {
 async function performScan(
   mountPath: string,
   callbacks: ScanCallbacks = {},
-): Promise<MusicIndex> {
+): Promise<T.MusicIndex> {
   const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
   const tmpPath = indexPath + '.tmp';
 
   // Load the existing index for incremental scanning.
-  const existingTracks = new Map<string, TrackMetadata>();
+  const existingTracks = new Map<string, T.TrackMetadata>();
   try {
     const contents = await fs.readFile(indexPath, 'utf-8');
-    const existing = JSON.parse(contents) as MusicIndex;
+    const existing = JSON.parse(contents) as T.MusicIndex;
     for (const track of existing.tracks) {
       existingTracks.set(track.path, track);
     }
@@ -225,7 +208,7 @@ async function performScan(
   const audioFiles = await findAudioFiles(mountPath, mountPath);
   callbacks.onTotal?.(audioFiles.length);
 
-  const tracks: TrackMetadata[] = [];
+  const tracks: T.TrackMetadata[] = [];
   for (let i = 0; i < audioFiles.length; i++) {
     const { clientPath, fullPath } = audioFiles[i];
     const stats = await fs.stat(fullPath);
@@ -263,7 +246,7 @@ async function performScan(
     callbacks.onProgress?.(i + 1, clientPath);
   }
 
-  const index: MusicIndex = {
+  const index: T.MusicIndex = {
     version: 1,
     scannedAt: new Date().toISOString(),
     tracks,

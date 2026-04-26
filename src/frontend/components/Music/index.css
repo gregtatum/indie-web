@@ -3,6 +3,13 @@
   flex-direction: column;
   height: 100%;
 
+  --border-color: #ddd;
+  --music-gap: 12px;
+  --music-padding-v: 8px;
+  --music-padding-h: 12px;
+  --music-label-font-size: 11px;
+  --music-meta-font-size: 13px;
+
   & .listFiles {
     min-height: 0;
     flex: 1;
@@ -13,14 +20,14 @@
 .musicToolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border-color, #ddd);
+  gap: var(--music-gap);
+  padding: var(--music-padding-v) 16px;
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
 .musicScanStatus {
-  font-size: 0.9em;
+  font-size: var(--music-meta-font-size);
 }
 
 .musicScanStatus-done {
@@ -60,11 +67,19 @@
   overflow: hidden;
 }
 
+.musicLibraryViewError {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  opacity: 0.5;
+}
+
 .musicFilterPanels {
   display: flex;
   flex-direction: row;
   height: 200px;
-  border-bottom: 1px solid var(--border-color, #ddd);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .musicFilterPanel {
@@ -74,19 +89,19 @@
   overflow: hidden;
 
   & + & {
-    border-left: 1px solid var(--border-color, #ddd);
+    border-left: 1px solid var(--border-color);
   }
 }
 
 .musicFilterPanelHeader {
-  padding: 6px 12px;
-  font-size: 0.75em;
+  padding: var(--music-padding-v) var(--music-padding-h);
+  font-size: var(--music-label-font-size);
   font-weight: bold;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 1px;
   opacity: 0.5;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border-color, #ddd);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .musicFilterPanelList {
@@ -95,7 +110,7 @@
 }
 
 .musicFilterPanelItem {
-  padding: 6px 12px;
+  padding: var(--music-padding-v) var(--music-padding-h);
   cursor: pointer;
 
   &:hover {
@@ -110,9 +125,9 @@
 
 .musicSong {
   display: flex;
-  gap: 12px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-color, #ddd);
+  gap: var(--music-gap);
+  padding: var(--music-padding-v) var(--music-padding-h);
+  border-bottom: 1px solid var(--border-color);
   align-items: baseline;
 }
 
@@ -122,7 +137,6 @@
 
 .musicSongArtist,
 .musicSongAlbum {
-  font-size: 0.85em;
+  font-size: var(--music-meta-font-size);
   opacity: 0.6;
 }
-

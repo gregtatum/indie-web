@@ -51,3 +51,21 @@ export interface TextFile {
 }
 
 export type SaveMode = 'overwrite' | 'add' | 'update';
+
+export interface TrackMetadata {
+  path: string;
+  title: string | null;
+  artist: string | null;
+  album: string | null;
+  /** Duration in seconds. */
+  duration: number | null;
+  size: number;
+  /** ISO timestamp — used for incremental re-scan. */
+  mtime: string;
+}
+
+export interface MusicIndex {
+  version: 1;
+  scannedAt: string;
+  tracks: TrackMetadata[];
+}
