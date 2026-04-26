@@ -67,7 +67,7 @@ function useMusicTestServer() {
       if (url.startsWith(getServer().baseUrl)) {
         return nodeFetch(url, init as any) as any;
       }
-      return sandbox(input, init);
+      return sandbox(input instanceof URL ? url : input, init);
     };
   });
 
@@ -88,7 +88,7 @@ function useMusicTestServer() {
 describe('<Music> with real server', () => {
   const { getServer } = useMusicTestServer();
 
-  function setup() {
+  function setup(search = '') {
     const server = getServer();
     const testServer: T.FileStoreServer = {
       url: server.baseUrl,
@@ -101,7 +101,7 @@ describe('<Music> with real server', () => {
     store.dispatch(A.addFileStoreServer(testServer));
 
     render(
-      <MemoryRouter initialEntries={[`/${testServer.id}/music`]}>
+      <MemoryRouter initialEntries={[`/${testServer.id}/music${search}`]}>
         <Provider store={store as any}>
           <AppRoutes />
         </Provider>
@@ -117,12 +117,9 @@ describe('<Music> with real server', () => {
   });
 
   it('shows files from the server in the listing', async () => {
-    await writeFile(
-      join(getServer().mountDir, 'Blue.mp3'),
-      buildMinimalMp3(),
-    );
+    await writeFile(join(getServer().mountDir, 'Blue.mp3'), buildMinimalMp3());
 
-    setup();
+    setup('?view=files');
 
     // The filename is split across spans (name + "." + extension).
     // Match extension span ("mp3") and name within the display span ("Blue...").
@@ -170,10 +167,7 @@ describe('<Music> with real server', () => {
   });
 
   it('picks up a newly added file on a second scan', async () => {
-    await writeFile(
-      join(getServer().mountDir, 'IncrA.mp3'),
-      buildMinimalMp3(),
-    );
+    await writeFile(join(getServer().mountDir, 'IncrA.mp3'), buildMinimalMp3());
 
     setup();
 
@@ -187,10 +181,7 @@ describe('<Music> with real server', () => {
     const firstCount = parseInt(firstResult.textContent!.match(/\d+/)![0], 10);
 
     // Add another file, then scan again.
-    await writeFile(
-      join(getServer().mountDir, 'IncrB.mp3'),
-      buildMinimalMp3(),
-    );
+    await writeFile(join(getServer().mountDir, 'IncrB.mp3'), buildMinimalMp3());
 
     await act(async () => {
       await userEvent.click(

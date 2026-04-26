@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { $$ } from 'frontend';
 import { ListFiles } from '../ListFiles';
 import './index.css';
@@ -11,6 +12,7 @@ interface ScanProgress {
 
 export function Music() {
   const server = $$.getCurrentServerOrNull();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [scanProgress, setScanProgress] = React.useState<ScanProgress | null>(
@@ -27,6 +29,8 @@ export function Music() {
   if (!server) {
     return null;
   }
+
+  const isFilesView = searchParams.get('view') === 'files';
 
   function handleScan() {
     if (!server || scanPhase === 'scanning') {
@@ -103,8 +107,28 @@ export function Music() {
             {displayMessage}
           </span>
         ) : null}
+        <div className="musicViewToggle">
+          <button
+            type="button"
+            className={`button musicViewToggleButton${!isFilesView ? ' musicViewToggleButton-active' : ''}`}
+            onClick={() => setSearchParams({})}
+          >
+            Library
+          </button>
+          <button
+            type="button"
+            className={`button musicViewToggleButton${isFilesView ? ' musicViewToggleButton-active' : ''}`}
+            onClick={() => setSearchParams({ view: 'files' })}
+          >
+            Files
+          </button>
+        </div>
       </div>
-      <ListFiles />
+      {isFilesView ? <ListFiles /> : <MusicLibraryView />}
     </div>
   );
+}
+
+function MusicLibraryView() {
+  return <div className="musicLibraryView">Music View</div>;
 }

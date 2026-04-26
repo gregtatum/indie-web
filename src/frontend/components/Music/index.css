@@ -2,6 +2,12 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+
+  & .listFiles {
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+  }
 }
 
 .musicToolbar {
@@ -24,3 +30,33 @@
 .musicScanStatus-error {
   color: var(--color-error, red);
 }
+
+.musicViewToggle {
+  display: flex;
+  margin-left: auto;
+}
+
+.musicViewToggleButton {
+  border-radius: 0;
+}
+
+.musicViewToggleButton:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.musicViewToggleButton:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.musicViewToggleButton-active {
+  background: var(--color-primary, #555);
+  color: #fff;
+}
+
+.musicLibraryView {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
