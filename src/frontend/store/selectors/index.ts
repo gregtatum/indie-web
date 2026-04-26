@@ -582,6 +582,7 @@ export function canGoFullScreen(state: State) {
     case 'view-image':
       return document.fullscreenEnabled;
     case 'list-files':
+    case 'music':
     case 'settings':
     case 'connect':
     case 'file-storage':

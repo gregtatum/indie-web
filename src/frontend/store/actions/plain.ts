@@ -90,6 +90,14 @@ export function viewListFiles(
   };
 }
 
+export function viewMusic(fileStoreServer: T.FileStoreServer, path: string) {
+  return {
+    type: 'view-music' as const,
+    fileStoreServer,
+    path,
+  };
+}
+
 export function viewLanguageCoach(
   coachPath: string,
   path: string,

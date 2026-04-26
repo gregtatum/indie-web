@@ -1,0 +1,26 @@
+.music {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.musicToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-color, #ddd);
+  flex-shrink: 0;
+}
+
+.musicScanStatus {
+  font-size: 0.9em;
+}
+
+.musicScanStatus-done {
+  color: var(--color-success, green);
+}
+
+.musicScanStatus-error {
+  color: var(--color-error, red);
+}

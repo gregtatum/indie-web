@@ -19,6 +19,7 @@ import { useFilesIndex } from 'frontend/logic/files-index';
 import { toFileStoreName } from 'frontend/logic/app-logic';
 import { LanguageCoach } from './LanguageCoach';
 import { FileStorage } from './FileStorage';
+import { Music } from './Music';
 
 import './App.css';
 import { Onboarding } from './Onboarding';
@@ -47,9 +48,29 @@ function ListFilesRouter() {
       }
       dispatch(A.viewListFiles(fileStoreName, server, path));
     } else {
-      dispatch(A.viewListFiles(currentFileStoreName, currentServer, path));
+      // At the root route, redirect music stores to the music view.
+      if (currentServer?.storeType === 'music') {
+        dispatch(A.viewMusic(currentServer, path));
+      } else {
+        dispatch(A.viewListFiles(currentFileStoreName, currentServer, path));
+      }
     }
   }, [fs, path, currentFileStoreName, currentServer]);
+  return null;
+}
+
+function MusicRouter() {
+  const servers = $$.getServers();
+  const params = Router.useParams();
+  const path = '/' + (params['*'] ?? '');
+  const { fs } = params;
+  const dispatch = Hooks.useDispatch();
+  React.useEffect(() => {
+    const server = servers.find((s) => s.id === fs) ?? null;
+    if (server?.storeType === 'music') {
+      dispatch(A.viewMusic(server, path));
+    }
+  }, [fs, path]);
   return null;
 }
 
@@ -211,6 +232,9 @@ export function AppRoutes() {
         <Router.Route path="/:fs/md" element={<ViewMarkdownRouter />}>
           <Router.Route path="*" element={<ViewMarkdownRouter />} />
         </Router.Route>
+        <Router.Route path="/:fs/music" element={<MusicRouter />}>
+          <Router.Route path="*" element={<MusicRouter />} />
+        </Router.Route>
       </Router.Routes>
       <LinkDropbox>
         <MainView>
@@ -265,6 +289,8 @@ function Views() {
       return <Privacy key={key} />;
     case 'language-coach':
       return <LanguageCoach key={key} />;
+    case 'music':
+      return <Music key={key} />;
     default:
       throw new UnhandledCaseError(view, 'view');
   }

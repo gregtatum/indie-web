@@ -111,6 +111,10 @@ export function serverId(
       }
       return action.fileStoreServer?.id ?? null;
     }
+    case 'view-music': {
+      window.localStorage.setItem('fileStoreServer', action.fileStoreServer.id);
+      return action.fileStoreServer.id;
+    }
     default:
       return state;
   }
@@ -428,6 +432,7 @@ function path(state = '/', action: T.Action): string {
   switch (action.type) {
     case 'change-active-file':
     case 'view-list-files':
+    case 'view-music':
     case 'view-language-coach':
     case 'view-file':
     case 'view-pdf':
@@ -479,6 +484,8 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
     case 'change-file-system':
     case 'view-list-files':
       return 'list-files';
+    case 'view-music':
+      return 'music';
     case 'view-file':
       return 'view-file';
     case 'view-language-coach':
@@ -605,6 +612,9 @@ function currentFileStoreName(
     }
     case 'view-list-files':
       return action.fileStoreName;
+    case 'view-music':
+      window.localStorage.setItem('fileStoreName', 'server');
+      return 'server';
     default:
       return state;
   }

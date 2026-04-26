@@ -230,6 +230,7 @@ export function LinkDropbox(props: { children: any }) {
       return props.children;
     case null:
     case 'list-files':
+    case 'music':
     case 'view-file':
     case 'view-pdf':
     case 'view-image':

@@ -74,7 +74,8 @@ export type View =
   | 'settings'
   | 'connect'
   | 'privacy'
-  | 'language-coach';
+  | 'language-coach'
+  | 'music';
 
 export type Message = {
   message: React.ReactNode;
