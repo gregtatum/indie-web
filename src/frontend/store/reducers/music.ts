@@ -1,0 +1,29 @@
+import * as T from 'frontend/@types';
+import { combineReducers } from 'redux';
+
+/**
+ * The panels are the top filter section for the music view. This structure controls
+ * what is currently selected inside of that panel.
+ */
+function panelSelections(
+  state: Partial<Record<T.MusicPanelType, string>> = {},
+  action: T.Action,
+): Partial<Record<T.MusicPanelType, string>> {
+  switch (action.type) {
+    case 'set-music-panel-selection': {
+      const next = { ...state, [action.panel]: action.value };
+      if (!action.value) {
+        delete next[action.panel];
+      }
+      return next;
+    }
+    case 'view-music':
+      return {};
+    default:
+      return state;
+  }
+}
+
+export const musicReducer = combineReducers({
+  panelSelections,
+});

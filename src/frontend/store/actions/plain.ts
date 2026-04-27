@@ -332,3 +332,14 @@ export function changeFileFocus(folder: string, fileFocus: string) {
     fileFocus,
   };
 }
+
+export function setMusicPanelSelection(
+  panel: T.MusicPanelType,
+  value?: string,
+) {
+  return {
+    type: 'set-music-panel-selection' as const,
+    panel,
+    value,
+  };
+}

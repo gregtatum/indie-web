@@ -25,6 +25,7 @@ import * as AppLogic from 'frontend/logic/app-logic';
 type State = T.State;
 
 export * from './language-coach';
+export * from './music';
 
 export function getView(state: State) {
   return state.view;

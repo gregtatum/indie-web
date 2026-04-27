@@ -12,6 +12,7 @@ import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 import { toFileStoreName } from 'frontend/logic/app-logic';
 import { languageCoachReducer } from './language-coach';
+import { musicReducer } from './music';
 
 function getDropboxOauth(): T.DropboxOauth | null {
   const oauthString = window.localStorage.getItem('dropboxOauth');
@@ -855,6 +856,7 @@ export const reducers = combineReducers({
   idbfs,
   isDraggingSplitter,
   languageCoach: languageCoachReducer,
+  music: musicReducer,
   listFileErrors,
   listFilesCache,
   messages,

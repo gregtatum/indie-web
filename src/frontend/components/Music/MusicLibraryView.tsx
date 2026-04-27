@@ -55,7 +55,7 @@ function FilterPanel({
   filter,
   tracks,
 }: {
-  filter: T.MusicFilterType;
+  filter: T.MusicPanelType;
   tracks: T.TrackMetadata[];
 }) {
   const values = [
