@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { $$, T } from 'frontend';
+import { $$, T, A, Hooks, $ } from 'frontend';
 
 export function MusicLibraryView() {
   const server = $$.getCurrentServerOrNull();
@@ -45,33 +45,146 @@ export function MusicLibraryView() {
 function FilterPanels({ tracks }: { tracks: T.TrackMetadata[] }) {
   return (
     <div className="musicFilterPanels">
-      <FilterPanel filter="artist" tracks={tracks} />
-      <FilterPanel filter="album" tracks={tracks} />
+      <FilterPanel panel="artist" tracks={tracks} />
+      <FilterPanel panel="album" tracks={tracks} />
     </div>
   );
 }
 
 function FilterPanel({
-  filter,
+  panel,
   tracks,
 }: {
-  filter: T.MusicPanelType;
+  panel: T.MusicPanelType;
   tracks: T.TrackMetadata[];
 }) {
+  const { getState, dispatch } = Hooks.useStore();
+  const panelSelections = $$.getMusicPanelSelections();
+  const selection = panelSelections[panel];
+
   const values = [
-    ...new Set(tracks.map((t) => t[filter]).filter(Boolean)),
+    ...new Set(tracks.map((t) => t[panel]).filter(Boolean)),
   ].sort() as string[];
+
+  // Keep a ref so the keydown handler always sees the latest values without
+  // re-registering on every render.
+  const valuesRef = React.useRef(values);
+  valuesRef.current = values;
+
+  const selectedIndex = selection !== undefined ? values.indexOf(selection) : -1;
+  const listRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (document.activeElement !== listRef.current) {
+        return;
+      }
+
+      const currentValues = valuesRef.current;
+      const currentSelection = $.getMusicPanelSelections(getState())[panel];
+      const currentIndex =
+        currentSelection !== undefined
+          ? currentValues.indexOf(currentSelection)
+          : -1;
+
+      switch (event.key) {
+        case 'ArrowUp': {
+          event.preventDefault();
+          const nextIndex = Math.max(0, currentIndex - 1);
+          if (currentValues[nextIndex] !== undefined) {
+            dispatch(A.setMusicPanelSelection(panel, currentValues[nextIndex]));
+          }
+          break;
+        }
+        case 'ArrowDown': {
+          event.preventDefault();
+          const nextIndex =
+            currentIndex < 0 ? 0 : Math.min(currentValues.length - 1, currentIndex + 1);
+          if (currentValues[nextIndex] !== undefined) {
+            dispatch(A.setMusicPanelSelection(panel, currentValues[nextIndex]));
+          }
+          break;
+        }
+        case 'Escape': {
+          event.preventDefault();
+          dispatch(A.setMusicPanelSelection(panel));
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    document.body.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [panel]);
 
   return (
     <div className="musicFilterPanel">
-      <div className="musicFilterPanelHeader">{filter}</div>
-      <div className="musicFilterPanelList">
-        {values.map((value) => (
-          <div key={value} className="musicFilterPanelItem">
-            {value}
-          </div>
+      <div className="musicFilterPanelHeader">{panel}</div>
+      <div
+        className="musicFilterPanelList"
+        role="listbox"
+        tabIndex={0}
+        aria-activedescendant={
+          selectedIndex >= 0
+            ? `music-panel-${panel}-${selectedIndex}`
+            : undefined
+        }
+        ref={listRef}
+      >
+        {values.map((value, index) => (
+          <FilterPanelItem
+            key={value}
+            panel={panel}
+            value={value}
+            index={index}
+            isSelected={value === selection}
+            dispatch={dispatch}
+          />
         ))}
       </div>
+    </div>
+  );
+}
+
+function FilterPanelItem({
+  panel,
+  value,
+  index,
+  isSelected,
+  dispatch,
+}: {
+  panel: T.MusicPanelType;
+  value: string;
+  index: number;
+  isSelected: boolean;
+  dispatch: T.Dispatch;
+}) {
+  const divRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (isSelected && divRef.current) {
+      divRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [isSelected]);
+
+  return (
+    <div
+      className={`musicFilterPanelItem${isSelected ? ' selected' : ''}`}
+      role="option"
+      aria-selected={isSelected}
+      id={`music-panel-${panel}-${index}`}
+      ref={divRef}
+      onClick={() => {
+        dispatch(
+          A.setMusicPanelSelection(panel, isSelected ? undefined : value),
+        );
+      }}
+    >
+      {value}
     </div>
   );
 }

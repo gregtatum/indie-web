@@ -116,6 +116,11 @@
   &:hover {
     background: #eee;
   }
+
+  &.selected {
+    background: var(--color-primary, #555);
+    color: #fff;
+  }
 }
 
 .musicSongs {
