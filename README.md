@@ -102,3 +102,12 @@ describe("example component", () => {
     );
   });
 ```
+
+## CSS
+
+I prefer the pattern `{component}{subcomponent}{items}` for class names. So for instance `.musicPlayerButton`. This makes it easy to have a global list of CSS names that don't conflict. As much as possible, I use consistent sizing and color tokens collected in `src/frontend/components/App.css` under `:root`. For certain sub-apps I have separate token roots like my experimental Language Coach uses `-lc-accent-color` rather than the main `--accent-color`. The `var()` access of the primitives should never provide a fallback value.
+
+
+## AI Usage Disclosure
+
+I sometimes use AI tools for codegen, but scrutinize the code output, and ensure that it meets my normal code quality bar. Ideally I shouldn't be able to tell the difference between my hand written code, and that from the agent I used.
