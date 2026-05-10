@@ -38,7 +38,22 @@ function tracks(
   }
 }
 
+function selectedTrackPath(
+  state: string | null = null,
+  action: T.Action,
+): string | null {
+  switch (action.type) {
+    case 'set-music-selected-track':
+      return action.path ?? null;
+    case 'view-music':
+      return null;
+    default:
+      return state;
+  }
+}
+
 export const musicReducer = combineReducers({
   panelSelections,
   tracks,
+  selectedTrackPath,
 });

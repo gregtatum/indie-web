@@ -293,18 +293,134 @@ function FilterPanelItem({
 
 function Songs() {
   const tracks = $$.getFilteredMusicTracks();
+  const selectedPath = $$.getMusicSelectedTrackPath();
+  const { getState, dispatch } = Hooks.useStore();
+
+  const selectedIndex = selectedPath
+    ? tracks.findIndex((t) => t.path === selectedPath)
+    : -1;
+  const listRef = React.useRef<HTMLDivElement | null>(null);
+
+  const activeDescendant =
+    selectedIndex >= 0 ? `music-song-${selectedIndex}` : undefined;
+
+  const tracksRef = React.useRef(tracks);
+  tracksRef.current = tracks;
+
+  React.useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (document.activeElement !== listRef.current) {
+        return;
+      }
+
+      const currentTracks = tracksRef.current;
+      const currentPath = $.getMusicSelectedTrackPath(getState());
+      const currentIndex = currentPath
+        ? currentTracks.findIndex((t) => t.path === currentPath)
+        : -1;
+
+      switch (event.key) {
+        case 'ArrowUp': {
+          event.preventDefault();
+          if (currentIndex > 0) {
+            dispatch(A.setMusicSelectedTrack(currentTracks[currentIndex - 1].path));
+          } else if (currentIndex === 0) {
+            dispatch(A.setMusicSelectedTrack());
+          }
+          break;
+        }
+        case 'ArrowDown': {
+          event.preventDefault();
+          const nextIndex =
+            currentIndex < 0
+              ? 0
+              : Math.min(currentTracks.length - 1, currentIndex + 1);
+          if (currentTracks[nextIndex]) {
+            dispatch(A.setMusicSelectedTrack(currentTracks[nextIndex].path));
+          }
+          break;
+        }
+        case 'Escape': {
+          event.preventDefault();
+          dispatch(A.setMusicSelectedTrack());
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    document.body.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const titles = React.useMemo(
+    () => tracks.map((t) => t.title ?? t.path),
+    [tracks],
+  );
+
+  Hooks.useTypeAheadSearch(listRef, titles, (title) => {
+    const track = tracks.find((t) => (t.title ?? t.path) === title);
+    if (track) {
+      dispatch(A.setMusicSelectedTrack(track.path));
+    }
+  });
+
   return (
-    <div className="musicSongs">
-      {tracks.map((track) => (
-        <Song key={track.path} track={track} />
+    <div className="musicSongsContainer">
+    <div
+      className="musicSongs"
+      role="listbox"
+      tabIndex={0}
+      aria-activedescendant={activeDescendant}
+      ref={listRef}
+    >
+      {tracks.map((track, index) => (
+        <Song
+          key={track.path}
+          track={track}
+          index={index}
+          isSelected={track.path === selectedPath}
+          dispatch={dispatch}
+        />
       ))}
+    </div>
     </div>
   );
 }
 
-function Song({ track }: { track: T.TrackMetadata }) {
+function Song({
+  track,
+  index,
+  isSelected,
+  dispatch,
+}: {
+  track: T.TrackMetadata;
+  index: number;
+  isSelected: boolean;
+  dispatch: T.Dispatch;
+}) {
+  const divRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (isSelected && divRef.current) {
+      divRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [isSelected]);
+
   return (
-    <div className="musicSong">
+    <div
+      className={`musicSong${isSelected ? ' selected' : ''}`}
+      role="option"
+      aria-selected={isSelected}
+      id={`music-song-${index}`}
+      ref={divRef}
+      onClick={() =>
+        dispatch(A.setMusicSelectedTrack(isSelected ? undefined : track.path))
+      }
+    >
       <span className="musicSongTitle">{track.title ?? track.path}</span>
       <span className="musicSongArtist">{track.artist}</span>
       <span className="musicSongAlbum">{track.album}</span>

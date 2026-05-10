@@ -149,9 +149,34 @@
   }
 }
 
-.musicSongs {
+.musicSongsContainer {
   flex: 1;
+  position: relative;
+  overflow: hidden;
+
+  &:focus-within::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    pointer-events: none;
+    border: var(--outline-focus);
+    border-radius: 2px;
+  }
+
+  &:focus-within .musicSong.selected {
+    background: var(--primary-color);
+  }
+
+  &:focus-within .musicSong.selected:hover {
+    background: var(--primary-color-hover);
+  }
+}
+
+.musicSongs {
   overflow-y: auto;
+  outline: none;
+  height: 100%;
 }
 
 .musicSong {
@@ -160,6 +185,20 @@
   padding: var(--music-padding-v) var(--music-padding-h);
   border-bottom: 1px solid var(--border-color);
   align-items: baseline;
+  cursor: pointer;
+
+  &:hover {
+    background: #eee;
+  }
+
+  &.selected {
+    background: var(--primary-color-dim);
+    color: #fff;
+
+    &:hover {
+      background: var(--primary-color-hover);
+    }
+  }
 }
 
 .musicSongTitle {

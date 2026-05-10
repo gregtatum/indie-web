@@ -11,6 +11,10 @@ export function getMusicTracks(state: State): T.TrackMetadata[] {
   return getMusic(state).tracks;
 }
 
+export function getMusicSelectedTrackPath(state: State): string | null {
+  return getMusic(state).selectedTrackPath;
+}
+
 export function getMusicPanelSelections(state: State) {
   return getMusic(state).panelSelections;
 }

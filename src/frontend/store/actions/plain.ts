@@ -344,6 +344,13 @@ export function setMusicPanelSelection(
   };
 }
 
+export function setMusicSelectedTrack(path?: string) {
+  return {
+    type: 'set-music-selected-track' as const,
+    path,
+  };
+}
+
 export function setMusicTracks(tracks: T.TrackMetadata[]) {
   return {
     type: 'set-music-tracks' as const,
