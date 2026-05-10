@@ -102,6 +102,14 @@
     border: var(--outline-focus);
     border-radius: 2px;
   }
+
+  &:focus-within .musicFilterPanelItem.selected {
+    background: var(--primary-color);
+  }
+
+  &:focus-within .musicFilterPanelItem.selected:hover {
+    background: var(--primary-color-hover);
+  }
 }
 
 .musicFilterPanelHeader {
@@ -130,8 +138,12 @@
   }
 
   &.selected {
-    background: var(--color-primary, #555);
+    background: var(--primary-color-dim);
     color: #fff;
+
+    &:hover {
+      background: var(--primary-color-hover);
+    }
   }
 }
 
