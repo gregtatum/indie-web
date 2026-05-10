@@ -86,6 +86,17 @@ function FilterPanels() {
   );
 }
 
+function getPanelAllLabel(panel: T.MusicPanelType): string {
+  switch (panel) {
+    case 'artist':
+      return 'All Artists';
+    case 'album':
+      return 'All Albums';
+    default:
+      throw new UnhandledCaseError(panel, 'MusicPanelType');
+  }
+}
+
 function getPanelItems(
   tracks: T.TrackMetadata[],
   panel: T.MusicPanelType,
@@ -125,8 +136,22 @@ function FilterPanel({
   const itemsRef = React.useRef(items);
   itemsRef.current = items;
 
-  const selectedIndex = selection !== undefined ? items.indexOf(selection) : -1;
+  const selectedIndex = selection ? items.indexOf(selection) : -1;
   const listRef = React.useRef<HTMLDivElement | null>(null);
+
+  let activeDescendant: string | undefined;
+  if (!selection) {
+    activeDescendant = `music-panel-${panel}-all`;
+  } else if (selectedIndex >= 0) {
+    activeDescendant = `music-panel-${panel}-${selectedIndex}`;
+  }
+  const allItemRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!selection && allItemRef.current) {
+      allItemRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [selection]);
 
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -136,17 +161,17 @@ function FilterPanel({
 
       const currentItems = itemsRef.current;
       const currentSelection = $.getMusicPanelSelections(getState())[panel];
-      const currentIndex =
-        currentSelection !== undefined
-          ? currentItems.indexOf(currentSelection)
-          : -1;
+      const currentIndex = currentSelection
+        ? currentItems.indexOf(currentSelection)
+        : -1;
 
       switch (event.key) {
         case 'ArrowUp': {
           event.preventDefault();
-          const nextIndex = Math.max(0, currentIndex - 1);
-          if (currentItems[nextIndex] !== undefined) {
-            dispatch(A.setMusicPanelSelection(panel, currentItems[nextIndex]));
+          if (currentIndex > 0) {
+            dispatch(A.setMusicPanelSelection(panel, currentItems[currentIndex - 1]));
+          } else if (currentIndex === 0) {
+            dispatch(A.setMusicPanelSelection(panel));
           }
           break;
         }
@@ -184,13 +209,19 @@ function FilterPanel({
         className="musicFilterPanelList"
         role="listbox"
         tabIndex={0}
-        aria-activedescendant={
-          selectedIndex >= 0
-            ? `music-panel-${panel}-${selectedIndex}`
-            : undefined
-        }
+        aria-activedescendant={activeDescendant}
         ref={listRef}
       >
+        <div
+          className={`musicFilterPanelItem${!selection ? ' selected' : ''}`}
+          role="option"
+          aria-selected={!selection}
+          id={`music-panel-${panel}-all`}
+          ref={allItemRef}
+          onClick={() => dispatch(A.setMusicPanelSelection(panel))}
+        >
+          {getPanelAllLabel(panel)}
+        </div>
         {items.map((value, index) => (
           <FilterPanelItem
             key={value}
