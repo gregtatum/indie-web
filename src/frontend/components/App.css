@@ -36,6 +36,12 @@
   --primary-color: #004eca;
   --primary-color-hover: #0062ff;
 
+  --selection-hover: #eee;
+  --selection-active: var(--primary-color);
+  --selection-active-hover: var(--primary-color-hover);
+  --selection-inactive: #ccc;
+  --selection-inactive-hover: #ddd;
+
   --text-border: #555;
   --light-border: #ddd;
 }

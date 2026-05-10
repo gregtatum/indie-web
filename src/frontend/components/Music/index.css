@@ -106,11 +106,12 @@
   }
 
   &:focus-within .musicFilterPanelItem.selected {
-    background: var(--primary-color);
+    background: var(--selection-active);
+    color: #fff;
   }
 
   &:focus-within .musicFilterPanelItem.selected:hover {
-    background: var(--primary-color-hover);
+    background: var(--selection-active-hover);
   }
 }
 
@@ -136,15 +137,14 @@
   cursor: pointer;
 
   &:hover {
-    background: #eee;
+    background: var(--selection-hover);
   }
 
   &.selected {
-    background: var(--primary-color-dim);
-    color: #fff;
+    background: var(--selection-inactive);
 
     &:hover {
-      background: var(--primary-color-hover);
+      background: var(--selection-inactive-hover);
     }
   }
 }
@@ -165,11 +165,12 @@
   }
 
   &:focus-within .musicSong.selected {
-    background: var(--primary-color);
+    background: var(--selection-active);
+    color: #fff;
   }
 
   &:focus-within .musicSong.selected:hover {
-    background: var(--primary-color-hover);
+    background: var(--selection-active-hover);
   }
 }
 
@@ -188,15 +189,14 @@
   cursor: pointer;
 
   &:hover {
-    background: #eee;
+    background: var(--selection-hover);
   }
 
   &.selected {
-    background: var(--primary-color-dim);
-    color: #fff;
+    background: var(--selection-inactive);
 
     &:hover {
-      background: var(--primary-color-hover);
+      background: var(--selection-inactive-hover);
     }
   }
 }
