@@ -7,14 +7,69 @@ interface SplitterProps {
   start: React.ReactNode;
   end: React.ReactNode;
   persistLocalStorage?: string;
+  direction?: 'horizontal' | 'vertical';
 }
 
+const splitterWidth = 3;
+const splitterPadding = 6;
+
+const verticalStartStyle: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  width: '100%',
+  top: 0,
+};
+
+const verticalEndStyle: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  width: '100%',
+  bottom: 0,
+};
+
+const verticalMiddleStyle: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  width: '100%',
+  height: `${splitterWidth}px`,
+  padding: `${splitterPadding}px 0`,
+};
+
+const horizontalStartStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  height: '100%',
+  left: 0,
+};
+
+const horizontalEndStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  height: '100%',
+  right: 0,
+};
+
+const horizontalMiddleStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  height: '100%',
+  width: `${splitterWidth}px`,
+  padding: `0 ${splitterPadding}px`,
+};
+
 export function Splitter(props: SplitterProps) {
-  const { start, end, className, persistLocalStorage } = props;
+  const {
+    start,
+    end,
+    className,
+    persistLocalStorage,
+    direction = 'horizontal',
+  } = props;
   const container = React.useRef<HTMLDivElement>(null);
   const isDragging = $$.getIsDraggingSplitter();
   const dispatch = Hooks.useDispatch();
   const touchId = React.useRef<null | number>(null);
+  const isVertical = direction === 'vertical';
 
   let initialOffset = 0;
   if (persistLocalStorage) {
@@ -26,27 +81,29 @@ export function Splitter(props: SplitterProps) {
       }
     }
   }
-  const [offsetX, setOffsetX] = React.useState(initialOffset);
+  const [offset, setOffset] = React.useState(initialOffset);
 
-  // Store the offsetX in a ref so it can be passed to the ResizeObserver.
-  const offsetXRef = React.useRef(offsetX);
-  offsetXRef.current = offsetX;
+  // Store the offset in a ref so it can be passed to the ResizeObserver.
+  const offsetRef = React.useRef(offset);
+  offsetRef.current = offset;
   const minSpace = 10;
-  const splitterWidth = 3;
-  const splitterPadding = 6;
 
   if (persistLocalStorage) {
-    window.localStorage.setItem(persistLocalStorage, String(offsetX));
+    window.localStorage.setItem(persistLocalStorage, String(offset));
   }
 
   if (className.includes(' ')) {
     throw new Error('Splitter only allows class names with no spaces.');
   }
 
-  function keepOffsetInBounds(rect: DOMRect, offX: number): number {
-    offX = Math.max(-(rect.width / 2) + minSpace, offX);
-    offX = Math.min(rect.width / 2 - minSpace, offX);
-    return offX;
+  function keepOffsetInBounds(
+    rect: DOMRect | { width: number; height: number },
+    off: number,
+  ): number {
+    const size = isVertical ? rect.height : rect.width;
+    off = Math.max(-(size / 2) + minSpace, off);
+    off = Math.min(size / 2 - minSpace, off);
+    return off;
   }
 
   React.useEffect(() => {
@@ -56,11 +113,11 @@ export function Splitter(props: SplitterProps) {
     }
 
     const resizeObserver = new ResizeObserver((entries) => {
-      const offsetX = offsetXRef.current;
+      const currentOffset = offsetRef.current;
       for (const entry of entries) {
-        const offX = keepOffsetInBounds(entry.contentRect, offsetX);
-        if (offX !== offsetX) {
-          setOffsetX(offX);
+        const off = keepOffsetInBounds(entry.contentRect, currentOffset);
+        if (off !== currentOffset) {
+          setOffset(off);
         }
       }
     });
@@ -83,7 +140,7 @@ export function Splitter(props: SplitterProps) {
 
     function onMouseMove(event: MouseEvent) {
       event.preventDefault();
-      handleMove(event.pageX);
+      handleMove(isVertical ? event.pageY : event.pageX);
     }
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('mousemove', onMouseMove);
@@ -117,7 +174,7 @@ export function Splitter(props: SplitterProps) {
         throw new Error('Expected to find a touch from the identifier');
       }
       event.preventDefault();
-      handleMove(touch.pageX);
+      handleMove(isVertical ? touch.pageY : touch.pageX);
     }
     function preventDocScroll(event: TouchEvent) {
       event.preventDefault();
@@ -129,40 +186,50 @@ export function Splitter(props: SplitterProps) {
     });
   };
 
-  function handleMove(pageX: number) {
+  function handleMove(pos: number) {
     const { current } = container;
     if (!current) {
       return;
     }
     const rect = current.getBoundingClientRect();
-    const offX = rect.width / 2 + rect.x - pageX;
-    setOffsetX(keepOffsetInBounds(rect, offX));
+    const size = isVertical ? rect.height : rect.width;
+    const origin = isVertical ? rect.y : rect.x;
+    const off = size / 2 + origin - pos;
+    setOffset(keepOffsetInBounds(rect, off));
   }
+
   function handleUp() {
     dispatch(A.draggingSplitter(false));
     window.document.body.style.cursor = '';
   }
 
-  const startStyle = { width: `calc(50% - ${offsetX}px)` };
-  const endStyle = { width: `calc(50% + ${offsetX}px)` };
-  const middleStyle = {
-    left: `calc(50% - ${splitterWidth / 2 + splitterPadding + offsetX}px)`,
-    width: String(splitterWidth) + 'px',
-    padding: `0 ${splitterPadding}px`,
-  };
+  let startStyle: React.CSSProperties;
+  let endStyle: React.CSSProperties;
+  let middleStyle: React.CSSProperties;
+  const midPos = `calc(50% - ${splitterWidth / 2 + splitterPadding + offset}px)`;
+
+  if (isVertical) {
+    startStyle = { ...verticalStartStyle, height: `calc(50% - ${offset}px)` };
+    endStyle = { ...verticalEndStyle, height: `calc(50% + ${offset}px)` };
+    middleStyle = { ...verticalMiddleStyle, top: midPos };
+  } else {
+    startStyle = { ...horizontalStartStyle, width: `calc(50% - ${offset}px)` };
+    endStyle = { ...horizontalEndStyle, width: `calc(50% + ${offset}px)` };
+    middleStyle = { ...horizontalMiddleStyle, left: midPos };
+  }
 
   return (
-    <div className={className} ref={container}>
+    <div className={className} data-direction={direction} ref={container}>
       <div className={className + 'Start'} style={startStyle}>
         {start}
       </div>
       <div
-        className={className + 'Middle ' + (isDragging ? 'dragging' : '')}
+        className={`${className}Middle splitterMiddle${isDragging ? ' dragging' : ''}`}
         style={middleStyle}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
       >
-        <div className={className + 'MiddleVisible'} />
+        <div className={`${className}MiddleVisible splitterMiddleVisible`} />
       </div>
       <div className={className + 'End'} style={endStyle}>
         {end}

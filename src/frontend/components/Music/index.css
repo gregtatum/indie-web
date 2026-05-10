@@ -69,6 +69,12 @@
   overflow: hidden;
 }
 
+.musicLibrarySplitter {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
 .musicLibraryViewError {
   align-items: center;
   justify-content: center;
@@ -80,7 +86,7 @@
 .musicFilterPanels {
   display: flex;
   flex-direction: row;
-  height: 200px;
+  height: 100%;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -150,7 +156,7 @@
 }
 
 .musicSongsContainer {
-  flex: 1;
+  height: 100%;
   position: relative;
   overflow: hidden;
 

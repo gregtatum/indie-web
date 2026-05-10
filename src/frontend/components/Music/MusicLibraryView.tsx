@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { $$, T, A, Hooks, $ } from 'frontend';
 import { UnhandledCaseError } from 'frontend/utils';
+import { Splitter } from 'frontend/components/Splitter';
 
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
   const { name, url } = server;
@@ -70,8 +71,13 @@ export function MusicLibraryView() {
 
   return (
     <div className="musicLibraryView">
-      <FilterPanels />
-      <Songs />
+      <Splitter
+        direction="vertical"
+        className="musicLibrarySplitter"
+        start={<FilterPanels />}
+        end={<Songs />}
+        persistLocalStorage="musicLibrarySplitterOffset"
+      />
     </div>
   );
 }
