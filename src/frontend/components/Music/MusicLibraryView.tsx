@@ -2,19 +2,48 @@ import * as React from 'react';
 import { $$, T, A, Hooks, $ } from 'frontend';
 import { UnhandledCaseError } from 'frontend/utils';
 
+function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
+  const { name, url } = server;
+  const hostname = URL.parse(url)?.hostname;
+
+  let advice: React.ReactNode;
+  if (process.env.NODE_ENV === 'development') {
+    advice = (
+      <>
+        Run <code>task start-server</code> to start it.
+      </>
+    );
+  } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    advice = 'Make sure the server is running on your local machine.';
+  } else {
+    advice =
+      'Check that the server is online and your network connection is working.';
+  }
+
+  return (
+    <>
+      Could not connect to the <code>{name}</code> server at <code>{url}</code>.
+      <br />
+      <br />
+      {advice}
+    </>
+  );
+}
+
 export function MusicLibraryView() {
   const server = $$.getCurrentServerOrNull();
   const [tracks, setTracks] = React.useState<T.TrackMetadata[]>([]);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<React.ReactNode>(null);
 
   React.useEffect(() => {
     if (!server) {
       return;
     }
+    const currentServer = server;
 
     async function loadIndex() {
       try {
-        const res = await fetch(`${server!.url}/music/music-index`);
+        const res = await fetch(`${currentServer.url}/music/music-index`);
         if (!res.ok) {
           setError('Music library not found. Run a scan first.');
           return;
@@ -22,7 +51,7 @@ export function MusicLibraryView() {
         const index: T.MusicIndex = await res.json();
         setTracks(index.tracks);
       } catch {
-        setError('Could not connect to the server.');
+        setError(getConnectionErrorMessage(currentServer));
       }
     }
 
@@ -31,7 +60,11 @@ export function MusicLibraryView() {
 
   if (error) {
     return (
-      <div className="musicLibraryView musicLibraryViewError">{error}</div>
+      <div className="musicLibraryView">
+        <div className="musicLibraryViewError">
+          <div>{error}</div>
+        </div>
+      </div>
     );
   }
 
@@ -52,7 +85,10 @@ function FilterPanels({ tracks }: { tracks: T.TrackMetadata[] }) {
   );
 }
 
-function getPanelItems(tracks: T.TrackMetadata[], panel: T.MusicPanelType): string[] {
+function getPanelItems(
+  tracks: T.TrackMetadata[],
+  panel: T.MusicPanelType,
+): string[] {
   let field: (track: T.TrackMetadata) => string | null;
   switch (panel) {
     case 'artist':

@@ -31,11 +31,11 @@
 }
 
 .musicScanStatus-done {
-  color: var(--color-success, green);
+  color: var(--color-success);
 }
 
 .musicScanStatus-error {
-  color: var(--color-error, red);
+  color: var(--color-error);
 }
 
 .musicViewToggle {
@@ -68,11 +68,11 @@
 }
 
 .musicLibraryViewError {
-  display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
+  display: flex;
   flex: 1;
-  opacity: 0.5;
 }
 
 .musicFilterPanels {
