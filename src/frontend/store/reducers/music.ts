@@ -24,6 +24,21 @@ function panelSelections(
   }
 }
 
+function tracks(
+  state: T.TrackMetadata[] = [],
+  action: T.Action,
+): T.TrackMetadata[] {
+  switch (action.type) {
+    case 'set-music-tracks':
+      return action.tracks;
+    case 'view-music':
+      return [];
+    default:
+      return state;
+  }
+}
+
 export const musicReducer = combineReducers({
   panelSelections,
+  tracks,
 });

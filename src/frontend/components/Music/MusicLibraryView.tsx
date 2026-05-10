@@ -32,7 +32,7 @@ function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
 
 export function MusicLibraryView() {
   const server = $$.getCurrentServerOrNull();
-  const [tracks, setTracks] = React.useState<T.TrackMetadata[]>([]);
+  const { dispatch } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
 
   React.useEffect(() => {
@@ -49,7 +49,7 @@ export function MusicLibraryView() {
           return;
         }
         const index: T.MusicIndex = await res.json();
-        setTracks(index.tracks);
+        dispatch(A.setMusicTracks(index.tracks));
       } catch {
         setError(getConnectionErrorMessage(currentServer));
       }
@@ -70,17 +70,18 @@ export function MusicLibraryView() {
 
   return (
     <div className="musicLibraryView">
-      <FilterPanels tracks={tracks} />
-      <Songs tracks={tracks} />
+      <FilterPanels />
+      <Songs />
     </div>
   );
 }
 
-function FilterPanels({ tracks }: { tracks: T.TrackMetadata[] }) {
+function FilterPanels() {
+  const panelTracks = $$.getMusicPanelTracks();
   return (
     <div className="musicFilterPanels">
-      <FilterPanel panel="artist" tracks={tracks} />
-      <FilterPanel panel="album" tracks={tracks} />
+      <FilterPanel panel="artist" tracks={panelTracks.artist} />
+      <FilterPanel panel="album" tracks={panelTracks.album} />
     </div>
   );
 }
@@ -244,7 +245,8 @@ function FilterPanelItem({
   );
 }
 
-function Songs({ tracks }: { tracks: T.TrackMetadata[] }) {
+function Songs() {
+  const tracks = $$.getFilteredMusicTracks();
   return (
     <div className="musicSongs">
       {tracks.map((track) => (
