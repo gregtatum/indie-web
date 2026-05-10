@@ -87,9 +87,20 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative; /* Creating a stacking context. */
 
   & + & {
     border-left: 1px solid var(--border-color);
+  }
+
+  &:focus-within::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 28px 0 0 0;
+    pointer-events: none;
+    border: var(--outline-focus);
+    border-radius: 2px;
   }
 }
 
@@ -107,6 +118,7 @@
 .musicFilterPanelList {
   overflow-y: auto;
   flex: 1;
+  outline: none;
 }
 
 .musicFilterPanelItem {

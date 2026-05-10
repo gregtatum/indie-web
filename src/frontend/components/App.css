@@ -22,8 +22,12 @@
   --modal-shadow: 7px 6px 6px #0001;
   --modal-radius: 4px;
 
+  /* active and focus rules for outside a div  (no layout is affected) */
   --outline-active: 2px solid #0040ff;
   --outline-focus: 2px solid #0040ffaa;
+  /* active and focus rules for inside a div (no layout is affected) */
+  --box-shadow-active: 0 0 0 2px #0040ff inset;
+  --box-shadow-focus: 0 0 0 2px #0040ffaa inset;
 
   --accent-color: #ce1ebb;
   --accent-color-light: #ce1ebb52;
