@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { $$, T, A, Hooks, $ } from 'frontend';
+import { UnhandledCaseError } from 'frontend/utils';
 
 export function MusicLibraryView() {
   const server = $$.getCurrentServerOrNull();
@@ -51,6 +52,21 @@ function FilterPanels({ tracks }: { tracks: T.TrackMetadata[] }) {
   );
 }
 
+function getPanelItems(tracks: T.TrackMetadata[], panel: T.MusicPanelType): string[] {
+  let field: (track: T.TrackMetadata) => string | null;
+  switch (panel) {
+    case 'artist':
+      field = (t) => t.artist;
+      break;
+    case 'album':
+      field = (t) => t.album;
+      break;
+    default:
+      throw new UnhandledCaseError(panel, 'MusicPanelType');
+  }
+  return [...new Set(tracks.map(field).filter(Boolean))].sort() as string[];
+}
+
 function FilterPanel({
   panel,
   tracks,
@@ -62,16 +78,17 @@ function FilterPanel({
   const panelSelections = $$.getMusicPanelSelections();
   const selection = panelSelections[panel];
 
-  const values = [
-    ...new Set(tracks.map((t) => t[panel]).filter(Boolean)),
-  ].sort() as string[];
+  const items = React.useMemo(
+    () => getPanelItems(tracks, panel),
+    [tracks, panel],
+  );
 
-  // Keep a ref so the keydown handler always sees the latest values without
+  // Keep a ref so the keydown handler always sees the latest items without
   // re-registering on every render.
-  const valuesRef = React.useRef(values);
-  valuesRef.current = values;
+  const itemsRef = React.useRef(items);
+  itemsRef.current = items;
 
-  const selectedIndex = selection !== undefined ? values.indexOf(selection) : -1;
+  const selectedIndex = selection !== undefined ? items.indexOf(selection) : -1;
   const listRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -80,28 +97,30 @@ function FilterPanel({
         return;
       }
 
-      const currentValues = valuesRef.current;
+      const currentItems = itemsRef.current;
       const currentSelection = $.getMusicPanelSelections(getState())[panel];
       const currentIndex =
         currentSelection !== undefined
-          ? currentValues.indexOf(currentSelection)
+          ? currentItems.indexOf(currentSelection)
           : -1;
 
       switch (event.key) {
         case 'ArrowUp': {
           event.preventDefault();
           const nextIndex = Math.max(0, currentIndex - 1);
-          if (currentValues[nextIndex] !== undefined) {
-            dispatch(A.setMusicPanelSelection(panel, currentValues[nextIndex]));
+          if (currentItems[nextIndex] !== undefined) {
+            dispatch(A.setMusicPanelSelection(panel, currentItems[nextIndex]));
           }
           break;
         }
         case 'ArrowDown': {
           event.preventDefault();
           const nextIndex =
-            currentIndex < 0 ? 0 : Math.min(currentValues.length - 1, currentIndex + 1);
-          if (currentValues[nextIndex] !== undefined) {
-            dispatch(A.setMusicPanelSelection(panel, currentValues[nextIndex]));
+            currentIndex < 0
+              ? 0
+              : Math.min(currentItems.length - 1, currentIndex + 1);
+          if (currentItems[nextIndex] !== undefined) {
+            dispatch(A.setMusicPanelSelection(panel, currentItems[nextIndex]));
           }
           break;
         }
@@ -135,7 +154,7 @@ function FilterPanel({
         }
         ref={listRef}
       >
-        {values.map((value, index) => (
+        {items.map((value, index) => (
           <FilterPanelItem
             key={value}
             panel={panel}
