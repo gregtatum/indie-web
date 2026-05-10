@@ -179,7 +179,9 @@ function FilterPanel({
         case 'ArrowUp': {
           event.preventDefault();
           if (currentIndex > 0) {
-            dispatch(A.setMusicPanelSelection(panel, currentItems[currentIndex - 1]));
+            dispatch(
+              A.setMusicPanelSelection(panel, currentItems[currentIndex - 1]),
+            );
           } else if (currentIndex === 0) {
             dispatch(A.setMusicPanelSelection(panel));
           }
@@ -329,7 +331,9 @@ function Songs() {
         case 'ArrowUp': {
           event.preventDefault();
           if (currentIndex > 0) {
-            dispatch(A.setMusicSelectedTrack(currentTracks[currentIndex - 1].path));
+            dispatch(
+              A.setMusicSelectedTrack(currentTracks[currentIndex - 1].path),
+            );
           }
           break;
         }
@@ -374,23 +378,23 @@ function Songs() {
 
   return (
     <div className="musicSongsContainer">
-    <div
-      className="musicSongs"
-      role="listbox"
-      tabIndex={0}
-      aria-activedescendant={activeDescendant}
-      ref={listRef}
-    >
-      {tracks.map((track, index) => (
-        <Song
-          key={track.path}
-          track={track}
-          index={index}
-          isSelected={track.path === selectedPath}
-          dispatch={dispatch}
-        />
-      ))}
-    </div>
+      <div
+        className="musicSongs"
+        role="listbox"
+        tabIndex={0}
+        aria-activedescendant={activeDescendant}
+        ref={listRef}
+      >
+        {tracks.map((track, index) => (
+          <Song
+            key={track.path}
+            track={track}
+            index={index}
+            isSelected={track.path === selectedPath}
+            dispatch={dispatch}
+          />
+        ))}
+      </div>
     </div>
   );
 }

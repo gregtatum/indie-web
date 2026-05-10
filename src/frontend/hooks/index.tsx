@@ -715,7 +715,12 @@ export function useTypeAheadSearch(
       if (document.activeElement !== listRef.current) {
         return;
       }
-      if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) {
+      if (
+        event.key.length !== 1 ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey
+      ) {
         return;
       }
 
