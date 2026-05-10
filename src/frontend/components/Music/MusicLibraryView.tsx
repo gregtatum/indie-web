@@ -324,8 +324,6 @@ function Songs() {
           event.preventDefault();
           if (currentIndex > 0) {
             dispatch(A.setMusicSelectedTrack(currentTracks[currentIndex - 1].path));
-          } else if (currentIndex === 0) {
-            dispatch(A.setMusicSelectedTrack());
           }
           break;
         }
