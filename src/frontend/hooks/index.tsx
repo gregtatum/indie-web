@@ -691,3 +691,59 @@ export function useCachedFolderListing(): Set<string> {
 
   return cachedFolderListing;
 }
+
+/**
+ * Jumps to the first item whose text starts with the characters typed in
+ * quick succession. Resets the accumulated query after a pause.
+ */
+export function useTypeAheadSearch(
+  listRef: React.RefObject<HTMLElement | null>,
+  items: string[],
+  onSelect: (value: string) => void,
+): void {
+  const itemsRef = React.useRef(items);
+  itemsRef.current = items;
+
+  const onSelectRef = React.useRef(onSelect);
+  onSelectRef.current = onSelect;
+
+  React.useEffect(() => {
+    const queryRef = { current: '' };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (document.activeElement !== listRef.current) {
+        return;
+      }
+      if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      if (timer !== null) {
+        clearTimeout(timer);
+      }
+
+      queryRef.current += event.key.toLowerCase();
+      timer = setTimeout(() => {
+        queryRef.current = '';
+        timer = null;
+      }, 1000);
+
+      const query = queryRef.current;
+      const match = itemsRef.current.find((item) =>
+        item.toLowerCase().startsWith(query),
+      );
+      if (match) {
+        onSelectRef.current(match);
+      }
+    }
+
+    document.body.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.removeEventListener('keydown', handleKeyDown);
+      if (timer !== null) {
+        clearTimeout(timer);
+      }
+    };
+  }, []);
+}

@@ -139,6 +139,10 @@ function FilterPanel({
   const selectedIndex = selection ? items.indexOf(selection) : -1;
   const listRef = React.useRef<HTMLDivElement | null>(null);
 
+  Hooks.useTypeAheadSearch(listRef, items, (value) =>
+    dispatch(A.setMusicPanelSelection(panel, value)),
+  );
+
   let activeDescendant: string | undefined;
   if (!selection) {
     activeDescendant = `music-panel-${panel}-all`;
