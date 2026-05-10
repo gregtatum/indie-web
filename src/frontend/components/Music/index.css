@@ -9,6 +9,8 @@
   --music-padding-h: 12px;
   --music-label-font-size: 11px;
   --music-meta-font-size: 13px;
+  --success-color: green;
+  --error-color: red;
 
   & .listFiles {
     min-height: 0;
@@ -31,11 +33,11 @@
 }
 
 .musicScanStatus-done {
-  color: var(--color-success);
+  color: var(--success-color);
 }
 
 .musicScanStatus-error {
-  color: var(--color-error);
+  color: var(--error-color);
 }
 
 .musicViewToggle {
@@ -56,7 +58,7 @@
 }
 
 .musicViewToggleButton-active {
-  background: var(--color-primary, #555);
+  background: var(--primary-color);
   color: #fff;
 }
 
