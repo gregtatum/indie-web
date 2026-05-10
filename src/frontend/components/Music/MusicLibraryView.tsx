@@ -186,6 +186,17 @@ function FilterPanel({
           }
           break;
         }
+        case 'ArrowLeft':
+        case 'ArrowRight': {
+          event.preventDefault();
+          const lists = Array.from(
+            document.querySelectorAll<HTMLElement>('.musicFilterPanelList'),
+          );
+          const idx = lists.indexOf(listRef.current!);
+          const target = lists[idx + (event.key === 'ArrowRight' ? 1 : -1)];
+          target?.focus();
+          break;
+        }
         case 'Escape': {
           event.preventDefault();
           dispatch(A.setMusicPanelSelection(panel));
