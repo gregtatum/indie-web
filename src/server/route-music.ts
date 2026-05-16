@@ -194,9 +194,13 @@ async function performScan(
   const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
   const tmpPath = indexPath + '.tmp';
 
-  // Load the existing index for incremental scanning.
-  // Skip the cache when the on-disk version is older than the current format:
-  // a v1 track lacks `genre`, so reusing it would produce an incomplete index.
+  // Read the existing index to enable incremental scanning: files whose mtime
+  // and size are unchanged can skip tag re-parsing and reuse stored metadata.
+  //
+  // When the index format version has changed, discard the existing index
+  // entirely and rescan all files from scratch. Partial reuse would produce an
+  // incomplete index (e.g. v1 entries have no genre). A full rescan is the
+  // simplest correct strategy — the index is just rebuilt and written anew.
   const existingTracks = new Map<string, T.TrackMetadata>();
   try {
     const contents = await fs.readFile(indexPath, 'utf-8');
@@ -207,7 +211,7 @@ async function performScan(
       }
     }
   } catch {
-    // No existing index — start fresh.
+    // No existing index — scan all files.
   }
 
   const audioFiles = await findAudioFiles(mountPath, mountPath);
@@ -220,9 +224,13 @@ async function performScan(
     const mtime = stats.mtime.toISOString();
     const size = stats.size;
 
-    const cached = existingTracks.get(clientPath);
-    if (cached && cached.mtime === mtime && cached.size === size) {
-      tracks.push(cached);
+    const existingTrack = existingTracks.get(clientPath);
+    if (
+      existingTrack &&
+      existingTrack.mtime === mtime &&
+      existingTrack.size === size
+    ) {
+      tracks.push(existingTrack);
     } else {
       let title: string | null = null;
       let artist: string | null = null;

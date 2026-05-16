@@ -3,12 +3,25 @@ import * as T from 'shared/@types/shared';
 /**
  * In-memory upgraders for the MusicIndex serialized data format.
  *
- * The TypeScript type system only knows about the current MusicIndex format.
- * When the server returns an older serialized format (e.g. the server binary is
- * behind the UI), these upgraders normalize it to the current format before
- * anything else in the frontend touches it.
+ * ## Two upgrade paths
  *
- * Rules:
+ * There are two distinct situations where an old index format is encountered,
+ * and they are handled differently:
+ *
+ * 1. **Server upgraded, index on disk is old** — the server detects the version
+ *    mismatch at scan time and rebuilds the index from scratch, producing a
+ *    complete, up-to-date index. No upgrader involved.
+ *
+ * 2. **UI upgraded, server binary is old** — the server returns an older format
+ *    because it doesn't know about the new version yet. The upgraders here
+ *    normalize that response so the UI remains functional. The data is
+ *    incomplete (e.g. genre is backfilled as null rather than read from tags),
+ *    so the UI prompts the user to rescan once the server is also upgraded.
+ *
+ * These upgraders are a compatibility shim for case 2 only. A rescan is always
+ * the authoritative way to get complete data.
+ *
+ * ## Rules
  *   1. Each upgrader takes a loosely-typed input (`{ version: N } & Record<string, unknown>`)
  *      rather than importing old type definitions. Old formats are documented via
  *      checked-in JSON fixtures, not TypeScript types.
