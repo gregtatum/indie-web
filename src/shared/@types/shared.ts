@@ -65,6 +65,28 @@ export interface TrackMetadata {
   mtime: string;
 }
 
+/**
+ * The serialized music library index written to disk by the server and read by
+ * the client. This type always reflects the *current* format only.
+ *
+ * ## Versioning
+ * When this type changes, bump `version` and add an in-memory upgrader:
+ *   1. Add an upgrader function in `src/frontend/logic/music/music-index-upgraders.ts`
+ *      that converts the old format to the new one. Use loose `unknown` typing —
+ *      do not import old type definitions.
+ *   2. Check in a JSON fixture of the old format at
+ *      `src/frontend/test/fixtures/music-index-v{N}.json`. This is the durable
+ *      record of what the old format looked like.
+ *   3. Add tests in `src/frontend/test/music-index-upgraders.test.ts` that pass
+ *      the fixture through the upgrader and snapshot the result. Once written,
+ *      these tests and upgraders are never modified.
+ *   4. Wire the new upgrader into `upgradeMusicIndex`.
+ *
+ * The client runs the upgrader at ingestion time, so older server responses are
+ * transparently normalized before reaching Redux. The UI surfaces a
+ * "Scan Library (updates detected)" prompt when an upgrade was applied, since
+ * backfilled fields (e.g. genre: null) are incomplete vs. a fresh scan.
+ */
 export interface MusicIndex {
   version: 2;
   scannedAt: string;
