@@ -87,6 +87,7 @@ function FilterPanels() {
   const panelTracks = $$.getMusicPanelTracks();
   return (
     <div className="musicFilterPanels">
+      <FilterPanel panel="genre" tracks={panelTracks.genre} />
       <FilterPanel panel="artist" tracks={panelTracks.artist} />
       <FilterPanel panel="album" tracks={panelTracks.album} />
     </div>
@@ -95,10 +96,12 @@ function FilterPanels() {
 
 function getPanelAllLabel(panel: T.MusicPanelType): string {
   switch (panel) {
+    case 'genre':
+      return '« All Genres »';
     case 'artist':
-      return 'All Artists';
+      return '« All Artists »';
     case 'album':
-      return 'All Albums';
+      return '« All Albums »';
     default:
       throw new UnhandledCaseError(panel, 'MusicPanelType');
   }
@@ -110,6 +113,9 @@ function getPanelItems(
 ): string[] {
   let field: (track: T.TrackMetadata) => string | null;
   switch (panel) {
+    case 'genre':
+      field = (t) => t.genre;
+      break;
     case 'artist':
       field = (t) => t.artist;
       break;
@@ -202,6 +208,10 @@ function FilterPanel({
         case 'ArrowLeft':
         case 'ArrowRight': {
           event.preventDefault();
+          // stopImmediatePropagation prevents the newly-focused panel's handler
+          // from also firing on this same event (focus changes activeElement
+          // synchronously, which would cause a double-advance).
+          event.stopImmediatePropagation();
           const lists = Array.from(
             document.querySelectorAll<HTMLElement>('.musicFilterPanelList'),
           );

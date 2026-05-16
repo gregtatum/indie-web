@@ -265,4 +265,4 @@ export type LanguageCoachSection =
   | 'learned'
   | 'reading';
 
-export type MusicPanelType = 'artist' | 'album';
+export type MusicPanelType = 'genre' | 'artist' | 'album';

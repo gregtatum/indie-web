@@ -27,7 +27,7 @@ export function getMusicNeedsRescan(state: State): boolean {
   return getMusic(state).needsRescan;
 }
 
-const PANEL_ORDER: T.MusicPanelType[] = ['artist', 'album'];
+const PANEL_ORDER: T.MusicPanelType[] = ['genre', 'artist', 'album'];
 
 function filterByPanel(
   filteredTracks: T.TrackMetadata[],
@@ -35,6 +35,8 @@ function filterByPanel(
   value: string,
 ): T.TrackMetadata[] {
   switch (panel) {
+    case 'genre':
+      return filteredTracks.filter((t) => t.genre === value);
     case 'artist':
       return filteredTracks.filter((t) => t.artist === value);
     case 'album':
