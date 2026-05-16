@@ -176,7 +176,9 @@ function FilterPanel({
   // unset for display purposes without clearing the store value.
   const effectiveSelection =
     selection && items.includes(selection) ? selection : undefined;
-  const selectedIndex = effectiveSelection ? items.indexOf(effectiveSelection) : -1;
+  const selectedIndex = effectiveSelection
+    ? items.indexOf(effectiveSelection)
+    : -1;
   const listRef = React.useRef<HTMLDivElement | null>(null);
 
   Hooks.useTypeAheadSearch(listRef, items, (value) =>
@@ -264,7 +266,9 @@ function FilterPanel({
             // didn't change so the per-item effect won't fire on its own.
             const activeId = target.getAttribute('aria-activedescendant');
             if (activeId) {
-              document.getElementById(activeId)?.scrollIntoView({ block: 'nearest' });
+              document
+                .getElementById(activeId)
+                ?.scrollIntoView({ block: 'nearest' });
             }
           }
           break;

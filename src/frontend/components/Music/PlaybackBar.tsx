@@ -15,7 +15,9 @@ export function PlaybackBar() {
   const { currentTime, duration, volume, play, pause, seek, setVolume } =
     useAudioPlayer();
 
-  const track = trackPath ? allTracks.find((t) => t.path === trackPath) ?? null : null;
+  const track = trackPath
+    ? (allTracks.find((t) => t.path === trackPath) ?? null)
+    : null;
   const isPlaying = status === 'playing';
 
   if (status === 'idle') {
@@ -23,7 +25,11 @@ export function PlaybackBar() {
   }
 
   return (
-    <div className="musicPlaybackBar" role="region" aria-label="Playback controls">
+    <div
+      className="musicPlaybackBar"
+      role="region"
+      aria-label="Playback controls"
+    >
       <div className="musicPlaybackTrackInfo">
         <span className="musicPlaybackTitle">{track?.title ?? trackPath}</span>
         <span className="musicPlaybackArtist">{track?.artist}</span>
