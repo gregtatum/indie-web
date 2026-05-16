@@ -146,6 +146,7 @@
   overflow-y: auto;
   flex: 1;
   outline: none;
+  padding-block: calc(var(--music-padding-h) / 2);
 }
 
 .musicFilterPanelItem {
