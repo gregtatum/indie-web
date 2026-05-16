@@ -11,6 +11,25 @@ export interface AudioPlayerState {
   setVolume(volume: number): void;
 }
 
+/**
+ * Manages audio playback for the music library using the Web Audio API.
+ *
+ * Playback state that other components need (the playing track path and status)
+ * lives in Redux. High-frequency values that only the playback bar needs
+ * (currentTime, duration, volume) are kept as local React state to avoid
+ * store churn on every tick.
+ *
+ * When a new track is dispatched via musicPlaybackLoad, this hook fetches the
+ * full audio file from the server, decodes it with AudioContext.decodeAudioData,
+ * and begins playback immediately. Pausing and resuming work by stopping and
+ * recreating AudioBufferSourceNode at the saved position, since that node type
+ * cannot be paused directly. Seeking follows the same stop-and-restart approach.
+ * Volume is routed through a persistent GainNode so it can be adjusted without
+ * interrupting playback.
+ *
+ * The AudioContext is created lazily on the first play action to satisfy browser
+ * autoplay policies, which require a user gesture before audio can start.
+ */
 export function useAudioPlayer(): AudioPlayerState {
   const { dispatch, getState } = Hooks.useStore();
 
@@ -25,7 +44,9 @@ export function useAudioPlayer(): AudioPlayerState {
   const pausePositionRef = React.useRef<number>(0);
   const playStartTimeRef = React.useRef<number>(0);
   const isPlayingRef = React.useRef<boolean>(false);
-  const tickIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const tickIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
   const volumeRef = React.useRef<number>(1);
 
   function getOrCreateContext(): AudioContext {
@@ -96,7 +117,7 @@ export function useAudioPlayer(): AudioPlayerState {
   const trackPath = $.getMusicPlaybackTrackPath(getState());
   const serverUrl = $.getCurrentServerOrNull(getState())?.url ?? '';
 
-  // Effect 1: fetch and decode audio whenever the track path or server URL changes
+  // Fetch and decode audio whenever the track path or server URL changes.
   React.useEffect(() => {
     if (!trackPath || !serverUrl) return;
 
@@ -136,10 +157,14 @@ export function useAudioPlayer(): AudioPlayerState {
 
   const status = $.getMusicPlaybackStatus(getState());
 
-  // Effect 2: resume or stop audio when status is changed externally (e.g. Space key)
-
+  // Responds to play/pause actions dispatched from outside the hook, such as
+  // the Space key handler in the song list.
   React.useEffect(() => {
-    if (status === 'playing' && !isPlayingRef.current && audioBufferRef.current) {
+    if (
+      status === 'playing' &&
+      !isPlayingRef.current &&
+      audioBufferRef.current
+    ) {
       startPlayback(pausePositionRef.current);
     } else if (status === 'paused' && isPlayingRef.current) {
       const ctx = audioContextRef.current;
@@ -153,7 +178,6 @@ export function useAudioPlayer(): AudioPlayerState {
     }
   }, [status]);
 
-  // Cleanup on unmount
   React.useEffect(() => {
     return () => {
       stopSourceNode();
