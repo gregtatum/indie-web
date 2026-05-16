@@ -45,8 +45,6 @@ function setup() {
   return { store };
 }
 
-// ── Song interaction tests ─────────────────────────────────────────────────
-
 describe('song interactions', () => {
   it('double-clicking a song loads that track for playback', async () => {
     const { store } = setup();
@@ -110,8 +108,6 @@ describe('song interactions', () => {
     expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
   });
 });
-
-// ── PlaybackBar rendering tests ────────────────────────────────────────────
 
 describe('PlaybackBar', () => {
   it('is not rendered when status is idle', () => {
