@@ -2,6 +2,7 @@ import { createSelector } from 'reselect';
 import * as T from 'frontend/@types';
 import { State } from 'frontend/@types';
 import { UnhandledCaseError } from 'frontend/utils';
+import type { MusicPlaybackStatus } from 'frontend/store/reducers/music';
 
 export function getMusic(state: State) {
   return state.music;
@@ -67,6 +68,18 @@ export const getMusicPanelTracks = createSelector(
     return result;
   },
 );
+
+export function getMusicPlayback(state: State) {
+  return getMusic(state).playback;
+}
+
+export function getMusicPlaybackStatus(state: State): MusicPlaybackStatus {
+  return getMusicPlayback(state).status;
+}
+
+export function getMusicPlaybackTrackPath(state: State): string | null {
+  return getMusicPlayback(state).trackPath;
+}
 
 /**
  * All panel filters applied in order — the final track list for the song view.

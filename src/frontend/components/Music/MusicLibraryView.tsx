@@ -3,6 +3,7 @@ import { $$, T, A, Hooks, $ } from 'frontend';
 import { UnhandledCaseError } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
+import { PlaybackBar } from './PlaybackBar';
 
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
   const { name, url } = server;
@@ -88,9 +89,18 @@ export function MusicLibraryView() {
         direction="vertical"
         className="musicLibrarySplitter"
         start={<FilterPanels />}
-        end={<Songs />}
+        end={<SongsView />}
         persistLocalStorage="musicLibrarySplitterOffset"
       />
+    </div>
+  );
+}
+
+function SongsView() {
+  return (
+    <div className="musicSongsView">
+      <Songs />
+      <PlaybackBar />
     </div>
   );
 }
@@ -396,6 +406,25 @@ function Songs() {
           }
           break;
         }
+        case 'Enter': {
+          event.preventDefault();
+          if (currentPath) {
+            dispatch(A.musicPlaybackLoad(currentPath));
+          }
+          break;
+        }
+        case ' ': {
+          event.preventDefault();
+          const playbackStatus = $.getMusicPlaybackStatus(getState());
+          if (playbackStatus === 'playing') {
+            dispatch(A.musicPlaybackPause());
+          } else if (playbackStatus === 'paused') {
+            dispatch(A.musicPlaybackPlay());
+          } else if (currentPath) {
+            dispatch(A.musicPlaybackLoad(currentPath));
+          }
+          break;
+        }
         case 'Escape': {
           event.preventDefault();
           dispatch(A.setMusicSelectedTrack());
@@ -429,6 +458,7 @@ function Songs() {
       <div
         className="musicSongs"
         role="listbox"
+        aria-label="Songs"
         tabIndex={0}
         aria-activedescendant={activeDescendant}
         ref={listRef}
@@ -476,6 +506,10 @@ function Song({
       onClick={() =>
         dispatch(A.setMusicSelectedTrack(isSelected ? undefined : track.path))
       }
+      onDoubleClick={() => {
+        dispatch(A.setMusicSelectedTrack(track.path));
+        dispatch(A.musicPlaybackLoad(track.path));
+      }}
     >
       <span className="musicSongTitle">{track.title ?? track.path}</span>
       <span className="musicSongArtist">{track.artist}</span>

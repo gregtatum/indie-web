@@ -361,3 +361,27 @@ export function setMusicTracks(
     needsRescan,
   };
 }
+
+export function musicPlaybackLoad(path: string) {
+  return { type: 'music-playback-load' as const, path };
+}
+
+export function musicPlaybackReady() {
+  return { type: 'music-playback-ready' as const };
+}
+
+export function musicPlaybackPlay() {
+  return { type: 'music-playback-play' as const };
+}
+
+export function musicPlaybackPause() {
+  return { type: 'music-playback-pause' as const };
+}
+
+export function musicPlaybackError() {
+  return { type: 'music-playback-error' as const };
+}
+
+export function musicPlaybackStop() {
+  return { type: 'music-playback-stop' as const };
+}
