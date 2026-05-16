@@ -8,32 +8,38 @@ export type MusicPlaybackStatus =
   | 'paused'
   | 'error';
 
-interface PlaybackState {
-  trackPath: string | null;
-  status: MusicPlaybackStatus;
-}
-
-const playbackInitial: PlaybackState = { trackPath: null, status: 'idle' };
-
-function playback(
-  state: PlaybackState = playbackInitial,
+function playingTrackPath(
+  state: string | null = null,
   action: T.Action,
-): PlaybackState {
+): string | null {
   switch (action.type) {
     case 'music-playback-load':
-      return { trackPath: action.path, status: 'loading' };
-    case 'music-playback-ready':
-      return { ...state, status: 'playing' };
-    case 'music-playback-play':
-      return { ...state, status: 'playing' };
-    case 'music-playback-pause':
-      return { ...state, status: 'paused' };
-    case 'music-playback-error':
-      return { ...state, status: 'error' };
+      return action.path;
     case 'music-playback-stop':
-      return playbackInitial;
     case 'view-music':
-      return playbackInitial;
+      return null;
+    default:
+      return state;
+  }
+}
+
+function playbackStatus(
+  state: MusicPlaybackStatus = 'idle',
+  action: T.Action,
+): MusicPlaybackStatus {
+  switch (action.type) {
+    case 'music-playback-load':
+      return 'loading';
+    case 'music-playback-ready':
+    case 'music-playback-play':
+      return 'playing';
+    case 'music-playback-pause':
+      return 'paused';
+    case 'music-playback-error':
+      return 'error';
+    case 'music-playback-stop':
+    case 'view-music':
+      return 'idle';
     default:
       return state;
   }
@@ -106,5 +112,6 @@ export const musicReducer = combineReducers({
   tracks,
   selectedTrackPath,
   needsRescan,
-  playback,
+  playingTrackPath,
+  playbackStatus,
 });

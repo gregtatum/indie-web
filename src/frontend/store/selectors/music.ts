@@ -69,16 +69,12 @@ export const getMusicPanelTracks = createSelector(
   },
 );
 
-export function getMusicPlayback(state: State) {
-  return getMusic(state).playback;
-}
-
 export function getMusicPlaybackStatus(state: State): MusicPlaybackStatus {
-  return getMusicPlayback(state).status;
+  return getMusic(state).playbackStatus;
 }
 
 export function getMusicPlaybackTrackPath(state: State): string | null {
-  return getMusicPlayback(state).trackPath;
+  return getMusic(state).playingTrackPath;
 }
 
 /**
