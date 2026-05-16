@@ -139,8 +139,10 @@
 }
 
 .musicFilterPanelItem {
-  padding: var(--music-padding-v) var(--music-padding-h);
+  padding: var(--music-padding-v) calc(var(--music-padding-h) / 2);
+  margin-inline: calc(var(--music-padding-h) / 2);
   cursor: pointer;
+  border-radius: 3px;
 
   &:hover {
     background: var(--selection-hover);
