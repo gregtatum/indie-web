@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'node:fs/promises';
+import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
@@ -8,6 +9,67 @@ export interface TestServer {
   baseUrl: string;
   mountDir: string;
   close: () => Promise<void>;
+}
+
+function stripAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
+/**
+ * Wraps a test function to capture and assert console output.
+ *
+ * During the test, all console.log and console.error calls are intercepted.
+ * After the test body runs, the captured messages (ANSI stripped) must account
+ * for every entry in `expected` by substring match (unordered). Any captured
+ * message left unmatched, or any expected substring with no matching message,
+ * fails the test.
+ *
+ * Pass an empty array to assert the test produces no console output at all.
+ */
+export function withLogs(
+  expected: string[],
+  fn: () => Promise<void>,
+): () => Promise<void> {
+  return async () => {
+    const captured: string[] = [];
+    const originalLog = console.log;
+    const originalError = console.error;
+
+    const capture =
+      (label: string) =>
+      (...args: unknown[]) => {
+        captured.push(label + args.map(String).join(' '));
+      };
+
+    console.log = capture('');
+    console.error = capture('');
+
+    try {
+      await fn();
+    } finally {
+      console.log = originalLog;
+      console.error = originalError;
+    }
+
+    const stripped = captured.map(stripAnsi);
+    const remaining = [...stripped];
+
+    for (const substr of expected) {
+      const idx = remaining.findIndex((m) => m.includes(substr));
+      assert.ok(
+        idx >= 0,
+        `Expected a log containing "${substr}" but none was found.\nCaptured:\n${stripped.map((m) => `  ${JSON.stringify(m)}`).join('\n')}`,
+      );
+      remaining.splice(idx, 1);
+    }
+
+    assert.deepEqual(
+      remaining,
+      [],
+      `Unexpected log output:\n${remaining.map((m) => `  ${JSON.stringify(m)}`).join('\n')}`,
+    );
+  };
 }
 
 /**
