@@ -53,6 +53,7 @@ export function buildMp3WithTags(tags: {
   title?: string;
   artist?: string;
   album?: string;
+  genre?: string;
 }): Buffer {
   const frames: Buffer[] = [];
 
@@ -72,6 +73,7 @@ export function buildMp3WithTags(tags: {
   if (tags.title) frames.push(textFrame('TIT2', tags.title));
   if (tags.artist) frames.push(textFrame('TPE1', tags.artist));
   if (tags.album) frames.push(textFrame('TALB', tags.album));
+  if (tags.genre) frames.push(textFrame('TCON', tags.genre));
 
   const frameData = Buffer.concat(frames);
 

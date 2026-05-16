@@ -23,6 +23,10 @@ export function getMusicPanelSelection(panel: T.MusicPanelType) {
   return (state: State) => getMusicPanelSelections(state)[panel];
 }
 
+export function getMusicNeedsRescan(state: State): boolean {
+  return getMusic(state).needsRescan;
+}
+
 const PANEL_ORDER: T.MusicPanelType[] = ['artist', 'album'];
 
 function filterByPanel(

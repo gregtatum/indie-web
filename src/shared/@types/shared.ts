@@ -57,6 +57,7 @@ export interface TrackMetadata {
   title: string | null;
   artist: string | null;
   album: string | null;
+  genre: string | null;
   /** Duration in seconds. */
   duration: number | null;
   size: number;
@@ -65,7 +66,7 @@ export interface TrackMetadata {
 }
 
 export interface MusicIndex {
-  version: 1;
+  version: 2;
   scannedAt: string;
   tracks: TrackMetadata[];
 }

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { $$, T, A, Hooks, $ } from 'frontend';
 import { UnhandledCaseError } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
+import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
   const { name, url } = server;
@@ -49,8 +50,8 @@ export function MusicLibraryView() {
           setError('Music library not found. Run a scan first.');
           return;
         }
-        const index: T.MusicIndex = await res.json();
-        dispatch(A.setMusicTracks(index.tracks));
+        const { index, wasUpgraded } = upgradeMusicIndex(await res.json());
+        dispatch(A.setMusicTracks(index.tracks, wasUpgraded));
       } catch {
         setError(getConnectionErrorMessage(currentServer));
       }

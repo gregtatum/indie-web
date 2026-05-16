@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { $$ } from 'frontend';
+import { $$, A, Hooks } from 'frontend';
 import { ListFiles } from '../ListFiles';
 import { MusicLibraryView } from './MusicLibraryView';
 import './index.css';
@@ -13,6 +13,8 @@ interface ScanProgress {
 
 export function Music() {
   const server = $$.getCurrentServerOrNull();
+  const needsRescan = $$.getMusicNeedsRescan();
+  const { dispatch } = Hooks.useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
@@ -61,6 +63,7 @@ export function Music() {
           setScanPhase('done');
           setScanProgress(null);
           setStatusMessage(`Found ${data.tracks.length} tracks.`);
+          dispatch(A.setMusicTracks(data.tracks, false));
           break;
         case 'error':
           eventSource.close();
@@ -103,6 +106,15 @@ export function Music() {
         >
           {scanPhase === 'scanning' ? 'Scanning…' : 'Scan Library'}
         </button>
+        {needsRescan && scanPhase !== 'scanning' ? (
+          <button
+            type="button"
+            className="button musicRescanRecommendedButton"
+            onClick={handleScan}
+          >
+            Rescan recommended
+          </button>
+        ) : null}
         {displayMessage ? (
           <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
             {displayMessage}

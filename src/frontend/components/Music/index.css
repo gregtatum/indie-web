@@ -40,6 +40,16 @@
   color: var(--error-color);
 }
 
+.musicRescanRecommendedButton {
+  background: #fff8e1;
+  border-color: #ffe082;
+  color: #5d4037;
+
+  &:hover {
+    background: #fff3cd;
+  }
+}
+
 .musicViewToggle {
   display: flex;
   margin-left: auto;

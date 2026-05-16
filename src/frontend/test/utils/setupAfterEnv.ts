@@ -91,6 +91,7 @@ beforeEach(function () {
   };
 
   document.elementFromPoint = (): null => null;
+  HTMLElement.prototype.scrollIntoView = jest.fn();
   HTMLElement.prototype.getBoundingClientRect = getBoundingClientRect;
   HTMLElement.prototype.getClientRects = (): DOMRectList =>
     new FakeDOMRectList();

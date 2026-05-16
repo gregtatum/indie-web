@@ -11,6 +11,7 @@ import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
+const MUSIC_INDEX_VERSION = 2 as const;
 
 const AUDIO_EXTENSIONS = new Set([
   '.mp3',
@@ -194,12 +195,16 @@ async function performScan(
   const tmpPath = indexPath + '.tmp';
 
   // Load the existing index for incremental scanning.
+  // Skip the cache when the on-disk version is older than the current format:
+  // a v1 track lacks `genre`, so reusing it would produce an incomplete index.
   const existingTracks = new Map<string, T.TrackMetadata>();
   try {
     const contents = await fs.readFile(indexPath, 'utf-8');
     const existing = JSON.parse(contents) as T.MusicIndex;
-    for (const track of existing.tracks) {
-      existingTracks.set(track.path, track);
+    if (existing.version === MUSIC_INDEX_VERSION) {
+      for (const track of existing.tracks) {
+        existingTracks.set(track.path, track);
+      }
     }
   } catch {
     // No existing index — start fresh.
@@ -222,12 +227,14 @@ async function performScan(
       let title: string | null = null;
       let artist: string | null = null;
       let album: string | null = null;
+      let genre: string | null = null;
       let duration: number | null = null;
       try {
         const meta = await parseFile(fullPath, { duration: true });
         title = meta.common.title ?? null;
         artist = meta.common.artist ?? null;
         album = meta.common.album ?? null;
+        genre = meta.common.genre?.[0] ?? null;
         duration = meta.format.duration ?? null;
       } catch {
         // If tag reading fails, store what we have.
@@ -237,6 +244,7 @@ async function performScan(
         title,
         artist,
         album,
+        genre,
         duration,
         size,
         mtime,
@@ -247,7 +255,7 @@ async function performScan(
   }
 
   const index: T.MusicIndex = {
-    version: 1,
+    version: MUSIC_INDEX_VERSION,
     scannedAt: new Date().toISOString(),
     tracks,
   };

@@ -351,9 +351,13 @@ export function setMusicSelectedTrack(path?: string) {
   };
 }
 
-export function setMusicTracks(tracks: T.TrackMetadata[]) {
+export function setMusicTracks(
+  tracks: T.TrackMetadata[],
+  needsRescan: boolean,
+) {
   return {
     type: 'set-music-tracks' as const,
     tracks,
+    needsRescan,
   };
 }

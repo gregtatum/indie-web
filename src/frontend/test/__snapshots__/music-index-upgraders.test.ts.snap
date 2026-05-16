@@ -1,0 +1,30 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`upgradeMusicIndex upgrades a v1 index to the current format 1`] = `
+{
+  "scannedAt": "2025-01-01T00:00:00.000Z",
+  "tracks": [
+    {
+      "album": "Test Album",
+      "artist": "Test Artist",
+      "duration": 180.5,
+      "genre": null,
+      "mtime": "2024-12-01T00:00:00.000Z",
+      "path": "/Artist/Album/track.mp3",
+      "size": 3145728,
+      "title": "Test Track",
+    },
+    {
+      "album": null,
+      "artist": null,
+      "duration": null,
+      "genre": null,
+      "mtime": "2024-11-01T00:00:00.000Z",
+      "path": "/no-tags.mp3",
+      "size": 1024,
+      "title": null,
+    },
+  ],
+  "version": 2,
+}
+`;

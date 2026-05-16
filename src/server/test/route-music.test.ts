@@ -40,7 +40,7 @@ describe('POST /music/music-index/scan', () => {
     });
     assert.equal(res.status, 200);
     const index = await res.json();
-    assert.equal(index.version, 1);
+    assert.equal(index.version, 2);
     assert.ok(typeof index.scannedAt === 'string');
     assert.deepEqual(index.tracks, []);
   });
@@ -77,6 +77,40 @@ describe('POST /music/music-index/scan', () => {
     assert.equal(track.title, 'My Song');
     assert.equal(track.artist, 'My Artist');
     assert.equal(track.album, 'My Album');
+  });
+
+  it('extracts genre from the ID3 TCON tag', async () => {
+    await writeFile(
+      join(server.mountDir, 'genre.mp3'),
+      buildMp3WithTags({ title: 'Genre Track', genre: 'Rock' }),
+    );
+
+    const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+      method: 'POST',
+    });
+    const index = await res.json();
+    const track = index.tracks.find(
+      (t: { path: string }) => t.path === '/genre.mp3',
+    );
+    assert.ok(track, 'genre.mp3 should appear in the index');
+    assert.equal(track.genre, 'Rock');
+  });
+
+  it('sets genre to null when the TCON tag is absent', async () => {
+    await writeFile(
+      join(server.mountDir, 'no-genre.mp3'),
+      buildMp3WithTags({ title: 'No Genre Track' }),
+    );
+
+    const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+      method: 'POST',
+    });
+    const index = await res.json();
+    const track = index.tracks.find(
+      (t: { path: string }) => t.path === '/no-genre.mp3',
+    );
+    assert.ok(track, 'no-genre.mp3 should appear in the index');
+    assert.equal(track.genre, null);
   });
 
   it('discovers audio files in subdirectories', async () => {
@@ -250,6 +284,63 @@ describe('GET /music/music-index/scan (SSE)', () => {
       'total must precede progress',
     );
     assert.equal(lastType, 'done', 'done must be last event');
+  });
+});
+
+describe('POST /music/music-index/scan v1→v2 cache bypass', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountDir) => {
+      app.use('/music', musicRoute(mountDir));
+    });
+  });
+
+  after(() => server.close());
+
+  it('ignores cached v1 tracks and populates genre on upgrade scan', async () => {
+    const filePath = join(server.mountDir, 'cached.mp3');
+    await writeFile(
+      filePath,
+      buildMp3WithTags({ title: 'Cached', genre: 'Jazz' }),
+    );
+
+    // Simulate a prior v1 scan by writing a v1 index directly to disk.
+    // The cached entry has no genre field, mimicking real v1 data.
+    const stats = await (await import('node:fs/promises')).stat(filePath);
+    const v1Index = {
+      version: 1,
+      scannedAt: new Date().toISOString(),
+      tracks: [
+        {
+          path: '/cached.mp3',
+          title: 'Cached',
+          artist: null,
+          album: null,
+          duration: null,
+          size: stats.size,
+          mtime: stats.mtime.toISOString(),
+        },
+      ],
+    };
+    await writeFile(
+      join(server.mountDir, '.music-index.json'),
+      JSON.stringify(v1Index),
+    );
+
+    const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+      method: 'POST',
+    });
+    assert.equal(res.status, 200);
+    const index = await res.json();
+    assert.equal(index.version, 2);
+
+    const track = index.tracks.find(
+      (t: { path: string }) => t.path === '/cached.mp3',
+    );
+    assert.ok(track, 'cached.mp3 should appear in upgraded index');
+    // Genre must be populated — confirms the v1 cache was not reused.
+    assert.equal(track.genre, 'Jazz');
   });
 });
 

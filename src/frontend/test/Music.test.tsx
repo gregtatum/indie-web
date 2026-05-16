@@ -9,6 +9,7 @@ import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import { A, T } from 'frontend';
 import type { FetchMockSandbox } from 'fetch-mock';
+import v1Fixture from './fixtures/music-index-v1.json';
 import {
   startMusicTestServer,
   type MusicTestServer,
@@ -206,5 +207,53 @@ describe('<Music> with real server', () => {
       const button = screen.getByRole('button', { name: 'Scan Library' });
       expect((button as HTMLButtonElement).disabled).toBe(false);
     });
+  });
+
+  it('does not show the rescan button after a fresh scan', async () => {
+    setup();
+
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+
+    await screen.findByText(/Found \d+ tracks\./);
+    expect(
+      screen.queryByRole('button', { name: 'Rescan recommended' }),
+    ).toBeNull();
+  });
+
+  it('shows the rescan button when the served index is v1', async () => {
+    await writeFile(
+      join(getServer().mountDir, '.music-index.json'),
+      JSON.stringify(v1Fixture),
+    );
+
+    setup();
+
+    await screen.findByRole('button', { name: 'Rescan recommended' });
+  });
+
+  it('rescan button disappears after clicking it and a scan completes', async () => {
+    await writeFile(
+      join(getServer().mountDir, '.music-index.json'),
+      JSON.stringify(v1Fixture),
+    );
+
+    setup();
+
+    await screen.findByRole('button', { name: 'Rescan recommended' });
+
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Rescan recommended' }),
+      );
+    });
+
+    await screen.findByText(/Found \d+ tracks\./);
+    expect(
+      screen.queryByRole('button', { name: 'Rescan recommended' }),
+    ).toBeNull();
   });
 });

@@ -52,8 +52,20 @@ function selectedTrackPath(
   }
 }
 
+function needsRescan(state = false, action: T.Action): boolean {
+  switch (action.type) {
+    case 'set-music-tracks':
+      return action.needsRescan;
+    case 'view-music':
+      return false;
+    default:
+      return state;
+  }
+}
+
 export const musicReducer = combineReducers({
   panelSelections,
   tracks,
   selectedTrackPath,
+  needsRescan,
 });

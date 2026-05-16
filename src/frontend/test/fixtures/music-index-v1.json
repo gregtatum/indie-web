@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "scannedAt": "2025-01-01T00:00:00.000Z",
+  "tracks": [
+    {
+      "path": "/Artist/Album/track.mp3",
+      "title": "Test Track",
+      "artist": "Test Artist",
+      "album": "Test Album",
+      "duration": 180.5,
+      "size": 3145728,
+      "mtime": "2024-12-01T00:00:00.000Z"
+    },
+    {
+      "path": "/no-tags.mp3",
+      "title": null,
+      "artist": null,
+      "album": null,
+      "duration": null,
+      "size": 1024,
+      "mtime": "2024-11-01T00:00:00.000Z"
+    }
+  ]
+}
