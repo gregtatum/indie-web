@@ -2,7 +2,6 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "lib": ["esnext", "dom", "dom.iterable"],
-    "resolveJsonModule": true,
   },
   "include": ["**/*", "./@types/globals.d.ts",],
 }

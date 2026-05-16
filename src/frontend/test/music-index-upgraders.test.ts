@@ -1,5 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
-import v1Fixture from './fixtures/music-index-v1.json';
+
+const v1Fixture = JSON.parse(
+  readFileSync(join(__dirname, 'fixtures/music-index-v1.json'), 'utf-8'),
+);
 
 /**
  * These tests verify that in-memory upgraders correctly normalize old serialized

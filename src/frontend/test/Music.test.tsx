@@ -9,7 +9,7 @@ import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import { A, T } from 'frontend';
 import type { FetchMockSandbox } from 'fetch-mock';
-import v1Fixture from './fixtures/music-index-v1.json';
+import { readFileSync } from 'node:fs';
 import {
   startMusicTestServer,
   type MusicTestServer,
@@ -17,6 +17,11 @@ import {
 import { NodeEventSource } from './utils/nodeEventSource';
 // node-fetch provides real HTTP for the fetch-mock sandbox's fallbackToNetwork.
 import nodeFetch from 'node-fetch';
+
+const v1Fixture = readFileSync(
+  join(__dirname, 'fixtures/music-index-v1.json'),
+  'utf-8',
+);
 
 // Minimal valid MP3: ID3v2.3 header with no frames (11 bytes).
 // Enough for the server to recognise it as an audio file without needing
@@ -225,10 +230,7 @@ describe('<Music> with real server', () => {
   });
 
   it('shows "Scan Library (updates detected)" when the served index is v1', async () => {
-    await writeFile(
-      join(getServer().mountDir, '.music-index.json'),
-      JSON.stringify(v1Fixture),
-    );
+    await writeFile(join(getServer().mountDir, '.music-index.json'), v1Fixture);
 
     setup();
 
@@ -238,10 +240,7 @@ describe('<Music> with real server', () => {
   });
 
   it('reverts to "Scan Library" after scanning clears the stale index', async () => {
-    await writeFile(
-      join(getServer().mountDir, '.music-index.json'),
-      JSON.stringify(v1Fixture),
-    );
+    await writeFile(join(getServer().mountDir, '.music-index.json'), v1Fixture);
 
     setup();
 
