@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import * as React from 'react';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
@@ -93,6 +93,13 @@ function useMusicTestServer() {
 
 describe('<Music> with real server', () => {
   const { getServer } = useMusicTestServer();
+
+  afterEach(async () => {
+    // All tests share a single server and mount directory for the lifetime of this
+    // describe block. Tests that write .music-index.json (e.g. the v1 upgrade
+    // tests) would otherwise leave stale state that silently affects later tests.
+    await rm(join(getServer().mountDir, '.music-index.json'), { force: true });
+  });
 
   function setup(search = '') {
     const server = getServer();
