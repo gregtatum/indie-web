@@ -127,6 +127,7 @@ describe('<Music> with real server', () => {
   it('renders the Scan Library button', async () => {
     setup();
     await screen.findByRole('button', { name: 'Scan Library' });
+    await screen.findByText('Music library not found. Run a scan first.');
   });
 
   it('shows files from the server in the listing', async () => {
@@ -154,6 +155,7 @@ describe('<Music> with real server', () => {
     );
 
     setup();
+    await screen.findByText('Music library not found. Run a scan first.');
 
     await act(async () => {
       await userEvent.click(
@@ -166,6 +168,7 @@ describe('<Music> with real server', () => {
 
   it('shows "Scanning…" and disables the button while a scan is in progress', async () => {
     setup();
+    await screen.findByText('Music library not found. Run a scan first.');
 
     const button = await screen.findByRole('button', { name: 'Scan Library' });
     void userEvent.click(button);
@@ -183,6 +186,7 @@ describe('<Music> with real server', () => {
     await writeFile(join(getServer().mountDir, 'IncrA.mp3'), buildMinimalMp3());
 
     setup();
+    await screen.findByText('Music library not found. Run a scan first.');
 
     // First scan — establishes the baseline count.
     await act(async () => {
@@ -208,6 +212,7 @@ describe('<Music> with real server', () => {
 
   it('re-enables the Scan Library button after a scan completes', async () => {
     setup();
+    await screen.findByText('Music library not found. Run a scan first.');
 
     await act(async () => {
       await userEvent.click(
@@ -223,6 +228,7 @@ describe('<Music> with real server', () => {
 
   it('does not show the rescan button after a fresh scan', async () => {
     setup();
+    await screen.findByText('Music library not found. Run a scan first.');
 
     await act(async () => {
       await userEvent.click(

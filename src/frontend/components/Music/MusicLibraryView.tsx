@@ -39,25 +39,37 @@ export function MusicLibraryView() {
 
   React.useEffect(() => {
     if (!server) {
-      return;
+      return undefined;
     }
     const currentServer = server;
+    const fetchController = new AbortController();
 
     async function loadIndex() {
       try {
-        const res = await fetch(`${currentServer.url}/music/music-index`);
+        const res = await fetch(`${currentServer.url}/music/music-index`, {
+          signal: fetchController.signal,
+        });
         if (!res.ok) {
           setError('Music library not found. Run a scan first.');
           return;
         }
         const { index, wasUpgraded } = upgradeMusicIndex(await res.json());
         dispatch(A.setMusicTracks(index.tracks, wasUpgraded));
-      } catch {
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
         setError(getConnectionErrorMessage(currentServer));
       }
     }
 
+    // loadIndex is infallible as it handles the error.
     void loadIndex();
+
+    return () => {
+      // When unmounting the component, cancel the music index fetch.
+      fetchController.abort();
+    };
   }, [server?.url]);
 
   if (error) {

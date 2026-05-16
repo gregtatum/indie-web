@@ -140,6 +140,8 @@ describe('ListFiles', () => {
         '02 - Lark Bastion/',
       ]);
 
+    await waitFor(() => screen.getByText(/01 - Stone End/));
+
     // Navigate into 01 - Stone End.
     expect(getSelectedFilePath()).toBeNull();
 
