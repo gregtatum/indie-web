@@ -45,6 +45,10 @@ function upgradeV1ToV2(blob: V1Blob): T.MusicIndex {
  * Callers should surface a rescan recommendation when `wasUpgraded` is true,
  * since upgraded data (e.g. backfilled genre: null) is incomplete compared to
  * what a fresh scan would produce.
+ *
+ * To add support for a new version N: add `else if (raw.version === N - 1)`
+ * that calls your new upgradeV(N-1)ToV(N) function. Each step upgrades one
+ * version at a time; chaining handles multi-step upgrades automatically.
  */
 export function upgradeMusicIndex(blob: unknown): {
   index: T.MusicIndex;

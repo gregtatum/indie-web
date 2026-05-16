@@ -2,10 +2,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 
-const v1Fixture = JSON.parse(
-  readFileSync(join(__dirname, 'fixtures/music-index-v1.json'), 'utf-8'),
-);
-
 /**
  * These tests verify that in-memory upgraders correctly normalize old serialized
  * MusicIndex formats. Upgraders are write-once: if a test here breaks, something
@@ -13,16 +9,24 @@ const v1Fixture = JSON.parse(
  *
  * Snapshot testing is the primary assertion: the snapshot is the ground truth for
  * what a correctly upgraded index looks like.
+ *
+ * One describe block per version step. Future upgraders add a new block below;
+ * existing blocks are never modified.
  */
 
-describe('upgradeMusicIndex', () => {
-  it('upgrades a v1 index to the current format', () => {
+// v1 → v2: genre field added (backfilled as null on upgrade)
+describe('upgradeMusicIndex v1 → v2', () => {
+  const v1Fixture = JSON.parse(
+    readFileSync(join(__dirname, 'fixtures/music-index-v1.json'), 'utf-8'),
+  );
+
+  it('upgrades a v1 index to v2', () => {
     const { index, wasUpgraded } = upgradeMusicIndex(v1Fixture);
     expect(wasUpgraded).toBe(true);
     expect(index).toMatchSnapshot();
   });
 
-  it('sets version to 2 after upgrade', () => {
+  it('sets version to 2', () => {
     const { index } = upgradeMusicIndex(v1Fixture);
     expect(index.version).toBe(2);
   });
@@ -34,7 +38,7 @@ describe('upgradeMusicIndex', () => {
     }
   });
 
-  it('preserves all other track fields during upgrade', () => {
+  it('preserves all other track fields', () => {
     const { index } = upgradeMusicIndex(v1Fixture);
     const track = index.tracks[0];
     expect(track.path).toBe('/Artist/Album/track.mp3');
@@ -45,7 +49,7 @@ describe('upgradeMusicIndex', () => {
     expect(track.size).toBe(3145728);
   });
 
-  it('preserves null fields during upgrade', () => {
+  it('preserves null fields', () => {
     const { index } = upgradeMusicIndex(v1Fixture);
     const track = index.tracks[1];
     expect(track.title).toBeNull();
@@ -64,3 +68,22 @@ describe('upgradeMusicIndex', () => {
     expect(wasUpgraded).toBe(false);
   });
 });
+
+// v2 → v3: (example — fill in when v3 is introduced)
+// describe('upgradeMusicIndex v2 → v3', () => {
+//   const v2Fixture = JSON.parse(
+//     readFileSync(join(__dirname, 'fixtures/music-index-v2.json'), 'utf-8'),
+//   );
+//
+//   it('upgrades a v2 index to v3', () => {
+//     const { index, wasUpgraded } = upgradeMusicIndex(v2Fixture);
+//     expect(wasUpgraded).toBe(true);
+//     expect(index).toMatchSnapshot();
+//   });
+//
+//   it('returns wasUpgraded: false for a current v3 index', () => {
+//     const v3: unknown = { version: 3, scannedAt: '...', tracks: [] };
+//     const { wasUpgraded } = upgradeMusicIndex(v3);
+//     expect(wasUpgraded).toBe(false);
+//   });
+// });

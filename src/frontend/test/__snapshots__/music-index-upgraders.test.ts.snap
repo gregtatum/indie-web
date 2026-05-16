@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`upgradeMusicIndex upgrades a v1 index to the current format 1`] = `
+exports[`upgradeMusicIndex v1 → v2 upgrades a v1 index to v2 1`] = `
 {
   "scannedAt": "2025-01-01T00:00:00.000Z",
   "tracks": [
