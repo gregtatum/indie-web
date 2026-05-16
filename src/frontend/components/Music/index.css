@@ -115,10 +115,10 @@
     content: "";
     position: absolute;
     z-index: 1;
-    inset: 28px 0 0 0;
+    inset: 28px 0 2px 0;
     pointer-events: none;
-    border: var(--outline-focus);
-    border-radius: 2px;
+    border: var(--outline-focus-dim);
+    border-radius: 3px;
   }
 
   &:focus-within .musicFilterPanelItem.selected {

@@ -182,6 +182,20 @@ function FilterPanel({
     }
   }, [selection]);
 
+  // Keep the active item visible when the panel is resized (e.g. splitter drag).
+  React.useEffect(() => {
+    const list = listRef.current;
+    if (!list) return undefined;
+    const observer = new ResizeObserver(() => {
+      const activeId = list.getAttribute('aria-activedescendant');
+      if (activeId) {
+        document.getElementById(activeId)?.scrollIntoView({ block: 'nearest' });
+      }
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, []);
+
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (document.activeElement !== listRef.current) {
@@ -229,7 +243,15 @@ function FilterPanel({
           );
           const idx = lists.indexOf(listRef.current!);
           const target = lists[idx + (event.key === 'ArrowRight' ? 1 : -1)];
-          target?.focus();
+          if (target) {
+            target.focus();
+            // Scroll the destination panel's active item into view; selection
+            // didn't change so the per-item effect won't fire on its own.
+            const activeId = target.getAttribute('aria-activedescendant');
+            if (activeId) {
+              document.getElementById(activeId)?.scrollIntoView({ block: 'nearest' });
+            }
+          }
           break;
         }
         case 'Escape': {

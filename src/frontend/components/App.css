@@ -25,6 +25,7 @@
   /* active and focus rules for outside a div  (no layout is affected) */
   --outline-active: 2px solid #0040ff;
   --outline-focus: 2px solid #0040ffaa;
+  --outline-focus-dim: 2px solid #0040ff33;
   /* active and focus rules for inside a div (no layout is affected) */
   --box-shadow-active: 0 0 0 2px #0040ff inset;
   --box-shadow-focus: 0 0 0 2px #0040ffaa inset;
