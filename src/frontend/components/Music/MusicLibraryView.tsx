@@ -339,9 +339,7 @@ function FilterPanelItem({
       id={`music-panel-${panel}-${index}`}
       ref={divRef}
       onClick={() => {
-        dispatch(
-          A.setMusicPanelSelection(panel, isSelected ? undefined : value),
-        );
+        dispatch(A.setMusicPanelSelection(panel, value));
       }}
     >
       {value}
