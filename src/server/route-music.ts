@@ -194,18 +194,21 @@ async function performScan(
   const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
   const tmpPath = indexPath + '.tmp';
 
-  // Read the existing index to enable incremental scanning: files whose mtime
-  // and size are unchanged can skip tag re-parsing and reuse stored metadata.
+  // Read the existing index to enable incremental scanning: individual track
+  // entries whose mtime and size are unchanged can skip tag re-parsing.
+  // Only track entries are reused — version, scannedAt, and all other root
+  // fields are always written fresh from the current scan.
   //
-  // When the index format version has changed, discard the existing index
-  // entirely and rescan all files from scratch. Partial reuse would produce an
-  // incomplete index (e.g. v1 entries have no genre). A full rescan is the
-  // simplest correct strategy — the index is just rebuilt and written anew.
+  // If the format version has changed, skip the existing index entirely and
+  // rescan all files from scratch. Reusing track entries from an older format
+  // would produce an incomplete index (e.g. v1 entries have no genre field).
+  // A full rescan is the simplest correct strategy.
   const existingTracks = new Map<string, T.TrackMetadata>();
   try {
     const contents = await fs.readFile(indexPath, 'utf-8');
-    const existing = JSON.parse(contents) as T.MusicIndex;
-    if (existing.version === MUSIC_INDEX_VERSION) {
+    const raw = JSON.parse(contents) as { version?: unknown };
+    if (raw.version === MUSIC_INDEX_VERSION) {
+      const existing = raw as T.MusicIndex;
       for (const track of existing.tracks) {
         existingTracks.set(track.path, track);
       }
