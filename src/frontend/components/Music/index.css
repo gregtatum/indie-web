@@ -40,13 +40,13 @@
   color: var(--error-color);
 }
 
-.musicRescanRecommendedButton {
-  background: #fff8e1;
-  border-color: #ffe082;
-  color: #5d4037;
+.musicScanLibraryButton-rescan {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
 
   &:hover {
-    background: #fff3cd;
+    opacity: 0.9;
   }
 }
 

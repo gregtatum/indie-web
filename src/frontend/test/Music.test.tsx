@@ -224,7 +224,7 @@ describe('<Music> with real server', () => {
     ).toBeNull();
   });
 
-  it('shows the rescan button when the served index is v1', async () => {
+  it('shows "Scan Library (updates detected)" when the served index is v1', async () => {
     await writeFile(
       join(getServer().mountDir, '.music-index.json'),
       JSON.stringify(v1Fixture),
@@ -232,10 +232,12 @@ describe('<Music> with real server', () => {
 
     setup();
 
-    await screen.findByRole('button', { name: 'Rescan recommended' });
+    await screen.findByRole('button', {
+      name: 'Scan Library (updates detected)',
+    });
   });
 
-  it('rescan button disappears after clicking it and a scan completes', async () => {
+  it('reverts to "Scan Library" after scanning clears the stale index', async () => {
     await writeFile(
       join(getServer().mountDir, '.music-index.json'),
       JSON.stringify(v1Fixture),
@@ -243,17 +245,17 @@ describe('<Music> with real server', () => {
 
     setup();
 
-    await screen.findByRole('button', { name: 'Rescan recommended' });
+    await screen.findByRole('button', {
+      name: 'Scan Library (updates detected)',
+    });
 
     await act(async () => {
       await userEvent.click(
-        screen.getByRole('button', { name: 'Rescan recommended' }),
+        screen.getByRole('button', { name: 'Scan Library (updates detected)' }),
       );
     });
 
     await screen.findByText(/Found \d+ tracks\./);
-    expect(
-      screen.queryByRole('button', { name: 'Rescan recommended' }),
-    ).toBeNull();
+    await screen.findByRole('button', { name: 'Scan Library' });
   });
 });

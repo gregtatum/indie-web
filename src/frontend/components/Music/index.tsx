@@ -100,21 +100,16 @@ export function Music() {
       <div className="musicToolbar">
         <button
           type="button"
-          className="button"
+          className={`button${needsRescan && scanPhase !== 'scanning' ? ' button-primary musicScanLibraryButton-rescan' : ''}`}
           onClick={handleScan}
           disabled={scanPhase === 'scanning'}
         >
-          {scanPhase === 'scanning' ? 'Scanning…' : 'Scan Library'}
+          {scanPhase === 'scanning'
+            ? 'Scanning…'
+            : needsRescan
+              ? 'Scan Library (updates detected)'
+              : 'Scan Library'}
         </button>
-        {needsRescan && scanPhase !== 'scanning' ? (
-          <button
-            type="button"
-            className="button musicRescanRecommendedButton"
-            onClick={handleScan}
-          >
-            Rescan recommended
-          </button>
-        ) : null}
         {displayMessage ? (
           <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
             {displayMessage}
