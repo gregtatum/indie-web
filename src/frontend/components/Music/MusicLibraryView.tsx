@@ -161,7 +161,12 @@ function FilterPanel({
   const itemsRef = React.useRef(items);
   itemsRef.current = items;
 
-  const selectedIndex = selection ? items.indexOf(selection) : -1;
+  // If the stored selection isn't in the current filtered list (e.g. genre
+  // changed and the previous artist no longer exists in it), treat it as
+  // unset for display purposes without clearing the store value.
+  const effectiveSelection =
+    selection && items.includes(selection) ? selection : undefined;
+  const selectedIndex = effectiveSelection ? items.indexOf(effectiveSelection) : -1;
   const listRef = React.useRef<HTMLDivElement | null>(null);
 
   Hooks.useTypeAheadSearch(listRef, items, (value) =>
@@ -169,7 +174,7 @@ function FilterPanel({
   );
 
   let activeDescendant: string | undefined;
-  if (!selection) {
+  if (!effectiveSelection) {
     activeDescendant = `music-panel-${panel}-all`;
   } else if (selectedIndex >= 0) {
     activeDescendant = `music-panel-${panel}-${selectedIndex}`;
@@ -177,10 +182,10 @@ function FilterPanel({
   const allItemRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    if (!selection && allItemRef.current) {
+    if (!effectiveSelection && allItemRef.current) {
       allItemRef.current.scrollIntoView({ block: 'nearest' });
     }
-  }, [selection]);
+  }, [effectiveSelection]);
 
   // Keep the active item visible when the panel is resized (e.g. splitter drag).
   React.useEffect(() => {
@@ -281,9 +286,9 @@ function FilterPanel({
         ref={listRef}
       >
         <div
-          className={`musicFilterPanelItem${!selection ? ' selected' : ''}`}
+          className={`musicFilterPanelItem${!effectiveSelection ? ' selected' : ''}`}
           role="option"
-          aria-selected={!selection}
+          aria-selected={!effectiveSelection}
           id={`music-panel-${panel}-all`}
           ref={allItemRef}
           onClick={() => dispatch(A.setMusicPanelSelection(panel))}
@@ -296,7 +301,7 @@ function FilterPanel({
             panel={panel}
             value={value}
             index={index}
-            isSelected={value === selection}
+            isSelected={value === effectiveSelection}
             dispatch={dispatch}
           />
         ))}
