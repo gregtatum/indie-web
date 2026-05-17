@@ -175,6 +175,51 @@
   height: 100%;
 }
 
+.musicSongsHeader {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+  user-select: none;
+}
+
+.musicSongsHeaderCell {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: var(--music-padding-v) var(--music-padding-h);
+  font-size: var(--music-label-font-size);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.5;
+}
+
+.musicSongsHeaderTitle {
+  flex: 1;
+  min-width: 100px;
+}
+
+.musicSongsHeaderArtist {
+  flex: 0 0 var(--col-artist, 160px);
+}
+
+.musicSongsHeaderAlbum {
+  flex: 0 0 var(--col-album, 160px);
+}
+
+.musicSongColResize {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+
+  &:hover {
+    background: var(--border-color);
+  }
+}
+
 .musicSongsContainer {
   flex: 1;
   min-height: 0;
@@ -232,10 +277,26 @@
 
 .musicSongTitle {
   flex: 1;
+  min-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.musicSongArtist,
-.musicSongAlbum {
+.musicSongArtist {
+  flex: 0 0 var(--col-artist, 160px);
   font-size: var(--music-meta-font-size);
   opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.musicSongAlbum {
+  flex: 0 0 var(--col-album, 160px);
+  font-size: var(--music-meta-font-size);
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

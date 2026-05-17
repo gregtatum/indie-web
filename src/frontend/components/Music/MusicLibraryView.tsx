@@ -97,13 +97,108 @@ export function MusicLibraryView() {
   );
 }
 
+type ColWidths = { artist: number; album: number };
+
+const COL_WIDTHS_KEY = 'musicSongColumnWidths';
+const COL_MIN_WIDTH = 60;
+const COL_DEFAULT_WIDTHS: ColWidths = { artist: 160, album: 160 };
+
+function loadColumnWidths(): ColWidths {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) ?? 'null');
+    if (
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      typeof parsed.artist === 'number' &&
+      typeof parsed.album === 'number'
+    ) {
+      return {
+        artist: Math.max(COL_MIN_WIDTH, parsed.artist),
+        album: Math.max(COL_MIN_WIDTH, parsed.album),
+      };
+    }
+  } catch {}
+  return COL_DEFAULT_WIDTHS;
+}
+
 function SongsView() {
+  const [colWidths, setColWidths] = React.useState<ColWidths>(loadColumnWidths);
+
+  React.useEffect(() => {
+    localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(colWidths));
+  }, [colWidths]);
+
   return (
-    <div className="musicSongsView">
+    <div
+      className="musicSongsView"
+      style={
+        {
+          '--col-artist': `${colWidths.artist}px`,
+          '--col-album': `${colWidths.album}px`,
+        } as React.CSSProperties
+      }
+    >
+      <SongsHeader setColWidths={setColWidths} />
       <Songs />
       <PlaybackBar />
     </div>
   );
+}
+
+function SongsHeader({
+  setColWidths,
+}: {
+  setColWidths: React.Dispatch<React.SetStateAction<ColWidths>>;
+}) {
+  return (
+    <div className="musicSongsHeader">
+      <div className="musicSongsHeaderCell musicSongsHeaderTitle">Song</div>
+      <div className="musicSongsHeaderCell musicSongsHeaderArtist">
+        Artist
+        <ColumnResizeHandle
+          onDrag={(dx) =>
+            setColWidths((prev) => ({
+              ...prev,
+              artist: Math.max(COL_MIN_WIDTH, prev.artist + dx),
+            }))
+          }
+        />
+      </div>
+      <div className="musicSongsHeaderCell musicSongsHeaderAlbum">
+        Album
+        <ColumnResizeHandle
+          onDrag={(dx) =>
+            setColWidths((prev) => ({
+              ...prev,
+              album: Math.max(COL_MIN_WIDTH, prev.album + dx),
+            }))
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function ColumnResizeHandle({ onDrag }: { onDrag: (dx: number) => void }) {
+  const onMouseDown: React.MouseEventHandler = (e) => {
+    e.preventDefault();
+    document.body.style.cursor = 'col-resize';
+    let lastX = e.pageX;
+
+    function handleMove(ev: MouseEvent) {
+      onDrag(ev.pageX - lastX);
+      lastX = ev.pageX;
+    }
+    function handleUp() {
+      document.body.style.cursor = '';
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    }
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+  };
+
+  return <div className="musicSongColResize" onMouseDown={onMouseDown} />;
 }
 
 function FilterPanels() {
