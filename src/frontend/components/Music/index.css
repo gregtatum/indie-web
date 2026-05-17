@@ -176,7 +176,11 @@
 }
 
 .musicSongsHeader {
+  /* Mirror .musicSong exactly so column widths align: container padding + gap,
+     no padding on individual cells. */
   display: flex;
+  gap: var(--music-gap);
+  padding: var(--music-padding-v) var(--music-padding-h);
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
   user-select: none;
@@ -186,7 +190,6 @@
   position: relative;
   overflow: hidden;
   white-space: nowrap;
-  padding: var(--music-padding-v) var(--music-padding-h);
   font-size: var(--music-label-font-size);
   font-weight: bold;
   text-transform: uppercase;
@@ -209,15 +212,23 @@
 
 .musicSongColResize {
   position: absolute;
-  right: 0;
+  left: 0;
   top: 0;
   bottom: 0;
-  width: 6px;
+  width: 3px;
+  padding: 0 6px;
   cursor: col-resize;
+  display: flex;
 
-  &:hover {
-    background: var(--border-color);
+  &:hover .musicSongColResizeVisible {
+    background: var(--primary-color);
   }
+}
+
+.musicSongColResizeVisible {
+  flex: 1;
+  background: var(--border-color);
+  border-radius: 1px;
 }
 
 .musicSongsContainer {

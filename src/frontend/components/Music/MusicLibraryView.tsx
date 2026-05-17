@@ -109,15 +109,17 @@ function loadColumnWidths(): ColWidths {
     if (
       parsed !== null &&
       typeof parsed === 'object' &&
-      typeof parsed.artist === 'number' &&
-      typeof parsed.album === 'number'
+      Number.isFinite(parsed.artist) &&
+      Number.isFinite(parsed.album)
     ) {
       return {
         artist: Math.max(COL_MIN_WIDTH, parsed.artist),
         album: Math.max(COL_MIN_WIDTH, parsed.album),
       };
     }
-  } catch {}
+  } catch {
+    // Ignore malformed localStorage data.
+  }
   return COL_DEFAULT_WIDTHS;
 }
 
@@ -154,36 +156,36 @@ function SongsHeader({
     <div className="musicSongsHeader">
       <div className="musicSongsHeaderCell musicSongsHeaderTitle">Song</div>
       <div className="musicSongsHeaderCell musicSongsHeaderArtist">
-        Artist
         <ColumnResizeHandle
           onDrag={(dx) =>
             setColWidths((prev) => ({
               ...prev,
-              artist: Math.max(COL_MIN_WIDTH, prev.artist + dx),
+              artist: Math.max(COL_MIN_WIDTH, prev.artist - dx),
             }))
           }
         />
+        Artist
       </div>
       <div className="musicSongsHeaderCell musicSongsHeaderAlbum">
-        Album
         <ColumnResizeHandle
           onDrag={(dx) =>
             setColWidths((prev) => ({
               ...prev,
-              album: Math.max(COL_MIN_WIDTH, prev.album + dx),
+              album: Math.max(COL_MIN_WIDTH, prev.album - dx),
             }))
           }
         />
+        Album
       </div>
     </div>
   );
 }
 
 function ColumnResizeHandle({ onDrag }: { onDrag: (dx: number) => void }) {
-  const onMouseDown: React.MouseEventHandler = (e) => {
-    e.preventDefault();
+  const onMouseDown: React.MouseEventHandler = (event) => {
+    event.preventDefault();
     document.body.style.cursor = 'col-resize';
-    let lastX = e.pageX;
+    let lastX = event.pageX;
 
     function handleMove(ev: MouseEvent) {
       onDrag(ev.pageX - lastX);
@@ -198,7 +200,11 @@ function ColumnResizeHandle({ onDrag }: { onDrag: (dx: number) => void }) {
     window.addEventListener('mouseup', handleUp);
   };
 
-  return <div className="musicSongColResize" onMouseDown={onMouseDown} />;
+  return (
+    <div className="musicSongColResize" onMouseDown={onMouseDown}>
+      <div className="musicSongColResizeVisible" />
+    </div>
+  );
 }
 
 function FilterPanels() {

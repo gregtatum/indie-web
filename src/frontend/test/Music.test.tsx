@@ -98,8 +98,12 @@ describe('<Music> with real server', () => {
   // render. Jsdom returns 0 for both, so without this the virtualizer renders
   // nothing and cleanup hits a broken ResizeObserver instance during unmount.
   beforeEach(() => {
-    jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
-    jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockReturnValue(600);
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockReturnValue(800);
   });
 
   afterEach(async () => {
