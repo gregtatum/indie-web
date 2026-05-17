@@ -3,6 +3,7 @@ import { $$, T, A, Hooks, $ } from 'frontend';
 import { UnhandledCaseError } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { PlaybackBar } from './PlaybackBar';
 
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
@@ -377,6 +378,22 @@ function Songs() {
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
 
+  const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
+    count: tracks.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => 37,
+    overscan: 5,
+  });
+
+  const virtualizerRef = React.useRef(virtualizer);
+  virtualizerRef.current = virtualizer;
+
+  React.useEffect(() => {
+    if (selectedIndex >= 0) {
+      virtualizerRef.current.scrollToIndex(selectedIndex, { align: 'auto' });
+    }
+  }, [selectedIndex]);
+
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (document.activeElement !== listRef.current) {
@@ -467,15 +484,27 @@ function Songs() {
         aria-activedescendant={activeDescendant}
         ref={listRef}
       >
-        {tracks.map((track, index) => (
-          <Song
-            key={track.path}
-            track={track}
-            index={index}
-            isSelected={track.path === selectedPath}
-            dispatch={dispatch}
-          />
-        ))}
+        <div
+          style={{
+            height: virtualizer.getTotalSize(),
+            position: 'relative',
+          }}
+        >
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const track = tracks[virtualItem.index];
+            return (
+              <Song
+                key={track.path}
+                track={track}
+                index={virtualItem.index}
+                isSelected={track.path === selectedPath}
+                dispatch={dispatch}
+                offsetTop={virtualItem.start}
+                measureElement={virtualizer.measureElement}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -486,27 +515,31 @@ function Song({
   index,
   isSelected,
   dispatch,
+  offsetTop,
+  measureElement,
 }: {
   track: T.TrackMetadata;
   index: number;
   isSelected: boolean;
   dispatch: T.Dispatch;
+  offsetTop: number;
+  measureElement: (el: HTMLDivElement | null) => void;
 }) {
-  const divRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    if (isSelected && divRef.current) {
-      divRef.current.scrollIntoView({ block: 'nearest' });
-    }
-  }, [isSelected]);
-
   return (
     <div
       className={`musicSong${isSelected ? ' selected' : ''}`}
       role="option"
       aria-selected={isSelected}
       id={`music-song-${index}`}
-      ref={divRef}
+      ref={measureElement}
+      data-index={index}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        transform: `translateY(${offsetTop}px)`,
+      }}
       onClick={() =>
         dispatch(A.setMusicSelectedTrack(isSelected ? undefined : track.path))
       }

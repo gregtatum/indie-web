@@ -93,6 +93,11 @@ beforeEach(function () {
   document.elementFromPoint = (): null => null;
   HTMLElement.prototype.scrollIntoView = jest.fn();
   HTMLElement.prototype.getBoundingClientRect = getBoundingClientRect;
+  // The virtualizer reads offsetHeight/offsetWidth (not getBoundingClientRect) to
+  // determine how many rows to render. Jsdom returns 0 for both, so without this
+  // the virtualizer renders nothing and song-list tests cannot find their elements.
+  jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+  jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
   HTMLElement.prototype.getClientRects = (): DOMRectList =>
     new FakeDOMRectList();
   Range.prototype.getBoundingClientRect = getBoundingClientRect;

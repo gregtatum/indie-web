@@ -75,6 +75,7 @@
     "@codemirror/language-data": "^6.5.2",
     "@codemirror/search": "^6.5.11",
     "@codemirror/state": "^6.5.3",
+    "@tanstack/react-virtual": "^3.13.24",
     "@types/codemirror": "^5.60.17",
     "@types/node": "^22.13.8",
     "codemirror": "^6.0.2",
