@@ -94,6 +94,14 @@ function useMusicTestServer() {
 describe('<Music> with real server', () => {
   const { getServer } = useMusicTestServer();
 
+  // The virtualizer reads offsetHeight/offsetWidth to determine how many rows to
+  // render. Jsdom returns 0 for both, so without this the virtualizer renders
+  // nothing and cleanup hits a broken ResizeObserver instance during unmount.
+  beforeEach(() => {
+    jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+    jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+  });
+
   afterEach(async () => {
     // All tests share a single server and mount directory for the lifetime of this
     // describe block. Tests that write .music-index.json (e.g. the v1 upgrade

@@ -93,21 +93,21 @@ beforeEach(function () {
   document.elementFromPoint = (): null => null;
   HTMLElement.prototype.scrollIntoView = jest.fn();
   HTMLElement.prototype.getBoundingClientRect = getBoundingClientRect;
-  // The virtualizer reads offsetHeight/offsetWidth (not getBoundingClientRect) to
-  // determine how many rows to render. Jsdom returns 0 for both, so without this
-  // the virtualizer renders nothing and song-list tests cannot find their elements.
-  jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
-  jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
   HTMLElement.prototype.getClientRects = (): DOMRectList =>
     new FakeDOMRectList();
   Range.prototype.getBoundingClientRect = getBoundingClientRect;
   Range.prototype.getClientRects = (): DOMRectList => new FakeDOMRectList();
 
-  (global as any).ResizeObserver = jest.fn().mockImplementation(() => ({
-    observe: jest.fn(),
-    unobserve: jest.fn(),
-    disconnect: jest.fn(),
-  }));
+  // Use a class so the constructor survives jest.resetAllMocks(): a jest.fn()
+  // constructor returns {} after reset (implementation cleared, `new` falls back
+  // to returning `this`), which has no disconnect/observe methods and breaks
+  // any code that calls them during cleanup after mock teardown.
+  class MockResizeObserver {
+    observe = jest.fn();
+    unobserve = jest.fn();
+    disconnect = jest.fn();
+  }
+  (global as any).ResizeObserver = MockResizeObserver;
 });
 
 afterEach(() => {

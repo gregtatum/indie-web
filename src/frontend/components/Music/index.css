@@ -208,6 +208,8 @@
 }
 
 .musicSong {
+  /* Height is fixed to match estimateSize in Songs — see MusicLibraryView.tsx. */
+  box-sizing: border-box;
   display: flex;
   gap: var(--music-gap);
   padding: var(--music-padding-v) var(--music-padding-h);

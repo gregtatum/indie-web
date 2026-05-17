@@ -381,7 +381,11 @@ function Songs() {
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: tracks.length,
     getScrollElement: () => listRef.current,
-    estimateSize: () => 37,
+    // Must match the height set on .musicSong in index.css (box-sizing: border-box).
+    // Derived from: padding-v (8px×2) + border-bottom (1px) + line-height (~16.5px) ≈ 33.5px.
+    // Rounded up to 34 per the TanStack Virtual recommendation to estimate the
+    // largest plausible size when not using dynamic measurement.
+    estimateSize: () => 34,
     overscan: 5,
   });
 
@@ -500,7 +504,6 @@ function Songs() {
                 isSelected={track.path === selectedPath}
                 dispatch={dispatch}
                 offsetTop={virtualItem.start}
-                measureElement={virtualizer.measureElement}
               />
             );
           })}
@@ -516,14 +519,12 @@ function Song({
   isSelected,
   dispatch,
   offsetTop,
-  measureElement,
 }: {
   track: T.TrackMetadata;
   index: number;
   isSelected: boolean;
   dispatch: T.Dispatch;
   offsetTop: number;
-  measureElement: (el: HTMLDivElement | null) => void;
 }) {
   return (
     <div
@@ -531,13 +532,12 @@ function Song({
       role="option"
       aria-selected={isSelected}
       id={`music-song-${index}`}
-      ref={measureElement}
-      data-index={index}
       style={{
         position: 'absolute',
         top: 0,
         left: 0,
         width: '100%',
+        height: '34px',
         transform: `translateY(${offsetTop}px)`,
       }}
       onClick={() =>

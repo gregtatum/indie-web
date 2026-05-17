@@ -11,6 +11,14 @@ import { MusicLibraryView } from 'frontend/components/Music/MusicLibraryView';
 // fetch), Effect 2 exits early (no AudioBuffer), and AudioContext is never
 // created. Button clicks dispatch real Redux actions — we assert on store state.
 
+// The virtualizer reads offsetHeight/offsetWidth to determine how many rows to
+// render. Jsdom returns 0 for both, so without this the virtualizer renders
+// nothing and tests cannot find song elements.
+beforeEach(() => {
+  jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+  jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+});
+
 const TRACKS: T.TrackMetadata[] = [
   {
     path: '/music/a.mp3',
