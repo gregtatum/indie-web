@@ -159,19 +159,48 @@ interface ColumnHeaderProps {
   columnKey: ConfigurableColumns;
   label: string;
   setColumnWidths: React.Dispatch<React.SetStateAction<ColumnWidths>>;
+  maxAvailableWidth: number; // TODO - CSS Pixels of the total available column width less the gaps.
 }
 
+/**
+ * A draggable column header for the songs. It's smart enough to affect the sizing of
+ * the other columns when dragging. The first column fills in the available space,
+ * and the trailing columns determine the sizing using --column-${columnKey} CSS
+ * variables.
+ */
 function ColumnHeader({
   columnKey,
   label,
   setColumnWidths,
+  maxAvailableWidth,
 }: ColumnHeaderProps) {
   function dragHandler(dx: number) {
     setColumnWidths((prevColumnWidths) => {
-      // TODO - This is not handling what happens when the update makes the column
-      // bigger than the available space. Really it should just resize the current
-      // column into the available space in the adjacent column. It should never
-      // increase the column size to be bigger than the total container space.
+      // TODO - This implementation is naive and needs expanding:
+
+      // Given a column setup: "song A artist B album" where A and B are separators.
+
+      // If you drag A, then the song column will shrink implicitly based on filling in
+      // the available space by CSS sizing. Only artist and album have defined sizes.
+      // If the you drag A an unreasonably large amount, then the widths of
+      // song + artist + album will never be larger than maxAvailableWidth. There
+      // is an existing mechanism to limit the smallest size as COL_MIN_WIDTH but there
+      // is no check for the drag to be too large. In addition, song should never be
+      // smaller than MIN_COL_WIDTH.
+
+      // Now, if you drag B, the behavior currently is incorrect. It should increase
+      // the width of album, but also decrease the width of artist. artist should not
+      // be decreasable beyond COL_MIN_WIDTH. Care should be taken to never exceed the
+      // maxAvailableWidth.
+
+      // Another case that needs to be handled is when you drag column A to the right.
+      // Once artist reaches its minimum size, then you must continue shrinking album
+      // to account for the drag still happening. The drag to the right stops affecting
+      // sizing when both artist and album are COL_MIN_WIDTH
+
+      // This is an example of 3 columns, but it should expand to work effectively for N
+      // columns as well.
+
       const width = Math.max(COL_MIN_WIDTH, prevColumnWidths[columnKey] - dx);
 
       return { ...prevColumnWidths, [columnKey]: width };
