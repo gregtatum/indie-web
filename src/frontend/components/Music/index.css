@@ -188,7 +188,6 @@
 
 .musicSongsHeaderCell {
   position: relative;
-  overflow: hidden;
   white-space: nowrap;
   font-size: var(--music-label-font-size);
   font-weight: bold;
@@ -200,23 +199,32 @@
 .musicSongsHeaderTitle {
   flex: 1;
   min-width: 100px;
+  overflow: hidden;
 }
 
-.musicSongsHeaderArtist {
-  flex: 0 0 var(--col-artist, 160px);
+.musicSongsHeaderCellText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: red;
 }
 
-.musicSongsHeaderAlbum {
-  flex: 0 0 var(--col-album, 160px);
-}
-
-.musicSongColResize {
+.musicSongColumnResize {
+  --padding: calc(var(--music-gap) / 2);
+  --width: 3px;
+  /* Compute the offset for half the width of this component. */
+  --resize-offset: calc(-1 * var(--padding) - var(--width) / 2);
   position: absolute;
   left: 0;
-  top: 0;
-  bottom: 0;
+
+  transform: translateX(
+    /* Combine the offset for this width, plus the gap */
+    calc( var(--resize-offset) - var(--music-gap) / 2)
+  );
+  top: calc(-1 * var(--music-padding-v));
+  bottom: calc(-1 * var(--music-padding-v));
   width: 3px;
-  padding: 0 6px;
+  padding: 0 var(--padding);
   cursor: col-resize;
   display: flex;
 
@@ -225,7 +233,7 @@
   }
 }
 
-.musicSongColResizeVisible {
+.musicSongColumnResizeVisible {
   flex: 1;
   background: var(--border-color);
   border-radius: 1px;
@@ -295,7 +303,7 @@
 }
 
 .musicSongArtist {
-  flex: 0 0 var(--col-artist, 160px);
+  flex: 0 0 var(--column-artist);
   font-size: var(--music-meta-font-size);
   opacity: 0.6;
   overflow: hidden;
@@ -304,7 +312,7 @@
 }
 
 .musicSongAlbum {
-  flex: 0 0 var(--col-album, 160px);
+  flex: 0 0 var(--column-album);
   font-size: var(--music-meta-font-size);
   opacity: 0.6;
   overflow: hidden;

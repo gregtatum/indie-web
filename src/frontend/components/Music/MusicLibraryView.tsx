@@ -97,17 +97,17 @@ export function MusicLibraryView() {
   );
 }
 
-type ColWidths = { artist: number; album: number };
-
-const COL_WIDTHS_KEY = 'musicSongColumnWidths';
+type ConfigurableColumns = 'artist' | 'album';
+type ColumnWidths = Record<ConfigurableColumns, number>;
 const COL_MIN_WIDTH = 60;
-const COL_DEFAULT_WIDTHS: ColWidths = { artist: 160, album: 160 };
 
-function loadColumnWidths(): ColWidths {
+function loadColumnWidths(): ColumnWidths {
   try {
-    const parsed = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) ?? 'null');
+    const parsed = JSON.parse(
+      localStorage.getItem('musicSongColumnWidths') ?? 'null',
+    );
     if (
-      parsed !== null &&
+      parsed &&
       typeof parsed === 'object' &&
       Number.isFinite(parsed.artist) &&
       Number.isFinite(parsed.album)
@@ -120,63 +120,95 @@ function loadColumnWidths(): ColWidths {
   } catch {
     // Ignore malformed localStorage data.
   }
-  return COL_DEFAULT_WIDTHS;
+  return { artist: 160, album: 160 };
+}
+
+function useColumnWidths() {
+  const [columnWidths, setColumnWidths] =
+    React.useState<ColumnWidths>(loadColumnWidths);
+
+  React.useEffect(() => {
+    // TODO - Let's debounce this to something like 500ms.
+    localStorage.setItem('musicSongColumnWidths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
+
+  return { columnWidths, setColumnWidths };
 }
 
 function SongsView() {
-  const [colWidths, setColWidths] = React.useState<ColWidths>(loadColumnWidths);
-
-  React.useEffect(() => {
-    localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(colWidths));
-  }, [colWidths]);
+  const { columnWidths, setColumnWidths } = useColumnWidths();
 
   return (
     <div
       className="musicSongsView"
       style={
         {
-          '--col-artist': `${colWidths.artist}px`,
-          '--col-album': `${colWidths.album}px`,
+          '--column-artist': `${columnWidths.artist}px`,
+          '--column-album': `${columnWidths.album}px`,
         } as React.CSSProperties
       }
     >
-      <SongsHeader setColWidths={setColWidths} />
+      <SongsHeader setColumnWidths={setColumnWidths} />
       <Songs />
       <PlaybackBar />
     </div>
   );
 }
 
-function SongsHeader({
-  setColWidths,
-}: {
-  setColWidths: React.Dispatch<React.SetStateAction<ColWidths>>;
-}) {
+interface ColumnHeaderProps {
+  columnKey: ConfigurableColumns;
+  label: string;
+  setColumnWidths: React.Dispatch<React.SetStateAction<ColumnWidths>>;
+}
+
+function ColumnHeader({
+  columnKey,
+  label,
+  setColumnWidths,
+}: ColumnHeaderProps) {
+  function dragHandler(dx: number) {
+    setColumnWidths((prevColumnWidths) => {
+      // TODO - This is not handling what happens when the update makes the column
+      // bigger than the available space. Really it should just resize the current
+      // column into the available space in the adjacent column. It should never
+      // increase the column size to be bigger than the total container space.
+      const width = Math.max(COL_MIN_WIDTH, prevColumnWidths[columnKey] - dx);
+
+      return { ...prevColumnWidths, [columnKey]: width };
+    });
+  }
+
+  return (
+    <div
+      className="musicSongsHeaderCell"
+      style={{ flex: `0 0 var(--column-${columnKey})` }}
+    >
+      <ColumnResizeHandle onDrag={dragHandler} />
+      <div className="musicSongsHeaderCellText">{label}</div>
+    </div>
+  );
+}
+
+interface SongsHeaderProps {
+  setColumnWidths: React.Dispatch<React.SetStateAction<ColumnWidths>>;
+}
+
+function SongsHeader({ setColumnWidths }: SongsHeaderProps) {
   return (
     <div className="musicSongsHeader">
-      <div className="musicSongsHeaderCell musicSongsHeaderTitle">Song</div>
-      <div className="musicSongsHeaderCell musicSongsHeaderArtist">
-        <ColumnResizeHandle
-          onDrag={(dx) =>
-            setColWidths((prev) => ({
-              ...prev,
-              artist: Math.max(COL_MIN_WIDTH, prev.artist - dx),
-            }))
-          }
-        />
-        Artist
+      <div className="musicSongsHeaderCell musicSongsHeaderTitle">
+        <div className="musicSongsHeaderCellText">Song</div>
       </div>
-      <div className="musicSongsHeaderCell musicSongsHeaderAlbum">
-        <ColumnResizeHandle
-          onDrag={(dx) =>
-            setColWidths((prev) => ({
-              ...prev,
-              album: Math.max(COL_MIN_WIDTH, prev.album - dx),
-            }))
-          }
-        />
-        Album
-      </div>
+      <ColumnHeader
+        columnKey="artist"
+        label="Artist"
+        setColumnWidths={setColumnWidths}
+      />
+      <ColumnHeader
+        columnKey="album"
+        label="Album"
+        setColumnWidths={setColumnWidths}
+      />
     </div>
   );
 }
@@ -201,8 +233,8 @@ function ColumnResizeHandle({ onDrag }: { onDrag: (dx: number) => void }) {
   };
 
   return (
-    <div className="musicSongColResize" onMouseDown={onMouseDown}>
-      <div className="musicSongColResizeVisible" />
+    <div className="musicSongColumnResize" onMouseDown={onMouseDown}>
+      <div className="musicSongColumnResizeVisible" />
     </div>
   );
 }
