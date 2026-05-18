@@ -100,6 +100,10 @@ export function MusicLibraryView() {
 type ConfigurableColumns = 'artist' | 'album';
 type ColumnWidths = Record<ConfigurableColumns, number>;
 const COL_MIN_WIDTH = 60;
+const SONG_MIN_WIDTH = 100; // matches .musicSongsHeaderTitle { min-width: 100px }
+const MUSIC_GAP = 12; // matches --music-gap CSS variable
+const MUSIC_PADDING_H = 12; // matches --music-padding-h CSS variable
+const CONFIGURABLE_COLUMNS: ConfigurableColumns[] = ['artist', 'album'];
 
 function loadColumnWidths(): ColumnWidths {
   try {
@@ -157,53 +161,55 @@ function SongsView() {
 
 interface ColumnHeaderProps {
   columnKey: ConfigurableColumns;
+  columnOrder: ConfigurableColumns[];
   label: string;
   setColumnWidths: React.Dispatch<React.SetStateAction<ColumnWidths>>;
-  maxAvailableWidth: number; // TODO - CSS Pixels of the total available column width less the gaps.
+  maxAvailableWidth: number;
 }
 
-/**
- * A draggable column header for the songs. It's smart enough to affect the sizing of
- * the other columns when dragging. The first column fills in the available space,
- * and the trailing columns determine the sizing using --column-${columnKey} CSS
- * variables.
- */
 function ColumnHeader({
   columnKey,
+  columnOrder,
   label,
   setColumnWidths,
   maxAvailableWidth,
 }: ColumnHeaderProps) {
   function dragHandler(dx: number) {
-    setColumnWidths((prevColumnWidths) => {
-      // TODO - This implementation is naive and needs expanding:
+    setColumnWidths((prev) => {
+      const result = { ...prev };
+      const myIndex = columnOrder.indexOf(columnKey);
 
-      // Given a column setup: "song A artist B album" where A and B are separators.
+      if (dx > 0) {
+        // Drag right: shrink this column, cascade right if it hits min, grow left neighbor.
+        let remaining = dx;
+        for (let i = myIndex; i < columnOrder.length && remaining > 0; i++) {
+          const key = columnOrder[i];
+          const shrinkBy = Math.min(remaining, Math.max(0, result[key] - COL_MIN_WIDTH));
+          result[key] -= shrinkBy;
+          remaining -= shrinkBy;
+        }
+        // Grow left neighbor. Song (K=0) grows automatically via flex:1.
+        if (myIndex > 0) {
+          result[columnOrder[myIndex - 1]] += dx - remaining;
+        }
+      } else {
+        // Drag left: grow this column, take space from left neighbor.
+        const growBy = -dx;
+        if (myIndex === 0) {
+          const songCurrent =
+            maxAvailableWidth - columnOrder.reduce((sum, k) => sum + result[k], 0);
+          const canTake = Math.max(0, songCurrent - SONG_MIN_WIDTH);
+          result[columnKey] += Math.min(growBy, canTake);
+        } else {
+          const leftKey = columnOrder[myIndex - 1];
+          const canTake = Math.max(0, result[leftKey] - COL_MIN_WIDTH);
+          const actualGrowth = Math.min(growBy, canTake);
+          result[columnKey] += actualGrowth;
+          result[leftKey] -= actualGrowth;
+        }
+      }
 
-      // If you drag A, then the song column will shrink implicitly based on filling in
-      // the available space by CSS sizing. Only artist and album have defined sizes.
-      // If the you drag A an unreasonably large amount, then the widths of
-      // song + artist + album will never be larger than maxAvailableWidth. There
-      // is an existing mechanism to limit the smallest size as COL_MIN_WIDTH but there
-      // is no check for the drag to be too large. In addition, song should never be
-      // smaller than MIN_COL_WIDTH.
-
-      // Now, if you drag B, the behavior currently is incorrect. It should increase
-      // the width of album, but also decrease the width of artist. artist should not
-      // be decreasable beyond COL_MIN_WIDTH. Care should be taken to never exceed the
-      // maxAvailableWidth.
-
-      // Another case that needs to be handled is when you drag column A to the right.
-      // Once artist reaches its minimum size, then you must continue shrinking album
-      // to account for the drag still happening. The drag to the right stops affecting
-      // sizing when both artist and album are COL_MIN_WIDTH
-
-      // This is an example of 3 columns, but it should expand to work effectively for N
-      // columns as well.
-
-      const width = Math.max(COL_MIN_WIDTH, prevColumnWidths[columnKey] - dx);
-
-      return { ...prevColumnWidths, [columnKey]: width };
+      return result;
     });
   }
 
@@ -223,20 +229,39 @@ interface SongsHeaderProps {
 }
 
 function SongsHeader({ setColumnWidths }: SongsHeaderProps) {
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const [maxAvailableWidth, setMaxAvailableWidth] = React.useState(400);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    const numCols = CONFIGURABLE_COLUMNS.length + 1; // +1 for Song
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      setMaxAvailableWidth(width - 2 * MUSIC_PADDING_H - (numCols - 1) * MUSIC_GAP);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="musicSongsHeader">
+    <div className="musicSongsHeader" ref={containerRef}>
       <div className="musicSongsHeaderCell musicSongsHeaderTitle">
         <div className="musicSongsHeaderCellText">Song</div>
       </div>
       <ColumnHeader
         columnKey="artist"
+        columnOrder={CONFIGURABLE_COLUMNS}
         label="Artist"
         setColumnWidths={setColumnWidths}
+        maxAvailableWidth={maxAvailableWidth}
       />
       <ColumnHeader
         columnKey="album"
+        columnOrder={CONFIGURABLE_COLUMNS}
         label="Album"
         setColumnWidths={setColumnWidths}
+        maxAvailableWidth={maxAvailableWidth}
       />
     </div>
   );
