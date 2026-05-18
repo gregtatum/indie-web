@@ -7,5 +7,7 @@
     "**/package-lock.json": true,
     ".cache": true,
     "dist": true
-  }
+  },
+  "stylelint.validate": ["css"],
+  "css.validate": false
 }
