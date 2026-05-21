@@ -193,19 +193,21 @@ function ColumnHeader({
           result[columnOrder[myIndex - 1]] += dx - remaining;
         }
       } else {
-        // Drag left: grow this column, take space from left neighbor.
-        const growBy = -dx;
-        if (myIndex === 0) {
+        // Drag left: grow this column, cascade left through explicit columns then song.
+        let remaining = -dx;
+        for (let i = myIndex - 1; i >= 0 && remaining > 0; i--) {
+          const key = columnOrder[i];
+          const canTake = Math.max(0, result[key] - COL_MIN_WIDTH);
+          const taken = Math.min(remaining, canTake);
+          result[key] -= taken;
+          result[columnKey] += taken;
+          remaining -= taken;
+        }
+        if (remaining > 0) {
           const songCurrent =
             maxAvailableWidth - columnOrder.reduce((sum, k) => sum + result[k], 0);
           const canTake = Math.max(0, songCurrent - SONG_MIN_WIDTH);
-          result[columnKey] += Math.min(growBy, canTake);
-        } else {
-          const leftKey = columnOrder[myIndex - 1];
-          const canTake = Math.max(0, result[leftKey] - COL_MIN_WIDTH);
-          const actualGrowth = Math.min(growBy, canTake);
-          result[columnKey] += actualGrowth;
-          result[leftKey] -= actualGrowth;
+          result[columnKey] += Math.min(remaining, canTake);
         }
       }
 
