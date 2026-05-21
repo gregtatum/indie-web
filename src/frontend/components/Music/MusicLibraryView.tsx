@@ -105,6 +105,21 @@ const MUSIC_GAP = 12; // matches --music-gap CSS variable
 const MUSIC_PADDING_H = 12; // matches --music-padding-h CSS variable
 const CONFIGURABLE_COLUMNS: ConfigurableColumns[] = ['artist', 'album'];
 
+function clampColumnWidths(prev: ColumnWidths, maxWidth: number): ColumnWidths {
+  const maxForConfigurable = maxWidth - SONG_MIN_WIDTH;
+  const total = CONFIGURABLE_COLUMNS.reduce((sum, k) => sum + prev[k], 0);
+  if (total <= maxForConfigurable) return prev;
+  const result = { ...prev };
+  let excess = total - maxForConfigurable;
+  for (let i = CONFIGURABLE_COLUMNS.length - 1; i >= 0 && excess > 0; i--) {
+    const key = CONFIGURABLE_COLUMNS[i];
+    const shrinkBy = Math.min(excess, Math.max(0, result[key] - COL_MIN_WIDTH));
+    result[key] -= shrinkBy;
+    excess -= shrinkBy;
+  }
+  return result;
+}
+
 function loadColumnWidths(): ColumnWidths {
   try {
     const parsed = JSON.parse(
@@ -240,7 +255,9 @@ function SongsHeader({ setColumnWidths }: SongsHeaderProps) {
     const numCols = CONFIGURABLE_COLUMNS.length + 1; // +1 for Song
     const observer = new ResizeObserver(([entry]) => {
       const width = entry.contentRect.width;
-      setMaxAvailableWidth(width - 2 * MUSIC_PADDING_H - (numCols - 1) * MUSIC_GAP);
+      const newMax = width - 2 * MUSIC_PADDING_H - (numCols - 1) * MUSIC_GAP;
+      setMaxAvailableWidth(newMax);
+      setColumnWidths((prev) => clampColumnWidths(prev, newMax));
     });
     observer.observe(el);
     return () => observer.disconnect();
