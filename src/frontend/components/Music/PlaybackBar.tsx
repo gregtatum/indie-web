@@ -10,20 +10,25 @@ function formatTime(secs: number): string {
 }
 
 export function PlaybackBar() {
-  const status = $$.getMusicPlaybackStatus();
+  const musicPlaybackStatus = $$.getMusicPlaybackStatus();
   const trackPath = $$.getMusicPlaybackTrackPath();
   const allTracks = $$.getMusicTracks();
   const { currentTime, duration, volume, play, pause, seek, setVolume } =
     useAudioPlayer();
 
-  const track = trackPath
+  const trackMetadata = trackPath
     ? (allTracks.find((t) => t.path === trackPath) ?? null)
     : null;
-  const isPlaying = status === 'playing';
+  const isPlaying = musicPlaybackStatus === 'playing';
 
-  useMediaSession({ status, track, play, pause });
+  useMediaSession({
+    musicPlaybackStatus,
+    trackMetadata,
+    play,
+    pause,
+  });
 
-  if (status === 'idle') {
+  if (musicPlaybackStatus === 'idle') {
     return null;
   }
 
@@ -34,14 +39,16 @@ export function PlaybackBar() {
       aria-label="Playback controls"
     >
       <div className="musicPlaybackTrackInfo">
-        <span className="musicPlaybackTitle">{track?.title ?? trackPath}</span>
-        <span className="musicPlaybackArtist">{track?.artist}</span>
+        <span className="musicPlaybackTitle">
+          {trackMetadata?.title ?? trackPath}
+        </span>
+        <span className="musicPlaybackArtist">{trackMetadata?.artist}</span>
       </div>
       <button
         type="button"
         aria-label={isPlaying ? 'Pause' : 'Play'}
         onClick={isPlaying ? pause : play}
-        disabled={status === 'loading'}
+        disabled={musicPlaybackStatus === 'loading'}
       >
         {isPlaying ? 'Pause' : 'Play'}
       </button>
