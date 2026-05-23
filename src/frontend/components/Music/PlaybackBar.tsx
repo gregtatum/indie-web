@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { $$ } from 'frontend';
 import { useAudioPlayer } from 'frontend/hooks/useAudioPlayer';
+import { useMediaSession } from 'frontend/hooks/useMediaSession';
 
 function formatTime(secs: number): string {
   const m = Math.floor(secs / 60);
@@ -19,6 +20,8 @@ export function PlaybackBar() {
     ? (allTracks.find((t) => t.path === trackPath) ?? null)
     : null;
   const isPlaying = status === 'playing';
+
+  useMediaSession({ status, track, play, pause });
 
   if (status === 'idle') {
     return null;
