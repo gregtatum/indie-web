@@ -107,7 +107,7 @@ function needsRescan(state = false, action: T.Action): boolean {
   }
 }
 
-export const musicReducer = combineReducers({
+const combinedMusicReducer = combineReducers({
   panelSelections,
   tracks,
   selectedTrackPath,
@@ -115,3 +115,23 @@ export const musicReducer = combineReducers({
   playingTrackPath,
   playbackStatus,
 });
+
+type MusicState = ReturnType<typeof combinedMusicReducer>;
+
+export function musicReducer(
+  state: MusicState | undefined,
+  action: T.Action,
+): MusicState {
+  // When loading a new track, if the selected track matches the currently
+  // playing track, advance the selection to follow the new track.
+  if (
+    action.type === 'music-playback-load' &&
+    state !== undefined &&
+    state.selectedTrackPath !== null &&
+    state.selectedTrackPath === state.playingTrackPath
+  ) {
+    const next = combinedMusicReducer(state, action);
+    return { ...next, selectedTrackPath: action.path };
+  }
+  return combinedMusicReducer(state, action);
+}
