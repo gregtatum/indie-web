@@ -18,7 +18,7 @@ export function useMediaSession({
   pause,
 }: MediaSessionProps) {
   const dispatch = Hooks.useDispatch();
-  const filteredMusicTracks = $$.getFilteredMusicTracks();
+  const playbackQueue = $$.getMusicPlaybackQueue();
   const trackPath = $$.getMusicPlaybackTrackPath();
 
   const { mediaSession } = navigator;
@@ -62,8 +62,8 @@ export function useMediaSession({
   playRef.current = play;
   const pauseRef = React.useRef(pause);
   pauseRef.current = pause;
-  const filteredTracksRef = React.useRef(filteredMusicTracks);
-  filteredTracksRef.current = filteredMusicTracks;
+  const playbackQueueRef = React.useRef(playbackQueue);
+  playbackQueueRef.current = playbackQueue;
   const trackPathRef = React.useRef(trackPath);
   trackPathRef.current = trackPath;
 
@@ -76,17 +76,17 @@ export function useMediaSession({
       pauseRef.current();
     });
     mediaSession.setActionHandler('nexttrack', () => {
-      const tracks = filteredTracksRef.current;
-      const index = tracks.findIndex((t) => t.path === trackPathRef.current);
-      if (index !== -1 && index < tracks.length - 1) {
-        dispatch(A.musicPlaybackLoad(tracks[index + 1].path));
+      const queue = playbackQueueRef.current;
+      const index = queue.findIndex((t) => t.path === trackPathRef.current);
+      if (index !== -1 && index < queue.length - 1) {
+        dispatch(A.musicPlaybackLoad(queue[index + 1].path));
       }
     });
     mediaSession.setActionHandler('previoustrack', () => {
-      const tracks = filteredTracksRef.current;
-      const idx = tracks.findIndex((t) => t.path === trackPathRef.current);
+      const queue = playbackQueueRef.current;
+      const idx = queue.findIndex((t) => t.path === trackPathRef.current);
       if (idx > 0) {
-        dispatch(A.musicPlaybackLoad(tracks[idx - 1].path));
+        dispatch(A.musicPlaybackLoad(queue[idx - 1].path));
       }
     });
 
