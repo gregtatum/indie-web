@@ -69,7 +69,6 @@ interface PopupProps {
  */
 export function Popup({
   clickedElement,
-  openEventDetail,
   openGeneration,
   className,
   children,

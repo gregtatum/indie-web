@@ -61,6 +61,11 @@ beforeEach(function () {
   overlayContainer.id = 'overlayContainer';
   document.body.appendChild(overlayContainer);
 
+  document.body.querySelector('#modalsContainer')?.remove();
+  const modalsContainer = document.createElement('div');
+  modalsContainer.id = 'modalsContainer';
+  document.body.appendChild(modalsContainer);
+
   function getBoundingClientRect(): DOMRect {
     const rec = {
       x: 0,

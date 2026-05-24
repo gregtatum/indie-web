@@ -50,7 +50,11 @@ export function Modal({ isOpen, onClose, children }: Props) {
         aria-modal="true"
         tabIndex={-1}
       >
-        <button className="modalCloseButton" onClick={onClose} aria-label="Close">
+        <button
+          className="modalCloseButton"
+          onClick={onClose}
+          aria-label="Close"
+        >
           <img src="/svg/xmark.svg" alt="" />
         </button>
         {children}
