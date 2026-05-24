@@ -166,6 +166,16 @@
   }
 }
 
+.musicFilterPanelItem.selected + .musicFilterPanelItem.selected {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.musicFilterPanelItem.selected:has(+ .musicFilterPanelItem.selected) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 .musicTracksView {
   display: flex;
   flex-direction: column;
