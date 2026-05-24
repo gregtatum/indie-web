@@ -147,6 +147,9 @@
   margin-inline: calc(var(--music-padding-h) / 2);
   cursor: pointer;
   border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &:hover {
     background: var(--selection-hover);
