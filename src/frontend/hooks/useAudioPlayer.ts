@@ -48,7 +48,9 @@ export function useAudioPlayer(): AudioPlayerState {
   const serverUrl = $.getCurrentServerOrNull(getState())?.url ?? '';
 
   React.useEffect(() => {
-    if (!trackPath || !serverUrl) return;
+    if (!trackPath || !serverUrl) {
+      return;
+    }
 
     const audio = getAudio();
     isReadyRef.current = false;
@@ -100,6 +102,7 @@ export function useAudioPlayer(): AudioPlayerState {
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('error', onError);
 
+    // eslint-disable-next-line consistent-return
     return () => {
       isReadyRef.current = false;
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);

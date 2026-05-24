@@ -218,14 +218,20 @@ describe('filter panels', () => {
   it('lists items derived from track metadata', () => {
     setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
-    expect(within(genreList).getByRole('option', { name: 'Jazz' })).toBeTruthy();
-    expect(within(genreList).getByRole('option', { name: 'Rock' })).toBeTruthy();
+    expect(
+      within(genreList).getByRole('option', { name: 'Jazz' }),
+    ).toBeTruthy();
+    expect(
+      within(genreList).getByRole('option', { name: 'Rock' }),
+    ).toBeTruthy();
   });
 
   it('clicking an item selects it', async () => {
     const { store } = setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
-    await userEvent.click(within(genreList).getByRole('option', { name: 'Rock' }));
+    await userEvent.click(
+      within(genreList).getByRole('option', { name: 'Rock' }),
+    );
     expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
   });
 
@@ -235,7 +241,9 @@ describe('filter panels', () => {
       store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
     });
     const genreList = screen.getByRole('listbox', { name: 'genre' });
-    await userEvent.click(within(genreList).getByRole('option', { name: '« All Genres »' }));
+    await userEvent.click(
+      within(genreList).getByRole('option', { name: '« All Genres »' }),
+    );
     expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
   });
 
@@ -297,14 +305,18 @@ describe('filter panels', () => {
     setup();
     screen.getByRole('listbox', { name: 'genre' }).focus();
     await userEvent.keyboard('{ArrowRight}');
-    expect(document.activeElement).toBe(screen.getByRole('listbox', { name: 'artist' }));
+    expect(document.activeElement).toBe(
+      screen.getByRole('listbox', { name: 'artist' }),
+    );
   });
 
   it('ArrowLeft moves focus to the previous panel', async () => {
     setup();
     screen.getByRole('listbox', { name: 'artist' }).focus();
     await userEvent.keyboard('{ArrowLeft}');
-    expect(document.activeElement).toBe(screen.getByRole('listbox', { name: 'genre' }));
+    expect(document.activeElement).toBe(
+      screen.getByRole('listbox', { name: 'genre' }),
+    );
   });
 
   it('ArrowLeft does nothing on the first panel', async () => {
@@ -326,9 +338,15 @@ describe('filter panels', () => {
   it('a genre selection cascades to narrow the artist panel', async () => {
     setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
-    await userEvent.click(within(genreList).getByRole('option', { name: 'Jazz' }));
+    await userEvent.click(
+      within(genreList).getByRole('option', { name: 'Jazz' }),
+    );
     const artistList = screen.getByRole('listbox', { name: 'artist' });
-    expect(within(artistList).getByRole('option', { name: 'Artist A' })).toBeTruthy();
-    expect(within(artistList).queryByRole('option', { name: 'Artist B' })).toBeNull();
+    expect(
+      within(artistList).getByRole('option', { name: 'Artist A' }),
+    ).toBeTruthy();
+    expect(
+      within(artistList).queryByRole('option', { name: 'Artist B' }),
+    ).toBeNull();
   });
 });

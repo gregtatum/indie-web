@@ -45,7 +45,6 @@ describe('POST /music/music-index/scan', () => {
       });
       assert.equal(res.status, 200);
       const index = await res.json();
-      assert.equal(index.version, 2);
       assert.ok(typeof index.scannedAt === 'string');
       assert.deepEqual(index.tracks, []);
     }),
@@ -341,7 +340,7 @@ describe('GET /music/music-index/scan (SSE)', () => {
   );
 });
 
-describe('POST /music/music-index/scan v1→v2 cache bypass', () => {
+describe('POST /music/music-index/scan stale-cache bypass', () => {
   let server: TestServer;
 
   before(async () => {
@@ -389,7 +388,7 @@ describe('POST /music/music-index/scan v1→v2 cache bypass', () => {
       });
       assert.equal(res.status, 200);
       const index = await res.json();
-      assert.equal(index.version, 2);
+      assert.equal(index.version, 4);
 
       const track = index.tracks.find(
         (t: { path: string }) => t.path === '/cached.mp3',

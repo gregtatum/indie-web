@@ -92,6 +92,16 @@ beforeEach(function () {
 
   document.elementFromPoint = (): null => null;
   HTMLElement.prototype.scrollIntoView = jest.fn();
+  (navigator as any).mediaSession = {
+    metadata: null,
+    playbackState: 'none',
+    setActionHandler: jest.fn(),
+  };
+  (global as any).MediaMetadata = class MediaMetadata {
+    constructor(init?: MediaMetadataInit) {
+      Object.assign(this, init);
+    }
+  };
   HTMLElement.prototype.getBoundingClientRect = getBoundingClientRect;
   HTMLElement.prototype.getClientRects = (): DOMRectList =>
     new FakeDOMRectList();

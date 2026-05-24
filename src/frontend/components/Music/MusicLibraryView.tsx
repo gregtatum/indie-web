@@ -149,7 +149,10 @@ function useColumnWidths() {
 
   React.useEffect(() => {
     // TODO - Let's debounce this to something like 500ms.
-    localStorage.setItem('musicTrackColumnWidths', JSON.stringify(columnWidths));
+    localStorage.setItem(
+      'musicTrackColumnWidths',
+      JSON.stringify(columnWidths),
+    );
   }, [columnWidths]);
 
   return { columnWidths, setColumnWidths };
