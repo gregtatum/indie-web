@@ -523,13 +523,106 @@ export function useEscape(dismiss: () => void, isOpen: boolean) {
   }, [isOpen]);
 }
 
+const focusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+function isFocusable(element: HTMLElement) {
+  if (element.hasAttribute('disabled')) return false;
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+  if (element.offsetParent === null && style.position !== 'fixed') return false;
+  return true;
+}
+
+function getFocusableElements(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(focusableSelector),
+  ).filter(isFocusable);
+}
+
+/**
+ * Traps keyboard focus within a container while it is open, restoring focus to
+ * the previously active element on close. Focuses the first focusable child
+ * (or the container itself) when opened.
+ */
+export function useFocusTrap(
+  containerRef: React.RefObject<HTMLElement | null>,
+  isOpen: boolean,
+) {
+  const priorFocusRef = React.useRef<HTMLElement | null>(null);
+
+  // Save and restore focus around open/close.
+  React.useEffect(() => {
+    if (!isOpen) return () => {};
+    priorFocusRef.current = document.activeElement as HTMLElement | null;
+    return () => {
+      priorFocusRef.current?.focus();
+    };
+  }, [isOpen]);
+
+  // Focus first focusable element (or container) when opened.
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const container = containerRef.current;
+    if (!container) return;
+    requestAnimationFrame(() => {
+      const focusable = getFocusableElements(container);
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        container.focus();
+      }
+    });
+  }, [isOpen]);
+
+  // Cycle Tab/Shift+Tab within the container.
+  React.useEffect(() => {
+    if (!isOpen) return () => {};
+    const container = containerRef.current;
+    if (!container) return () => {};
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const focusable = getFocusableElements(container);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown);
+    return () => container.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+}
+
 import { createPortal } from 'react-dom';
 
 let overlayContainer: HTMLDivElement;
 
 /**
- * When creating an overlay, such a menu or tooltip, place it in the overlayContainer, as
- * the z-indexing is guaranteed to be correct.
+ * Renders into #overlayContainer — the topmost stacking layer, used for context menus,
+ * tooltips, and other anchored overlays. Sits above #modalsContainer by DOM order (both
+ * z-index: 1; later sibling wins the tie). See Popup.tsx for the component that uses this.
+ *
+ * Cross-reference: Menus.css (.overlayContainer), Modal.css (.modalsContainer),
+ * index.html (DOM order), modalPortal below, Popup.tsx, Modal.tsx.
+ * Update all of these if the stacking strategy changes.
  */
 export function overlayPortal(child: React.ReactNode, key?: string) {
   if (!overlayContainer || !overlayContainer.isConnected) {
@@ -544,8 +637,14 @@ export function overlayPortal(child: React.ReactNode, key?: string) {
 let modalsContainer: HTMLDivElement;
 
 /**
- * When creating a modal dialog, place it in the modalsContainer. It sits above the app
- * content but below the overlayContainer so context menus remain on top.
+ * Renders into #modalsContainer — the middle stacking layer, used for full-screen modal
+ * dialogs. Sits above app content but below #overlayContainer (context menus) by DOM
+ * order (both z-index: 1; later sibling wins the tie). See Modal.tsx for the component
+ * that uses this.
+ *
+ * Cross-reference: Modal.css (.modalsContainer), Menus.css (.overlayContainer),
+ * index.html (DOM order), overlayPortal above, Popup.tsx, Modal.tsx.
+ * Update all of these if the stacking strategy changes.
  */
 export function modalPortal(child: React.ReactNode, key?: string) {
   if (!modalsContainer || !modalsContainer.isConnected) {

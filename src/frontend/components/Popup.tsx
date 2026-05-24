@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ensureExists } from 'frontend/utils';
-import { useEscape } from 'frontend/hooks';
+import { useEscape, useFocusTrap } from 'frontend/hooks';
 
 import './Popup.css';
 
@@ -43,35 +43,6 @@ function useDismissOnOutsideClick(
   }, [elementRef, isOpen]);
 }
 
-const focusableSelector = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-function isFocusable(element: HTMLElement) {
-  if (element.hasAttribute('disabled')) {
-    return false;
-  }
-  const style = window.getComputedStyle(element);
-  if (style.display === 'none' || style.visibility === 'hidden') {
-    return false;
-  }
-  if (element.offsetParent === null && style.position !== 'fixed') {
-    return false;
-  }
-  return true;
-}
-
-function getFocusableElements(popup: HTMLDivElement) {
-  return Array.from(
-    popup.querySelectorAll<HTMLElement>(focusableSelector),
-  ).filter(isFocusable);
-}
-
 interface PopupProps {
   clickedElement: React.MutableRefObject<HTMLElement | null>;
   openEventDetail: React.MouseEvent['detail'];
@@ -80,6 +51,22 @@ interface PopupProps {
   children: React.ReactNode;
 }
 
+/**
+ * Anchored contextual UI (tooltips, dropdowns, right-click menus) that floats near a
+ * trigger element. The caller only ever opens it — Popup owns its dismissed state
+ * internally via generation counters, which lets it handle rapid re-triggers on the same
+ * element without a toggle-off/on cycle from the parent. Positioning is computed from the
+ * anchor's bounding rect and flips automatically near viewport edges. No backdrop: the
+ * page remains visible and interactive around it, so outside-click detection uses a
+ * capture-phase document listener rather than a covering element.
+ *
+ * Rendered into #overlayContainer (z-index: 1, last in DOM order), which places it above
+ * #modalsContainer (also z-index: 1 but earlier in DOM). When z-indexes tie among
+ * siblings, later DOM position wins — so context menus always stack above modal backdrops.
+ * Cross-reference: Menus.css (.overlayContainer), Modal.css (.modalsContainer),
+ * index.html (DOM order), hooks/index.tsx (overlayPortal, modalPortal), Modal.tsx.
+ * Update all of these if the stacking strategy changes.
+ */
 export function Popup({
   clickedElement,
   openEventDetail,
@@ -91,7 +78,6 @@ export function Popup({
   const isOpen = Boolean(openGeneration && openGeneration !== closeGeneration);
   const isClosed = !isOpen;
   const divRef = React.useRef<HTMLDivElement>(null);
-  const priorFocusRef = React.useRef<HTMLElement | null>(null);
   const [position, setPosition] = React.useState<null | {
     top: number;
     left: number;
@@ -101,16 +87,7 @@ export function Popup({
 
   useEscape(dismiss, isOpen);
   useDismissOnOutsideClick(clickedElement, divRef, dismiss, isOpen);
-
-  React.useEffect(() => {
-    if (isClosed) {
-      return () => {};
-    }
-    priorFocusRef.current = document.activeElement as HTMLElement | null;
-    return () => {
-      priorFocusRef.current?.focus();
-    };
-  }, [isOpen]);
+  useFocusTrap(divRef, isOpen);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -144,57 +121,6 @@ export function Popup({
     }
 
     setPosition({ top, left });
-  }, [isOpen]);
-
-  React.useEffect(() => {
-    if (openEventDetail === 0 && isOpen) {
-      const popup = divRef.current;
-      if (!popup) {
-        return;
-      }
-      requestAnimationFrame(() => {
-        const focusable = getFocusableElements(popup);
-        if (focusable.length > 0) {
-          focusable[0].focus();
-          return;
-        }
-        popup.focus();
-      });
-    }
-  }, [openEventDetail, isOpen]);
-
-  React.useEffect(() => {
-    if (!isOpen) {
-      return () => {};
-    }
-    const popup = divRef.current;
-    if (!popup) {
-      return () => {};
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') {
-        return;
-      }
-      const focusable = getFocusableElements(popup);
-      if (focusable.length === 0) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    popup.addEventListener('keydown', handleKeyDown);
-    return () => popup.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
   if (isClosed) {

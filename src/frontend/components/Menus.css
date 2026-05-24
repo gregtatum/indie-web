@@ -1,3 +1,12 @@
+/*
+ * Stacking layer for context menus, tooltips, and other anchored overlays. Sits above
+ * .modalsContainer because it appears later in the DOM — both have z-index: 1, and among
+ * siblings with equal z-index the later element wins.
+ *
+ * Cross-reference: Modal.css (.modalsContainer), index.html (DOM order),
+ * hooks/index.tsx (overlayPortal, modalPortal), Popup.tsx, Modal.tsx.
+ * Update all of these if the stacking strategy changes.
+ */
 .overlayContainer {
   position: absolute;
   width: 0;

@@ -1,3 +1,12 @@
+/*
+ * Stacking layer for full-screen modal dialogs. Sits above app content but below
+ * .overlayContainer (context menus) because it appears earlier in the DOM — both have
+ * z-index: 1, and among siblings with equal z-index the later element wins.
+ *
+ * Cross-reference: Menus.css (.overlayContainer), index.html (DOM order),
+ * hooks/index.tsx (overlayPortal, modalPortal), Popup.tsx, Modal.tsx.
+ * Update all of these if the stacking strategy changes.
+ */
 .modalsContainer {
   position: absolute;
   width: 0;
