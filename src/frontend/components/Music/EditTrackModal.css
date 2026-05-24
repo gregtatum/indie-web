@@ -1,0 +1,50 @@
+.editTrackModal {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.editTrackModalTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
+}
+
+.editTrackModalFields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editTrackModalField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editTrackModalLabel {
+  font-size: var(--font-size-small);
+  color: #555;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.editTrackModalInput {
+  font-size: var(--font-size-normal);
+  font-family: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--light-border);
+  border-radius: var(--button-border-radius);
+  background: #fff;
+  color: #000;
+  outline: none;
+  box-shadow: none;
+}
+
+.editTrackModalInput:focus {
+  border-color: var(--primary-color);
+  box-shadow: var(--box-shadow-focus);
+}

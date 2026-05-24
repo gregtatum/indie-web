@@ -541,6 +541,22 @@ export function overlayPortal(child: React.ReactNode, key?: string) {
   return createPortal(child, overlayContainer, key);
 }
 
+let modalsContainer: HTMLDivElement;
+
+/**
+ * When creating a modal dialog, place it in the modalsContainer. It sits above the app
+ * content but below the overlayContainer so context menus remain on top.
+ */
+export function modalPortal(child: React.ReactNode, key?: string) {
+  if (!modalsContainer || !modalsContainer.isConnected) {
+    modalsContainer = ensureExists(
+      document.querySelector<HTMLDivElement>('#modalsContainer'),
+      'Could not find the modalsContainer',
+    );
+  }
+  return createPortal(child, modalsContainer, key);
+}
+
 export function useUploadOnFileDrop(
   divRef: React.RefObject<HTMLElement | null>,
   folderPath: string,

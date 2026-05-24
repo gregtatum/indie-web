@@ -3,6 +3,7 @@ import * as Router from 'react-router-dom';
 import { $$, A, Hooks, $ } from 'frontend';
 import { getDirName, getPathFileName } from 'frontend/utils';
 import { Menu, MenuButton } from 'frontend/components/Menus';
+import { EditTrackModal } from 'frontend/components/Music/EditTrackModal';
 
 // Must stay in sync with menuWidth in Menus.tsx so the menu left-aligns to the cursor.
 const MENU_WIDTH = 200;
@@ -21,6 +22,9 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     const [contextTrackPath, setContextTrackPath] = React.useState<
       string | null
     >(null);
+    const [editTrackPath, setEditTrackPath] = React.useState<string | null>(
+      null,
+    );
     const anchorRef = React.useRef<HTMLElement | null>(null);
 
     React.useImperativeHandle(ref, () => ({
@@ -76,6 +80,13 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
       ...(!isMultiSelect && contextTrackPath
         ? [
             {
+              key: 'edit',
+              children: 'Edit',
+              onClick() {
+                setEditTrackPath(contextTrackPath);
+              },
+            } as MenuButton,
+            {
               key: 'show-in-files',
               children: 'Show in Files',
               onClick() {
@@ -91,13 +102,21 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
         : []),
     ];
 
-    return Hooks.overlayPortal(
-      <Menu
-        clickedElement={anchorRef}
-        openEventDetail={openEventDetail}
-        openGeneration={openGeneration}
-        buttons={buttons}
-      />,
+    return (
+      <>
+        {Hooks.overlayPortal(
+          <Menu
+            clickedElement={anchorRef}
+            openEventDetail={openEventDetail}
+            openGeneration={openGeneration}
+            buttons={buttons}
+          />,
+        )}
+        <EditTrackModal
+          trackPath={editTrackPath}
+          onClose={() => setEditTrackPath(null)}
+        />
+      </>
     );
   },
 );

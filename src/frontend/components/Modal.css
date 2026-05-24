@@ -1,0 +1,29 @@
+.modalsContainer {
+  position: absolute;
+  width: 0;
+  height: 0;
+  z-index: 1;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+}
+
+.modalBox {
+  max-width: var(--page-max-width);
+  max-height: calc(100dvh - 2 * var(--page-padding));
+  margin: var(--page-padding);
+  overflow-y: auto;
+  background: var(--modal-background);
+  border: 1px solid var(--modal-border-color);
+  border-radius: var(--modal-radius);
+  box-shadow: 0 8px 40px #0004, var(--modal-shadow);
+  box-sizing: border-box;
+  width: 100%;
+}
