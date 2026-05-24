@@ -82,10 +82,7 @@ function tracks(
   }
 }
 
-function selectedTrackPaths(
-  state: string[] = [],
-  action: T.Action,
-): string[] {
+function selectedTrackPaths(state: string[] = [], action: T.Action): string[] {
   switch (action.type) {
     case 'set-music-selected-tracks':
       return action.paths;

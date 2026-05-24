@@ -83,7 +83,10 @@ export function PlaybackBar() {
             className="musicPlaybackBtn musicPlaybackPlayBtn"
             aria-label={isPlaying ? 'Pause' : 'Play'}
             onClick={isPlaying ? pause : play}
-            disabled={musicPlaybackStatus === 'loading' || musicPlaybackStatus === 'error'}
+            disabled={
+              musicPlaybackStatus === 'loading' ||
+              musicPlaybackStatus === 'error'
+            }
           >
             <img src={isPlaying ? '/svg/pause.svg' : '/svg/play.svg'} alt="" />
           </button>

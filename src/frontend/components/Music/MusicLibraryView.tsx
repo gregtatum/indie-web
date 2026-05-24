@@ -441,8 +441,10 @@ function FilterPanel({
       if (!effectiveSelections.includes(value)) {
         anchorRef.current = value;
       }
-      dispatch(A.setMusicPanelSelection(panel, next.length > 0 ? next : undefined));
-    } else if (event.shiftKey && anchorRef.current != null) {
+      dispatch(
+        A.setMusicPanelSelection(panel, next.length > 0 ? next : undefined),
+      );
+    } else if (event.shiftKey && anchorRef.current !== null) {
       const anchorIndex = itemsRef.current.indexOf(anchorRef.current);
       const targetIndex = itemsRef.current.indexOf(value);
       const [start, end] =
@@ -465,7 +467,7 @@ function FilterPanel({
     dispatch(A.setMusicPanelSelection(panel, [value]));
   });
 
-  const cursorInItems = cursor != null && items.includes(cursor);
+  const cursorInItems = cursor !== null && items.includes(cursor);
   let activeDescendant: string | undefined;
   if (cursorInItems) {
     activeDescendant = `music-panel-${panel}-${items.indexOf(cursor!)}`;
@@ -502,20 +504,41 @@ function FilterPanel({
       const currentItems = itemsRef.current;
       const currentCursor = cursorRef.current;
       const currentIndex =
-        currentCursor != null ? currentItems.indexOf(currentCursor) : -1;
+        currentCursor !== null ? currentItems.indexOf(currentCursor) : -1;
 
       switch (event.key) {
         case 'ArrowUp': {
           event.preventDefault();
-          if (currentIndex > 0) {
-            const next = currentItems[currentIndex - 1];
-            anchorRef.current = next;
-            setCursor(next);
-            dispatch(A.setMusicPanelSelection(panel, [next]));
-          } else if (currentIndex === 0) {
-            anchorRef.current = null;
-            setCursor(null);
-            dispatch(A.setMusicPanelSelection(panel));
+          if (
+            event.shiftKey &&
+            anchorRef.current !== null &&
+            currentIndex > 0
+          ) {
+            const newIndex = currentIndex - 1;
+            const newCursor = currentItems[newIndex];
+            setCursor(newCursor);
+            const anchorIndex = currentItems.indexOf(anchorRef.current);
+            const [start, end] =
+              anchorIndex <= newIndex
+                ? [anchorIndex, newIndex]
+                : [newIndex, anchorIndex];
+            dispatch(
+              A.setMusicPanelSelection(
+                panel,
+                currentItems.slice(start, end + 1),
+              ),
+            );
+          } else if (!event.shiftKey) {
+            if (currentIndex > 0) {
+              const next = currentItems[currentIndex - 1];
+              anchorRef.current = next;
+              setCursor(next);
+              dispatch(A.setMusicPanelSelection(panel, [next]));
+            } else if (currentIndex === 0) {
+              anchorRef.current = null;
+              setCursor(null);
+              dispatch(A.setMusicPanelSelection(panel));
+            }
           }
           break;
         }
@@ -526,10 +549,30 @@ function FilterPanel({
               ? 0
               : Math.min(currentItems.length - 1, currentIndex + 1);
           if (currentItems[nextIndex] !== undefined) {
-            const next = currentItems[nextIndex];
-            anchorRef.current = next;
-            setCursor(next);
-            dispatch(A.setMusicPanelSelection(panel, [next]));
+            if (
+              event.shiftKey &&
+              anchorRef.current !== null &&
+              currentIndex >= 0
+            ) {
+              const newCursor = currentItems[nextIndex];
+              setCursor(newCursor);
+              const anchorIndex = currentItems.indexOf(anchorRef.current);
+              const [start, end] =
+                anchorIndex <= nextIndex
+                  ? [anchorIndex, nextIndex]
+                  : [nextIndex, anchorIndex];
+              dispatch(
+                A.setMusicPanelSelection(
+                  panel,
+                  currentItems.slice(start, end + 1),
+                ),
+              );
+            } else {
+              const next = currentItems[nextIndex];
+              anchorRef.current = next;
+              setCursor(next);
+              dispatch(A.setMusicPanelSelection(panel, [next]));
+            }
           }
           break;
         }
@@ -671,7 +714,9 @@ function Tracks() {
 
   // focusedPath is the keyboard cursor and the anchor for Enter/Space playback.
   // focusedPathRef gives the keyboard handler synchronous access.
-  const [focusedPath, setFocusedPathState] = React.useState<string | null>(null);
+  const [focusedPath, setFocusedPathState] = React.useState<string | null>(
+    null,
+  );
   const focusedPathRef = React.useRef<string | null>(null);
   // anchorPath is the pivot for shift-click range selection.
   const anchorPathRef = React.useRef<string | null>(null);
@@ -724,7 +769,7 @@ function Tracks() {
           anchorPathRef.current = track.path;
         }
         dispatch(A.setMusicSelectedTracks(next));
-      } else if (event.shiftKey && anchorPathRef.current != null) {
+      } else if (event.shiftKey && anchorPathRef.current !== null) {
         const currentTracks = tracksRef.current;
         const anchorIndex = currentTracks.findIndex(
           (t) => t.path === anchorPathRef.current,
@@ -787,9 +832,26 @@ function Tracks() {
           event.preventDefault();
           if (currentIndex > 0) {
             const newPath = currentTracks[currentIndex - 1].path;
-            anchorPathRef.current = newPath;
-            setFocusedPath(newPath);
-            dispatch(A.setMusicSelectedTracks([newPath]));
+            if (event.shiftKey && anchorPathRef.current !== null) {
+              setFocusedPath(newPath);
+              const anchorIndex = currentTracks.findIndex(
+                (t) => t.path === anchorPathRef.current,
+              );
+              const newCursorIndex = currentIndex - 1;
+              const [start, end] =
+                anchorIndex <= newCursorIndex
+                  ? [anchorIndex, newCursorIndex]
+                  : [newCursorIndex, anchorIndex];
+              dispatch(
+                A.setMusicSelectedTracks(
+                  currentTracks.slice(start, end + 1).map((t) => t.path),
+                ),
+              );
+            } else {
+              anchorPathRef.current = newPath;
+              setFocusedPath(newPath);
+              dispatch(A.setMusicSelectedTracks([newPath]));
+            }
           }
           break;
         }
@@ -801,9 +863,29 @@ function Tracks() {
               : Math.min(currentTracks.length - 1, currentIndex + 1);
           if (currentTracks[nextIndex]) {
             const newPath = currentTracks[nextIndex].path;
-            anchorPathRef.current = newPath;
-            setFocusedPath(newPath);
-            dispatch(A.setMusicSelectedTracks([newPath]));
+            if (
+              event.shiftKey &&
+              anchorPathRef.current !== null &&
+              currentIndex >= 0
+            ) {
+              setFocusedPath(newPath);
+              const anchorIndex = currentTracks.findIndex(
+                (t) => t.path === anchorPathRef.current,
+              );
+              const [start, end] =
+                anchorIndex <= nextIndex
+                  ? [anchorIndex, nextIndex]
+                  : [nextIndex, anchorIndex];
+              dispatch(
+                A.setMusicSelectedTracks(
+                  currentTracks.slice(start, end + 1).map((t) => t.path),
+                ),
+              );
+            } else {
+              anchorPathRef.current = newPath;
+              setFocusedPath(newPath);
+              dispatch(A.setMusicSelectedTracks([newPath]));
+            }
           }
           break;
         }
