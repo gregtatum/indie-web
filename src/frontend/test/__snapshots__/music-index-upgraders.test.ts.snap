@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`upgradeMusicIndex v1 → v2 upgrades a v1 index to v2 1`] = `
+exports[`upgradeMusicIndex v1 → current upgrades a v1 index to current 1`] = `
 {
   "scannedAt": "2025-01-01T00:00:00.000Z",
   "tracks": [
@@ -13,6 +13,7 @@ exports[`upgradeMusicIndex v1 → v2 upgrades a v1 index to v2 1`] = `
       "path": "/Artist/Album/track.mp3",
       "size": 3145728,
       "title": "Test Track",
+      "track": null,
     },
     {
       "album": null,
@@ -23,8 +24,40 @@ exports[`upgradeMusicIndex v1 → v2 upgrades a v1 index to v2 1`] = `
       "path": "/no-tags.mp3",
       "size": 1024,
       "title": null,
+      "track": null,
     },
   ],
-  "version": 2,
+  "version": 3,
+}
+`;
+
+exports[`upgradeMusicIndex v2 → current upgrades a v2 index to current 1`] = `
+{
+  "scannedAt": "2025-01-01T00:00:00.000Z",
+  "tracks": [
+    {
+      "album": "Test Album",
+      "artist": "Test Artist",
+      "duration": 180.5,
+      "genre": "Rock",
+      "mtime": "2024-12-01T00:00:00.000Z",
+      "path": "/Artist/Album/track.mp3",
+      "size": 3145728,
+      "title": "Test Track",
+      "track": null,
+    },
+    {
+      "album": null,
+      "artist": null,
+      "duration": null,
+      "genre": null,
+      "mtime": "2024-11-01T00:00:00.000Z",
+      "path": "/no-tags.mp3",
+      "size": 1024,
+      "title": null,
+      "track": null,
+    },
+  ],
+  "version": 3,
 }
 `;

@@ -113,16 +113,6 @@
     border-left: 1px solid var(--border-color);
   }
 
-  &:focus-within::after {
-    content: "";
-    position: absolute;
-    z-index: 1;
-    inset: 28px 0 2px 0;
-    pointer-events: none;
-    border: var(--outline-focus-dim);
-    border-radius: 3px;
-  }
-
   &:focus-within .musicFilterPanelItem.selected {
     background: var(--selection-active);
     color: #fff;
@@ -142,6 +132,7 @@
   opacity: 0.5;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 5px 5px #0000000d, 0 10px 10px #00000003;
 }
 
 .musicFilterPanelList {
@@ -174,6 +165,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  --column-track: 24px;
 }
 
 .musicSongsHeader {
@@ -187,6 +179,7 @@
   user-select: none;
   position: relative;
   z-index: 1;
+  box-shadow: 0 5px 5px #0000000d, 0 10px 10px #00000003;
 }
 
 .musicSongsHeaderCell {
@@ -197,6 +190,10 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   opacity: 0.5;
+}
+
+.musicSongsHeaderTrack {
+  flex: 0 0 var(--column-track);
 }
 
 .musicSongsHeaderTitle {
@@ -251,6 +248,8 @@
   &:focus-within .musicSong.selected {
     background: var(--selection-active);
     color: #fff;
+
+    & .musicSongTrack img { filter: invert(1); }
   }
 
   &:focus-within .musicSong.selected:hover {
@@ -285,6 +284,19 @@
       background: var(--selection-inactive-hover);
     }
   }
+}
+
+.musicSongTrack {
+  flex: 0 0 var(--column-track);
+  font-size: var(--music-label-font-size);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.5;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  & img { width: 10px; height: 10px; }
 }
 
 .musicSongTitle {

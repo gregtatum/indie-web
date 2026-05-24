@@ -11,7 +11,7 @@ import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
-const MUSIC_INDEX_VERSION = 2 as const;
+const MUSIC_INDEX_VERSION = 3 as const;
 
 const AUDIO_EXTENSIONS = new Set([
   '.mp3',
@@ -239,6 +239,7 @@ async function performScan(
       let artist: string | null = null;
       let album: string | null = null;
       let genre: string | null = null;
+      let track: number | null = null;
       let duration: number | null = null;
       try {
         const meta = await parseFile(fullPath, { duration: true });
@@ -246,6 +247,7 @@ async function performScan(
         artist = meta.common.artist ?? null;
         album = meta.common.album ?? null;
         genre = meta.common.genre?.[0] ?? null;
+        track = meta.common.track.no ?? null;
         duration = meta.format.duration ?? null;
       } catch {
         // If tag reading fails, store what we have.
@@ -256,6 +258,7 @@ async function performScan(
         artist,
         album,
         genre,
+        track,
         duration,
         size,
         mtime,

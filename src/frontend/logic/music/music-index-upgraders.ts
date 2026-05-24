@@ -22,19 +22,23 @@ import * as T from 'shared/@types/shared';
  * the authoritative way to get complete data.
  *
  * ## Rules
- *   1. Each upgrader takes a loosely-typed input (`{ version: N } & Record<string, unknown>`)
- *      rather than importing old type definitions. Old formats are documented via
- *      checked-in JSON fixtures, not TypeScript types.
+ *   1. Each upgrader takes a loosely-typed input (`IndexVersion<N>`) rather than
+ *      importing old type definitions. Old formats are documented via checked-in
+ *      JSON fixtures, not TypeScript types.
  *   2. Each upgrader is permanent. Once written and tested, never modify it.
  *      If you need to change an upgrader, that means the fixture test is wrong.
  *   3. To add a new version: write an upgrader from vN→v(N+1), add a fixture,
  *      add a test, and wire it into `upgradeMusicIndex`. Nothing else changes.
  */
 
-type V1Blob = { version: 1 } & Record<string, unknown>;
+/** Loosely-typed shape of a serialized MusicIndex at version N. */
+type IndexVersion<N extends number> = { version: N } & Record<string, unknown>;
+
+/** The version number of the current MusicIndex format. */
+export const CURRENT_MUSIC_INDEX_VERSION = 3 satisfies T.MusicIndex['version'];
 
 /** v1 → v2: backfill genre as null (v1 had no genre field). */
-function upgradeV1ToV2(blob: V1Blob): T.MusicIndex {
+function upgradeV1ToV2(blob: IndexVersion<1>): IndexVersion<2> {
   const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
     path: t.path as string,
     title: (t.title as string | null) ?? null,
@@ -46,7 +50,27 @@ function upgradeV1ToV2(blob: V1Blob): T.MusicIndex {
     mtime: t.mtime as string,
   }));
   return {
-    version: 2,
+    version: 2 as const,
+    scannedAt: blob.scannedAt as string,
+    tracks,
+  } as unknown as IndexVersion<2>;
+}
+
+/** v2 → v3: backfill track as null (v2 had no track number field). */
+function upgradeV2ToV3(blob: IndexVersion<2>): T.MusicIndex {
+  const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
+    path: t.path as string,
+    title: (t.title as string | null) ?? null,
+    artist: (t.artist as string | null) ?? null,
+    album: (t.album as string | null) ?? null,
+    genre: (t.genre as string | null) ?? null,
+    track: null as number | null,
+    duration: (t.duration as number | null) ?? null,
+    size: t.size as number,
+    mtime: t.mtime as string,
+  }));
+  return {
+    version: 3 as const,
     scannedAt: blob.scannedAt as string,
     tracks,
   };
@@ -67,9 +91,15 @@ export function upgradeMusicIndex(blob: unknown): {
   index: T.MusicIndex;
   wasUpgraded: boolean;
 } {
-  const raw = blob as { version?: number } & Record<string, unknown>;
+  let raw = blob as { version?: number } & Record<string, unknown>;
+  let wasUpgraded = false;
   if (raw.version === 1) {
-    return { index: upgradeV1ToV2(raw as V1Blob), wasUpgraded: true };
+    raw = upgradeV1ToV2(raw as IndexVersion<1>) as unknown as typeof raw;
+    wasUpgraded = true;
   }
-  return { index: raw as unknown as T.MusicIndex, wasUpgraded: false };
+  if (raw.version === 2) {
+    raw = upgradeV2ToV3(raw as IndexVersion<2>) as unknown as typeof raw;
+    wasUpgraded = true;
+  }
+  return { index: raw as unknown as T.MusicIndex, wasUpgraded };
 }

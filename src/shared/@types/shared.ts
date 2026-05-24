@@ -58,6 +58,8 @@ export interface TrackMetadata {
   artist: string | null;
   album: string | null;
   genre: string | null;
+  /** Track number within its album. */
+  track: number | null;
   /** Duration in seconds. */
   duration: number | null;
   size: number;
@@ -88,7 +90,7 @@ export interface TrackMetadata {
  * backfilled fields (e.g. genre: null) are incomplete vs. a fresh scan.
  */
 export interface MusicIndex {
-  version: 2;
+  version: 3;
   scannedAt: string;
   tracks: TrackMetadata[];
 }

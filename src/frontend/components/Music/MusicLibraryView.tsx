@@ -101,6 +101,7 @@ type ConfigurableColumns = 'artist' | 'album';
 type ColumnWidths = Record<ConfigurableColumns, number>;
 const COL_MIN_WIDTH = 60;
 const SONG_MIN_WIDTH = 100; // matches .musicSongsHeaderTitle { min-width: 100px }
+const TRACK_COLUMN_WIDTH = 24; // matches --column-track CSS variable
 const MUSIC_GAP = 12; // matches --music-gap CSS variable
 const MUSIC_PADDING_H = 12; // matches --music-padding-h CSS variable
 const CONFIGURABLE_COLUMNS: ConfigurableColumns[] = ['artist', 'album'];
@@ -252,10 +253,14 @@ function SongsHeader({ setColumnWidths }: SongsHeaderProps) {
   React.useEffect(() => {
     const el = containerRef.current;
     if (!el) return undefined;
-    const numCols = CONFIGURABLE_COLUMNS.length + 1; // +1 for Song
+    const numCols = CONFIGURABLE_COLUMNS.length + 2; // +1 for Song, +1 for Track
     const observer = new ResizeObserver(([entry]) => {
       const width = entry.contentRect.width;
-      const newMax = width - 2 * MUSIC_PADDING_H - (numCols - 1) * MUSIC_GAP;
+      const newMax =
+        width -
+        2 * MUSIC_PADDING_H -
+        (numCols - 1) * MUSIC_GAP -
+        TRACK_COLUMN_WIDTH;
       setMaxAvailableWidth(newMax);
       setColumnWidths((prev) => clampColumnWidths(prev, newMax));
     });
@@ -265,6 +270,7 @@ function SongsHeader({ setColumnWidths }: SongsHeaderProps) {
 
   return (
     <div className="musicSongsHeader" ref={containerRef}>
+      <div className="musicSongsHeaderCell musicSongsHeaderTrack" />
       <div className="musicSongsHeaderCell musicSongsHeaderTitle">
         <div className="musicSongsHeaderCellText">Song</div>
       </div>
@@ -571,6 +577,7 @@ function FilterPanelItem({
 function Songs() {
   const tracks = $$.getFilteredMusicTracks();
   const selectedPath = $$.getMusicSelectedTrackPath();
+  const playingPath = $$.getMusicPlaybackTrackPath();
   const { getState, dispatch } = Hooks.useStore();
 
   const selectedIndex = selectedPath
@@ -708,6 +715,7 @@ function Songs() {
                 track={track}
                 index={virtualItem.index}
                 isSelected={track.path === selectedPath}
+                isPlaying={track.path === playingPath}
                 dispatch={dispatch}
                 offsetTop={virtualItem.start}
               />
@@ -723,12 +731,14 @@ function Song({
   track,
   index,
   isSelected,
+  isPlaying,
   dispatch,
   offsetTop,
 }: {
   track: T.TrackMetadata;
   index: number;
   isSelected: boolean;
+  isPlaying: boolean;
   dispatch: T.Dispatch;
   offsetTop: number;
 }) {
@@ -754,6 +764,13 @@ function Song({
         dispatch(A.musicPlaybackLoad(track.path));
       }}
     >
+      <span className="musicSongTrack" aria-hidden="true">
+        {isPlaying ? (
+          <img src="/svg/play.svg" alt="" />
+        ) : (
+          track.track ?? ''
+        )}
+      </span>
       <span className="musicSongTitle">{track.title ?? track.path}</span>
       <span className="musicSongArtist">{track.artist}</span>
       <span className="musicSongAlbum">{track.album}</span>
