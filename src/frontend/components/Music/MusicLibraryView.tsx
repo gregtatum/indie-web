@@ -597,6 +597,11 @@ function Songs() {
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
 
+  const handlePlay = React.useCallback((path: string) => {
+    dispatch(A.setMusicPlaybackQueue(tracksRef.current));
+    dispatch(A.musicPlaybackLoad(path));
+  }, []);
+
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: tracks.length,
     getScrollElement: () => listRef.current,
@@ -652,6 +657,7 @@ function Songs() {
         case 'Enter': {
           event.preventDefault();
           if (currentPath) {
+            dispatch(A.setMusicPlaybackQueue(currentTracks));
             dispatch(A.musicPlaybackLoad(currentPath));
           }
           break;
@@ -664,6 +670,7 @@ function Songs() {
           } else if (playbackStatus === 'paused') {
             dispatch(A.musicPlaybackPlay());
           } else if (currentPath) {
+            dispatch(A.setMusicPlaybackQueue(currentTracks));
             dispatch(A.musicPlaybackLoad(currentPath));
           }
           break;
@@ -722,6 +729,7 @@ function Songs() {
                 isSelected={track.path === selectedPath}
                 isPlaying={track.path === playingPath}
                 dispatch={dispatch}
+                onPlay={handlePlay}
                 offsetTop={virtualItem.start}
               />
             );
@@ -738,6 +746,7 @@ function Song({
   isSelected,
   isPlaying,
   dispatch,
+  onPlay,
   offsetTop,
 }: {
   track: T.TrackMetadata;
@@ -745,6 +754,7 @@ function Song({
   isSelected: boolean;
   isPlaying: boolean;
   dispatch: T.Dispatch;
+  onPlay: (path: string) => void;
   offsetTop: number;
 }) {
   return (
@@ -766,7 +776,7 @@ function Song({
       }
       onDoubleClick={() => {
         dispatch(A.setMusicSelectedTrack(track.path));
-        dispatch(A.musicPlaybackLoad(track.path));
+        onPlay(track.path);
       }}
     >
       <span className="musicSongTrack" aria-hidden="true">

@@ -107,6 +107,20 @@ function needsRescan(state = false, action: T.Action): boolean {
   }
 }
 
+function playbackQueue(
+  state: T.TrackMetadata[] = [],
+  action: T.Action,
+): T.TrackMetadata[] {
+  switch (action.type) {
+    case 'set-music-playback-queue':
+      return action.tracks;
+    case 'view-music':
+      return [];
+    default:
+      return state;
+  }
+}
+
 const combinedMusicReducer = combineReducers({
   panelSelections,
   tracks,
@@ -114,6 +128,7 @@ const combinedMusicReducer = combineReducers({
   needsRescan,
   playingTrackPath,
   playbackStatus,
+  playbackQueue,
 });
 
 type MusicState = ReturnType<typeof combinedMusicReducer>;

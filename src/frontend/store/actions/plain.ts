@@ -366,6 +366,10 @@ export function musicPlaybackLoad(path: string) {
   return { type: 'music-playback-load' as const, path };
 }
 
+export function setMusicPlaybackQueue(tracks: T.TrackMetadata[]) {
+  return { type: 'set-music-playback-queue' as const, tracks };
+}
+
 export function musicPlaybackReady() {
   return { type: 'music-playback-ready' as const };
 }

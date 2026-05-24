@@ -77,6 +77,10 @@ export function getMusicPlaybackTrackPath(state: State): string | null {
   return getMusic(state).playingTrackPath;
 }
 
+export function getMusicPlaybackQueue(state: State): T.TrackMetadata[] {
+  return getMusic(state).playbackQueue;
+}
+
 /**
  * All panel filters applied in order — the final track list for the song view.
  */

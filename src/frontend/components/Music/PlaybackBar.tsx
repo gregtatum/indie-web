@@ -14,7 +14,7 @@ export function PlaybackBar() {
   const musicPlaybackStatus = $$.getMusicPlaybackStatus();
   const trackPath = $$.getMusicPlaybackTrackPath();
   const allTracks = $$.getMusicTracks();
-  const filteredTracks = $$.getFilteredMusicTracks();
+  const playbackQueue = $$.getMusicPlaybackQueue();
   const { currentTime, duration, volume, play, pause, seek, setVolume } =
     useAudioPlayer();
 
@@ -23,14 +23,14 @@ export function PlaybackBar() {
     : null;
   const isPlaying = musicPlaybackStatus === 'playing';
 
-  const idx = filteredTracks.findIndex((t) => t.path === trackPath);
+  const idx = playbackQueue.findIndex((t) => t.path === trackPath);
   const prevTrack =
     idx > 0
-      ? () => dispatch(A.musicPlaybackLoad(filteredTracks[idx - 1].path))
+      ? () => dispatch(A.musicPlaybackLoad(playbackQueue[idx - 1].path))
       : undefined;
   const nextTrack =
-    idx !== -1 && idx < filteredTracks.length - 1
-      ? () => dispatch(A.musicPlaybackLoad(filteredTracks[idx + 1].path))
+    idx !== -1 && idx < playbackQueue.length - 1
+      ? () => dispatch(A.musicPlaybackLoad(playbackQueue[idx + 1].path))
       : undefined;
 
   useMediaSession({
