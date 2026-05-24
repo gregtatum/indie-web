@@ -5,6 +5,7 @@ import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { PlaybackBar } from './PlaybackBar';
+import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
 
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
   const { name, url } = server;
@@ -709,6 +710,7 @@ function Tracks() {
   const { getState, dispatch } = Hooks.useStore();
 
   const listRef = React.useRef<HTMLDivElement | null>(null);
+  const contextMenuRef = React.useRef<TrackContextMenuHandle | null>(null);
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
 
@@ -951,6 +953,7 @@ function Tracks() {
 
   return (
     <div className="musicTracksContainer">
+      <TrackContextMenu ref={contextMenuRef} />
       <div
         className="musicTracks"
         role="listbox"
@@ -977,6 +980,9 @@ function Tracks() {
                 isPlaying={track.path === playingPath}
                 onClick={(event) => handleTrackClick(track, event)}
                 onPlay={handlePlay}
+                onContextMenu={(event) =>
+                  contextMenuRef.current?.open(event, track.path)
+                }
                 offsetTop={virtualItem.start}
               />
             );
@@ -993,6 +999,7 @@ function Track({
   isSelected,
   isPlaying,
   onClick,
+  onContextMenu,
   onPlay,
   offsetTop,
 }: {
@@ -1001,6 +1008,7 @@ function Track({
   isSelected: boolean;
   isPlaying: boolean;
   onClick: (event: React.MouseEvent) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
   onPlay: (path: string) => void;
   offsetTop: number;
 }) {
@@ -1019,6 +1027,7 @@ function Track({
         transform: `translateY(${offsetTop}px)`,
       }}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       onDoubleClick={() => {
         onPlay(track.path);
       }}
