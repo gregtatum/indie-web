@@ -24,7 +24,12 @@ export function Modal({ isOpen, onClose, children }: Props) {
         }
       }}
     >
-      <div className="modalBox">{children}</div>
+      <div className="modalBox">
+        <button className="modalCloseButton" onClick={onClose} aria-label="Close">
+          <img src="/svg/xmark.svg" alt="" />
+        </button>
+        {children}
+      </div>
     </div>,
   );
 }

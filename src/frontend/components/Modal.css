@@ -16,6 +16,7 @@
 }
 
 .modalBox {
+  position: relative;
   max-width: var(--page-max-width);
   max-height: calc(100dvh - 2 * var(--page-padding));
   margin: var(--page-padding);
@@ -26,4 +27,36 @@
   box-shadow: 0 8px 40px #0004, var(--modal-shadow);
   box-sizing: border-box;
   width: 100%;
+}
+
+.modalCloseButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 0;
+  background: none;
+  border-radius: var(--button-border-radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+}
+
+.modalCloseButton:hover {
+  background: #0001;
+  opacity: 1;
+}
+
+.modalCloseButton:focus {
+  outline: var(--outline-focus);
+  opacity: 1;
+}
+
+.modalCloseButton > img {
+  width: var(--icon-size);
+  height: var(--icon-size);
 }
