@@ -892,7 +892,14 @@ function Tracks() {
         case 'Enter': {
           event.preventDefault();
           if (currentPath) {
-            dispatch(A.setMusicPlaybackQueue(currentTracks));
+            const selectedPaths = $.getMusicSelectedTrackPaths(getState());
+            // Queue up either all of the filtered tracks, or just the selected
+            // tracks if there is more than one selection.
+            const queue =
+              selectedPaths.length > 1
+                ? currentTracks.filter((t) => selectedPaths.includes(t.path))
+                : currentTracks;
+            dispatch(A.setMusicPlaybackQueue(queue));
             dispatch(A.musicPlaybackLoad(currentPath));
           }
           break;

@@ -100,6 +100,26 @@ describe('track interactions', () => {
     expect($.getMusicPlaybackStatus(state)).toBe('loading');
   });
 
+  it('pressing Enter with multiple tracks selected queues only those tracks', async () => {
+    const { store } = setup();
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Song B'), { shiftKey: true });
+    });
+    const list = screen.getByRole('listbox', { name: 'Tracks' });
+    await act(async () => {
+      list.focus();
+      await userEvent.keyboard('{Enter}');
+    });
+    const state = store.getState();
+    expect($.getMusicPlaybackQueue(state).map((t) => t.path)).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+    ]);
+  });
+
   it('pressing Space with an idle status loads the selected track', async () => {
     const { store } = setup();
     await act(async () => {
