@@ -512,6 +512,7 @@ function FilterPanel({
       <div
         className="musicFilterPanelList"
         role="listbox"
+        aria-label={panel}
         tabIndex={0}
         aria-activedescendant={activeDescendant}
         ref={listRef}

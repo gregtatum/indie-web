@@ -19,14 +19,16 @@ beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
 });
 
+// When a new music index upgrader is written (bumping CURRENT_MUSIC_INDEX_VERSION),
+// add a representative track here with the new field populated.
 const TRACKS: T.TrackMetadata[] = [
   {
     path: '/music/a.mp3',
     title: 'Song A',
     artist: 'Artist A',
-    album: 'Album',
-    genre: null,
-    track: null,
+    album: 'Album A',
+    genre: 'Rock',
+    track: 1,
     duration: 180,
     size: 1024,
     mtime: '2024-01-01T00:00:00Z',
@@ -36,11 +38,23 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/music/b.mp3',
     title: 'Song B',
     artist: 'Artist B',
-    album: 'Album',
-    genre: null,
-    track: null,
+    album: 'Album A',
+    genre: 'Rock',
+    track: 2,
     duration: 200,
     size: 2048,
+    mtime: '2024-01-01T00:00:00Z',
+    coverArt: null,
+  },
+  {
+    path: '/music/c.mp3',
+    title: 'Song C',
+    artist: 'Artist A',
+    album: 'Album B',
+    genre: 'Jazz',
+    track: 1,
+    duration: 240,
+    size: 3072,
     mtime: '2024-01-01T00:00:00Z',
     coverArt: null,
   },
@@ -197,5 +211,124 @@ describe('PlaybackBar', () => {
     const bar = screen.getByRole('region', { name: 'Playback controls' });
     const times = within(bar).getAllByText('0:00');
     expect(times.length).toBe(2); // current time + duration both start at 0:00
+  });
+});
+
+describe('filter panels', () => {
+  it('lists items derived from track metadata', () => {
+    setup();
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    expect(within(genreList).getByRole('option', { name: 'Jazz' })).toBeTruthy();
+    expect(within(genreList).getByRole('option', { name: 'Rock' })).toBeTruthy();
+  });
+
+  it('clicking an item selects it', async () => {
+    const { store } = setup();
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    await userEvent.click(within(genreList).getByRole('option', { name: 'Rock' }));
+    expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
+  });
+
+  it('clicking the All option clears a selection', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
+    });
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    await userEvent.click(within(genreList).getByRole('option', { name: '« All Genres »' }));
+    expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
+  });
+
+  it('ArrowDown selects the first item when none is selected', async () => {
+    const { store } = setup();
+    screen.getByRole('listbox', { name: 'genre' }).focus();
+    await userEvent.keyboard('{ArrowDown}');
+    expect($.getMusicPanelSelections(store.getState()).genre).toBe('Jazz');
+  });
+
+  it('ArrowDown advances the selection', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(A.setMusicPanelSelection('genre', 'Jazz'));
+    });
+    screen.getByRole('listbox', { name: 'genre' }).focus();
+    await userEvent.keyboard('{ArrowDown}');
+    expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
+  });
+
+  it('ArrowDown stays on the last item', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
+    });
+    screen.getByRole('listbox', { name: 'genre' }).focus();
+    await userEvent.keyboard('{ArrowDown}');
+    expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
+  });
+
+  it('ArrowUp from the first item clears to All', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(A.setMusicPanelSelection('genre', 'Jazz'));
+    });
+    screen.getByRole('listbox', { name: 'genre' }).focus();
+    await userEvent.keyboard('{ArrowUp}');
+    expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
+  });
+
+  it('ArrowUp does nothing when All is active', async () => {
+    const { store } = setup();
+    screen.getByRole('listbox', { name: 'genre' }).focus();
+    await userEvent.keyboard('{ArrowUp}');
+    expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
+  });
+
+  it('Escape clears the selection', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
+    });
+    screen.getByRole('listbox', { name: 'genre' }).focus();
+    await userEvent.keyboard('{Escape}');
+    expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
+  });
+
+  it('ArrowRight moves focus to the next panel', async () => {
+    setup();
+    screen.getByRole('listbox', { name: 'genre' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(screen.getByRole('listbox', { name: 'artist' }));
+  });
+
+  it('ArrowLeft moves focus to the previous panel', async () => {
+    setup();
+    screen.getByRole('listbox', { name: 'artist' }).focus();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(document.activeElement).toBe(screen.getByRole('listbox', { name: 'genre' }));
+  });
+
+  it('ArrowLeft does nothing on the first panel', async () => {
+    setup();
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    genreList.focus();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(document.activeElement).toBe(genreList);
+  });
+
+  it('ArrowRight does nothing on the last panel', async () => {
+    setup();
+    const albumList = screen.getByRole('listbox', { name: 'album' });
+    albumList.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(albumList);
+  });
+
+  it('a genre selection cascades to narrow the artist panel', async () => {
+    setup();
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    await userEvent.click(within(genreList).getByRole('option', { name: 'Jazz' }));
+    const artistList = screen.getByRole('listbox', { name: 'artist' });
+    expect(within(artistList).getByRole('option', { name: 'Artist A' })).toBeTruthy();
+    expect(within(artistList).queryByRole('option', { name: 'Artist B' })).toBeNull();
   });
 });
