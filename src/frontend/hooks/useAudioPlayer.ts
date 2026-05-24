@@ -80,7 +80,13 @@ export function useAudioPlayer(): AudioPlayerState {
     }
 
     function onEnded() {
-      dispatch(A.musicPlaybackStop());
+      const queue = $.getMusicPlaybackQueue(getState());
+      const idx = queue.findIndex((t) => t.path === trackPath);
+      if (idx !== -1 && idx < queue.length - 1) {
+        dispatch(A.musicPlaybackLoad(queue[idx + 1].path));
+      } else {
+        dispatch(A.musicPlaybackStop());
+      }
     }
 
     function onError() {
