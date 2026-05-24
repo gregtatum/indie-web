@@ -321,3 +321,141 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.musicPlaybackBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+  height: 77px;
+  box-sizing: border-box;
+}
+
+.musicPlaybackAlbumArt {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  background: #ccc;
+  flex-shrink: 0;
+}
+
+.musicPlaybackTrackInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+  width: 180px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.musicPlaybackTitle {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.musicPlaybackArtist {
+  font-size: var(--music-meta-font-size);
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.musicPlaybackControls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.musicPlaybackButtons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 5px;
+}
+
+.musicPlaybackBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  opacity: 0.75;
+
+  &:hover { opacity: 1; }
+  &:disabled { opacity: 0.3; cursor: default; }
+
+  & img {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.musicPlaybackPlayBtn {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #000;
+  position: relative;
+  left: 1px;
+
+  & img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.musicPlaybackScrubber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.musicPlaybackTime {
+  font-size: var(--music-label-font-size);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+  flex-shrink: 0;
+  width: 32px;
+
+  &:last-child { text-align: right; }
+}
+
+.musicPlaybackSeek {
+  flex: 1;
+  min-width: 0;
+  max-width: 400px;
+}
+
+.musicPlaybackVolume {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 130px;
+
+  & img {
+    width: 20px;
+    height: 20px;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+}
+
+.musicPlaybackVolumeSlider {
+  flex: 1;
+  min-width: 0;
+}
