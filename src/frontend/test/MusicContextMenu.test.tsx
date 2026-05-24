@@ -217,11 +217,11 @@ describe('edit track modal', () => {
     setup();
     await openEditModal('Song A');
     screen.getByRole('dialog');
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
+      'Song A',
+    );
     expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
       'Artist A',
-    );
-    expect((screen.getByLabelText('Song') as HTMLInputElement).value).toBe(
-      'Song A',
     );
     expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
       'Rock',
@@ -271,7 +271,7 @@ describe('edit track modal', () => {
     expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
       'Artist B',
     );
-    expect((screen.getByLabelText('Song') as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
       'Song B',
     );
     expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
