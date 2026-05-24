@@ -186,7 +186,7 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
       dispatch(PlainInternal.downloadFileReceived(path, file));
 
       // For things like back and next, ensure we have a copy of the prev/next
-      // songs in the folder.
+      // tracks in the folder.
       const listFilesCache = $.getListFilesCache(getState());
       const folder = getDirName(path);
       if (!listFilesCache.get(folder)) {
@@ -244,7 +244,7 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
       dispatch(PlainInternal.downloadBlobReceived(path, blobFile));
 
       // For things like back and next, ensure we have a copy of the prev/next
-      // songs in the folder.
+      // tracks in the folder.
       const cache = $.getListFilesCache(getState());
       const folder = getDirName(path);
       if (!cache.get(folder)) {

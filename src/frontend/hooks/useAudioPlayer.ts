@@ -116,7 +116,7 @@ export function useAudioPlayer(): AudioPlayerState {
   const status = $.getMusicPlaybackStatus(getState());
 
   // Responds to play/pause actions dispatched from outside the hook, such as
-  // the Space key handler in the song list.
+  // the Space key handler in the track list.
   React.useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;

@@ -82,7 +82,7 @@ export function getMusicPlaybackQueue(state: State): T.TrackMetadata[] {
 }
 
 /**
- * All panel filters applied in order — the final track list for the song view.
+ * All panel filters applied in order — the final track list for the tracks view.
  */
 export const getFilteredMusicTracks = createSelector(
   getMusicTracks,

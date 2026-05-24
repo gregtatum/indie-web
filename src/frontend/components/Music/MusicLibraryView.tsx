@@ -90,7 +90,7 @@ export function MusicLibraryView() {
         direction="vertical"
         className="musicLibrarySplitter"
         start={<FilterPanels />}
-        end={<SongsView />}
+        end={<TracksView />}
         persistLocalStorage="musicLibrarySplitterOffset"
       />
     </div>
@@ -100,14 +100,14 @@ export function MusicLibraryView() {
 type ConfigurableColumns = 'artist' | 'album';
 type ColumnWidths = Record<ConfigurableColumns, number>;
 const COL_MIN_WIDTH = 60;
-const SONG_MIN_WIDTH = 100; // matches .musicSongsHeaderTitle { min-width: 100px }
+const TRACK_MIN_WIDTH = 100; // matches .musicTracksHeaderTitle { min-width: 100px }
 const TRACK_COLUMN_WIDTH = 24; // matches --column-track CSS variable
 const MUSIC_GAP = 12; // matches --music-gap CSS variable
 const MUSIC_PADDING_H = 12; // matches --music-padding-h CSS variable
 const CONFIGURABLE_COLUMNS: ConfigurableColumns[] = ['artist', 'album'];
 
 function clampColumnWidths(prev: ColumnWidths, maxWidth: number): ColumnWidths {
-  const maxForConfigurable = maxWidth - SONG_MIN_WIDTH;
+  const maxForConfigurable = maxWidth - TRACK_MIN_WIDTH;
   const total = CONFIGURABLE_COLUMNS.reduce((sum, k) => sum + prev[k], 0);
   if (total <= maxForConfigurable) return prev;
   const result = { ...prev };
@@ -124,7 +124,7 @@ function clampColumnWidths(prev: ColumnWidths, maxWidth: number): ColumnWidths {
 function loadColumnWidths(): ColumnWidths {
   try {
     const parsed = JSON.parse(
-      localStorage.getItem('musicSongColumnWidths') ?? 'null',
+      localStorage.getItem('musicTrackColumnWidths') ?? 'null',
     );
     if (
       parsed &&
@@ -149,18 +149,18 @@ function useColumnWidths() {
 
   React.useEffect(() => {
     // TODO - Let's debounce this to something like 500ms.
-    localStorage.setItem('musicSongColumnWidths', JSON.stringify(columnWidths));
+    localStorage.setItem('musicTrackColumnWidths', JSON.stringify(columnWidths));
   }, [columnWidths]);
 
   return { columnWidths, setColumnWidths };
 }
 
-function SongsView() {
+function TracksView() {
   const { columnWidths, setColumnWidths } = useColumnWidths();
 
   return (
     <div
-      className="musicSongsView"
+      className="musicTracksView"
       style={
         {
           '--column-artist': `${columnWidths.artist}px`,
@@ -168,8 +168,8 @@ function SongsView() {
         } as React.CSSProperties
       }
     >
-      <SongsHeader setColumnWidths={setColumnWidths} />
-      <Songs />
+      <TracksHeader setColumnWidths={setColumnWidths} />
+      <Tracks />
       <PlaybackBar />
     </div>
   );
@@ -207,12 +207,12 @@ function ColumnHeader({
           result[key] -= shrinkBy;
           remaining -= shrinkBy;
         }
-        // Grow left neighbor. Song (K=0) grows automatically via flex:1.
+        // Grow left neighbor. Title column (K=0) grows automatically via flex:1.
         if (myIndex > 0) {
           result[columnOrder[myIndex - 1]] += dx - remaining;
         }
       } else {
-        // Drag left: grow this column, cascade left through explicit columns then song.
+        // Drag left: grow this column, cascade left through explicit columns then the title column.
         let remaining = -dx;
         for (let i = myIndex - 1; i >= 0 && remaining > 0; i--) {
           const key = columnOrder[i];
@@ -223,10 +223,10 @@ function ColumnHeader({
           remaining -= taken;
         }
         if (remaining > 0) {
-          const songCurrent =
+          const trackCurrent =
             maxAvailableWidth -
             columnOrder.reduce((sum, k) => sum + result[k], 0);
-          const canTake = Math.max(0, songCurrent - SONG_MIN_WIDTH);
+          const canTake = Math.max(0, trackCurrent - TRACK_MIN_WIDTH);
           result[columnKey] += Math.min(remaining, canTake);
         }
       }
@@ -237,27 +237,27 @@ function ColumnHeader({
 
   return (
     <div
-      className="musicSongsHeaderCell"
+      className="musicTracksHeaderCell"
       style={{ flex: `0 0 var(--column-${columnKey})` }}
     >
       <ColumnResizeHandle onDrag={dragHandler} />
-      <div className="musicSongsHeaderCellText">{label}</div>
+      <div className="musicTracksHeaderCellText">{label}</div>
     </div>
   );
 }
 
-interface SongsHeaderProps {
+interface TracksHeaderProps {
   setColumnWidths: React.Dispatch<React.SetStateAction<ColumnWidths>>;
 }
 
-function SongsHeader({ setColumnWidths }: SongsHeaderProps) {
+function TracksHeader({ setColumnWidths }: TracksHeaderProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const [maxAvailableWidth, setMaxAvailableWidth] = React.useState(400);
 
   React.useEffect(() => {
     const el = containerRef.current;
     if (!el) return undefined;
-    const numCols = CONFIGURABLE_COLUMNS.length + 2; // +1 for Song, +1 for Track
+    const numCols = CONFIGURABLE_COLUMNS.length + 2; // +1 for Title, +1 for TrackNumber
     const observer = new ResizeObserver(([entry]) => {
       const width = entry.contentRect.width;
       const newMax =
@@ -273,10 +273,10 @@ function SongsHeader({ setColumnWidths }: SongsHeaderProps) {
   }, []);
 
   return (
-    <div className="musicSongsHeader" ref={containerRef}>
-      <div className="musicSongsHeaderCell musicSongsHeaderTrack" />
-      <div className="musicSongsHeaderCell musicSongsHeaderTitle">
-        <div className="musicSongsHeaderCellText">Song</div>
+    <div className="musicTracksHeader" ref={containerRef}>
+      <div className="musicTracksHeaderCell musicTracksHeaderTrackNumber" />
+      <div className="musicTracksHeaderCell musicTracksHeaderTitle">
+        <div className="musicTracksHeaderCellText">Track</div>
       </div>
       <ColumnHeader
         columnKey="artist"
@@ -316,8 +316,8 @@ function ColumnResizeHandle({ onDrag }: { onDrag: (dx: number) => void }) {
   };
 
   return (
-    <div className="musicSongColumnResize" onMouseDown={onMouseDown}>
-      <div className="musicSongColumnResizeVisible" />
+    <div className="musicTrackColumnResize" onMouseDown={onMouseDown}>
+      <div className="musicTrackColumnResizeVisible" />
     </div>
   );
 }
@@ -580,7 +580,7 @@ function FilterPanelItem({
 
 const sizeEstimate = 32;
 
-function Songs() {
+function Tracks() {
   const tracks = $$.getFilteredMusicTracks();
   const selectedPath = $$.getMusicSelectedTrackPath();
   const playingPath = $$.getMusicPlaybackTrackPath();
@@ -592,7 +592,7 @@ function Songs() {
   const listRef = React.useRef<HTMLDivElement | null>(null);
 
   const activeDescendant =
-    selectedIndex >= 0 ? `music-song-${selectedIndex}` : undefined;
+    selectedIndex >= 0 ? `music-track-${selectedIndex}` : undefined;
 
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
@@ -605,7 +605,7 @@ function Songs() {
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: tracks.length,
     getScrollElement: () => listRef.current,
-    // Must match the height set on .musicSong in index.css (box-sizing: border-box).
+    // Must match the height set on .musicTrack in index.css (box-sizing: border-box).
     // Derived from: padding-v (8px×2) + border-bottom (1px) + line-height.
     // Estimate the largest plausible size when not using dynamic measurement.
     estimateSize: () => sizeEstimate,
@@ -704,11 +704,11 @@ function Songs() {
   });
 
   return (
-    <div className="musicSongsContainer">
+    <div className="musicTracksContainer">
       <div
-        className="musicSongs"
+        className="musicTracks"
         role="listbox"
-        aria-label="Songs"
+        aria-label="Tracks"
         tabIndex={0}
         aria-activedescendant={activeDescendant}
         ref={listRef}
@@ -722,7 +722,7 @@ function Songs() {
           {virtualizer.getVirtualItems().map((virtualItem) => {
             const track = tracks[virtualItem.index];
             return (
-              <Song
+              <Track
                 key={track.path}
                 track={track}
                 index={virtualItem.index}
@@ -740,7 +740,7 @@ function Songs() {
   );
 }
 
-function Song({
+function Track({
   track,
   index,
   isSelected,
@@ -759,10 +759,10 @@ function Song({
 }) {
   return (
     <div
-      className={`musicSong${isSelected ? ' selected' : ''}`}
+      className={`musicTrack${isSelected ? ' selected' : ''}`}
       role="option"
       aria-selected={isSelected}
-      id={`music-song-${index}`}
+      id={`music-track-${index}`}
       style={{
         position: 'absolute',
         top: 0,
@@ -779,12 +779,12 @@ function Song({
         onPlay(track.path);
       }}
     >
-      <span className="musicSongTrack" aria-hidden="true">
+      <span className="musicTrackNumber" aria-hidden="true">
         {isPlaying ? <img src="/svg/play.svg" alt="" /> : (track.track ?? '')}
       </span>
-      <span className="musicSongTitle">{track.title ?? track.path}</span>
-      <span className="musicSongArtist">{track.artist}</span>
-      <span className="musicSongAlbum">{track.album}</span>
+      <span className="musicTrackTitle">{track.title ?? track.path}</span>
+      <span className="musicTrackArtist">{track.artist}</span>
+      <span className="musicTrackAlbum">{track.album}</span>
     </div>
   );
 }

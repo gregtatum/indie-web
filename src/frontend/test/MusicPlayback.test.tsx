@@ -13,7 +13,7 @@ import { MusicLibraryView } from 'frontend/components/Music/MusicLibraryView';
 
 // The virtualizer reads offsetHeight/offsetWidth to determine how many rows to
 // render. Jsdom returns 0 for both, so without this the virtualizer renders
-// nothing and tests cannot find song elements.
+// nothing and tests cannot find track elements.
 beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
@@ -57,22 +57,22 @@ function setup() {
   return { store };
 }
 
-describe('song interactions', () => {
-  it('double-clicking a song loads that track for playback', async () => {
+describe('track interactions', () => {
+  it('double-clicking a track loads it for playback', async () => {
     const { store } = setup();
-    const songA = await screen.findByText('Song A');
-    await userEvent.dblClick(songA);
+    const trackA = await screen.findByText('Song A');
+    await userEvent.dblClick(trackA);
     const state = store.getState();
     expect($.getMusicPlaybackTrackPath(state)).toBe('/music/a.mp3');
     expect($.getMusicPlaybackStatus(state)).toBe('loading');
   });
 
-  it('pressing Enter on a selected song loads that track', async () => {
+  it('pressing Enter on a selected track loads it', async () => {
     const { store } = setup();
     // Click to select Song A first
     await userEvent.click(await screen.findByText('Song A'));
-    // Focus the song list and press Enter
-    const list = screen.getByRole('listbox', { name: 'Songs' });
+    // Focus the track list and press Enter
+    const list = screen.getByRole('listbox', { name: 'Tracks' });
     list.focus();
     await userEvent.keyboard('{Enter}');
     const state = store.getState();
@@ -83,7 +83,7 @@ describe('song interactions', () => {
   it('pressing Space with an idle status loads the selected track', async () => {
     const { store } = setup();
     await userEvent.click(await screen.findByText('Song B'));
-    const list = screen.getByRole('listbox', { name: 'Songs' });
+    const list = screen.getByRole('listbox', { name: 'Tracks' });
     list.focus();
     await userEvent.keyboard(' ');
     const state = store.getState();
@@ -97,7 +97,7 @@ describe('song interactions', () => {
       store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
     });
-    const list = screen.getByRole('listbox', { name: 'Songs' });
+    const list = screen.getByRole('listbox', { name: 'Tracks' });
     await act(async () => {
       list.focus();
     });
@@ -112,7 +112,7 @@ describe('song interactions', () => {
       store.dispatch(A.musicPlaybackReady());
       store.dispatch(A.musicPlaybackPause());
     });
-    const list = screen.getByRole('listbox', { name: 'Songs' });
+    const list = screen.getByRole('listbox', { name: 'Tracks' });
     await act(async () => {
       list.focus();
     });

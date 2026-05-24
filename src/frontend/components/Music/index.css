@@ -166,15 +166,15 @@
   }
 }
 
-.musicSongsView {
+.musicTracksView {
   display: flex;
   flex-direction: column;
   height: 100%;
   --column-track: 24px;
 }
 
-.musicSongsHeader {
-  /* Mirror .musicSong exactly so column widths align: container padding + gap,
+.musicTracksHeader {
+  /* Mirror .musicTrack exactly so column widths align: container padding + gap,
      no padding on individual cells. */
   display: flex;
   gap: var(--music-gap);
@@ -187,7 +187,7 @@
   box-shadow: 0 5px 5px #0000000d, 0 10px 10px #00000003;
 }
 
-.musicSongsHeaderCell {
+.musicTracksHeaderCell {
   position: relative;
   white-space: nowrap;
   font-size: var(--music-label-font-size);
@@ -197,23 +197,23 @@
   opacity: 0.5;
 }
 
-.musicSongsHeaderTrack {
+.musicTracksHeaderTrackNumber {
   flex: 0 0 var(--column-track);
 }
 
-.musicSongsHeaderTitle {
+.musicTracksHeaderTitle {
   flex: 1;
   min-width: 100px;
   overflow: hidden;
 }
 
-.musicSongsHeaderCellText {
+.musicTracksHeaderCellText {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.musicSongColumnResize {
+.musicTrackColumnResize {
   --padding: calc(var(--music-gap) / 2);
   --width: 3px;
   /* Compute the offset for half the width of this component. */
@@ -233,43 +233,43 @@
   cursor: col-resize;
   display: flex;
 
-  &:hover .musicSongColResizeVisible {
+  &:hover .musicTrackColResizeVisible {
     background: var(--primary-color);
   }
 }
 
-.musicSongColumnResizeVisible {
+.musicTrackColumnResizeVisible {
   flex: 1;
   background: var(--border-color);
   border-radius: 1px;
 }
 
-.musicSongsContainer {
+.musicTracksContainer {
   flex: 1;
   min-height: 0;
   position: relative;
   overflow: hidden;
 
-  &:focus-within .musicSong.selected {
+  &:focus-within .musicTrack.selected {
     background: var(--selection-active);
     color: #fff;
 
-    & .musicSongTrack img { filter: invert(1); }
+    & .musicTrackNumber img { filter: invert(1); }
   }
 
-  &:focus-within .musicSong.selected:hover {
+  &:focus-within .musicTrack.selected:hover {
     background: var(--selection-active-hover);
   }
 }
 
-.musicSongs {
+.musicTracks {
   overflow-y: auto;
   outline: none;
   height: 100%;
 }
 
-.musicSong {
-  /* Height is fixed to match estimateSize in Songs — see MusicLibraryView.tsx. */
+.musicTrack {
+  /* Height is fixed to match estimateSize in Tracks — see MusicLibraryView.tsx. */
   box-sizing: border-box;
   display: flex;
   gap: var(--music-gap);
@@ -291,7 +291,7 @@
   }
 }
 
-.musicSongTrack {
+.musicTrackNumber {
   flex: 0 0 var(--column-track);
   font-size: var(--music-item-font-size);
   font-variant-numeric: tabular-nums;
@@ -304,7 +304,7 @@
   & img { width: 10px; height: 10px; }
 }
 
-.musicSongTitle {
+.musicTrackTitle {
   flex: 1;
   min-width: 100px;
   overflow: hidden;
@@ -313,7 +313,7 @@
   font-size: var(--music-item-font-size);
 }
 
-.musicSongArtist {
+.musicTrackArtist {
   flex: 0 0 var(--column-artist);
   font-size: var(--music-item-font-size);
   opacity: 0.6;
@@ -322,7 +322,7 @@
   white-space: nowrap;
 }
 
-.musicSongAlbum {
+.musicTrackAlbum {
   flex: 0 0 var(--column-album);
   font-size: var(--music-item-font-size);
   opacity: 0.6;
