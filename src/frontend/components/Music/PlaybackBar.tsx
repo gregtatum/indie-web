@@ -15,12 +15,18 @@ export function PlaybackBar() {
   const trackPath = $$.getMusicPlaybackTrackPath();
   const allTracks = $$.getMusicTracks();
   const playbackQueue = $$.getMusicPlaybackQueue();
+  const server = $$.getCurrentServerOrNull();
   const { currentTime, duration, volume, play, pause, seek, setVolume } =
     useAudioPlayer();
 
   const trackMetadata = trackPath
     ? (allTracks.find((t) => t.path === trackPath) ?? null)
     : null;
+
+  const artUrl =
+    server && trackMetadata?.coverArt
+      ? `${server.url}/music/cover-art?path=${encodeURIComponent(trackMetadata.coverArt)}`
+      : null;
   const isPlaying = musicPlaybackStatus === 'playing';
 
   const idx = playbackQueue.findIndex((t) => t.path === trackPath);
@@ -50,7 +56,9 @@ export function PlaybackBar() {
       role="region"
       aria-label="Playback controls"
     >
-      <div className="musicPlaybackAlbumArt" aria-hidden="true" />
+      <div className="musicPlaybackAlbumArt" aria-hidden="true">
+        {artUrl ? <img src={artUrl} alt="" /> : null}
+      </div>
 
       <div className="musicPlaybackTrackInfo">
         <span className="musicPlaybackTitle">

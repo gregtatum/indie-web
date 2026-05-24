@@ -125,3 +125,52 @@ describe('upgradeMusicIndex v2 → current', () => {
     expect(wasUpgraded).toBe(false);
   });
 });
+
+// v3 → current: coverArt field added (backfilled as null on upgrade)
+describe('upgradeMusicIndex v3 → current', () => {
+  const v3Fixture = JSON.parse(
+    readFileSync(join(__dirname, 'fixtures/music-index-v3.json'), 'utf-8'),
+  );
+
+  it('upgrades a v3 index to current', () => {
+    const { index, wasUpgraded } = upgradeMusicIndex(v3Fixture);
+    expect(wasUpgraded).toBe(true);
+    expect(index).toMatchSnapshot();
+  });
+
+  it('sets version to current', () => {
+    const { index } = upgradeMusicIndex(v3Fixture);
+    expect(index.version).toBe(CURRENT_MUSIC_INDEX_VERSION);
+  });
+
+  it('backfills coverArt as null on all tracks', () => {
+    const { index } = upgradeMusicIndex(v3Fixture);
+    for (const track of index.tracks) {
+      expect(track.coverArt).toBeNull();
+    }
+  });
+
+  it('preserves all other track fields', () => {
+    const { index } = upgradeMusicIndex(v3Fixture);
+    const track = index.tracks[0];
+    expect(track.path).toBe('/Artist/Album/track.mp3');
+    expect(track.title).toBe('Test Track');
+    expect(track.artist).toBe('Test Artist');
+    expect(track.album).toBe('Test Album');
+    expect(track.genre).toBe('Rock');
+    expect(track.track).toBe(1);
+    expect(track.duration).toBe(180.5);
+    expect(track.size).toBe(3145728);
+  });
+
+  it('preserves null fields', () => {
+    const { index } = upgradeMusicIndex(v3Fixture);
+    const track = index.tracks[1];
+    expect(track.title).toBeNull();
+    expect(track.artist).toBeNull();
+    expect(track.album).toBeNull();
+    expect(track.genre).toBeNull();
+    expect(track.track).toBeNull();
+    expect(track.duration).toBeNull();
+  });
+});

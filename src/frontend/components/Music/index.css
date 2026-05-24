@@ -348,6 +348,14 @@
   border-radius: 4px;
   background: #ccc;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.musicPlaybackAlbumArt img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .musicPlaybackTrackInfo {

@@ -6,12 +6,21 @@ import {
 } from './utils.ts';
 import type { T } from './index.ts';
 import { createReadStream, Dirent, promises as fs } from 'node:fs';
-import { join, extname, resolve } from 'node:path';
+import { join, extname, resolve, dirname } from 'node:path';
 import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
-const MUSIC_INDEX_VERSION = 3 as const;
+const MUSIC_INDEX_VERSION = 4 as const;
+
+const COVER_ART_FILENAMES = [
+  'cover.jpg',
+  'cover.png',
+  'folder.jpg',
+  'Folder.jpg',
+  'front.jpg',
+  'front.png',
+];
 
 const AUDIO_EXTENSIONS = new Set([
   '.mp3',
@@ -174,6 +183,36 @@ export function musicRoute(mountPath: string) {
     await finished(stream);
   });
 
+  /**
+   * Serves a cover art image stored in an album directory.
+   * Accepts a ?path= query parameter using the same client-path convention as
+   * stream-audio (e.g. /Artist/Album/Folder.jpg).
+   */
+  route.addBlobRoute('GET', '/cover-art', async (req, res) => {
+    const clientPath = req.query.path;
+    if (typeof clientPath !== 'string' || !clientPath) {
+      res.status(400).send('Missing path query parameter.');
+      return;
+    }
+
+    const resolvedPath = resolveMountedPath(clientPath, mountPath);
+
+    try {
+      await fs.access(resolvedPath);
+    } catch {
+      res.status(404).send('Not found.');
+      return;
+    }
+
+    const ext = extname(resolvedPath).toLowerCase();
+    const contentType = ext === '.png' ? 'image/png' : 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    const stream = createReadStream(resolvedPath);
+    stream.pipe(res);
+    await finished(stream);
+  });
+
   return route.router;
 }
 
@@ -220,6 +259,9 @@ async function performScan(
   const audioFiles = await findAudioFiles(mountPath, mountPath);
   callbacks.onTotal?.(audioFiles.length);
 
+  // Cache cover art lookups per album directory — probed once per unique dir.
+  const coverArtDirCache = new Map<string, string | null>();
+
   const tracks: T.TrackMetadata[] = [];
   for (let i = 0; i < audioFiles.length; i++) {
     const { clientPath, fullPath } = audioFiles[i];
@@ -227,13 +269,35 @@ async function performScan(
     const mtime = stats.mtime.toISOString();
     const size = stats.size;
 
+    // Probe the album directory for cover art (cached per directory).
+    const dirClientPath = dirname(clientPath);
+    const dirFullPath = dirname(fullPath);
+    let coverArt: string | null;
+    if (coverArtDirCache.has(dirClientPath)) {
+      coverArt = coverArtDirCache.get(dirClientPath)!;
+    } else {
+      coverArt = null;
+      for (const name of COVER_ART_FILENAMES) {
+        try {
+          await fs.access(join(dirFullPath, name));
+          coverArt = join(dirClientPath, name);
+          break;
+        } catch {
+          // not found, try next
+        }
+      }
+      coverArtDirCache.set(dirClientPath, coverArt);
+    }
+
     const existingTrack = existingTracks.get(clientPath);
     if (
       existingTrack &&
       existingTrack.mtime === mtime &&
       existingTrack.size === size
     ) {
-      tracks.push(existingTrack);
+      // Re-apply freshly probed coverArt so changes to image files are picked
+      // up on rescan even when the audio file itself is unchanged.
+      tracks.push({ ...existingTrack, coverArt });
     } else {
       let title: string | null = null;
       let artist: string | null = null;
@@ -262,6 +326,7 @@ async function performScan(
         duration,
         size,
         mtime,
+        coverArt,
       });
     }
 

@@ -65,6 +65,8 @@ export interface TrackMetadata {
   size: number;
   /** ISO timestamp — used for incremental re-scan. */
   mtime: string;
+  /** Client path to a cover image file in the album directory, or null if none found. */
+  coverArt: string | null;
 }
 
 /**
@@ -90,7 +92,7 @@ export interface TrackMetadata {
  * backfilled fields (e.g. genre: null) are incomplete vs. a fresh scan.
  */
 export interface MusicIndex {
-  version: 3;
+  version: 4;
   scannedAt: string;
   tracks: TrackMetadata[];
 }
