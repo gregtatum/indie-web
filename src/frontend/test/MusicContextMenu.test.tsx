@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import * as React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
@@ -53,9 +54,11 @@ function setup() {
   const store = createStore();
   store.dispatch(A.setMusicTracks(TRACKS, false));
   render(
-    <Provider store={store as any}>
-      <MusicLibraryView />
-    </Provider>,
+    <MemoryRouter>
+      <Provider store={store as any}>
+        <MusicLibraryView />
+      </Provider>
+    </MemoryRouter>,
   );
   return { store };
 }
@@ -140,5 +143,38 @@ describe('track right-click context menu', () => {
       '/music/b.mp3',
       '/music/c.mp3',
     ]);
+  });
+
+  it('"Show in Files" is shown for single-track selection and focuses the file', async () => {
+    const { store } = setup();
+    const trackB = await screen.findByText('Song B');
+    await act(async () => {
+      fireEvent.contextMenu(trackB);
+    });
+    const showButton = await screen.findByRole('button', {
+      name: 'Show in Files',
+    });
+    await act(async () => {
+      fireEvent.click(showButton);
+    });
+    const state = store.getState();
+    expect($.getFileFocusByPath(state)).toMatchObject({
+      '/music': 'b.mp3',
+    });
+  });
+
+  it('"Show in Files" is not shown for multi-track selection', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+    });
+    const trackA = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.contextMenu(trackA);
+    });
+    await screen.findByRole('button', { name: 'Play Selection' });
+    expect(screen.queryByRole('button', { name: 'Show in Files' })).toBeNull();
   });
 });

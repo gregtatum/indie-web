@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
@@ -64,9 +65,11 @@ function setup() {
   const store = createStore();
   store.dispatch(A.setMusicTracks(TRACKS, false));
   render(
-    <Provider store={store as any}>
-      <MusicLibraryView />
-    </Provider>,
+    <MemoryRouter>
+      <Provider store={store as any}>
+        <MusicLibraryView />
+      </Provider>
+    </MemoryRouter>,
   );
   return { store };
 }

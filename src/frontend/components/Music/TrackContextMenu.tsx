@@ -1,5 +1,7 @@
 import * as React from 'react';
+import * as Router from 'react-router-dom';
 import { $$, A, Hooks, $ } from 'frontend';
+import { getDirName, getPathFileName } from 'frontend/utils';
 import { Menu, MenuButton } from 'frontend/components/Menus';
 
 // Must stay in sync with menuWidth in Menus.tsx so the menu left-aligns to the cursor.
@@ -13,6 +15,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
   function TrackContextMenu(_props, ref) {
     const dispatch = Hooks.useDispatch();
     const { getState } = Hooks.useStore();
+    const navigate = Router.useNavigate();
     const [openGeneration, setOpenGeneration] = React.useState(0);
     const [openEventDetail, setOpenEventDetail] = React.useState(-1);
     const [contextTrackPath, setContextTrackPath] = React.useState<
@@ -70,6 +73,22 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
           }
         },
       },
+      ...(!isMultiSelect && contextTrackPath
+        ? [
+            {
+              key: 'show-in-files',
+              children: 'Show in Files',
+              onClick() {
+                const state = getState();
+                const fsSlug = $.getCurrentFileStoreSlug(state);
+                const folderPath = getDirName(contextTrackPath);
+                const fileName = getPathFileName(contextTrackPath);
+                dispatch(A.changeFileFocus(folderPath, fileName));
+                navigate(`/${fsSlug}/folder${folderPath}`);
+              },
+            } as MenuButton,
+          ]
+        : []),
     ];
 
     return Hooks.overlayPortal(
