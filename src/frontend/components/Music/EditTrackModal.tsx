@@ -6,11 +6,6 @@ import './EditTrackModal.css';
 
 type TabId = 'details' | 'artwork';
 
-const TABS: ReadonlyArray<{ id: TabId; label: string }> = [
-  { id: 'details', label: 'Details' },
-  { id: 'artwork', label: 'Artwork' },
-];
-
 interface Props {
   trackPath: string | null;
   onClose: () => void;
@@ -19,6 +14,7 @@ interface Props {
 export function EditTrackModal({ trackPath, onClose }: Props) {
   const tracks = $$.getMusicTracks();
   const track = tracks.find((t) => t.path === trackPath) ?? null;
+  const server = $$.getCurrentServerOrNull();
 
   const [activeTab, setActiveTab] = React.useState<TabId>('details');
   const [title, setTitle] = React.useState('');
@@ -40,11 +36,84 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     setActiveTab('details');
   }, [trackPath]);
 
-  const server = $$.getCurrentServerOrNull();
   const artUrl =
     server && track?.coverArt
       ? `${server.url}/music/cover-art?path=${encodeURIComponent(track.coverArt)}`
       : null;
+
+  const tabs = [
+    {
+      id: 'details' as TabId,
+      label: 'Details',
+      panel: (
+        <div className="editTrackModalDetails">
+          <label className="editTrackModalField">
+            <span className="editTrackModalLabel">Title</span>
+            <input
+              className="editTrackModalInput"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </label>
+          <label className="editTrackModalField">
+            <span className="editTrackModalLabel">Artist</span>
+            <input
+              className="editTrackModalInput"
+              type="text"
+              value={artist}
+              onChange={(e) => setArtist(e.target.value)}
+            />
+          </label>
+          <label className="editTrackModalField">
+            <span className="editTrackModalLabel">Album</span>
+            <input
+              className="editTrackModalInput"
+              type="text"
+              value={album}
+              onChange={(e) => setAlbum(e.target.value)}
+            />
+          </label>
+          <label className="editTrackModalField">
+            <span className="editTrackModalLabel">Genre</span>
+            <input
+              className="editTrackModalInput"
+              type="text"
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+            />
+          </label>
+          <label className="editTrackModalField">
+            <span className="editTrackModalLabel">Track</span>
+            <input
+              className="editTrackModalInput editTrackModalInput-short"
+              type="number"
+              min="1"
+              value={trackNumber}
+              onChange={(e) => setTrackNumber(e.target.value)}
+            />
+          </label>
+        </div>
+      ),
+    },
+    {
+      id: 'artwork' as TabId,
+      label: 'Artwork',
+      panel: (
+        <div className="editTrackModalArtwork">
+          {artUrl ? (
+            <img
+              className="editTrackModalArtworkImage"
+              src={artUrl}
+              alt="Album artwork"
+            />
+          ) : (
+            <div className="editTrackModalArtworkEmpty">No artwork found</div>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <Modal isOpen={!!trackPath} onClose={onClose}>
@@ -61,73 +130,10 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           )}
         </div>
         <Tabs
-          tabs={TABS}
+          tabs={tabs}
           activeTab={activeTab}
           onChange={(id) => setActiveTab(id as TabId)}
         />
-        {activeTab === 'details' && (
-          <div className="editTrackModalDetails">
-            <label className="editTrackModalField">
-              <span className="editTrackModalLabel">Title</span>
-              <input
-                className="editTrackModalInput"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </label>
-            <label className="editTrackModalField">
-              <span className="editTrackModalLabel">Artist</span>
-              <input
-                className="editTrackModalInput"
-                type="text"
-                value={artist}
-                onChange={(e) => setArtist(e.target.value)}
-              />
-            </label>
-            <label className="editTrackModalField">
-              <span className="editTrackModalLabel">Album</span>
-              <input
-                className="editTrackModalInput"
-                type="text"
-                value={album}
-                onChange={(e) => setAlbum(e.target.value)}
-              />
-            </label>
-            <label className="editTrackModalField">
-              <span className="editTrackModalLabel">Genre</span>
-              <input
-                className="editTrackModalInput"
-                type="text"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-              />
-            </label>
-            <label className="editTrackModalField">
-              <span className="editTrackModalLabel">Track</span>
-              <input
-                className="editTrackModalInput editTrackModalInput-short"
-                type="number"
-                min="1"
-                value={trackNumber}
-                onChange={(e) => setTrackNumber(e.target.value)}
-              />
-            </label>
-          </div>
-        )}
-        {activeTab === 'artwork' && (
-          <div className="editTrackModalArtwork">
-            {artUrl ? (
-              <img
-                className="editTrackModalArtworkImage"
-                src={artUrl}
-                alt="Album artwork"
-              />
-            ) : (
-              <div className="editTrackModalArtworkEmpty">No artwork found</div>
-            )}
-          </div>
-        )}
       </div>
     </Modal>
   );

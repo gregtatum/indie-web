@@ -29,7 +29,9 @@
   max-width: var(--page-max-width);
   max-height: calc(100dvh - 2 * var(--page-padding));
   margin: var(--page-padding);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--modal-background);
   border: 1px solid var(--modal-border-color);
   border-radius: var(--modal-radius);

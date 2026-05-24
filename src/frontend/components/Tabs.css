@@ -38,3 +38,19 @@
   color: #fff;
   opacity: 1;
 }
+
+.tabPanels {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.tabPanel {
+  grid-area: 1 / 1;
+}
+
+.tabPanel-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
