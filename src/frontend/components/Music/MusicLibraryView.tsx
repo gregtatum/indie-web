@@ -377,9 +377,9 @@ function FilterPanel({
   panel: T.MusicPanelType;
   tracks: T.TrackMetadata[];
 }) {
-  const { getState, dispatch } = Hooks.useStore();
+  const { dispatch } = Hooks.useStore();
   const panelSelections = $$.getMusicPanelSelections();
-  const selection = panelSelections[panel];
+  const selections = panelSelections[panel] ?? [];
 
   const items = React.useMemo(
     () => getPanelItems(tracks, panel),
@@ -391,33 +391,93 @@ function FilterPanel({
   const itemsRef = React.useRef(items);
   itemsRef.current = items;
 
-  // If the stored selection isn't in the current filtered list (e.g. genre
-  // changed and the previous artist no longer exists in it), treat it as
-  // unset for display purposes without clearing the store value.
-  const effectiveSelection =
-    selection && items.includes(selection) ? selection : undefined;
-  const selectedIndex = effectiveSelection
-    ? items.indexOf(effectiveSelection)
-    : -1;
-  const listRef = React.useRef<HTMLDivElement | null>(null);
-
-  Hooks.useTypeAheadSearch(listRef, items, (value) =>
-    dispatch(A.setMusicPanelSelection(panel, value)),
+  // Filter stored selections to only those present in the current item list
+  // (e.g. upstream panel changed and some values no longer exist).
+  const effectiveSelections = React.useMemo(
+    () => selections.filter((s) => items.includes(s)),
+    [selections, items],
   );
 
-  let activeDescendant: string | undefined;
-  if (!effectiveSelection) {
-    activeDescendant = `music-panel-${panel}-all`;
-  } else if (selectedIndex >= 0) {
-    activeDescendant = `music-panel-${panel}-${selectedIndex}`;
-  }
+  const listRef = React.useRef<HTMLDivElement | null>(null);
   const allItemRef = React.useRef<HTMLDivElement | null>(null);
 
+  // cursor tracks the focused item for aria-activedescendant and keyboard nav.
+  // cursorRef gives the keyboard handler synchronous access without stale closure.
+  const [cursor, setCursorState] = React.useState<string | null>(null);
+  const cursorRef = React.useRef<string | null>(null);
+  // anchor is the pivot for shift-click range selection.
+  const anchorRef = React.useRef<string | null>(null);
+
+  function setCursor(value: string | null) {
+    cursorRef.current = value;
+    setCursorState(value);
+  }
+
+  // Sync cursor from Redux when selection has 0 or 1 item so that externally
+  // dispatched actions (e.g. from tests or keyboard nav) stay in sync.
   React.useEffect(() => {
-    if (!effectiveSelection && allItemRef.current) {
+    if (effectiveSelections.length === 1) {
+      const only = effectiveSelections[0];
+      if (cursorRef.current !== only) {
+        cursorRef.current = only;
+        setCursorState(only);
+        anchorRef.current = only;
+      }
+    } else if (effectiveSelections.length === 0) {
+      if (cursorRef.current !== null) {
+        cursorRef.current = null;
+        setCursorState(null);
+        anchorRef.current = null;
+      }
+    }
+  }, [effectiveSelections]);
+
+  function handleItemClick(value: string, event: React.MouseEvent) {
+    if (event.metaKey || event.ctrlKey) {
+      const next = effectiveSelections.includes(value)
+        ? effectiveSelections.filter((s) => s !== value)
+        : [...effectiveSelections, value];
+      setCursor(value);
+      if (!effectiveSelections.includes(value)) {
+        anchorRef.current = value;
+      }
+      dispatch(A.setMusicPanelSelection(panel, next.length > 0 ? next : undefined));
+    } else if (event.shiftKey && anchorRef.current != null) {
+      const anchorIndex = itemsRef.current.indexOf(anchorRef.current);
+      const targetIndex = itemsRef.current.indexOf(value);
+      const [start, end] =
+        anchorIndex <= targetIndex
+          ? [anchorIndex, targetIndex]
+          : [targetIndex, anchorIndex];
+      const range = itemsRef.current.slice(start, end + 1);
+      setCursor(value);
+      dispatch(A.setMusicPanelSelection(panel, range));
+    } else {
+      anchorRef.current = value;
+      setCursor(value);
+      dispatch(A.setMusicPanelSelection(panel, [value]));
+    }
+  }
+
+  Hooks.useTypeAheadSearch(listRef, items, (value) => {
+    anchorRef.current = value;
+    setCursor(value);
+    dispatch(A.setMusicPanelSelection(panel, [value]));
+  });
+
+  const cursorInItems = cursor != null && items.includes(cursor);
+  let activeDescendant: string | undefined;
+  if (cursorInItems) {
+    activeDescendant = `music-panel-${panel}-${items.indexOf(cursor!)}`;
+  } else if (effectiveSelections.length === 0) {
+    activeDescendant = `music-panel-${panel}-all`;
+  }
+
+  React.useEffect(() => {
+    if (cursor === null && allItemRef.current) {
       allItemRef.current.scrollIntoView({ block: 'nearest' });
     }
-  }, [effectiveSelection]);
+  }, [cursor]);
 
   // Keep the active item visible when the panel is resized (e.g. splitter drag).
   React.useEffect(() => {
@@ -440,19 +500,21 @@ function FilterPanel({
       }
 
       const currentItems = itemsRef.current;
-      const currentSelection = $.getMusicPanelSelections(getState())[panel];
-      const currentIndex = currentSelection
-        ? currentItems.indexOf(currentSelection)
-        : -1;
+      const currentCursor = cursorRef.current;
+      const currentIndex =
+        currentCursor != null ? currentItems.indexOf(currentCursor) : -1;
 
       switch (event.key) {
         case 'ArrowUp': {
           event.preventDefault();
           if (currentIndex > 0) {
-            dispatch(
-              A.setMusicPanelSelection(panel, currentItems[currentIndex - 1]),
-            );
+            const next = currentItems[currentIndex - 1];
+            anchorRef.current = next;
+            setCursor(next);
+            dispatch(A.setMusicPanelSelection(panel, [next]));
           } else if (currentIndex === 0) {
+            anchorRef.current = null;
+            setCursor(null);
             dispatch(A.setMusicPanelSelection(panel));
           }
           break;
@@ -464,7 +526,10 @@ function FilterPanel({
               ? 0
               : Math.min(currentItems.length - 1, currentIndex + 1);
           if (currentItems[nextIndex] !== undefined) {
-            dispatch(A.setMusicPanelSelection(panel, currentItems[nextIndex]));
+            const next = currentItems[nextIndex];
+            anchorRef.current = next;
+            setCursor(next);
+            dispatch(A.setMusicPanelSelection(panel, [next]));
           }
           break;
         }
@@ -495,6 +560,8 @@ function FilterPanel({
         }
         case 'Escape': {
           event.preventDefault();
+          anchorRef.current = null;
+          setCursor(null);
           dispatch(A.setMusicPanelSelection(panel));
           break;
         }
@@ -509,6 +576,8 @@ function FilterPanel({
     };
   }, [panel]);
 
+  const allSelected = effectiveSelections.length === 0;
+
   return (
     <div className="musicFilterPanel">
       <div className="musicFilterPanelHeader">{panel}</div>
@@ -516,17 +585,22 @@ function FilterPanel({
         className="musicFilterPanelList"
         role="listbox"
         aria-label={panel}
+        aria-multiselectable="true"
         tabIndex={0}
         aria-activedescendant={activeDescendant}
         ref={listRef}
       >
         <div
-          className={`musicFilterPanelItem${!effectiveSelection ? ' selected' : ''}`}
+          className={`musicFilterPanelItem${allSelected ? ' selected' : ''}`}
           role="option"
-          aria-selected={!effectiveSelection}
+          aria-selected={allSelected}
           id={`music-panel-${panel}-all`}
           ref={allItemRef}
-          onClick={() => dispatch(A.setMusicPanelSelection(panel))}
+          onClick={() => {
+            anchorRef.current = null;
+            setCursor(null);
+            dispatch(A.setMusicPanelSelection(panel));
+          }}
         >
           {getPanelAllLabel(panel)}
         </div>
@@ -536,8 +610,9 @@ function FilterPanel({
             panel={panel}
             value={value}
             index={index}
-            isSelected={value === effectiveSelection}
-            dispatch={dispatch}
+            isSelected={effectiveSelections.includes(value)}
+            isCursor={value === cursor}
+            onClick={(event) => handleItemClick(value, event)}
           />
         ))}
       </div>
@@ -550,21 +625,23 @@ function FilterPanelItem({
   value,
   index,
   isSelected,
-  dispatch,
+  isCursor,
+  onClick,
 }: {
   panel: T.MusicPanelType;
   value: string;
   index: number;
   isSelected: boolean;
-  dispatch: T.Dispatch;
+  isCursor: boolean;
+  onClick: (event: React.MouseEvent) => void;
 }) {
   const divRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    if (isSelected && divRef.current) {
+    if (isCursor && divRef.current) {
       divRef.current.scrollIntoView({ block: 'nearest' });
     }
-  }, [isSelected]);
+  }, [isCursor]);
 
   return (
     <div
@@ -573,9 +650,7 @@ function FilterPanelItem({
       aria-selected={isSelected}
       id={`music-panel-${panel}-${index}`}
       ref={divRef}
-      onClick={() => {
-        dispatch(A.setMusicPanelSelection(panel, value));
-      }}
+      onClick={onClick}
     >
       {value}
     </div>
@@ -586,25 +661,95 @@ const sizeEstimate = 32;
 
 function Tracks() {
   const tracks = $$.getFilteredMusicTracks();
-  const selectedPath = $$.getMusicSelectedTrackPath();
+  const selectedPaths = $$.getMusicSelectedTrackPaths();
   const playingPath = $$.getMusicPlaybackTrackPath();
   const { getState, dispatch } = Hooks.useStore();
 
-  const selectedIndex = selectedPath
-    ? tracks.findIndex((t) => t.path === selectedPath)
-    : -1;
   const listRef = React.useRef<HTMLDivElement | null>(null);
-
-  const activeDescendant =
-    selectedIndex >= 0 ? `music-track-${selectedIndex}` : undefined;
-
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
+
+  // focusedPath is the keyboard cursor and the anchor for Enter/Space playback.
+  // focusedPathRef gives the keyboard handler synchronous access.
+  const [focusedPath, setFocusedPathState] = React.useState<string | null>(null);
+  const focusedPathRef = React.useRef<string | null>(null);
+  // anchorPath is the pivot for shift-click range selection.
+  const anchorPathRef = React.useRef<string | null>(null);
+
+  function setFocusedPath(path: string | null) {
+    focusedPathRef.current = path;
+    setFocusedPathState(path);
+  }
+
+  // Sync focusedPath from Redux when selection has 0 or 1 item.
+  React.useEffect(() => {
+    if (selectedPaths.length === 1) {
+      const only = selectedPaths[0];
+      if (focusedPathRef.current !== only) {
+        focusedPathRef.current = only;
+        setFocusedPathState(only);
+        anchorPathRef.current = only;
+      }
+    } else if (selectedPaths.length === 0) {
+      if (focusedPathRef.current !== null) {
+        focusedPathRef.current = null;
+        setFocusedPathState(null);
+        anchorPathRef.current = null;
+      }
+    }
+  }, [selectedPaths]);
+
+  const focusedIndex = focusedPath
+    ? tracks.findIndex((t) => t.path === focusedPath)
+    : -1;
+
+  const activeDescendant =
+    focusedIndex >= 0 ? `music-track-${focusedIndex}` : undefined;
 
   const handlePlay = React.useCallback((path: string) => {
     dispatch(A.setMusicPlaybackQueue(tracksRef.current));
     dispatch(A.musicPlaybackLoad(path));
   }, []);
+
+  const handleTrackClick = React.useCallback(
+    (track: T.TrackMetadata, event: React.MouseEvent) => {
+      const currentPaths = $.getMusicSelectedTrackPaths(getState());
+      if (event.metaKey || event.ctrlKey) {
+        const isSelected = currentPaths.includes(track.path);
+        const next = isSelected
+          ? currentPaths.filter((p) => p !== track.path)
+          : [...currentPaths, track.path];
+        setFocusedPath(track.path);
+        if (!isSelected) {
+          anchorPathRef.current = track.path;
+        }
+        dispatch(A.setMusicSelectedTracks(next));
+      } else if (event.shiftKey && anchorPathRef.current != null) {
+        const currentTracks = tracksRef.current;
+        const anchorIndex = currentTracks.findIndex(
+          (t) => t.path === anchorPathRef.current,
+        );
+        const targetIndex = currentTracks.findIndex(
+          (t) => t.path === track.path,
+        );
+        const [start, end] =
+          anchorIndex <= targetIndex
+            ? [anchorIndex, targetIndex]
+            : [targetIndex, anchorIndex];
+        const range = currentTracks.slice(start, end + 1).map((t) => t.path);
+        setFocusedPath(track.path);
+        dispatch(A.setMusicSelectedTracks(range));
+      } else {
+        const isSoleSelected =
+          currentPaths.length === 1 && currentPaths[0] === track.path;
+        const next = isSoleSelected ? [] : [track.path];
+        anchorPathRef.current = isSoleSelected ? null : track.path;
+        setFocusedPath(isSoleSelected ? null : track.path);
+        dispatch(A.setMusicSelectedTracks(next));
+      }
+    },
+    [],
+  );
 
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: tracks.length,
@@ -620,10 +765,10 @@ function Tracks() {
   virtualizerRef.current = virtualizer;
 
   React.useEffect(() => {
-    if (selectedIndex >= 0) {
-      virtualizerRef.current.scrollToIndex(selectedIndex, { align: 'auto' });
+    if (focusedIndex >= 0) {
+      virtualizerRef.current.scrollToIndex(focusedIndex, { align: 'auto' });
     }
-  }, [selectedIndex]);
+  }, [focusedIndex]);
 
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -632,7 +777,7 @@ function Tracks() {
       }
 
       const currentTracks = tracksRef.current;
-      const currentPath = $.getMusicSelectedTrackPath(getState());
+      const currentPath = focusedPathRef.current;
       const currentIndex = currentPath
         ? currentTracks.findIndex((t) => t.path === currentPath)
         : -1;
@@ -641,9 +786,10 @@ function Tracks() {
         case 'ArrowUp': {
           event.preventDefault();
           if (currentIndex > 0) {
-            dispatch(
-              A.setMusicSelectedTrack(currentTracks[currentIndex - 1].path),
-            );
+            const newPath = currentTracks[currentIndex - 1].path;
+            anchorPathRef.current = newPath;
+            setFocusedPath(newPath);
+            dispatch(A.setMusicSelectedTracks([newPath]));
           }
           break;
         }
@@ -654,7 +800,10 @@ function Tracks() {
               ? 0
               : Math.min(currentTracks.length - 1, currentIndex + 1);
           if (currentTracks[nextIndex]) {
-            dispatch(A.setMusicSelectedTrack(currentTracks[nextIndex].path));
+            const newPath = currentTracks[nextIndex].path;
+            anchorPathRef.current = newPath;
+            setFocusedPath(newPath);
+            dispatch(A.setMusicSelectedTracks([newPath]));
           }
           break;
         }
@@ -681,7 +830,9 @@ function Tracks() {
         }
         case 'Escape': {
           event.preventDefault();
-          dispatch(A.setMusicSelectedTrack());
+          anchorPathRef.current = null;
+          setFocusedPath(null);
+          dispatch(A.setMusicSelectedTracks([]));
           break;
         }
         default:
@@ -703,7 +854,9 @@ function Tracks() {
   Hooks.useTypeAheadSearch(listRef, titles, (title) => {
     const track = tracks.find((t) => (t.title ?? t.path) === title);
     if (track) {
-      dispatch(A.setMusicSelectedTrack(track.path));
+      anchorPathRef.current = track.path;
+      setFocusedPath(track.path);
+      dispatch(A.setMusicSelectedTracks([track.path]));
     }
   });
 
@@ -713,6 +866,7 @@ function Tracks() {
         className="musicTracks"
         role="listbox"
         aria-label="Tracks"
+        aria-multiselectable="true"
         tabIndex={0}
         aria-activedescendant={activeDescendant}
         ref={listRef}
@@ -730,9 +884,9 @@ function Tracks() {
                 key={track.path}
                 track={track}
                 index={virtualItem.index}
-                isSelected={track.path === selectedPath}
+                isSelected={selectedPaths.includes(track.path)}
                 isPlaying={track.path === playingPath}
-                dispatch={dispatch}
+                onClick={(event) => handleTrackClick(track, event)}
                 onPlay={handlePlay}
                 offsetTop={virtualItem.start}
               />
@@ -749,7 +903,7 @@ function Track({
   index,
   isSelected,
   isPlaying,
-  dispatch,
+  onClick,
   onPlay,
   offsetTop,
 }: {
@@ -757,7 +911,7 @@ function Track({
   index: number;
   isSelected: boolean;
   isPlaying: boolean;
-  dispatch: T.Dispatch;
+  onClick: (event: React.MouseEvent) => void;
   onPlay: (path: string) => void;
   offsetTop: number;
 }) {
@@ -775,11 +929,8 @@ function Track({
         height: `${sizeEstimate}px`,
         transform: `translateY(${offsetTop}px)`,
       }}
-      onClick={() =>
-        dispatch(A.setMusicSelectedTrack(isSelected ? undefined : track.path))
-      }
+      onClick={onClick}
       onDoubleClick={() => {
-        dispatch(A.setMusicSelectedTrack(track.path));
         onPlay(track.path);
       }}
     >

@@ -143,6 +143,88 @@ describe('track interactions', () => {
     });
     expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
   });
+
+  it('clicking a track selects it', async () => {
+    const { store } = setup();
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+    ]);
+  });
+
+  it('clicking the sole selected track deselects it', async () => {
+    const { store } = setup();
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
+  });
+
+  it('cmd+click adds a track to the selection', async () => {
+    const { store } = setup();
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Song B'), { metaKey: true });
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+    ]);
+  });
+
+  it('cmd+click removes an already-selected track', async () => {
+    const { store } = setup();
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Song B'), { metaKey: true });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Song A'), { metaKey: true });
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/b.mp3',
+    ]);
+  });
+
+  it('shift+click selects a range of tracks', async () => {
+    const { store } = setup();
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Song C'), { shiftKey: true });
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+      '/music/c.mp3',
+    ]);
+  });
+
+  it('plain click after multi-select narrows to a single track', async () => {
+    const { store } = setup();
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText('Song C'), { shiftKey: true });
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByText('Song B'));
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/b.mp3',
+    ]);
+  });
 });
 
 describe('PlaybackBar', () => {
@@ -248,13 +330,13 @@ describe('filter panels', () => {
         within(genreList).getByRole('option', { name: 'Rock' }),
       );
     });
-    expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual(['Rock']);
   });
 
   it('clicking the All option clears a selection', async () => {
     const { store } = setup();
     await act(async () => {
-      store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
+      store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
     });
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     await act(async () => {
@@ -265,43 +347,126 @@ describe('filter panels', () => {
     expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
   });
 
+  it('cmd+click adds an item to the filter panel selection', async () => {
+    const { store } = setup();
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    await act(async () => {
+      await userEvent.click(
+        within(genreList).getByRole('option', { name: 'Jazz' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(genreList).getByRole('option', { name: 'Rock' }),
+        { metaKey: true },
+      );
+    });
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual([
+      'Jazz',
+      'Rock',
+    ]);
+  });
+
+  it('cmd+click removes an already-selected filter panel item', async () => {
+    const { store } = setup();
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    await act(async () => {
+      await userEvent.click(
+        within(genreList).getByRole('option', { name: 'Jazz' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(genreList).getByRole('option', { name: 'Rock' }),
+        { metaKey: true },
+      );
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(genreList).getByRole('option', { name: 'Jazz' }),
+        { metaKey: true },
+      );
+    });
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual(['Rock']);
+  });
+
+  it('shift+click selects a range in the filter panel', async () => {
+    const { store } = setup();
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    await act(async () => {
+      await userEvent.click(
+        within(genreList).getByRole('option', { name: 'Jazz' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(genreList).getByRole('option', { name: 'Rock' }),
+        { shiftKey: true },
+      );
+    });
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual([
+      'Jazz',
+      'Rock',
+    ]);
+  });
+
+  it('a multi-selection in a filter panel shows tracks matching any selection', async () => {
+    setup();
+    const genreList = screen.getByRole('listbox', { name: 'genre' });
+    await act(async () => {
+      await userEvent.click(
+        within(genreList).getByRole('option', { name: 'Jazz' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(genreList).getByRole('option', { name: 'Rock' }),
+        { metaKey: true },
+      );
+    });
+    // All three tracks should be visible (Rock: A, B — Jazz: C)
+    expect(await screen.findByText('Song A')).toBeTruthy();
+    expect(screen.getByText('Song B')).toBeTruthy();
+    expect(screen.getByText('Song C')).toBeTruthy();
+  });
+
   it('ArrowDown selects the first item when none is selected', async () => {
     const { store } = setup();
     await act(async () => {
       screen.getByRole('listbox', { name: 'genre' }).focus();
       await userEvent.keyboard('{ArrowDown}');
     });
-    expect($.getMusicPanelSelections(store.getState()).genre).toBe('Jazz');
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual(['Jazz']);
   });
 
   it('ArrowDown advances the selection', async () => {
     const { store } = setup();
     await act(async () => {
-      store.dispatch(A.setMusicPanelSelection('genre', 'Jazz'));
+      store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
     });
     await act(async () => {
       screen.getByRole('listbox', { name: 'genre' }).focus();
       await userEvent.keyboard('{ArrowDown}');
     });
-    expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual(['Rock']);
   });
 
   it('ArrowDown stays on the last item', async () => {
     const { store } = setup();
     await act(async () => {
-      store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
+      store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
     });
     await act(async () => {
       screen.getByRole('listbox', { name: 'genre' }).focus();
       await userEvent.keyboard('{ArrowDown}');
     });
-    expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual(['Rock']);
   });
 
   it('ArrowUp from the first item clears to All', async () => {
     const { store } = setup();
     await act(async () => {
-      store.dispatch(A.setMusicPanelSelection('genre', 'Jazz'));
+      store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
     });
     await act(async () => {
       screen.getByRole('listbox', { name: 'genre' }).focus();
@@ -322,7 +487,7 @@ describe('filter panels', () => {
   it('Escape clears the selection', async () => {
     const { store } = setup();
     await act(async () => {
-      store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
+      store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
     });
     await act(async () => {
       screen.getByRole('listbox', { name: 'genre' }).focus();

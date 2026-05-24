@@ -50,13 +50,13 @@ function playbackStatus(
  * what is currently selected inside of that panel.
  */
 function panelSelections(
-  state: Partial<Record<T.MusicPanelType, string>> = {},
+  state: Partial<Record<T.MusicPanelType, string[]>> = {},
   action: T.Action,
-): Partial<Record<T.MusicPanelType, string>> {
+): Partial<Record<T.MusicPanelType, string[]>> {
   switch (action.type) {
     case 'set-music-panel-selection': {
-      const next = { ...state, [action.panel]: action.value };
-      if (!action.value) {
+      const next = { ...state, [action.panel]: action.values };
+      if (!action.values || action.values.length === 0) {
         delete next[action.panel];
       }
       return next;
@@ -82,15 +82,15 @@ function tracks(
   }
 }
 
-function selectedTrackPath(
-  state: string | null = null,
+function selectedTrackPaths(
+  state: string[] = [],
   action: T.Action,
-): string | null {
+): string[] {
   switch (action.type) {
-    case 'set-music-selected-track':
-      return action.path ?? null;
+    case 'set-music-selected-tracks':
+      return action.paths;
     case 'view-music':
-      return null;
+      return [];
     default:
       return state;
   }
@@ -124,7 +124,7 @@ function playbackQueue(
 const combinedMusicReducer = combineReducers({
   panelSelections,
   tracks,
-  selectedTrackPath,
+  selectedTrackPaths,
   needsRescan,
   playingTrackPath,
   playbackStatus,
@@ -137,16 +137,16 @@ export function musicReducer(
   state: MusicState | undefined,
   action: T.Action,
 ): MusicState {
-  // When loading a new track, if the selected track matches the currently
+  // When loading a new track, if the single selected track matches the currently
   // playing track, advance the selection to follow the new track.
   if (
     action.type === 'music-playback-load' &&
     state !== undefined &&
-    state.selectedTrackPath !== null &&
-    state.selectedTrackPath === state.playingTrackPath
+    state.selectedTrackPaths.length === 1 &&
+    state.selectedTrackPaths[0] === state.playingTrackPath
   ) {
     const next = combinedMusicReducer(state, action);
-    return { ...next, selectedTrackPath: action.path };
+    return { ...next, selectedTrackPaths: [action.path] };
   }
   return combinedMusicReducer(state, action);
 }

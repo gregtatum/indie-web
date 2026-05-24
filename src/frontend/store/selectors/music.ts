@@ -12,16 +12,14 @@ export function getMusicTracks(state: State): T.TrackMetadata[] {
   return getMusic(state).tracks;
 }
 
-export function getMusicSelectedTrackPath(state: State): string | null {
-  return getMusic(state).selectedTrackPath;
+export function getMusicSelectedTrackPaths(state: State): string[] {
+  return getMusic(state).selectedTrackPaths;
 }
 
-export function getMusicPanelSelections(state: State) {
+export function getMusicPanelSelections(
+  state: State,
+): Partial<Record<T.MusicPanelType, string[]>> {
   return getMusic(state).panelSelections;
-}
-
-export function getMusicPanelSelection(panel: T.MusicPanelType) {
-  return (state: State) => getMusicPanelSelections(state)[panel];
 }
 
 export function getMusicNeedsRescan(state: State): boolean {
@@ -33,15 +31,21 @@ const PANEL_ORDER: T.MusicPanelType[] = ['genre', 'artist', 'album'];
 function filterByPanel(
   filteredTracks: T.TrackMetadata[],
   panel: T.MusicPanelType,
-  value: string,
+  selections: string[],
 ): T.TrackMetadata[] {
   switch (panel) {
     case 'genre':
-      return filteredTracks.filter((t) => t.genre === value);
+      return filteredTracks.filter(
+        (t) => t.genre && selections.includes(t.genre),
+      );
     case 'artist':
-      return filteredTracks.filter((t) => t.artist === value);
+      return filteredTracks.filter(
+        (t) => t.artist && selections.includes(t.artist),
+      );
     case 'album':
-      return filteredTracks.filter((t) => t.album === value);
+      return filteredTracks.filter(
+        (t) => t.album && selections.includes(t.album),
+      );
     default:
       throw new UnhandledCaseError(panel, 'MusicPanelType');
   }
@@ -60,9 +64,9 @@ export const getMusicPanelTracks = createSelector(
     let filtered = allTracks;
     for (const panel of PANEL_ORDER) {
       result[panel] = filtered;
-      const sel = panelSelections[panel];
-      if (sel) {
-        filtered = filterByPanel(filtered, panel, sel);
+      const selections = panelSelections[panel];
+      if (selections && selections.length > 0) {
+        filtered = filterByPanel(filtered, panel, selections);
       }
     }
     return result;
@@ -90,6 +94,8 @@ export const getFilteredMusicTracks = createSelector(
   (allTracks, panelSelections) =>
     PANEL_ORDER.reduce((filtered, panel) => {
       const sel = panelSelections[panel];
-      return sel ? filterByPanel(filtered, panel, sel) : filtered;
+      return sel && sel.length > 0
+        ? filterByPanel(filtered, panel, sel)
+        : filtered;
     }, allTracks),
 );

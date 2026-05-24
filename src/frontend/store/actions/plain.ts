@@ -335,19 +335,19 @@ export function changeFileFocus(folder: string, fileFocus: string) {
 
 export function setMusicPanelSelection(
   panel: T.MusicPanelType,
-  value?: string,
+  values?: string[],
 ) {
   return {
     type: 'set-music-panel-selection' as const,
     panel,
-    value,
+    values,
   };
 }
 
-export function setMusicSelectedTrack(path?: string) {
+export function setMusicSelectedTracks(paths: string[]) {
   return {
-    type: 'set-music-selected-track' as const,
-    path,
+    type: 'set-music-selected-tracks' as const,
+    paths,
   };
 }
 
