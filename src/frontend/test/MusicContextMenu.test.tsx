@@ -4,12 +4,15 @@ import { MemoryRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
-import { MusicLibraryView } from 'frontend/components/Music/MusicLibraryView';
+import { AppRoutes } from 'frontend/components/App';
+import type { FetchMockSandbox } from 'fetch-mock';
 
-beforeEach(() => {
-  jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
-  jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
-});
+const FAKE_SERVER: T.FileStoreServer = {
+  id: 'test-music',
+  url: 'http://fake-music',
+  name: 'Test Music',
+  storeType: 'music',
+};
 
 const TRACKS: T.TrackMetadata[] = [
   {
@@ -50,16 +53,35 @@ const TRACKS: T.TrackMetadata[] = [
   },
 ];
 
-function setup() {
+beforeEach(() => {
+  jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+  jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+});
+
+function setup(tracks = TRACKS) {
   const store = createStore();
-  store.dispatch(A.setMusicTracks(TRACKS, false));
+  store.dispatch(A.addFileStoreServer(FAKE_SERVER));
+
+  (window.fetch as FetchMockSandbox).get(
+    `${FAKE_SERVER.url}/music/music-index`,
+    {
+      body: JSON.stringify({
+        version: 4,
+        scannedAt: '2024-01-01T00:00:00Z',
+        tracks,
+      }),
+      status: 200,
+    },
+  );
+
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
       <Provider store={store as any}>
-        <MusicLibraryView />
+        <AppRoutes />
       </Provider>
     </MemoryRouter>,
   );
+
   return { store };
 }
 
@@ -176,5 +198,84 @@ describe('track right-click context menu', () => {
     });
     await screen.findByRole('button', { name: 'Play Selection' });
     expect(screen.queryByRole('button', { name: 'Show in Files' })).toBeNull();
+  });
+});
+
+describe('edit track modal', () => {
+  async function openEditModal(trackText: string) {
+    const track = await screen.findByText(trackText);
+    await act(async () => {
+      fireEvent.contextMenu(track);
+    });
+    const editButton = await screen.findByRole('button', { name: 'Edit' });
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+  }
+
+  it('opens with the right-clicked track fields pre-populated', async () => {
+    setup();
+    await openEditModal('Song A');
+    screen.getByRole('dialog');
+    expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
+      'Artist A',
+    );
+    expect((screen.getByLabelText('Song') as HTMLInputElement).value).toBe(
+      'Song A',
+    );
+    expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
+      'Rock',
+    );
+  });
+
+  it('allows editing the artist field', async () => {
+    setup();
+    await openEditModal('Song A');
+    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(artistInput, { target: { value: 'New Artist' } });
+    });
+    expect(artistInput.value).toBe('New Artist');
+  });
+
+  it('closes when the close button is clicked', async () => {
+    setup();
+    await openEditModal('Song A');
+    screen.getByRole('dialog');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('closes when Escape is pressed', async () => {
+    setup();
+    await openEditModal('Song A');
+    screen.getByRole('dialog');
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'Escape' });
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('repopulates fields when opening for a different track', async () => {
+    setup();
+    await openEditModal('Song A');
+    expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
+      'Artist A',
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+    await openEditModal('Song B');
+    expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
+      'Artist B',
+    );
+    expect((screen.getByLabelText('Song') as HTMLInputElement).value).toBe(
+      'Song B',
+    );
+    expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
+      'Rock',
+    );
   });
 });
