@@ -75,7 +75,9 @@ describe('track interactions', () => {
   it('double-clicking a track loads it for playback', async () => {
     const { store } = setup();
     const trackA = await screen.findByText('Song A');
-    await userEvent.dblClick(trackA);
+    await act(async () => {
+      await userEvent.dblClick(trackA);
+    });
     const state = store.getState();
     expect($.getMusicPlaybackTrackPath(state)).toBe('/music/a.mp3');
     expect($.getMusicPlaybackStatus(state)).toBe('loading');
@@ -84,11 +86,15 @@ describe('track interactions', () => {
   it('pressing Enter on a selected track loads it', async () => {
     const { store } = setup();
     // Click to select Song A first
-    await userEvent.click(await screen.findByText('Song A'));
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song A'));
+    });
     // Focus the track list and press Enter
     const list = screen.getByRole('listbox', { name: 'Tracks' });
-    list.focus();
-    await userEvent.keyboard('{Enter}');
+    await act(async () => {
+      list.focus();
+      await userEvent.keyboard('{Enter}');
+    });
     const state = store.getState();
     expect($.getMusicPlaybackTrackPath(state)).toBe('/music/a.mp3');
     expect($.getMusicPlaybackStatus(state)).toBe('loading');
@@ -96,10 +102,14 @@ describe('track interactions', () => {
 
   it('pressing Space with an idle status loads the selected track', async () => {
     const { store } = setup();
-    await userEvent.click(await screen.findByText('Song B'));
+    await act(async () => {
+      await userEvent.click(await screen.findByText('Song B'));
+    });
     const list = screen.getByRole('listbox', { name: 'Tracks' });
-    list.focus();
-    await userEvent.keyboard(' ');
+    await act(async () => {
+      list.focus();
+      await userEvent.keyboard(' ');
+    });
     const state = store.getState();
     expect($.getMusicPlaybackTrackPath(state)).toBe('/music/b.mp3');
     expect($.getMusicPlaybackStatus(state)).toBe('loading');
@@ -114,8 +124,8 @@ describe('track interactions', () => {
     const list = screen.getByRole('listbox', { name: 'Tracks' });
     await act(async () => {
       list.focus();
+      await userEvent.keyboard(' ');
     });
-    await userEvent.keyboard(' ');
     expect($.getMusicPlaybackStatus(store.getState())).toBe('paused');
   });
 
@@ -129,8 +139,8 @@ describe('track interactions', () => {
     const list = screen.getByRole('listbox', { name: 'Tracks' });
     await act(async () => {
       list.focus();
+      await userEvent.keyboard(' ');
     });
-    await userEvent.keyboard(' ');
     expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
   });
 });
@@ -176,7 +186,9 @@ describe('PlaybackBar', () => {
 
   it('clicking the Pause button dispatches pause', async () => {
     const { store } = await setupPlaying();
-    await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    });
     expect($.getMusicPlaybackStatus(store.getState())).toBe('paused');
   });
 
@@ -187,7 +199,9 @@ describe('PlaybackBar', () => {
       store.dispatch(A.musicPlaybackReady());
       store.dispatch(A.musicPlaybackPause());
     });
-    await userEvent.click(screen.getByRole('button', { name: 'Play' }));
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Play' }));
+    });
     expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
   });
 
@@ -229,9 +243,11 @@ describe('filter panels', () => {
   it('clicking an item selects it', async () => {
     const { store } = setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
-    await userEvent.click(
-      within(genreList).getByRole('option', { name: 'Rock' }),
-    );
+    await act(async () => {
+      await userEvent.click(
+        within(genreList).getByRole('option', { name: 'Rock' }),
+      );
+    });
     expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
   });
 
@@ -241,16 +257,20 @@ describe('filter panels', () => {
       store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
     });
     const genreList = screen.getByRole('listbox', { name: 'genre' });
-    await userEvent.click(
-      within(genreList).getByRole('option', { name: '« All Genres »' }),
-    );
+    await act(async () => {
+      await userEvent.click(
+        within(genreList).getByRole('option', { name: '« All Genres »' }),
+      );
+    });
     expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
   });
 
   it('ArrowDown selects the first item when none is selected', async () => {
     const { store } = setup();
-    screen.getByRole('listbox', { name: 'genre' }).focus();
-    await userEvent.keyboard('{ArrowDown}');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      await userEvent.keyboard('{ArrowDown}');
+    });
     expect($.getMusicPanelSelections(store.getState()).genre).toBe('Jazz');
   });
 
@@ -259,8 +279,10 @@ describe('filter panels', () => {
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', 'Jazz'));
     });
-    screen.getByRole('listbox', { name: 'genre' }).focus();
-    await userEvent.keyboard('{ArrowDown}');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      await userEvent.keyboard('{ArrowDown}');
+    });
     expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
   });
 
@@ -269,8 +291,10 @@ describe('filter panels', () => {
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
     });
-    screen.getByRole('listbox', { name: 'genre' }).focus();
-    await userEvent.keyboard('{ArrowDown}');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      await userEvent.keyboard('{ArrowDown}');
+    });
     expect($.getMusicPanelSelections(store.getState()).genre).toBe('Rock');
   });
 
@@ -279,15 +303,19 @@ describe('filter panels', () => {
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', 'Jazz'));
     });
-    screen.getByRole('listbox', { name: 'genre' }).focus();
-    await userEvent.keyboard('{ArrowUp}');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      await userEvent.keyboard('{ArrowUp}');
+    });
     expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
   });
 
   it('ArrowUp does nothing when All is active', async () => {
     const { store } = setup();
-    screen.getByRole('listbox', { name: 'genre' }).focus();
-    await userEvent.keyboard('{ArrowUp}');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      await userEvent.keyboard('{ArrowUp}');
+    });
     expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
   });
 
@@ -296,15 +324,19 @@ describe('filter panels', () => {
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', 'Rock'));
     });
-    screen.getByRole('listbox', { name: 'genre' }).focus();
-    await userEvent.keyboard('{Escape}');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      await userEvent.keyboard('{Escape}');
+    });
     expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
   });
 
   it('ArrowRight moves focus to the next panel', async () => {
     setup();
-    screen.getByRole('listbox', { name: 'genre' }).focus();
-    await userEvent.keyboard('{ArrowRight}');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      await userEvent.keyboard('{ArrowRight}');
+    });
     expect(document.activeElement).toBe(
       screen.getByRole('listbox', { name: 'artist' }),
     );
@@ -312,8 +344,10 @@ describe('filter panels', () => {
 
   it('ArrowLeft moves focus to the previous panel', async () => {
     setup();
-    screen.getByRole('listbox', { name: 'artist' }).focus();
-    await userEvent.keyboard('{ArrowLeft}');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'artist' }).focus();
+      await userEvent.keyboard('{ArrowLeft}');
+    });
     expect(document.activeElement).toBe(
       screen.getByRole('listbox', { name: 'genre' }),
     );
@@ -322,25 +356,31 @@ describe('filter panels', () => {
   it('ArrowLeft does nothing on the first panel', async () => {
     setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
-    genreList.focus();
-    await userEvent.keyboard('{ArrowLeft}');
+    await act(async () => {
+      genreList.focus();
+      await userEvent.keyboard('{ArrowLeft}');
+    });
     expect(document.activeElement).toBe(genreList);
   });
 
   it('ArrowRight does nothing on the last panel', async () => {
     setup();
     const albumList = screen.getByRole('listbox', { name: 'album' });
-    albumList.focus();
-    await userEvent.keyboard('{ArrowRight}');
+    await act(async () => {
+      albumList.focus();
+      await userEvent.keyboard('{ArrowRight}');
+    });
     expect(document.activeElement).toBe(albumList);
   });
 
   it('a genre selection cascades to narrow the artist panel', async () => {
     setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
-    await userEvent.click(
-      within(genreList).getByRole('option', { name: 'Jazz' }),
-    );
+    await act(async () => {
+      await userEvent.click(
+        within(genreList).getByRole('option', { name: 'Jazz' }),
+      );
+    });
     const artistList = screen.getByRole('listbox', { name: 'artist' });
     expect(
       within(artistList).getByRole('option', { name: 'Artist A' }),

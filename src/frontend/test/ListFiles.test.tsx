@@ -229,8 +229,8 @@ describe('ListFiles', () => {
     });
 
     const renameInput = await screen.findByDisplayValue('README.md');
-    await user.clear(renameInput);
     await act(async () => {
+      await user.clear(renameInput);
       await user.type(renameInput, 'Journal.md{Enter}');
     });
 
