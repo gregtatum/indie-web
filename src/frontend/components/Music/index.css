@@ -73,6 +73,7 @@
 }
 
 .musicLibraryView {
+  user-select: none;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -246,16 +247,6 @@
   min-height: 0;
   position: relative;
   overflow: hidden;
-
-  &:focus-within::after {
-    content: "";
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-    pointer-events: none;
-    border: var(--outline-focus);
-    border-radius: 2px;
-  }
 
   &:focus-within .musicSong.selected {
     background: var(--selection-active);
