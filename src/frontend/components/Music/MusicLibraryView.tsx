@@ -200,7 +200,10 @@ function ColumnHeader({
         let remaining = dx;
         for (let i = myIndex; i < columnOrder.length && remaining > 0; i++) {
           const key = columnOrder[i];
-          const shrinkBy = Math.min(remaining, Math.max(0, result[key] - COL_MIN_WIDTH));
+          const shrinkBy = Math.min(
+            remaining,
+            Math.max(0, result[key] - COL_MIN_WIDTH),
+          );
           result[key] -= shrinkBy;
           remaining -= shrinkBy;
         }
@@ -221,7 +224,8 @@ function ColumnHeader({
         }
         if (remaining > 0) {
           const songCurrent =
-            maxAvailableWidth - columnOrder.reduce((sum, k) => sum + result[k], 0);
+            maxAvailableWidth -
+            columnOrder.reduce((sum, k) => sum + result[k], 0);
           const canTake = Math.max(0, songCurrent - SONG_MIN_WIDTH);
           result[columnKey] += Math.min(remaining, canTake);
         }
@@ -574,6 +578,8 @@ function FilterPanelItem({
   );
 }
 
+const sizeEstimate = 32;
+
 function Songs() {
   const tracks = $$.getFilteredMusicTracks();
   const selectedPath = $$.getMusicSelectedTrackPath();
@@ -595,10 +601,9 @@ function Songs() {
     count: tracks.length,
     getScrollElement: () => listRef.current,
     // Must match the height set on .musicSong in index.css (box-sizing: border-box).
-    // Derived from: padding-v (8px×2) + border-bottom (1px) + line-height (~16.5px) ≈ 33.5px.
-    // Rounded up to 34 per the TanStack Virtual recommendation to estimate the
-    // largest plausible size when not using dynamic measurement.
-    estimateSize: () => 34,
+    // Derived from: padding-v (8px×2) + border-bottom (1px) + line-height.
+    // Estimate the largest plausible size when not using dynamic measurement.
+    estimateSize: () => sizeEstimate,
     overscan: 5,
   });
 
@@ -753,7 +758,7 @@ function Song({
         top: 0,
         left: 0,
         width: '100%',
-        height: '34px',
+        height: `${sizeEstimate}px`,
         transform: `translateY(${offsetTop}px)`,
       }}
       onClick={() =>
@@ -765,11 +770,7 @@ function Song({
       }}
     >
       <span className="musicSongTrack" aria-hidden="true">
-        {isPlaying ? (
-          <img src="/svg/play.svg" alt="" />
-        ) : (
-          track.track ?? ''
-        )}
+        {isPlaying ? <img src="/svg/play.svg" alt="" /> : (track.track ?? '')}
       </span>
       <span className="musicSongTitle">{track.title ?? track.path}</span>
       <span className="musicSongArtist">{track.artist}</span>

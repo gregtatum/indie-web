@@ -9,6 +9,7 @@
   --music-padding-h: 12px;
   --music-label-font-size: 11px;
   --music-meta-font-size: 13px;
+  --music-item-font-size: 14px;
   --success-color: green;
   --error-color: red;
 
@@ -140,6 +141,7 @@
   flex: 1;
   outline: none;
   padding-block: calc(var(--music-padding-h) / 2);
+  font-size: var(--music-item-font-size);
 }
 
 .musicFilterPanelItem {
@@ -291,7 +293,7 @@
 
 .musicSongTrack {
   flex: 0 0 var(--column-track);
-  font-size: var(--music-label-font-size);
+  font-size: var(--music-item-font-size);
   font-variant-numeric: tabular-nums;
   opacity: 0.5;
   text-align: right;
@@ -308,11 +310,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--music-item-font-size);
 }
 
 .musicSongArtist {
   flex: 0 0 var(--column-artist);
-  font-size: var(--music-meta-font-size);
+  font-size: var(--music-item-font-size);
   opacity: 0.6;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -321,7 +324,7 @@
 
 .musicSongAlbum {
   flex: 0 0 var(--column-album);
-  font-size: var(--music-meta-font-size);
+  font-size: var(--music-item-font-size);
   opacity: 0.6;
   overflow: hidden;
   text-overflow: ellipsis;
