@@ -30,7 +30,7 @@ export function Messages() {
     };
   }, []);
 
-  return (
+  return Hooks.overlayPortal(
     <div className="messages">
       {messages.map(({ message, generation }) => (
         <div className="messagesMessage" key={generation}>
@@ -45,6 +45,6 @@ export function Messages() {
           </button>
         </div>
       ))}
-    </div>
+    </div>,
   );
 }
