@@ -1,3 +1,36 @@
+const PRIORITY_IDS = [
+  'TIT2', // Title
+  'TPE1', // Artist
+  'TPE2', // Album Artist
+  'TALB', // Album
+  'TRCK', // Track Number
+  'TPOS', // Disc Number
+  'TCON', // Genre
+  'TYER', // Year
+  'TCOM', // Composer
+  'TEXT', // Lyricist
+  'COMM', // Comments
+  'USLT', // Lyrics
+  'APIC', // Attached Picture
+  'TBPM', // BPM
+  'TKEY', // Initial Key
+];
+
+const priorityIndex = new Map(PRIORITY_IDS.map((id, i) => [id, i]));
+
+export function sortTags<T extends { id: string }>(tags: T[]): T[] {
+  return [...tags].sort((a, b) => {
+    const ai = priorityIndex.get(a.id);
+    const bi = priorityIndex.get(b.id);
+    if (ai !== undefined && bi !== undefined) return ai - bi;
+    if (ai !== undefined) return -1;
+    if (bi !== undefined) return 1;
+    const aLabel = id3FrameLabels[a.id as keyof typeof id3FrameLabels] ?? a.id;
+    const bLabel = id3FrameLabels[b.id as keyof typeof id3FrameLabels] ?? b.id;
+    return aLabel.localeCompare(bLabel);
+  });
+}
+
 export const id3FrameLabels = {
   AENC: 'Audio Encryption',
   APIC: 'Attached Picture',

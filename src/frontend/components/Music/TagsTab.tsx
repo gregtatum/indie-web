@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { A, Hooks } from 'frontend';
 import { formatBytes } from 'frontend/utils';
+import { id3FrameLabels, sortTags } from 'frontend/logic/music/tags';
 import type { TrackTagsResponse } from 'shared/@types/shared';
 
 interface Props {
@@ -77,47 +78,58 @@ export function TagsTab({ trackPath, serverUrl }: Props) {
         tags.length === 0 ? null : (
           <div key={format}>
             <div className="editTrackModalTagsFormat">{format}</div>
-            {tags.map(({ id, value, binary }, i) => (
-              <div key={i} className="editTrackModalTagRow">
-                <input
-                  className="editTrackModalTagInput editTrackModalTagInput-key"
-                  value={id}
-                  readOnly
-                />
-                {binary !== undefined ? (
-                  <div className="editTrackModalTagBinaryCell">
+            <div className="editTrackModalTagsBlock">
+            {sortTags(tags).map(({ id, value, binary }, i) => {
+              const label =
+                id3FrameLabels[id as keyof typeof id3FrameLabels] ?? id;
+              return (
+                <div key={i} className="editTrackModalTagRow">
+                  <span
+                    className="editTrackModalTagLabel"
+                    title={id}
+                  >
+                    {label}
+                  </span>
+                  {binary !== undefined ? (
+                    <div className="editTrackModalTagBinaryCell">
+                      <input
+                        className="editTrackModalTagInput editTrackModalTagInput-binary"
+                        value={value}
+                        title={id}
+                        readOnly
+                      />
+                      <button
+                        className="editTrackModalTagLogButton"
+                        onClick={() => {
+                          const bytes = Uint8Array.from(atob(binary), (c) =>
+                            c.charCodeAt(0),
+                          );
+                          console.log(
+                            `[Tags] ${format} / ${id}:`,
+                            bytes.buffer,
+                          );
+                          dispatch(
+                            A.addMessage({
+                              message: `Logged ${id} to console (${formatBytes(bytes.byteLength)})`,
+                              timeout: true,
+                            }),
+                          );
+                        }}
+                      >
+                        {formatBytes(base64ByteLength(binary))}
+                      </button>
+                    </div>
+                  ) : (
                     <input
-                      className="editTrackModalTagInput editTrackModalTagInput-binary"
+                      className="editTrackModalTagInput"
                       value={value}
                       readOnly
                     />
-                    <button
-                      className="editTrackModalTagLogButton"
-                      onClick={() => {
-                        const bytes = Uint8Array.from(atob(binary), (c) =>
-                          c.charCodeAt(0),
-                        );
-                        console.log(`[Tags] ${format} / ${id}:`, bytes.buffer);
-                        dispatch(
-                          A.addMessage({
-                            message: `Logged ${id} to console (${formatBytes(bytes.byteLength)})`,
-                            timeout: true,
-                          }),
-                        );
-                      }}
-                    >
-                      {formatBytes(base64ByteLength(binary))}
-                    </button>
-                  </div>
-                ) : (
-                  <input
-                    className="editTrackModalTagInput"
-                    value={value}
-                    readOnly
-                  />
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
+            </div>
           </div>
         ),
       )}

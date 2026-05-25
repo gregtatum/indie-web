@@ -5,7 +5,7 @@ import { Tabs } from 'frontend/components/Tabs';
 import { TagsTab } from './TagsTab';
 import './EditTrackModal.css';
 
-type TabId = 'details' | 'artwork' | 'tags';
+type TabId = 'details' | 'artwork' | 'id3';
 
 interface Props {
   trackPath: string | null;
@@ -115,8 +115,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       ),
     },
     {
-      id: 'tags' as TabId,
-      label: 'Tags',
+      id: 'id3' as TabId,
+      label: 'ID3',
       panel:
         track && server ? (
           <TagsTab trackPath={track.path} serverUrl={server.url} />
