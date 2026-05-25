@@ -106,7 +106,7 @@ export function TagsTab({ trackPath, serverUrl }: Props) {
                         );
                       }}
                     >
-                      {`data ${formatBytes(base64ByteLength(binary))}`}
+                      {formatBytes(base64ByteLength(binary))}
                     </button>
                   </div>
                 ) : (
