@@ -157,3 +157,32 @@
   color: #aaa;
   font-style: italic;
 }
+
+.editTrackModalTagBinaryCell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.editTrackModalTagBinaryCell .editTrackModalTagInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.editTrackModalTagLogButton {
+  flex-shrink: 0;
+  font-size: var(--font-size-small);
+  font-family: inherit;
+  padding: 4px 10px;
+  border: 1px solid var(--light-border);
+  border-radius: var(--button-border-radius);
+  background: #f0f0f0;
+  color: #444;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.editTrackModalTagLogButton:hover {
+  background: #e4e4e4;
+}

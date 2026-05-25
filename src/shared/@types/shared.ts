@@ -99,8 +99,10 @@ export interface MusicIndex {
 
 export interface RawTagEntry {
   id: string;
-  /** Server-serialized to a human-readable string. Binary data becomes '[binary]'. */
+  /** Human-readable string representation. Describes binary entries without raw bytes. */
   value: string;
+  /** Base64-encoded binary payload. Present when the tag value contains binary data (e.g. APIC embedded pictures). */
+  binary?: string;
 }
 
 export interface TrackTagsResponse {

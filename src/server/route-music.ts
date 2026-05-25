@@ -198,10 +198,12 @@ export function musicRoute(mountPath: string) {
     const native = Object.entries(meta.native ?? {}).map(
       ([format, frames]) => ({
         format,
-        tags: frames.map((frame) => ({
-          id: frame.id,
-          value: serializeTagValue(frame.value),
-        })),
+        tags: frames.map((frame) => {
+          const { value, binary } = serializeTag(frame.value);
+          return binary !== undefined
+            ? { id: frame.id, value, binary }
+            : { id: frame.id, value };
+        }),
       }),
     );
     return { native };
@@ -383,25 +385,47 @@ function resolveMountedPath(clientPath: string, mountPath: string): string {
   return resolvedPath;
 }
 
-function serializeTagValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
+function isBinary(value: unknown): value is Buffer | Uint8Array {
+  return Buffer.isBuffer(value) || ArrayBuffer.isView(value);
+}
+
+function toBinaryBase64(value: Buffer | Uint8Array): string {
+  return Buffer.isBuffer(value)
+    ? value.toString('base64')
+    : Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString(
+        'base64',
+      );
+}
+
+function serializeTag(value: unknown): { value: string; binary?: string } {
+  if (value === null || value === undefined) return { value: '' };
+  if (typeof value === 'string') return { value };
   if (typeof value === 'number' || typeof value === 'boolean')
-    return String(value);
-  if (Buffer.isBuffer(value)) return '[binary]';
-  if (Array.isArray(value)) return value.map(serializeTagValue).join(', ');
+    return { value: String(value) };
+  if (isBinary(value))
+    return { value: '[binary]', binary: toBinaryBase64(value) };
+  if (Array.isArray(value))
+    return { value: value.map((v) => serializeTag(v).value).join(', ') };
   if (typeof value === 'object') {
-    if ('data' in (value as Record<string, unknown>)) {
-      const inner = (value as Record<string, unknown>).data;
-      if (Buffer.isBuffer(inner)) return '[binary]';
+    const obj = value as Record<string, unknown>;
+    if ('data' in obj && isBinary(obj.data)) {
+      // Build a human-readable label from non-binary fields (e.g. APIC: "image/jpeg — Cover (front)")
+      const { data, ...rest } = obj;
+      const parts = Object.entries(rest)
+        .filter(([, v]) => v !== '' && v != null)
+        .map(([, v]) => String(v));
+      return {
+        value: parts.length > 0 ? parts.join(' — ') : '[binary]',
+        binary: toBinaryBase64(obj.data as Buffer | Uint8Array),
+      };
     }
     try {
-      return JSON.stringify(value);
+      return { value: JSON.stringify(value) };
     } catch {
-      return '[object]';
+      return { value: '[object]' };
     }
   }
-  return String(value);
+  return { value: String(value) };
 }
 
 async function findAudioFiles(

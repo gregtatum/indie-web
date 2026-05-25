@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { A, Hooks } from 'frontend';
+import { formatBytes } from 'frontend/utils';
 import type { TrackTagsResponse } from 'shared/@types/shared';
 
 interface Props {
@@ -11,7 +13,13 @@ type State =
   | { status: 'loaded'; data: TrackTagsResponse }
   | { status: 'error'; message: string };
 
+function base64ByteLength(base64: string): number {
+  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  return (base64.length / 4) * 3 - padding;
+}
+
 export function TagsTab({ trackPath, serverUrl }: Props) {
+  const dispatch = Hooks.useDispatch();
   const [state, setState] = React.useState<State>({ status: 'loading' });
 
   React.useEffect(() => {
@@ -63,26 +71,51 @@ export function TagsTab({ trackPath, serverUrl }: Props) {
     );
   }
 
-  console.log(`!!! native`, native);
-
   return (
     <div className="editTrackModalTags">
       {native.map(({ format, tags }) =>
         tags.length === 0 ? null : (
           <div key={format}>
             <div className="editTrackModalTagsFormat">{format}</div>
-            {tags.map(({ id, value }, i) => (
+            {tags.map(({ id, value, binary }, i) => (
               <div key={i} className="editTrackModalTagRow">
                 <input
                   className="editTrackModalTagInput editTrackModalTagInput-key"
                   value={id}
                   readOnly
                 />
-                <input
-                  className={`editTrackModalTagInput${value === '[binary]' ? ' editTrackModalTagInput-binary' : ''}`}
-                  value={value}
-                  readOnly
-                />
+                {binary !== undefined ? (
+                  <div className="editTrackModalTagBinaryCell">
+                    <input
+                      className="editTrackModalTagInput editTrackModalTagInput-binary"
+                      value={value}
+                      readOnly
+                    />
+                    <button
+                      className="editTrackModalTagLogButton"
+                      onClick={() => {
+                        const bytes = Uint8Array.from(atob(binary), (c) =>
+                          c.charCodeAt(0),
+                        );
+                        console.log(`[Tags] ${format} / ${id}:`, bytes.buffer);
+                        dispatch(
+                          A.addMessage({
+                            message: `Logged ${id} to console (${formatBytes(bytes.byteLength)})`,
+                            timeout: true,
+                          }),
+                        );
+                      }}
+                    >
+                      {`data ${formatBytes(base64ByteLength(binary))}`}
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    className="editTrackModalTagInput"
+                    value={value}
+                    readOnly
+                  />
+                )}
               </div>
             ))}
           </div>
