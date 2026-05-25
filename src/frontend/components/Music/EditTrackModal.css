@@ -136,6 +136,7 @@
   text-align: right;
   color: #666;
   white-space: nowrap;
+  min-width: 100px;
 }
 
 .editTrackModalTagInput {
