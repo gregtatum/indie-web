@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { A, Hooks } from 'frontend';
 import { formatBytes } from 'frontend/utils';
-import { id3FrameLabels, sortTags } from 'frontend/logic/music/tags';
+import {
+  id3FrameLabels,
+  id3FrameTooltips,
+  sortTags,
+} from 'frontend/logic/music/tags';
 import type { TrackTagsResponse } from 'shared/@types/shared';
 
 interface Props {
@@ -18,6 +22,7 @@ function base64ByteLength(base64: string): number {
   const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
   return (base64.length / 4) * 3 - padding;
 }
+
 
 export function TagsTab({ trackPath, serverUrl }: Props) {
   const dispatch = Hooks.useDispatch();
@@ -82,12 +87,12 @@ export function TagsTab({ trackPath, serverUrl }: Props) {
             {sortTags(tags).map(({ id, value, binary }, i) => {
               const label =
                 id3FrameLabels[id as keyof typeof id3FrameLabels] ?? id;
+              const tooltip =
+                id3FrameTooltips[id as keyof typeof id3FrameTooltips];
+              const title = tooltip ? `${id} – ${tooltip}` : id;
               return (
                 <div key={i} className="editTrackModalTagRow">
-                  <span
-                    className="editTrackModalTagLabel"
-                    title={id}
-                  >
+                  <span className="editTrackModalTagLabel" title={title}>
                     {label}
                   </span>
                   {binary !== undefined ? (
@@ -95,7 +100,7 @@ export function TagsTab({ trackPath, serverUrl }: Props) {
                       <input
                         className="editTrackModalTagInput editTrackModalTagInput-binary"
                         value={value}
-                        title={id}
+                        title={title}
                         readOnly
                       />
                       <button

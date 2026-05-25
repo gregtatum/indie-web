@@ -303,14 +303,18 @@ async function performScan(
       coverArt = coverArtDirCache.get(dirClientPath)!;
     } else {
       coverArt = null;
-      for (const name of COVER_ART_FILENAMES) {
-        try {
-          await fs.access(join(dirFullPath, name));
-          coverArt = join(dirClientPath, name);
-          break;
-        } catch {
-          // not found, try next
+      try {
+        const entries = await fs.readdir(dirFullPath);
+        const entryMap = new Map(entries.map((e) => [e.toLowerCase(), e]));
+        for (const name of COVER_ART_FILENAMES) {
+          const actual = entryMap.get(name.toLowerCase());
+          if (actual) {
+            coverArt = join(dirClientPath, actual);
+            break;
+          }
         }
+      } catch {
+        // directory unreadable, no cover art
       }
       coverArtDirCache.set(dirClientPath, coverArt);
     }

@@ -184,3 +184,85 @@
 .editTrackModalTagLogButton:hover {
   background: #e4e4e4;
 }
+
+.editTrackModalArtworkSections {
+  padding: 20px 24px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  overflow-y: auto;
+}
+
+.artworkBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.artworkBlockLabel {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #999;
+}
+
+.artworkSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.artworkSectionImage {
+  /* max-width capped to naturalWidth via inline style after onLoad */
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  border-radius: 6px;
+  border: 1px solid var(--light-border);
+}
+
+.artworkSectionError {
+  font-size: var(--font-size-small);
+  color: #aaa;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.artworkSectionDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.artworkSectionDetailsRow {
+  display: flex;
+  gap: 12px;
+  font-size: var(--font-size-small);
+  color: #888;
+}
+
+.artworkSectionDetailsKey {
+  color: #bbb;
+  min-width: 72px;
+}
+
+.artworkSectionDetailsLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: #ccc;
+  word-break: break-all;
+}
+
+.artworkSectionDetailsLink:hover {
+  color: #444;
+  text-decoration-color: #888;
+}

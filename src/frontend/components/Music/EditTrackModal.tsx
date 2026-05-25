@@ -2,6 +2,7 @@ import * as React from 'react';
 import { $$ } from 'frontend';
 import { Modal } from 'frontend/components/Modal';
 import { Tabs } from 'frontend/components/Tabs';
+import { ArtworkTab } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
 import './EditTrackModal.css';
 
@@ -100,19 +101,19 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     {
       id: 'artwork' as TabId,
       label: 'Artwork',
-      panel: (
-        <div className="editTrackModalArtwork">
-          {artUrl ? (
-            <img
-              className="editTrackModalArtworkImage"
-              src={artUrl}
-              alt="Album artwork"
-            />
-          ) : (
-            <div className="editTrackModalArtworkEmpty">No artwork found</div>
-          )}
-        </div>
-      ),
+      panel:
+        track && server ? (
+          <ArtworkTab
+            trackPath={track.path}
+            serverUrl={server.url}
+            artUrl={artUrl}
+            coverArtPath={track.coverArt ?? null}
+          />
+        ) : (
+          <div className="editTrackModalArtwork">
+            <div className="editTrackModalArtworkEmpty">No track selected</div>
+          </div>
+        ),
     },
     {
       id: 'id3' as TabId,
