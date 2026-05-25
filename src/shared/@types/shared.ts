@@ -96,3 +96,16 @@ export interface MusicIndex {
   scannedAt: string;
   tracks: TrackMetadata[];
 }
+
+export interface RawTagEntry {
+  id: string;
+  /** Server-serialized to a human-readable string. Binary data becomes '[binary]'. */
+  value: string;
+}
+
+export interface TrackTagsResponse {
+  native: Array<{
+    format: string;
+    tags: RawTagEntry[];
+  }>;
+}

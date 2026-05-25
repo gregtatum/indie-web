@@ -184,6 +184,30 @@ export function musicRoute(mountPath: string) {
   });
 
   /**
+   * Returns all raw native tag frames for a single audio file, serialized to
+   * human-readable strings. Binary values (e.g. embedded pictures) are
+   * represented as '[binary]'. Grouped by tag format (e.g. 'ID3v2.4', 'vorbis').
+   */
+  route.get('/track-tags', async (req): Promise<T.TrackTagsResponse> => {
+    const clientPath = req.query.path;
+    if (typeof clientPath !== 'string' || !clientPath) {
+      throw new ClientError('Missing path query parameter.');
+    }
+    const resolvedPath = resolveMountedPath(clientPath, mountPath);
+    const meta = await parseFile(resolvedPath);
+    const native = Object.entries(meta.native ?? {}).map(
+      ([format, frames]) => ({
+        format,
+        tags: frames.map((frame) => ({
+          id: frame.id,
+          value: serializeTagValue(frame.value),
+        })),
+      }),
+    );
+    return { native };
+  });
+
+  /**
    * Serves a cover art image stored in an album directory.
    * Accepts a ?path= query parameter using the same client-path convention as
    * stream-audio (e.g. /Artist/Album/Folder.jpg).
@@ -357,6 +381,27 @@ function resolveMountedPath(clientPath: string, mountPath: string): string {
     );
   }
   return resolvedPath;
+}
+
+function serializeTagValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean')
+    return String(value);
+  if (Buffer.isBuffer(value)) return '[binary]';
+  if (Array.isArray(value)) return value.map(serializeTagValue).join(', ');
+  if (typeof value === 'object') {
+    if ('data' in (value as Record<string, unknown>)) {
+      const inner = (value as Record<string, unknown>).data;
+      if (Buffer.isBuffer(inner)) return '[binary]';
+    }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '[object]';
+    }
+  }
+  return String(value);
 }
 
 async function findAudioFiles(

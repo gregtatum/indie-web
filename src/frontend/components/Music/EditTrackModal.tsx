@@ -2,9 +2,10 @@ import * as React from 'react';
 import { $$ } from 'frontend';
 import { Modal } from 'frontend/components/Modal';
 import { Tabs } from 'frontend/components/Tabs';
+import { TagsTab } from './TagsTab';
 import './EditTrackModal.css';
 
-type TabId = 'details' | 'artwork';
+type TabId = 'details' | 'artwork' | 'tags';
 
 interface Props {
   trackPath: string | null;
@@ -112,6 +113,18 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           )}
         </div>
       ),
+    },
+    {
+      id: 'tags' as TabId,
+      label: 'Tags',
+      panel:
+        track && server ? (
+          <TagsTab trackPath={track.path} serverUrl={server.url} />
+        ) : (
+          <div className="editTrackModalTags">
+            <div className="editTrackModalTagsLoading">No track selected</div>
+          </div>
+        ),
     },
   ];
 

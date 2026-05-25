@@ -74,6 +74,11 @@ function setup(tracks = TRACKS) {
     },
   );
 
+  (window.fetch as FetchMockSandbox).get(
+    new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+    { body: JSON.stringify({ native: [] }), status: 200 },
+  );
+
   render(
     <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
       <Provider store={store as any}>

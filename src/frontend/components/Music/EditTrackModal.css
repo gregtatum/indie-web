@@ -103,3 +103,57 @@
   color: #999;
   font-size: var(--font-size-small);
 }
+
+/* ── Tags tab ────────────────────────────────────────────── */
+
+.editTrackModalTags {
+  padding: 0 24px 20px;
+  background: #fff;
+  overflow-y: auto;
+}
+
+.editTrackModalTagsFormat {
+  font-size: var(--font-size-small);
+  color: #999;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 16px 0 8px;
+}
+
+.editTrackModalTagsLoading {
+  padding: 24px 0;
+  color: #999;
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
+.editTrackModalTagRow {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.editTrackModalTagInput {
+  font-size: var(--font-size-small);
+  font-family: inherit;
+  padding: 5px 8px;
+  border: 1px solid var(--light-border);
+  border-radius: var(--button-border-radius);
+  background: #fafafa;
+  color: #000;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.editTrackModalTagInput-key {
+  font-family: monospace;
+  color: #555;
+}
+
+.editTrackModalTagInput-binary {
+  color: #aaa;
+  font-style: italic;
+}
