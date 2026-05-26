@@ -159,7 +159,11 @@ export const id3FrameTooltips = {
 // ---------------------------------------------------------------------------
 
 export type DetailFieldType = 'text' | 'number' | 'split';
-export type DetailFieldGroup = 'core' | 'position' | 'classification' | 'credits';
+export type DetailFieldGroup =
+  | 'core'
+  | 'position'
+  | 'classification'
+  | 'credits';
 
 export interface DetailField {
   frameId: string;
@@ -183,21 +187,95 @@ export function isSplitField(field: AnyDetailField): field is SplitDetailField {
 
 export const detailFields: AnyDetailField[] = [
   // core
-  { frameId: 'TIT2', key: 'title',       label: 'Title',        type: 'text', group: 'core' },
-  { frameId: 'TPE1', key: 'artist',      label: 'Artist',       type: 'text', group: 'core' },
-  { frameId: 'TPE2', key: 'albumArtist', label: 'Album Artist', type: 'text', group: 'core' },
-  { frameId: 'TALB', key: 'album',       label: 'Album',        type: 'text', group: 'core' },
+  {
+    frameId: 'TIT2',
+    key: 'title',
+    label: 'Title',
+    type: 'text',
+    group: 'core',
+  },
+  {
+    frameId: 'TPE1',
+    key: 'artist',
+    label: 'Artist',
+    type: 'text',
+    group: 'core',
+  },
+  {
+    frameId: 'TPE2',
+    key: 'albumArtist',
+    label: 'Album Artist',
+    type: 'text',
+    group: 'core',
+  },
+  {
+    frameId: 'TALB',
+    key: 'album',
+    label: 'Album',
+    type: 'text',
+    group: 'core',
+  },
   // position — track/disc use "N/total" split inputs
-  { frameId: 'TRCK', key: 'trackNum', totalKey: 'trackTotal', label: 'Track', type: 'split', group: 'position' } as SplitDetailField,
-  { frameId: 'TPOS', key: 'discNum',  totalKey: 'discTotal',  label: 'Disc',  type: 'split', group: 'position' } as SplitDetailField,
-  { frameId: 'TYER', key: 'year',        label: 'Year',         type: 'number', group: 'position' },
+  {
+    frameId: 'TRCK',
+    key: 'trackNum',
+    totalKey: 'trackTotal',
+    label: 'Track',
+    type: 'split',
+    group: 'position',
+  } as SplitDetailField,
+  {
+    frameId: 'TPOS',
+    key: 'discNum',
+    totalKey: 'discTotal',
+    label: 'Disc',
+    type: 'split',
+    group: 'position',
+  } as SplitDetailField,
+  {
+    frameId: 'TYER',
+    key: 'year',
+    label: 'Year',
+    type: 'number',
+    group: 'position',
+  },
   // classification
-  { frameId: 'TCON', key: 'genre',       label: 'Genre',        type: 'text',   group: 'classification' },
-  { frameId: 'TBPM', key: 'bpm',         label: 'BPM',          type: 'number', group: 'classification' },
+  {
+    frameId: 'TCON',
+    key: 'genre',
+    label: 'Genre',
+    type: 'text',
+    group: 'classification',
+  },
+  {
+    frameId: 'TBPM',
+    key: 'bpm',
+    label: 'BPM',
+    type: 'number',
+    group: 'classification',
+  },
   // credits
-  { frameId: 'TCOM', key: 'composer',    label: 'Composer',     type: 'text', group: 'credits' },
-  { frameId: 'TEXT', key: 'lyricist',    label: 'Lyricist',     type: 'text', group: 'credits' },
-  { frameId: 'COMM', key: 'comment',     label: 'Comment',      type: 'text', group: 'credits' },
+  {
+    frameId: 'TCOM',
+    key: 'composer',
+    label: 'Composer',
+    type: 'text',
+    group: 'credits',
+  },
+  {
+    frameId: 'TEXT',
+    key: 'lyricist',
+    label: 'Lyricist',
+    type: 'text',
+    group: 'credits',
+  },
+  {
+    frameId: 'COMM',
+    key: 'comment',
+    label: 'Comment',
+    type: 'text',
+    group: 'credits',
+  },
 ];
 
 export type TagsState =
@@ -253,12 +331,12 @@ export function seedFormState(
 
   // Fall back to TrackMetadata for the fields it tracks, where native tags are empty
   if (track) {
-    if (!state['title'] && track.title) state['title'] = track.title;
-    if (!state['artist'] && track.artist) state['artist'] = track.artist;
-    if (!state['album'] && track.album) state['album'] = track.album;
-    if (!state['genre'] && track.genre) state['genre'] = track.genre;
-    if (!state['trackNum'] && track.track != null)
-      state['trackNum'] = String(track.track);
+    if (!state.title && track.title) state.title = track.title;
+    if (!state.artist && track.artist) state.artist = track.artist;
+    if (!state.album && track.album) state.album = track.album;
+    if (!state.genre && track.genre) state.genre = track.genre;
+    if (!state.trackNum && track.track != null)
+      state.trackNum = String(track.track);
   }
 
   return state;

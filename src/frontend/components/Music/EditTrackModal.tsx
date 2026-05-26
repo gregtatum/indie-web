@@ -34,14 +34,17 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const server = $$.getCurrentServerOrNull();
 
   const [activeTab, setActiveTab] = React.useState<TabId>('details');
-  const [formState, setFormState] = React.useState<Record<string, string>>(buildEmptyFormState);
-  const [tagsState, setTagsState] = React.useState<TagsState>({ status: 'loading' });
+  const [formState, setFormState] =
+    React.useState<Record<string, string>>(buildEmptyFormState);
+  const [tagsState, setTagsState] = React.useState<TagsState>({
+    status: 'loading',
+  });
 
   function setField(key: string, value: string) {
     setFormState((prev) => ({ ...prev, [key]: value }));
   }
 
-  // Reset form immediately from TrackMetadata when track changes
+  // Reset the form immediately from TrackMetadata when track changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     setFormState(seedFormState(track, null));
@@ -53,7 +56,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   React.useEffect(() => {
     if (!trackPath || !server) return;
     let cancelled = false;
-    fetch(`${server.url}/music/track-tags?path=${encodeURIComponent(trackPath)}`)
+    fetch(
+      `${server.url}/music/track-tags?path=${encodeURIComponent(trackPath)}`,
+    )
       .then((res) => {
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
         return res.json() as Promise<TrackTagsResponse>;
@@ -163,14 +168,13 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     {
       id: 'id3' as TabId,
       label: 'ID3',
-      panel:
-        track ? (
-          <TagsTab tagsState={tagsState} />
-        ) : (
-          <div className="editTrackModalTags">
-            <div className="editTrackModalTagsLoading">No track selected</div>
-          </div>
-        ),
+      panel: track ? (
+        <TagsTab tagsState={tagsState} />
+      ) : (
+        <div className="editTrackModalTags">
+          <div className="editTrackModalTagsLoading">No track selected</div>
+        </div>
+      ),
     },
   ];
 
