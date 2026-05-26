@@ -60,9 +60,13 @@ const Ch = {
 } as const;
 
 function readSymbolNote(input: InputStream) {
-  if (input.next < Ch.A || input.next > Ch.G) return false;
+  if (input.next < Ch.A || input.next > Ch.G) {
+    return false;
+  }
   input.advance();
-  if (input.next == Ch.b || input.next == Ch.Hash) input.advance();
+  if (input.next == Ch.b || input.next == Ch.Hash) {
+    input.advance();
+  }
   return true;
 }
 
@@ -72,26 +76,40 @@ function numeralChar(code: number) {
 
 function readNumeralNote(input: InputStream) {
   let off = 0;
-  if (input.next == Ch.b || input.next == Ch.Hash) off++;
-  if (!numeralChar(input.peek(off))) return false;
+  if (input.next == Ch.b || input.next == Ch.Hash) {
+    off++;
+  }
+  if (!numeralChar(input.peek(off))) {
+    return false;
+  }
   input.advance(off + 1);
-  if (numeralChar(input.next)) input.advance();
-  if (numeralChar(input.next)) input.advance();
+  if (numeralChar(input.next)) {
+    input.advance();
+  }
+  if (numeralChar(input.next)) {
+    input.advance();
+  }
   return true;
 }
 
 function readNumericNote(input: InputStream) {
   let off = 0;
-  if (input.next == Ch.b || input.next == Ch.Hash) off++;
+  if (input.next == Ch.b || input.next == Ch.Hash) {
+    off++;
+  }
   const next = input.peek(off);
-  if (next < Ch.One || next > Ch.Seven) return false;
+  if (next < Ch.One || next > Ch.Seven) {
+    return false;
+  }
   input.advance(off + 1);
   return true;
 }
 
 function readSuffixPart(input: InputStream, off: number) {
   const n = input.peek(off);
-  if (n < 0) return off;
+  if (n < 0) {
+    return off;
+  }
   if (
     n == Ch.b ||
     n == Ch.Hash ||
@@ -100,20 +118,32 @@ function readSuffixPart(input: InputStream, off: number) {
     n == Ch.Plus ||
     n == Ch.Dash ||
     (n >= Ch.Zero && n <= Ch.Nine)
-  )
+  ) {
     return off + 1;
+  }
   const n1 = input.peek(off + 1),
     n2 = input.peek(off + 2);
-  if (n == Ch.n && n1 == Ch.o) return off + 2; // no
-  if (n == Ch.s && n1 == Ch.u && n2 == Ch.s) return off + 3; // sus
-  if (n == Ch.a && ((n1 == Ch.d && n2 == Ch.d) || (n1 == Ch.u && n2 == Ch.g)))
-    return off + 3; // add/aug
-  if (n == Ch.d && (n1 == Ch.i || n1 == Ch.o) && n2 == Ch.m) return off + 3; // dim/dom
-  if (n == Ch.u && n1 == Ch.n && n2 == Ch.i && input.peek(off + 3) == Ch.s)
-    return off + 4; // unis
+  if (n == Ch.n && n1 == Ch.o) {
+    return off + 2;
+  } // no
+  if (n == Ch.s && n1 == Ch.u && n2 == Ch.s) {
+    return off + 3;
+  } // sus
+  if (n == Ch.a && ((n1 == Ch.d && n2 == Ch.d) || (n1 == Ch.u && n2 == Ch.g))) {
+    return off + 3;
+  } // add/aug
+  if (n == Ch.d && (n1 == Ch.i || n1 == Ch.o) && n2 == Ch.m) {
+    return off + 3;
+  } // dim/dom
+  if (n == Ch.u && n1 == Ch.n && n2 == Ch.i && input.peek(off + 3) == Ch.s) {
+    return off + 4;
+  } // unis
   if (n == Ch.t && n1 == Ch.r && n2 == Ch.i) {
-    for (let i = off + 3; i < off + 8; i++)
-      if (input.peek(i) != 'triangle'.charCodeAt(i)) return off;
+    for (let i = off + 3; i < off + 8; i++) {
+      if (input.peek(i) != 'triangle'.charCodeAt(i)) {
+        return off;
+      }
+    }
     return off + 8;
   }
   // Major/Majj/Minor or some prefix of that
@@ -121,15 +151,20 @@ function readSuffixPart(input: InputStream, off: number) {
     if (n1 == Ch.a) {
       if (n2 == Ch.j) {
         const n3 = input.peek(off + 3);
-        if (n3 == Ch.j) return off + 4;
-        if (n3 == Ch.o && input.peek(off + 4) == Ch.r) return off + 5;
+        if (n3 == Ch.j) {
+          return off + 4;
+        }
+        if (n3 == Ch.o && input.peek(off + 4) == Ch.r) {
+          return off + 5;
+        }
         return off + 3;
       }
       return off + 2;
     } else if (n1 == Ch.i) {
       if (n2 == Ch.n) {
-        if (input.peek(off + 3) == Ch.o && input.peek(off + 4) == Ch.r)
+        if (input.peek(off + 3) == Ch.o && input.peek(off + 4) == Ch.r) {
           return off + 5;
+        }
         return off + 3;
       }
       return off + 2;
@@ -142,7 +177,9 @@ function readSuffixPart(input: InputStream, off: number) {
 function readSuffixParts(input: InputStream, off: number) {
   for (;;) {
     const next = readSuffixPart(input, off);
-    if (next == off) return off;
+    if (next == off) {
+      return off;
+    }
     off = next;
   }
 }
@@ -152,20 +189,28 @@ function readChordSuffix(input: InputStream) {
   for (;;) {
     if (input.peek(off) == Ch.ParenL) {
       const end = readSuffixParts(input, off + 1);
-      if (input.peek(end) != Ch.ParenR) break;
+      if (input.peek(end) != Ch.ParenR) {
+        break;
+      }
       off = end + 1;
     } else {
       const end = readSuffixParts(input, off);
-      if (end == off) break;
+      if (end == off) {
+        break;
+      }
       off = end;
     }
   }
-  if (off) input.advance(off);
+  if (off) {
+    input.advance(off);
+  }
 }
 
 function readChord(input: InputStream) {
   const parens = input.next == Ch.ParenL;
-  if (parens) input.advance();
+  if (parens) {
+    input.advance();
+  }
   if (readSymbolNote(input)) {
     readChordSuffix(input);
     if (input.next == Ch.Slash) {
@@ -185,8 +230,9 @@ function readChord(input: InputStream) {
       if (
         !readNumericNote(input) &&
         ((input.next as any) == Ch.b || (input.next as any) == Ch.Hash)
-      )
+      ) {
         input.advance();
+      }
     }
   } else if (input.next == Ch.Slash) {
     input.advance();
@@ -207,8 +253,11 @@ function readChord(input: InputStream) {
     return false;
   }
   if (parens) {
-    if (input.next == Ch.ParenR) input.advance();
-    else return false;
+    if (input.next == Ch.ParenR) {
+      input.advance();
+    } else {
+      return false;
+    }
   }
   return true;
 }
@@ -227,12 +276,20 @@ function wordChar(ch: number) {
 }
 
 function hasDirectiveName(input: InputStream) {
-  if (!wordChar(input.next)) return false;
+  if (!wordChar(input.next)) {
+    return false;
+  }
   let off = 1;
-  while (wordChar(input.peek(off))) off++;
-  if (input.peek(off) != Ch.Colon) return false;
+  while (wordChar(input.peek(off))) {
+    off++;
+  }
+  if (input.peek(off) != Ch.Colon) {
+    return false;
+  }
   off++;
-  while (input.peek(off) == Ch.Space) off++;
+  while (input.peek(off) == Ch.Space) {
+    off++;
+  }
   return !endOfLine(input.peek(off));
 }
 
@@ -254,8 +311,9 @@ function readSectionHeader(input: InputStream) {
       upper = sectionHeadersUpper[i];
     for (let j = 0; j < header.length; j++) {
       const next = input.peek(j);
-      if (next != header.charCodeAt(j) && next != upper.charCodeAt(j))
+      if (next != header.charCodeAt(j) && next != upper.charCodeAt(j)) {
         continue headers;
+      }
     }
     const after = input.peek(header.length);
     if (
@@ -272,14 +330,20 @@ function readSectionHeader(input: InputStream) {
 }
 
 function skipLine(input: InputStream) {
-  while (!endOfLine(input.next)) input.advance();
+  while (!endOfLine(input.next)) {
+    input.advance();
+  }
 }
 
 export const line = new ExternalTokenizer((input, stack) => {
   const prev = input.peek(-1),
     startPos = input.pos;
-  if (prev != -1 && prev != Ch.Newline && prev != Ch.Return) return;
-  while (input.next == Ch.Space || input.next == Ch.Tab) input.advance();
+  if (prev != -1 && prev != Ch.Newline && prev != Ch.Return) {
+    return;
+  }
+  while (input.next == Ch.Space || input.next == Ch.Tab) {
+    input.advance();
+  }
   const maybeComment = input.next == Ch.Hash;
 
   if (input.next == Ch.Newline || input.next == Ch.Return) {
@@ -321,5 +385,7 @@ export const line = new ExternalTokenizer((input, stack) => {
 });
 
 export const chord = new ExternalTokenizer((input) => {
-  if (readChord(input)) input.acceptToken(Chord);
+  if (readChord(input)) {
+    input.acceptToken(Chord);
+  }
 });

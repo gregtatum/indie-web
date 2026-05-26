@@ -92,6 +92,7 @@ export const baseConfigs = [
       'no-useless-constructor': 'error',
       'no-useless-rename': 'error',
       'no-useless-return': 'error',
+      curly: ['error', 'all'],
       'no-var': 'error',
       'no-with': 'error',
       'prefer-const': 'error',

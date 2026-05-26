@@ -6,7 +6,7 @@ export const exampleStringLinter = linter((view) => {
   syntaxTree(view.state)
     .cursor()
     .iterate((node) => {
-      if (node.name === 'String')
+      if (node.name === 'String') {
         diagnostics.push({
           from: node.from,
           to: node.to,
@@ -21,6 +21,7 @@ export const exampleStringLinter = linter((view) => {
             },
           ],
         });
+      }
     });
   return diagnostics;
 });

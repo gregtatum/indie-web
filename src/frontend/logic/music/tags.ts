@@ -24,9 +24,15 @@ export function sortTags<T extends { id: string }>(tags: T[]): T[] {
   return [...tags].sort((a, b) => {
     const ai = priorityIndex.get(a.id);
     const bi = priorityIndex.get(b.id);
-    if (ai !== undefined && bi !== undefined) return ai - bi;
-    if (ai !== undefined) return -1;
-    if (bi !== undefined) return 1;
+    if (ai !== undefined && bi !== undefined) {
+      return ai - bi;
+    }
+    if (ai !== undefined) {
+      return -1;
+    }
+    if (bi !== undefined) {
+      return 1;
+    }
     const aLabel = id3FrameLabels[a.id as keyof typeof id3FrameLabels] ?? a.id;
     const bLabel = id3FrameLabels[b.id as keyof typeof id3FrameLabels] ?? b.id;
     return aLabel.localeCompare(bLabel);
@@ -331,12 +337,21 @@ export function seedFormState(
 
   // Fall back to TrackMetadata for the fields it tracks, where native tags are empty
   if (track) {
-    if (!state.title && track.title) state.title = track.title;
-    if (!state.artist && track.artist) state.artist = track.artist;
-    if (!state.album && track.album) state.album = track.album;
-    if (!state.genre && track.genre) state.genre = track.genre;
-    if (!state.trackNum && track.track != null)
+    if (!state.title && track.title) {
+      state.title = track.title;
+    }
+    if (!state.artist && track.artist) {
+      state.artist = track.artist;
+    }
+    if (!state.album && track.album) {
+      state.album = track.album;
+    }
+    if (!state.genre && track.genre) {
+      state.genre = track.genre;
+    }
+    if (!state.trackNum && track.track != null) {
       state.trackNum = String(track.track);
+    }
   }
 
   return state;

@@ -402,14 +402,21 @@ function toBinaryBase64(value: Buffer | Uint8Array): string {
 }
 
 function serializeTag(value: unknown): { value: string; binary?: string } {
-  if (value === null || value === undefined) return { value: '' };
-  if (typeof value === 'string') return { value };
-  if (typeof value === 'number' || typeof value === 'boolean')
+  if (value === null || value === undefined) {
+    return { value: '' };
+  }
+  if (typeof value === 'string') {
+    return { value };
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
     return { value: String(value) };
-  if (isBinary(value))
+  }
+  if (isBinary(value)) {
     return { value: '[binary]', binary: toBinaryBase64(value) };
-  if (Array.isArray(value))
+  }
+  if (Array.isArray(value)) {
     return { value: value.map((v) => serializeTag(v).value).join(', ') };
+  }
   if (typeof value === 'object') {
     const obj = value as Record<string, unknown>;
     if ('data' in obj && isBinary(obj.data)) {

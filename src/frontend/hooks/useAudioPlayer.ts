@@ -122,7 +122,9 @@ export function useAudioPlayer(): AudioPlayerState {
   // the Space key handler in the track list.
   React.useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio) {
+      return;
+    }
 
     if (status === 'playing' && isReadyRef.current && audio.paused) {
       audio.play().catch(() => dispatch(A.musicPlaybackError()));

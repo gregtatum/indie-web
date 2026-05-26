@@ -533,10 +533,16 @@ const focusableSelector = [
 ].join(',');
 
 function isFocusable(element: HTMLElement) {
-  if (element.hasAttribute('disabled')) return false;
+  if (element.hasAttribute('disabled')) {
+    return false;
+  }
   const style = window.getComputedStyle(element);
-  if (style.display === 'none' || style.visibility === 'hidden') return false;
-  if (element.offsetParent === null && style.position !== 'fixed') return false;
+  if (style.display === 'none' || style.visibility === 'hidden') {
+    return false;
+  }
+  if (element.offsetParent === null && style.position !== 'fixed') {
+    return false;
+  }
   return true;
 }
 
@@ -559,7 +565,9 @@ export function useFocusTrap(
 
   // Save and restore focus around open/close.
   React.useEffect(() => {
-    if (!isOpen) return () => {};
+    if (!isOpen) {
+      return () => {};
+    }
     priorFocusRef.current = document.activeElement as HTMLElement | null;
     return () => {
       priorFocusRef.current?.focus();
@@ -568,9 +576,13 @@ export function useFocusTrap(
 
   // Focus first focusable element (or container) when opened.
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
     requestAnimationFrame(() => {
       const focusable = getFocusableElements(container);
       if (focusable.length > 0) {
@@ -583,12 +595,18 @@ export function useFocusTrap(
 
   // Cycle Tab/Shift+Tab within the container.
   React.useEffect(() => {
-    if (!isOpen) return () => {};
+    if (!isOpen) {
+      return () => {};
+    }
     const container = containerRef.current;
-    if (!container) return () => {};
+    if (!container) {
+      return () => {};
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
+      if (event.key !== 'Tab') {
+        return;
+      }
       const focusable = getFocusableElements(container);
       if (focusable.length === 0) {
         event.preventDefault();

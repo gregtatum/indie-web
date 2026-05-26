@@ -54,24 +54,31 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
 
   // Fetch tags once per track
   React.useEffect(() => {
-    if (!trackPath || !server) return;
+    if (!trackPath || !server) {
+      return;
+    }
     let cancelled = false;
     fetch(
       `${server.url}/music/track-tags?path=${encodeURIComponent(trackPath)}`,
     )
       .then((res) => {
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        if (!res.ok) {
+          throw new Error(`${res.status} ${res.statusText}`);
+        }
         return res.json() as Promise<TrackTagsResponse>;
       })
       .then((data) => {
-        if (!cancelled) setTagsState({ status: 'loaded', data });
+        if (!cancelled) {
+          setTagsState({ status: 'loaded', data });
+        }
       })
       .catch((err: unknown) => {
-        if (!cancelled)
+        if (!cancelled) {
           setTagsState({
             status: 'error',
             message: err instanceof Error ? err.message : 'Unknown error',
           });
+        }
       });
     return () => {
       cancelled = true;

@@ -44,7 +44,9 @@ export class ServerFS extends FileStore {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(await response.text());
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
     const json = await response.json();
     return json;
   }

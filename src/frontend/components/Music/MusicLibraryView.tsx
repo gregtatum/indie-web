@@ -110,7 +110,9 @@ const CONFIGURABLE_COLUMNS: ConfigurableColumns[] = ['artist', 'album'];
 function clampColumnWidths(prev: ColumnWidths, maxWidth: number): ColumnWidths {
   const maxForConfigurable = maxWidth - TRACK_MIN_WIDTH;
   const total = CONFIGURABLE_COLUMNS.reduce((sum, k) => sum + prev[k], 0);
-  if (total <= maxForConfigurable) return prev;
+  if (total <= maxForConfigurable) {
+    return prev;
+  }
   const result = { ...prev };
   let excess = total - maxForConfigurable;
   for (let i = CONFIGURABLE_COLUMNS.length - 1; i >= 0 && excess > 0; i--) {
@@ -260,7 +262,9 @@ function TracksHeader({ setColumnWidths }: TracksHeaderProps) {
 
   React.useEffect(() => {
     const el = containerRef.current;
-    if (!el) return undefined;
+    if (!el) {
+      return undefined;
+    }
     const numCols = CONFIGURABLE_COLUMNS.length + 2; // +1 for Title, +1 for TrackNumber
     const observer = new ResizeObserver(([entry]) => {
       const width = entry.contentRect.width;
@@ -485,7 +489,9 @@ function FilterPanel({
   // Keep the active item visible when the panel is resized (e.g. splitter drag).
   React.useEffect(() => {
     const list = listRef.current;
-    if (!list) return undefined;
+    if (!list) {
+      return undefined;
+    }
     const observer = new ResizeObserver(() => {
       const activeId = list.getAttribute('aria-activedescendant');
       if (activeId) {

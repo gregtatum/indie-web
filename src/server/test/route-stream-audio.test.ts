@@ -8,7 +8,9 @@ import type { TestServer } from './helpers.ts';
 
 // 256 bytes of deterministic content for range assertions.
 const FILE_CONTENT = Buffer.alloc(256, 0);
-for (let i = 0; i < 256; i++) FILE_CONTENT[i] = i;
+for (let i = 0; i < 256; i++) {
+  FILE_CONTENT[i] = i;
+}
 
 describe('GET /music/stream-audio', () => {
   let server: TestServer;

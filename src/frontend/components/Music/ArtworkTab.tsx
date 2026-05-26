@@ -85,7 +85,9 @@ export function ArtworkTab({ artUrl, coverArtPath, tagsState }: Props) {
   const navigate = Router.useNavigate();
 
   const apics = React.useMemo(() => {
-    if (tagsState.status !== 'loaded') return [];
+    if (tagsState.status !== 'loaded') {
+      return [];
+    }
     return tagsState.data.native
       .flatMap((block) => block.tags)
       .filter((tag) => tag.id === 'APIC' && tag.binary !== undefined)
@@ -105,7 +107,9 @@ export function ArtworkTab({ artUrl, coverArtPath, tagsState }: Props) {
   );
 
   const folderArtHref = React.useMemo(() => {
-    if (!coverArtPath) return null;
+    if (!coverArtPath) {
+      return null;
+    }
     const fsSlug = $.getCurrentFileStoreSlug(getState());
     return `/${fsSlug}/folder${getDirName(coverArtPath)}`;
   }, [coverArtPath, getState]);
@@ -151,8 +155,12 @@ export function ArtworkTab({ artUrl, coverArtPath, tagsState }: Props) {
         const mimeType = rawMime.startsWith('image/') ? rawMime : 'image/jpeg';
         const src = `data:${mimeType};base64,${apic.binary}`;
         const details: DetailItem[] = [];
-        if (rawMime) details.push({ key: 'Format', value: rawMime });
-        if (pictureType) details.push({ key: 'Type', value: pictureType });
+        if (rawMime) {
+          details.push({ key: 'Format', value: rawMime });
+        }
+        if (pictureType) {
+          details.push({ key: 'Type', value: pictureType });
+        }
         return (
           <div key={i} className="artworkBlock">
             <div className="artworkBlockLabel">
