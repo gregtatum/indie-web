@@ -104,6 +104,12 @@ export function ArtworkTab({ artUrl, coverArtPath, tagsState }: Props) {
     [dispatch, getState, navigate],
   );
 
+  const folderArtHref = React.useMemo(() => {
+    if (!coverArtPath) return null;
+    const fsSlug = $.getCurrentFileStoreSlug(getState());
+    return `/${fsSlug}/folder${getDirName(coverArtPath)}`;
+  }, [coverArtPath, getState]);
+
   if (!artUrl && tagsState.status === 'loading') {
     return (
       <div className="editTrackModalArtwork">
@@ -119,12 +125,6 @@ export function ArtworkTab({ artUrl, coverArtPath, tagsState }: Props) {
       </div>
     );
   }
-
-  const folderArtHref = React.useMemo(() => {
-    if (!coverArtPath) return null;
-    const fsSlug = $.getCurrentFileStoreSlug(getState());
-    return `/${fsSlug}/folder${getDirName(coverArtPath)}`;
-  }, [coverArtPath, getState]);
 
   return (
     <div className="editTrackModalArtworkSections">
