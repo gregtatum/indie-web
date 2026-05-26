@@ -349,7 +349,7 @@ export function seedFormState(
     if (!state.genre && track.genre) {
       state.genre = track.genre;
     }
-    if (!state.trackNum && track.track != null) {
+    if (!state.trackNum && track.track !== null) {
       state.trackNum = String(track.track);
     }
   }

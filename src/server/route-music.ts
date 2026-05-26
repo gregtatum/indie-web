@@ -421,9 +421,9 @@ function serializeTag(value: unknown): { value: string; binary?: string } {
     const obj = value as Record<string, unknown>;
     if ('data' in obj && isBinary(obj.data)) {
       // Build a human-readable label from non-binary fields (e.g. APIC: "image/jpeg — Cover (front)")
-      const { data, ...rest } = obj;
+      const { data: _data, ...rest } = obj;
       const parts = Object.entries(rest)
-        .filter(([, v]) => v !== '' && v != null)
+        .filter(([, v]) => v !== '' && v !== null && v !== undefined)
         .map(([, v]) => String(v));
       return {
         value: parts.length > 0 ? parts.join(' — ') : '[binary]',

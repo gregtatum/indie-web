@@ -45,7 +45,6 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }
 
   // Reset the form immediately from TrackMetadata when track changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     setFormState(seedFormState(track, null));
     setTagsState({ status: 'loading' });
@@ -55,7 +54,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   // Fetch tags once per track
   React.useEffect(() => {
     if (!trackPath || !server) {
-      return;
+      return () => {};
     }
     let cancelled = false;
     fetch(
@@ -86,7 +85,6 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }, [trackPath, server?.url]);
 
   // Upgrade form state when tags load
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     if (tagsState.status === 'loaded') {
       setFormState(seedFormState(track, tagsState.data));
