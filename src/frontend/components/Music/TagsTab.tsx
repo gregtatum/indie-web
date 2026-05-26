@@ -5,53 +5,22 @@ import {
   id3FrameLabels,
   id3FrameTooltips,
   sortTags,
+  type TagsState,
 } from 'frontend/logic/music/tags';
-import type { TrackTagsResponse } from 'shared/@types/shared';
 
 interface Props {
-  trackPath: string;
-  serverUrl: string;
+  tagsState: TagsState;
 }
-
-type State =
-  | { status: 'loading' }
-  | { status: 'loaded'; data: TrackTagsResponse }
-  | { status: 'error'; message: string };
 
 function base64ByteLength(base64: string): number {
   const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
   return (base64.length / 4) * 3 - padding;
 }
 
-
-export function TagsTab({ trackPath, serverUrl }: Props) {
+export function TagsTab({ tagsState }: Props) {
   const dispatch = Hooks.useDispatch();
-  const [state, setState] = React.useState<State>({ status: 'loading' });
 
-  React.useEffect(() => {
-    setState({ status: 'loading' });
-    let cancelled = false;
-    fetch(`${serverUrl}/music/track-tags?path=${encodeURIComponent(trackPath)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        return res.json() as Promise<TrackTagsResponse>;
-      })
-      .then((data) => {
-        if (!cancelled) setState({ status: 'loaded', data });
-      })
-      .catch((err: unknown) => {
-        if (!cancelled)
-          setState({
-            status: 'error',
-            message: err instanceof Error ? err.message : 'Unknown error',
-          });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [trackPath, serverUrl]);
-
-  if (state.status === 'loading') {
+  if (tagsState.status === 'loading') {
     return (
       <div className="editTrackModalTags">
         <div className="editTrackModalTagsLoading">Loading…</div>
@@ -59,15 +28,15 @@ export function TagsTab({ trackPath, serverUrl }: Props) {
     );
   }
 
-  if (state.status === 'error') {
+  if (tagsState.status === 'error') {
     return (
       <div className="editTrackModalTags">
-        <div className="editTrackModalTagsLoading">Error: {state.message}</div>
+        <div className="editTrackModalTagsLoading">Error: {tagsState.message}</div>
       </div>
     );
   }
 
-  const { native } = state.data;
+  const { native } = tagsState.data;
 
   if (native.length === 0 || native.every((block) => block.tags.length === 0)) {
     return (

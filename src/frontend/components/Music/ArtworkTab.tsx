@@ -2,19 +2,13 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, Hooks, $ } from 'frontend';
 import { getDirName, getPathFileName } from 'frontend/utils';
-import type { TrackTagsResponse } from 'shared/@types/shared';
+import type { TagsState } from 'frontend/logic/music/tags';
 
 interface Props {
-  trackPath: string;
-  serverUrl: string;
   artUrl: string | null;
   coverArtPath: string | null;
+  tagsState: TagsState;
 }
-
-type EmbeddedState =
-  | { status: 'loading' }
-  | { status: 'loaded'; apics: Array<{ value: string; binary: string }> }
-  | { status: 'error' };
 
 interface DetailItem {
   key: string;
@@ -85,48 +79,19 @@ function ArtworkSection({
   );
 }
 
-export function ArtworkTab({
-  trackPath,
-  serverUrl,
-  artUrl,
-  coverArtPath,
-}: Props) {
+export function ArtworkTab({ artUrl, coverArtPath, tagsState }: Props) {
   const dispatch = Hooks.useDispatch();
   const { getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
 
-  const [embedded, setEmbedded] = React.useState<EmbeddedState>({
-    status: 'loading',
-  });
-
-  React.useEffect(() => {
-    setEmbedded({ status: 'loading' });
-    let cancelled = false;
-    fetch(`${serverUrl}/music/track-tags?path=${encodeURIComponent(trackPath)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json() as Promise<TrackTagsResponse>;
-      })
-      .then((data) => {
-        if (cancelled) return;
-        const apics = data.native
-          .flatMap((block) => block.tags)
-          .filter((tag) => tag.id === 'APIC' && tag.binary !== undefined)
-          .map((tag) => ({ value: tag.value, binary: tag.binary! }));
-        setEmbedded({ status: 'loaded', apics });
-      })
-      .catch(() => {
-        if (!cancelled) setEmbedded({ status: 'error' });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [trackPath, serverUrl]);
-
-  const apics =
-    embedded.status === 'loaded'
-      ? embedded.apics.filter((apic) => !apic.value.startsWith('-->'))
-      : [];
+  const apics = React.useMemo(() => {
+    if (tagsState.status !== 'loaded') return [];
+    return tagsState.data.native
+      .flatMap((block) => block.tags)
+      .filter((tag) => tag.id === 'APIC' && tag.binary !== undefined)
+      .map((tag) => ({ value: tag.value, binary: tag.binary! }))
+      .filter((apic) => !apic.value.startsWith('-->'));
+  }, [tagsState]);
 
   const navigateToFile = React.useCallback(
     (filePath: string) => {
@@ -139,7 +104,7 @@ export function ArtworkTab({
     [dispatch, getState, navigate],
   );
 
-  if (!artUrl && embedded.status === 'loading') {
+  if (!artUrl && tagsState.status === 'loading') {
     return (
       <div className="editTrackModalArtwork">
         <div className="editTrackModalArtworkEmpty">Loading…</div>
@@ -147,7 +112,7 @@ export function ArtworkTab({
     );
   }
 
-  if (!artUrl && (apics.length === 0 || embedded.status === 'error')) {
+  if (!artUrl && (apics.length === 0 || tagsState.status === 'error')) {
     return (
       <div className="editTrackModalArtwork">
         <div className="editTrackModalArtworkEmpty">No artwork found</div>

@@ -4,9 +4,24 @@ import { Modal } from 'frontend/components/Modal';
 import { Tabs } from 'frontend/components/Tabs';
 import { ArtworkTab } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
+import {
+  detailFields,
+  buildEmptyFormState,
+  seedFormState,
+  isSplitField,
+  type TagsState,
+} from 'frontend/logic/music/tags';
+import type { TrackTagsResponse } from 'shared/@types/shared';
 import './EditTrackModal.css';
 
 type TabId = 'details' | 'artwork' | 'id3';
+
+const GROUP_LABELS: Record<string, string> = {
+  core: 'Identity',
+  position: 'Position',
+  classification: 'Classification',
+  credits: 'Credits',
+};
 
 interface Props {
   trackPath: string | null;
@@ -19,84 +34,115 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const server = $$.getCurrentServerOrNull();
 
   const [activeTab, setActiveTab] = React.useState<TabId>('details');
-  const [title, setTitle] = React.useState('');
-  const [artist, setArtist] = React.useState('');
-  const [album, setAlbum] = React.useState('');
-  const [genre, setGenre] = React.useState('');
-  const [trackNumber, setTrackNumber] = React.useState('');
+  const [formState, setFormState] = React.useState<Record<string, string>>(buildEmptyFormState);
+  const [tagsState, setTagsState] = React.useState<TagsState>({ status: 'loading' });
 
+  function setField(key: string, value: string) {
+    setFormState((prev) => ({ ...prev, [key]: value }));
+  }
+
+  // Reset form immediately from TrackMetadata when track changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
-    setTitle(track?.title ?? '');
-    setArtist(track?.artist ?? '');
-    setAlbum(track?.album ?? '');
-    setGenre(track?.genre ?? '');
-    setTrackNumber(
-      track?.track !== null && track?.track !== undefined
-        ? String(track.track)
-        : '',
-    );
+    setFormState(seedFormState(track, null));
+    setTagsState({ status: 'loading' });
     setActiveTab('details');
   }, [trackPath]);
+
+  // Fetch tags once per track
+  React.useEffect(() => {
+    if (!trackPath || !server) return;
+    let cancelled = false;
+    fetch(`${server.url}/music/track-tags?path=${encodeURIComponent(trackPath)}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return res.json() as Promise<TrackTagsResponse>;
+      })
+      .then((data) => {
+        if (!cancelled) setTagsState({ status: 'loaded', data });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled)
+          setTagsState({
+            status: 'error',
+            message: err instanceof Error ? err.message : 'Unknown error',
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [trackPath, server?.url]);
+
+  // Upgrade form state when tags load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    if (tagsState.status === 'loaded') {
+      setFormState(seedFormState(track, tagsState.data));
+    }
+  }, [tagsState]);
 
   const artUrl =
     server && track?.coverArt
       ? `${server.url}/music/cover-art?path=${encodeURIComponent(track.coverArt)}`
       : null;
 
+  // Build the Details panel by iterating detailFields
+  let lastGroup: string | null = null;
+  const detailRows: React.ReactNode[] = [];
+  for (const field of detailFields) {
+    if (field.group !== lastGroup) {
+      detailRows.push(
+        <div key={`group-${field.group}`} className="editTrackModalGroupHeader">
+          {GROUP_LABELS[field.group]}
+        </div>,
+      );
+      lastGroup = field.group;
+    }
+
+    if (isSplitField(field)) {
+      detailRows.push(
+        <label key={field.key} className="editTrackModalField">
+          <span className="editTrackModalLabel">{field.label}</span>
+          <div className="editTrackModalSplitInput">
+            <input
+              className="editTrackModalInput editTrackModalSplitInput-num"
+              type="text"
+              inputMode="numeric"
+              value={formState[field.key]}
+              onChange={(e) => setField(field.key, e.target.value)}
+            />
+            <span className="editTrackModalSplitSep">of</span>
+            <input
+              className="editTrackModalInput editTrackModalSplitInput-total"
+              type="text"
+              inputMode="numeric"
+              value={formState[field.totalKey]}
+              onChange={(e) => setField(field.totalKey, e.target.value)}
+            />
+          </div>
+        </label>,
+      );
+    } else {
+      detailRows.push(
+        <label key={field.key} className="editTrackModalField">
+          <span className="editTrackModalLabel">{field.label}</span>
+          <input
+            className="editTrackModalInput"
+            type="text"
+            inputMode={field.type === 'number' ? 'numeric' : 'text'}
+            value={formState[field.key]}
+            onChange={(e) => setField(field.key, e.target.value)}
+          />
+        </label>,
+      );
+    }
+  }
+
   const tabs = [
     {
       id: 'details' as TabId,
       label: 'Details',
-      panel: (
-        <div className="editTrackModalDetails">
-          <label className="editTrackModalField">
-            <span className="editTrackModalLabel">Title</span>
-            <input
-              className="editTrackModalInput"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </label>
-          <label className="editTrackModalField">
-            <span className="editTrackModalLabel">Artist</span>
-            <input
-              className="editTrackModalInput"
-              type="text"
-              value={artist}
-              onChange={(e) => setArtist(e.target.value)}
-            />
-          </label>
-          <label className="editTrackModalField">
-            <span className="editTrackModalLabel">Album</span>
-            <input
-              className="editTrackModalInput"
-              type="text"
-              value={album}
-              onChange={(e) => setAlbum(e.target.value)}
-            />
-          </label>
-          <label className="editTrackModalField">
-            <span className="editTrackModalLabel">Genre</span>
-            <input
-              className="editTrackModalInput"
-              type="text"
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-            />
-          </label>
-          <label className="editTrackModalField">
-            <span className="editTrackModalLabel">Track</span>
-            <input
-              className="editTrackModalInput editTrackModalInput-short"
-              type="number"
-              min="1"
-              value={trackNumber}
-              onChange={(e) => setTrackNumber(e.target.value)}
-            />
-          </label>
-        </div>
-      ),
+      panel: <div className="editTrackModalDetails">{detailRows}</div>,
     },
     {
       id: 'artwork' as TabId,
@@ -104,10 +150,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       panel:
         track && server ? (
           <ArtworkTab
-            trackPath={track.path}
-            serverUrl={server.url}
             artUrl={artUrl}
             coverArtPath={track.coverArt ?? null}
+            tagsState={tagsState}
           />
         ) : (
           <div className="editTrackModalArtwork">
@@ -119,8 +164,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       id: 'id3' as TabId,
       label: 'ID3',
       panel:
-        track && server ? (
-          <TagsTab trackPath={track.path} serverUrl={server.url} />
+        track ? (
+          <TagsTab tagsState={tagsState} />
         ) : (
           <div className="editTrackModalTags">
             <div className="editTrackModalTagsLoading">No track selected</div>

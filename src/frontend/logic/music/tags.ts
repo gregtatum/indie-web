@@ -1,3 +1,5 @@
+import type { TrackMetadata, TrackTagsResponse } from 'shared/@types/shared';
+
 const PRIORITY_IDS = [
   'TIT2', // Title
   'TPE1', // Artist
@@ -151,3 +153,113 @@ export const id3FrameTooltips = {
   TSSE: `The 'Software/Hardware and settings used for encoding' frame includes the used audio encoder and its settings when the file was encoded. Hardware refers to hardware encoders, not the computer on which a program was run.`,
   TYER: `The 'Year' frame is a numeric string with a year of the recording. This frames is always four characters long (until the year 10000).`,
 };
+
+// ---------------------------------------------------------------------------
+// Detail fields — the editable properties shown in the Details tab
+// ---------------------------------------------------------------------------
+
+export type DetailFieldType = 'text' | 'number' | 'split';
+export type DetailFieldGroup = 'core' | 'position' | 'classification' | 'credits';
+
+export interface DetailField {
+  frameId: string;
+  key: string;
+  label: string;
+  type: DetailFieldType;
+  group: DetailFieldGroup;
+}
+
+export interface SplitDetailField extends DetailField {
+  type: 'split';
+  /** State key for the denominator (total) half of "N/total". */
+  totalKey: string;
+}
+
+export type AnyDetailField = DetailField | SplitDetailField;
+
+export function isSplitField(field: AnyDetailField): field is SplitDetailField {
+  return field.type === 'split';
+}
+
+export const detailFields: AnyDetailField[] = [
+  // core
+  { frameId: 'TIT2', key: 'title',       label: 'Title',        type: 'text', group: 'core' },
+  { frameId: 'TPE1', key: 'artist',      label: 'Artist',       type: 'text', group: 'core' },
+  { frameId: 'TPE2', key: 'albumArtist', label: 'Album Artist', type: 'text', group: 'core' },
+  { frameId: 'TALB', key: 'album',       label: 'Album',        type: 'text', group: 'core' },
+  // position — track/disc use "N/total" split inputs
+  { frameId: 'TRCK', key: 'trackNum', totalKey: 'trackTotal', label: 'Track', type: 'split', group: 'position' } as SplitDetailField,
+  { frameId: 'TPOS', key: 'discNum',  totalKey: 'discTotal',  label: 'Disc',  type: 'split', group: 'position' } as SplitDetailField,
+  { frameId: 'TYER', key: 'year',        label: 'Year',         type: 'number', group: 'position' },
+  // classification
+  { frameId: 'TCON', key: 'genre',       label: 'Genre',        type: 'text',   group: 'classification' },
+  { frameId: 'TBPM', key: 'bpm',         label: 'BPM',          type: 'number', group: 'classification' },
+  // credits
+  { frameId: 'TCOM', key: 'composer',    label: 'Composer',     type: 'text', group: 'credits' },
+  { frameId: 'TEXT', key: 'lyricist',    label: 'Lyricist',     type: 'text', group: 'credits' },
+  { frameId: 'COMM', key: 'comment',     label: 'Comment',      type: 'text', group: 'credits' },
+];
+
+export type TagsState =
+  | { status: 'loading' }
+  | { status: 'loaded'; data: TrackTagsResponse }
+  | { status: 'error'; message: string };
+
+export function buildEmptyFormState(): Record<string, string> {
+  const state: Record<string, string> = {};
+  for (const field of detailFields) {
+    state[field.key] = '';
+    if (isSplitField(field)) {
+      state[field.totalKey] = '';
+    }
+  }
+  return state;
+}
+
+export function seedFormState(
+  track: TrackMetadata | null,
+  tagsResponse: TrackTagsResponse | null,
+): Record<string, string> {
+  const state = buildEmptyFormState();
+
+  if (tagsResponse) {
+    const frameMap = new Map<string, string>();
+    for (const block of tagsResponse.native) {
+      for (const tag of block.tags) {
+        if (!frameMap.has(tag.id) && tag.binary === undefined) {
+          frameMap.set(tag.id, tag.value);
+        }
+      }
+    }
+
+    for (const field of detailFields) {
+      const raw = frameMap.get(field.frameId) ?? '';
+      if (isSplitField(field)) {
+        const slash = raw.indexOf('/');
+        state[field.key] = slash === -1 ? raw : raw.slice(0, slash);
+        state[field.totalKey] = slash === -1 ? '' : raw.slice(slash + 1);
+      } else if (field.frameId === 'COMM') {
+        try {
+          const parsed = JSON.parse(raw) as { text?: string };
+          state[field.key] = parsed.text ?? '';
+        } catch {
+          state[field.key] = raw;
+        }
+      } else {
+        state[field.key] = raw;
+      }
+    }
+  }
+
+  // Fall back to TrackMetadata for the fields it tracks, where native tags are empty
+  if (track) {
+    if (!state['title'] && track.title) state['title'] = track.title;
+    if (!state['artist'] && track.artist) state['artist'] = track.artist;
+    if (!state['album'] && track.album) state['album'] = track.album;
+    if (!state['genre'] && track.genre) state['genre'] = track.genre;
+    if (!state['trackNum'] && track.track != null)
+      state['trackNum'] = String(track.track);
+  }
+
+  return state;
+}

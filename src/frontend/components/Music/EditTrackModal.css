@@ -77,6 +77,36 @@
   max-width: 80px;
 }
 
+.editTrackModalGroupHeader {
+  grid-column: 1 / -1;
+  font-size: var(--font-size-small);
+  color: #aaa;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-top: 14px;
+}
+
+.editTrackModalGroupHeader:first-child {
+  padding-top: 0;
+}
+
+.editTrackModalSplitInput {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editTrackModalSplitInput-num,
+.editTrackModalSplitInput-total {
+  width: 60px;
+}
+
+.editTrackModalSplitSep {
+  font-size: var(--font-size-small);
+  color: #bbb;
+}
+
 .editTrackModalArtwork {
   padding: 24px;
   display: flex;
