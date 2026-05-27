@@ -13,7 +13,12 @@ interface Props {
 }
 
 function base64ByteLength(base64: string): number {
-  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  let padding = 0;
+  if (base64.endsWith('==')) {
+    padding = 2;
+  } else if (base64.endsWith('=')) {
+    padding = 1;
+  }
   return (base64.length / 4) * 3 - padding;
 }
 

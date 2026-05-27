@@ -153,12 +153,12 @@ export function Settings() {
           />
           <label htmlFor="file-store-cache">Enable offline file caching</label>
         </p>
-        {fileStoreCacheEnabled ? (
-          cacheTargets.length === 0 ? (
-            <p>No offline caches available yet.</p>
-          ) : (
-            <div>
-              {cacheTargets.map((target) => {
+        {fileStoreCacheEnabled && cacheTargets.length === 0 && (
+          <p>No offline caches available yet.</p>
+        )}
+        {fileStoreCacheEnabled && cacheTargets.length > 0 && (
+          <div>
+            {cacheTargets.map((target) => {
                 const estimate = cacheEstimates[target.id];
                 let label = `${target.label}: Estimating...`;
                 if (estimate?.status === 'error') {
@@ -209,8 +209,7 @@ export function Settings() {
                 );
               })}
             </div>
-          )
-        ) : null}
+          )}
         <h2>Editor Settings</h2>
         <p>
           <input

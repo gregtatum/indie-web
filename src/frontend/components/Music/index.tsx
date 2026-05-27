@@ -95,6 +95,13 @@ export function Music() {
     displayMessage = statusMessage;
   }
 
+  let scanLabel = 'Scan Library';
+  if (scanPhase === 'scanning') {
+    scanLabel = 'Scanning…';
+  } else if (needsRescan) {
+    scanLabel = 'Scan Library (updates detected)';
+  }
+
   return (
     <div className="music">
       <div className="musicToolbar">
@@ -104,11 +111,7 @@ export function Music() {
           onClick={handleScan}
           disabled={scanPhase === 'scanning'}
         >
-          {scanPhase === 'scanning'
-            ? 'Scanning…'
-            : needsRescan
-              ? 'Scan Library (updates detected)'
-              : 'Scan Library'}
+          {scanLabel}
         </button>
         {displayMessage ? (
           <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
