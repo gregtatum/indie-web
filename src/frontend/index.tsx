@@ -107,8 +107,8 @@ export function createRootApp(store: T.Store): JSX.Element {
 
 function mountReact(store: T.Store): void {
   const mountElement = ensureExists(
-    document.querySelector('.appRoot'),
-    'Could not find the app root',
+    document.getElementById('appContainer'),
+    'Could not find the app container',
   );
   const root = createRoot(mountElement);
   root.render(createRootApp(store));

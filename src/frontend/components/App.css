@@ -72,7 +72,7 @@
 
 html,
 body,
-.appRoot,
+.appContainer,
 .appView {
   position: absolute;
   inset: 0;

@@ -28,15 +28,18 @@
   <script>
     window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = { isDisabled: true }
   </script>
-  <div class="appRoot"></div>
   <!--
-    Stacking layers — both containers use z-index: 1; DOM order determines which wins.
-    modalsContainer (modal dialogs) must come before overlayContainer (context menus,
-    tooltips) so overlays always render on top of modal backdrops.
-    Cross-reference: Modal.css (.modalsContainer), Menus.css (.overlayContainer),
+    These are the main stacking containers to control z-indexing via React portals.
+
+      appContainer - The main rendered app.
+      modalsContainer - Modal overlays.
+      overlayContainer - Context menus and tooltips.
+
+    When updating these containers cross reference:
+    Modal.css (.modalsContainer), Menus.css (.overlayContainer),
     hooks/index.tsx (overlayPortal, modalPortal), Popup.tsx, Modal.tsx.
-    Update all of these if the stacking strategy changes.
   -->
+  <div id="appContainer" class="appContainer"></div>
   <div id="modalsContainer" class="modalsContainer"></div>
   <div id="overlayContainer" class="overlayContainer"></div>
 </body>
