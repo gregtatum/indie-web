@@ -2,12 +2,12 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, Hooks, $ } from 'frontend';
 import { getDirName, getPathFileName } from 'frontend/utils';
-import type { TagsState } from 'frontend/logic/music/tags';
+import type { TrackTagsLoadState } from 'frontend/logic/music/tags';
 
 interface Props {
   artUrl: string | null;
   coverArtPath: string | null;
-  tagsState: TagsState;
+  tagsState: TrackTagsLoadState;
 }
 
 interface DetailItem {

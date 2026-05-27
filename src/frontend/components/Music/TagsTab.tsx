@@ -5,11 +5,11 @@ import {
   id3FrameLabels,
   id3FrameTooltips,
   sortTags,
-  type TagsState,
+  type TrackTagsLoadState,
 } from 'frontend/logic/music/tags';
 
 interface Props {
-  tagsState: TagsState;
+  tagsState: TrackTagsLoadState;
 }
 
 function base64ByteLength(base64: string): number {

@@ -160,10 +160,6 @@ export const id3FrameTooltips = {
   TYER: `The 'Year' frame is a numeric string with a year of the recording. This frames is always four characters long (until the year 10000).`,
 };
 
-// ---------------------------------------------------------------------------
-// Detail fields — the editable properties shown in the Details tab
-// ---------------------------------------------------------------------------
-
 export type DetailFieldType = 'text' | 'number' | 'split';
 export type DetailFieldGroup =
   | 'core'
@@ -171,6 +167,9 @@ export type DetailFieldGroup =
   | 'classification'
   | 'credits';
 
+/**
+ * The editable properties shown in the Details tab
+ */
 export interface DetailField {
   frameId: string;
   key: string;
@@ -187,11 +186,24 @@ export interface SplitDetailField extends DetailField {
 
 export type AnyDetailField = DetailField | SplitDetailField;
 
+/**
+ * Maps each DetailField's key (and totalKey for split fields) to its current string value.
+ * e.g.
+ *  {
+ *   title: 'Reykjavik',
+ *   artist: 'Sigur Rós',
+ *   trackNum: '3',
+ *   trackTotal: '10',
+ *   ...
+ *  }
+ */
+export type DetailFieldValues = Record<string, string>;
+
 export function isSplitField(field: AnyDetailField): field is SplitDetailField {
   return field.type === 'split';
 }
 
-export const detailFields: AnyDetailField[] = [
+export const DETAIL_FIELDS: AnyDetailField[] = [
   // core
   {
     frameId: 'TIT2',
@@ -284,27 +296,30 @@ export const detailFields: AnyDetailField[] = [
   },
 ];
 
-export type TagsState =
+export type TrackTagsLoadState =
   | { status: 'loading' }
   | { status: 'loaded'; data: TrackTagsResponse }
   | { status: 'error'; message: string };
 
-export function buildEmptyFormState(): Record<string, string> {
-  const state: Record<string, string> = {};
-  for (const field of detailFields) {
-    state[field.key] = '';
+/**
+ * e.g. { title: "", artist: "", albumArtist: "", … }
+ */
+export function emptyDetailFieldValues(): DetailFieldValues {
+  const values: DetailFieldValues = {};
+  for (const field of DETAIL_FIELDS) {
+    values[field.key] = '';
     if (isSplitField(field)) {
-      state[field.totalKey] = '';
+      values[field.totalKey] = '';
     }
   }
-  return state;
+  return values;
 }
 
-export function seedFormState(
+export function detailFieldValues(
   track: TrackMetadata | null,
   tagsResponse: TrackTagsResponse | null,
-): Record<string, string> {
-  const state = buildEmptyFormState();
+): DetailFieldValues {
+  const state = emptyDetailFieldValues();
 
   if (tagsResponse) {
     const frameMap = new Map<string, string>();
@@ -316,7 +331,7 @@ export function seedFormState(
       }
     }
 
-    for (const field of detailFields) {
+    for (const field of DETAIL_FIELDS) {
       const raw = frameMap.get(field.frameId) ?? '';
       if (isSplitField(field)) {
         const slash = raw.indexOf('/');

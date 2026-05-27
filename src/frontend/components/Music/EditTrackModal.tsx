@@ -5,11 +5,12 @@ import { Tabs } from 'frontend/components/Tabs';
 import { ArtworkTab } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
 import {
-  detailFields,
-  buildEmptyFormState,
-  seedFormState,
+  DETAIL_FIELDS,
+  emptyDetailFieldValues,
+  detailFieldValues,
   isSplitField,
-  type TagsState,
+  type TrackTagsLoadState,
+  type DetailFieldValues,
 } from 'frontend/logic/music/tags';
 import type { TrackTagsResponse } from 'shared/@types/shared';
 import './EditTrackModal.css';
@@ -34,9 +35,10 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const server = $$.getCurrentServerOrNull();
 
   const [activeTab, setActiveTab] = React.useState<TabId>('details');
-  const [formState, setFormState] =
-    React.useState<Record<string, string>>(buildEmptyFormState);
-  const [tagsState, setTagsState] = React.useState<TagsState>({
+  const [formState, setFormState] = React.useState<DetailFieldValues>(
+    emptyDetailFieldValues,
+  );
+  const [tagsState, setTagsState] = React.useState<TrackTagsLoadState>({
     status: 'loading',
   });
 
@@ -46,7 +48,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
 
   // Reset the form immediately from TrackMetadata when track changes
   React.useEffect(() => {
-    setFormState(seedFormState(track, null));
+    setFormState(detailFieldValues(track, null));
     setTagsState({ status: 'loading' });
     setActiveTab('details');
   }, [trackPath]);
@@ -87,7 +89,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   // Upgrade form state when tags load
   React.useEffect(() => {
     if (tagsState.status === 'loaded') {
-      setFormState(seedFormState(track, tagsState.data));
+      setFormState(detailFieldValues(track, tagsState.data));
     }
   }, [tagsState]);
 
@@ -99,7 +101,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   // Build the Details panel by iterating detailFields
   let lastGroup: string | null = null;
   const detailRows: React.ReactNode[] = [];
-  for (const field of detailFields) {
+  for (const field of DETAIL_FIELDS) {
     if (field.group !== lastGroup) {
       detailRows.push(
         <div key={`group-${field.group}`} className="editTrackModalGroupHeader">
