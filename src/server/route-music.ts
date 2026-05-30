@@ -223,17 +223,25 @@ export function musicRoute(mountPath: string) {
 
     const resolvedPath = resolveMountedPath(clientPath, mountPath);
 
+    let stats: Awaited<ReturnType<typeof fs.stat>>;
     try {
-      await fs.access(resolvedPath);
+      stats = await fs.stat(resolvedPath);
     } catch {
       res.status(404).send('Not found.');
+      return;
+    }
+
+    const etag = `"${stats.size}-${stats.mtimeMs}"`;
+    if (req.headers['if-none-match'] === etag) {
+      res.status(304).end();
       return;
     }
 
     const ext = extname(resolvedPath).toLowerCase();
     const contentType = ext === '.png' ? 'image/png' : 'image/jpeg';
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'no-cache');
     const stream = createReadStream(resolvedPath);
     stream.pipe(res);
     await finished(stream);
