@@ -338,7 +338,6 @@ export class MountPath {
       !resolvedPath.startsWith(this.#mountPath + '/') &&
       resolvedPath !== this.#mountPath
     ) {
-      console.error('Resolved path:', resolvedPath);
       return null;
     }
 

@@ -68,7 +68,7 @@ export function musicRoute(mountPath: MountPath) {
     }
     scanInProgress = true;
     try {
-      return performScan(mountPath);
+      return await performScan(mountPath);
     } finally {
       scanInProgress = false;
     }
@@ -128,8 +128,7 @@ export function musicRoute(mountPath: MountPath) {
 
     const resolvedPath = mountPath.resolve(clientPath);
     if (!resolvedPath) {
-      res.status(400).send('Invalid path.');
-      return;
+      throw new ClientError('Invalid path.');
     }
 
     let stats: Awaited<ReturnType<typeof fs.stat>>;
@@ -232,14 +231,12 @@ export function musicRoute(mountPath: MountPath) {
   route.addBlobRoute('GET', '/cover-art', async (req, res) => {
     const clientPath = req.query.path;
     if (typeof clientPath !== 'string' || !clientPath) {
-      res.status(400).send('Missing path query parameter.');
-      return;
+      throw new ClientError('Missing path query parameter.');
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
     if (!resolvedPath) {
-      res.status(400).send('Invalid path.');
-      return;
+      throw new ClientError('Invalid path.');
     }
 
     let stats: Awaited<ReturnType<typeof fs.stat>>;

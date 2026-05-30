@@ -46,6 +46,7 @@ export function fileStoreRoute(mountPath: MountPath) {
       true /* expectedFolder */,
     );
     if (!resolvedPath) {
+      console.error('Resolved path:', listFilesRequest.path);
       throw new ClientError('Invalid path.');
     }
 
@@ -95,6 +96,7 @@ export function fileStoreRoute(mountPath: MountPath) {
 
     const resolvedPath = mountPath.resolve(clientPath);
     if (!resolvedPath || mountPath.isEqualToMountPath(resolvedPath)) {
+      console.error('Resolved path:', clientPath);
       throw new ClientError('Invalid path.');
     }
 
@@ -121,6 +123,7 @@ export function fileStoreRoute(mountPath: MountPath) {
 
     const resolvedPath = mountPath.resolve(clientPath);
     if (!resolvedPath || mountPath.isEqualToMountPath(resolvedPath)) {
+      console.error('Resolved path:', clientPath);
       throw new ClientError('Invalid path.');
     }
 
@@ -146,6 +149,7 @@ export function fileStoreRoute(mountPath: MountPath) {
       const fromResolved = mountPath.resolve(fromPath);
       const toResolved = mountPath.resolve(toPath);
       if (!fromResolved || !toResolved) {
+        console.error('Resolved path:', fromPath, toPath);
         throw new ClientError('Invalid path.');
       }
       await rename(fromResolved, toResolved);
@@ -162,6 +166,7 @@ export function fileStoreRoute(mountPath: MountPath) {
 
     const resolvedPath = mountPath.resolve(folderPath);
     if (!resolvedPath) {
+      console.error('Resolved path:', folderPath);
       throw new ClientError('Invalid path.');
     }
     await mkdir(resolvedPath, { recursive: true });
@@ -171,14 +176,13 @@ export function fileStoreRoute(mountPath: MountPath) {
   route.addBlobRoute('POST', '/compress-folder', async (req, res) => {
     const { path } = req.body;
     if (typeof path !== 'string') {
-      res.status(400).json({ error: 'Missing path' });
-      return;
+      throw new ClientError('Missing path');
     }
 
     const resolvedPath = mountPath.resolve(path);
     if (!resolvedPath) {
-      res.status(400).send('Invalid path.');
-      return;
+      console.error('Resolved path:', path);
+      throw new ClientError('Invalid path.');
     }
 
     if (!(await doesFolderExist(resolvedPath))) {
