@@ -391,7 +391,7 @@ export class MountPath {
       return [];
     }
     try {
-      return readdir(dirPath, { withFileTypes: true });
+      return await readdir(dirPath, { withFileTypes: true });
     } catch {
       return [];
     }
