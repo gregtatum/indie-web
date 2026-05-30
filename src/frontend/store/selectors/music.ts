@@ -2,7 +2,11 @@ import { createSelector } from 'reselect';
 import * as T from 'frontend/@types';
 import { State } from 'frontend/@types';
 import { UnhandledCaseError } from 'frontend/utils';
-import type { MusicPlaybackStatus } from 'frontend/store/reducers/music';
+import type {
+  MusicPlaybackStatus,
+  FolderArtSaveStatus,
+} from 'frontend/store/reducers/music';
+export type { FolderArtSaveStatus } from 'frontend/store/reducers/music';
 
 export function getMusic(state: State) {
   return state.music;
@@ -83,6 +87,14 @@ export function getMusicPlaybackTrackPath(state: State): string | null {
 
 export function getMusicPlaybackQueue(state: State): T.TrackMetadata[] {
   return getMusic(state).playbackQueue;
+}
+
+export function getMusicFolderArtSaveStatus(state: State): FolderArtSaveStatus {
+  return getMusic(state).folderArtSave.status;
+}
+
+export function getMusicFolderArtVersion(state: State): number {
+  return getMusic(state).folderArtSave.version;
 }
 
 /**

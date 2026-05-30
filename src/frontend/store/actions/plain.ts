@@ -389,3 +389,15 @@ export function musicPlaybackError() {
 export function musicPlaybackStop() {
   return { type: 'music-playback-stop' as const };
 }
+
+export function musicFolderArtSaveStart() {
+  return { type: 'music-folder-art-save-start' as const };
+}
+
+export function musicFolderArtSaveSuccess() {
+  return { type: 'music-folder-art-save-success' as const };
+}
+
+export function musicFolderArtSaveError() {
+  return { type: 'music-folder-art-save-error' as const };
+}

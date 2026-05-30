@@ -1,11 +1,9 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, Hooks, $ } from 'frontend';
+import { A, Hooks, $, $$ } from 'frontend';
 import { getDirName, getPathFileName } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/tags';
 import type { WriteFolderArtResponse } from 'shared/@types/shared';
-
-type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 interface Props {
   artUrl: string | null;
@@ -22,12 +20,57 @@ interface DetailItem {
   onClick?: () => void;
 }
 
+function FolderArtOverwriteButton({
+  trackPath,
+  serverUrl,
+}: {
+  trackPath: string;
+  serverUrl: string;
+}) {
+  const dispatch = Hooks.useDispatch();
+  const saveStatus = $$.getMusicFolderArtSaveStatus();
+
+  function saveFolderArt() {
+    dispatch(A.musicFolderArtSaveStart());
+    fetch(
+      `${serverUrl}/music/write-folder-art?path=${encodeURIComponent(trackPath)}`,
+      { method: 'POST' },
+    )
+      .then((res) => {
+        if (!res.ok) {
+          return res.text().then((t) => {
+            throw new Error(t || `${res.status}`);
+          });
+        }
+        return res.json() as Promise<WriteFolderArtResponse>;
+      })
+      .then(() => dispatch(A.musicFolderArtSaveSuccess()))
+      .catch(() => dispatch(A.musicFolderArtSaveError()));
+  }
+
+  return (
+    <button
+      type="button"
+      className="artworkSaveFolderBtn"
+      disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+      onClick={saveFolderArt}
+    >
+      {saveStatus === 'saving' && 'Saving…'}
+      {saveStatus === 'saved' && 'Saved ✓'}
+      {saveStatus === 'error' && 'Error — retry'}
+      {saveStatus === 'idle' && 'Overwrite with embedded artwork'}
+    </button>
+  );
+}
+
 function ArtworkSection({
   src,
   details,
+  children,
 }: {
   src: string;
   details: DetailItem[];
+  children?: React.ReactNode;
 }) {
   const [naturalWidth, setNaturalWidth] = React.useState<number | null>(null);
   const [resolution, setResolution] = React.useState<string>('');
@@ -79,6 +122,9 @@ function ArtworkSection({
             <span>{resolution}</span>
           </div>
         )}
+        {children && (
+          <div className="artworkSectionDetailsRow">{children}</div>
+        )}
       </div>
     </div>
   );
@@ -94,6 +140,7 @@ export function ArtworkTab({
   const dispatch = Hooks.useDispatch();
   const { getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
+  const version = $$.getMusicFolderArtVersion();
 
   const apics = React.useMemo(() => {
     if (tagsState.status !== 'loaded') {
@@ -105,32 +152,6 @@ export function ArtworkTab({
       .map((tag) => ({ value: tag.value, binary: tag.binary! }))
       .filter((apic) => !apic.value.startsWith('-->'));
   }, [tagsState]);
-
-  const [saveStates, setSaveStates] = React.useState<Record<number, SaveState>>(
-    {},
-  );
-
-  function saveFolderArt(apicIndex: number) {
-    setSaveStates((prev) => ({ ...prev, [apicIndex]: 'saving' }));
-    fetch(
-      `${serverUrl}/music/write-folder-art?path=${encodeURIComponent(trackPath)}`,
-      { method: 'POST' },
-    )
-      .then((res) => {
-        if (!res.ok) {
-          return res.text().then((t) => {
-            throw new Error(t || `${res.status}`);
-          });
-        }
-        return res.json() as Promise<WriteFolderArtResponse>;
-      })
-      .then(() => {
-        setSaveStates((prev) => ({ ...prev, [apicIndex]: 'saved' }));
-      })
-      .catch(() => {
-        setSaveStates((prev) => ({ ...prev, [apicIndex]: 'error' }));
-      });
-  }
 
   const navigateToFile = React.useCallback(
     (filePath: string) => {
@@ -173,6 +194,7 @@ export function ArtworkTab({
         <div className="artworkBlock">
           <div className="artworkBlockLabel">Folder</div>
           <ArtworkSection
+            key={version}
             src={artUrl}
             details={[
               {
@@ -182,7 +204,14 @@ export function ArtworkTab({
                 onClick: () => navigateToFile(coverArtPath),
               },
             ]}
-          />
+          >
+            {apics.length > 0 && (
+              <FolderArtOverwriteButton
+                trackPath={trackPath}
+                serverUrl={serverUrl}
+              />
+            )}
+          </ArtworkSection>
         </div>
       )}
       {apics.map((apic, i) => {
@@ -198,24 +227,10 @@ export function ArtworkTab({
         if (pictureType) {
           details.push({ key: 'Type', value: pictureType });
         }
-        const saveState = saveStates[i] ?? 'idle';
         return (
           <div key={i} className="artworkBlock">
-            <div className="artworkBlockHeader">
-              <div className="artworkBlockLabel">
-                {apics.length > 1 ? `Embedded ${i + 1}` : 'Embedded'}
-              </div>
-              <button
-                type="button"
-                className="artworkSaveFolderBtn"
-                disabled={saveState === 'saving' || saveState === 'saved'}
-                onClick={() => saveFolderArt(i)}
-              >
-                {saveState === 'saving' && 'Saving…'}
-                {saveState === 'saved' && 'Saved ✓'}
-                {saveState === 'error' && 'Error — retry'}
-                {saveState === 'idle' && 'Save as Folder.jpg'}
-              </button>
+            <div className="artworkBlockLabel">
+              {apics.length > 1 ? `Embedded ${i + 1}` : 'Embedded'}
             </div>
             <ArtworkSection src={src} details={details} />
           </div>
