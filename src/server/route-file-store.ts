@@ -72,12 +72,10 @@ export function fileStoreRoute(mountPath: MountPath) {
         continue;
       }
       try {
-        // Slice off the mount path, but retain the final '/'.
-        // const mountPath = '/mount/path/'
-        // const entryPath = '/mount/path/foobar'
-        // const clientPath = '/foobar'
-        const clientPath = entryPath.slice(mountPath.getRiskyRawPath().length);
-
+        const clientPath = mountPath.toClientPath(entryPath);
+        if (!clientPath) {
+          continue;
+        }
         listing.push(getMetadata(clientPath, await fs.stat(entryPath)));
       } catch (error) {
         console.error('Unable to read a file, ignoring it', error);

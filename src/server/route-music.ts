@@ -348,8 +348,7 @@ async function performScan(
     // No existing index — scan all files.
   }
 
-  const rawMountPath = mountPath.getRiskyRawPath();
-  const audioFiles = await findAudioFiles(rawMountPath, mountPath);
+  const audioFiles = await findAudioFiles(mountPath);
   callbacks?.onTotalTracksCounted(audioFiles.length);
 
   // Cache cover art lookups per album directory — probed once per unique dir.
@@ -512,36 +511,33 @@ function serializeTag(value: unknown): { value: string; binary?: string } {
 }
 
 async function findAudioFiles(
-  dirPath: string,
   mountPath: MountPath,
 ): Promise<Array<{ clientPath: string; fullPath: string }>> {
   const results: Array<{ clientPath: string; fullPath: string }> = [];
+  const nextDirs: Array<Promise<Dirent[]>> = [mountPath.mountReaddir()];
 
-  let entries: Dirent[];
-  try {
-    entries = await fs.readdir(dirPath, { withFileTypes: true });
-  } catch {
-    return results;
-  }
+  let nextDir: Promise<Dirent[]> | undefined;
+  while ((nextDir = nextDirs.pop())) {
+    for (const entry of await nextDir) {
+      // Skip hidden files and directories (including .music-index.json itself).
+      if (entry.name.startsWith('.')) {
+        continue;
+      }
 
-  for (const entry of entries) {
-    // Skip hidden files and directories (including .music-index.json itself).
-    if (entry.name.startsWith('.')) {
-      continue;
-    }
+      const fullPath = mountPath.joinWithinMount(entry.parentPath, entry.name);
+      if (!fullPath) {
+        continue;
+      }
 
-    const fullPath = mountPath.joinWithinMount(dirPath, entry.name);
-    if (!fullPath) {
-      continue;
-    }
-
-    if (entry.isDirectory()) {
-      const nested = await findAudioFiles(fullPath, mountPath);
-      results.push(...nested);
-    } else if (entry.isFile()) {
-      if (AUDIO_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
-        const clientPath = fullPath.slice(mountPath.getRiskyRawPath().length);
-        results.push({ clientPath, fullPath });
+      if (entry.isDirectory()) {
+        nextDirs.push(mountPath.readdir(fullPath));
+      } else if (entry.isFile()) {
+        if (AUDIO_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
+          const clientPath = mountPath.toClientPath(fullPath);
+          if (clientPath !== null) {
+            results.push({ clientPath, fullPath });
+          }
+        }
       }
     }
   }

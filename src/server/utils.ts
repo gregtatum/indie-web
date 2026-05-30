@@ -1,6 +1,8 @@
 import Express from 'express';
 import { resolve, join } from 'node:path';
 import { statSync } from 'fs';
+import { readdir } from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
 
 export const colors = {
   Reset: '\x1b[0m',
@@ -304,14 +306,6 @@ export class MountPath {
   }
 
   /**
-   * Do no path manipulation with this string. Ideally this method should be removed
-   * and anything that needs a string access can be validated for path escapes here.
-   */
-  getRiskyRawPath() {
-    return this.#mountPath;
-  }
-
-  /**
    * See if the resolved path is equal to the mount path.
    */
   isEqualToMountPath(path: string) {
@@ -378,6 +372,47 @@ export class MountPath {
       return null;
     }
     return joined;
+  }
+
+  /**
+   * Read through the root files in the mount.
+   */
+  mountReaddir(): Promise<Dirent[]> {
+    return this.readdir(this.#mountPath);
+  }
+
+  /**
+   * Read a directory within the current mount path.
+   */
+  async readdir(dirPath: string): Promise<Dirent[]> {
+    if (
+      !dirPath.startsWith(this.#mountPath + '/') &&
+      dirPath !== this.#mountPath
+    ) {
+      return [];
+    }
+    try {
+      return readdir(dirPath, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Removes the mount portion of the path, and just has the relative client path.
+   *
+   * mountPath = '/mount/path'
+   * fullPath  = '/mount/path/foobar'
+   * clientPath = '/foobar'
+   */
+  toClientPath(fullPath: string): string | null {
+    if (
+      !fullPath.startsWith(this.#mountPath + '/') &&
+      fullPath !== this.#mountPath
+    ) {
+      return null;
+    }
+    return fullPath.slice(this.#mountPath.length);
   }
 
   /**
