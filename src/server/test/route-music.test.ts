@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { musicRoute } from '../route-music.ts';
-import { createTestServer, buildMp3WithTags, withLogs } from './helpers.ts';
+import {
+  createTestServer,
+  buildMp3WithTags,
+  withLogs,
+  MINIMAL_JPEG,
+} from './helpers.ts';
 import type { TestServer } from './helpers.ts';
 
 describe('GET /music/music-index', () => {
@@ -388,7 +393,7 @@ describe('POST /music/music-index/scan stale-cache bypass', () => {
       });
       assert.equal(res.status, 200);
       const index = await res.json();
-      assert.equal(index.version, 4);
+      assert.equal(index.version, 5);
 
       const track = index.tracks.find(
         (t: { path: string }) => t.path === '/cached.mp3',
@@ -396,6 +401,120 @@ describe('POST /music/music-index/scan stale-cache bypass', () => {
       assert.ok(track, 'cached.mp3 should appear in upgraded index');
       // Genre must be populated — confirms the v1 cache was not reused.
       assert.equal(track.genre, 'Jazz');
+    }),
+  );
+});
+
+describe('POST /music/music-index/scan APIC backfill', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountDir) => {
+      app.use('/music', musicRoute(mountDir));
+    });
+  });
+
+  after(() => server.close());
+
+  it(
+    'sets hasEmbeddedArt: false for a track with no embedded picture',
+    withLogs([], async () => {
+      await writeFile(
+        join(server.mountDir, 'no-art.mp3'),
+        buildMp3WithTags({ title: 'No Art' }),
+      );
+
+      const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+      const index = await res.json();
+      const track = index.tracks.find(
+        (t: { path: string }) => t.path === '/no-art.mp3',
+      );
+      assert.ok(track, 'no-art.mp3 should appear in the index');
+      assert.equal(track.hasEmbeddedArt, false);
+    }),
+  );
+
+  it(
+    'sets hasEmbeddedArt: true for a track with an embedded APIC frame',
+    withLogs([], async () => {
+      await writeFile(
+        join(server.mountDir, 'has-art.mp3'),
+        buildMp3WithTags({ title: 'Has Art', apic: MINIMAL_JPEG }),
+      );
+
+      const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+      const index = await res.json();
+      const track = index.tracks.find(
+        (t: { path: string }) => t.path === '/has-art.mp3',
+      );
+      assert.ok(track, 'has-art.mp3 should appear in the index');
+      assert.equal(track.hasEmbeddedArt, true);
+    }),
+  );
+
+  it(
+    'writes Folder.jpg from APIC when no folder art exists, and sets coverArt',
+    withLogs([], async () => {
+      await mkdir(join(server.mountDir, 'ApicArtist', 'ApicAlbum'), {
+        recursive: true,
+      });
+      await writeFile(
+        join(server.mountDir, 'ApicArtist', 'ApicAlbum', 'track.mp3'),
+        buildMp3WithTags({ title: 'APIC Track', apic: MINIMAL_JPEG }),
+      );
+
+      const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+      const index = await res.json();
+      const track = index.tracks.find(
+        (t: { path: string }) => t.path === '/ApicArtist/ApicAlbum/track.mp3',
+      );
+      assert.ok(track, 'track should appear in the index');
+      assert.equal(track.coverArt, '/ApicArtist/ApicAlbum/Folder.jpg');
+
+      // Verify the file was actually written with the correct bytes
+      const { readFile } = await import('node:fs/promises');
+      const written = await readFile(
+        join(server.mountDir, 'ApicArtist', 'ApicAlbum', 'Folder.jpg'),
+      );
+      assert.deepEqual(written, MINIMAL_JPEG);
+    }),
+  );
+
+  it(
+    'does not overwrite an existing Folder.jpg when APIC is also present',
+    withLogs([], async () => {
+      await mkdir(join(server.mountDir, 'ExistingArt', 'Album'), {
+        recursive: true,
+      });
+      const existingArt = Buffer.from('existing-art-bytes');
+      await writeFile(
+        join(server.mountDir, 'ExistingArt', 'Album', 'Folder.jpg'),
+        existingArt,
+      );
+      await writeFile(
+        join(server.mountDir, 'ExistingArt', 'Album', 'track.mp3'),
+        buildMp3WithTags({ title: 'Has Both', apic: MINIMAL_JPEG }),
+      );
+
+      await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+
+      const { readFile } = await import('node:fs/promises');
+      const afterScan = await readFile(
+        join(server.mountDir, 'ExistingArt', 'Album', 'Folder.jpg'),
+      );
+      assert.deepEqual(
+        afterScan,
+        existingArt,
+        'existing Folder.jpg must not be overwritten',
+      );
     }),
   );
 });

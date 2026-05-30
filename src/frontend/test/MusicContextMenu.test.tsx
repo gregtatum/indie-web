@@ -26,6 +26,7 @@ const TRACKS: T.TrackMetadata[] = [
     size: 1024,
     mtime: '2024-01-01T00:00:00Z',
     coverArt: null,
+    hasEmbeddedArt: false,
   },
   {
     path: '/music/b.mp3',
@@ -38,6 +39,7 @@ const TRACKS: T.TrackMetadata[] = [
     size: 2048,
     mtime: '2024-01-01T00:00:00Z',
     coverArt: null,
+    hasEmbeddedArt: false,
   },
   {
     path: '/music/c.mp3',
@@ -50,6 +52,7 @@ const TRACKS: T.TrackMetadata[] = [
     size: 3072,
     mtime: '2024-01-01T00:00:00Z',
     coverArt: null,
+    hasEmbeddedArt: false,
   },
 ];
 

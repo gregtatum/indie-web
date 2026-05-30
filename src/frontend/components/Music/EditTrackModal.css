@@ -231,12 +231,40 @@
   gap: 10px;
 }
 
+.artworkBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .artworkBlockLabel {
   font-size: var(--font-size-small);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #999;
+}
+
+.artworkSaveFolderBtn {
+  font-size: var(--font-size-small);
+  padding: 2px 8px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--light-border);
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.artworkSaveFolderBtn:hover:not(:disabled) {
+  border-color: #aaa;
+  color: #555;
+}
+
+.artworkSaveFolderBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .artworkSection {

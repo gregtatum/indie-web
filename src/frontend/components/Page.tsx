@@ -159,57 +159,57 @@ export function Settings() {
         {fileStoreCacheEnabled && cacheTargets.length > 0 && (
           <div>
             {cacheTargets.map((target) => {
-                const estimate = cacheEstimates[target.id];
-                let label = `${target.label}: Estimating...`;
-                if (estimate?.status === 'error') {
-                  label = `${target.label}: ${estimate.error}`;
-                } else if (estimate?.status === 'ready') {
-                  label = `${target.label}: ${formatBytes(estimate.size ?? 0)}`;
-                }
-                return (
-                  <div key={target.id}>
-                    <button
-                      type="button"
-                      onClick={async () => {
+              const estimate = cacheEstimates[target.id];
+              let label = `${target.label}: Estimating...`;
+              if (estimate?.status === 'error') {
+                label = `${target.label}: ${estimate.error}`;
+              } else if (estimate?.status === 'ready') {
+                label = `${target.label}: ${formatBytes(estimate.size ?? 0)}`;
+              }
+              return (
+                <div key={target.id}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setCacheEstimates((prev) => ({
+                        ...prev,
+                        [target.id]: {
+                          status: 'loading',
+                          size: null,
+                          error: null,
+                        },
+                      }));
+                      try {
+                        const cache = await openIDBFS(
+                          target.dbName,
+                          workerClient,
+                        );
+                        await cache.clear();
+                        await estimateCacheSizeForTarget(target);
+                      } catch (error) {
+                        console.error(error);
+                        if (!isMountedRef.current) {
+                          return;
+                        }
                         setCacheEstimates((prev) => ({
                           ...prev,
                           [target.id]: {
-                            status: 'loading',
+                            status: 'error',
                             size: null,
-                            error: null,
+                            error: 'Could not clear cache.',
                           },
                         }));
-                        try {
-                          const cache = await openIDBFS(
-                            target.dbName,
-                            workerClient,
-                          );
-                          await cache.clear();
-                          await estimateCacheSizeForTarget(target);
-                        } catch (error) {
-                          console.error(error);
-                          if (!isMountedRef.current) {
-                            return;
-                          }
-                          setCacheEstimates((prev) => ({
-                            ...prev,
-                            [target.id]: {
-                              status: 'error',
-                              size: null,
-                              error: 'Could not clear cache.',
-                            },
-                          }));
-                        }
-                      }}
-                    >
-                      Clear Cache
-                    </button>{' '}
-                    {label}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      }
+                    }}
+                  >
+                    Clear Cache
+                  </button>{' '}
+                  {label}
+                </div>
+              );
+            })}
+          </div>
+        )}
         <h2>Editor Settings</h2>
         <p>
           <input

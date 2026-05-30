@@ -35,7 +35,7 @@ import * as T from 'shared/@types/shared';
 type IndexVersion<N extends number> = { version: N } & Record<string, unknown>;
 
 /** The version number of the current MusicIndex format. */
-export const CURRENT_MUSIC_INDEX_VERSION = 4 satisfies T.MusicIndex['version'];
+export const CURRENT_MUSIC_INDEX_VERSION = 5 satisfies T.MusicIndex['version'];
 
 /** v1 → v2: backfill genre as null (v1 had no genre field). */
 function upgradeV1ToV2(blob: IndexVersion<1>): IndexVersion<2> {
@@ -77,7 +77,7 @@ function upgradeV2ToV3(blob: IndexVersion<2>): IndexVersion<3> {
 }
 
 /** v3 → v4: backfill coverArt as null (v3 had no cover art field). */
-function upgradeV3ToV4(blob: IndexVersion<3>): T.MusicIndex {
+function upgradeV3ToV4(blob: IndexVersion<3>): IndexVersion<4> {
   const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
     path: t.path as string,
     title: (t.title as string | null) ?? null,
@@ -92,6 +92,28 @@ function upgradeV3ToV4(blob: IndexVersion<3>): T.MusicIndex {
   }));
   return {
     version: 4 as const,
+    scannedAt: blob.scannedAt as string,
+    tracks,
+  } as unknown as IndexVersion<4>;
+}
+
+/** v4 → v5: backfill hasEmbeddedArt as false (v4 had no embedded art field). */
+function upgradeV4ToV5(blob: IndexVersion<4>): T.MusicIndex {
+  const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
+    path: t.path as string,
+    title: (t.title as string | null) ?? null,
+    artist: (t.artist as string | null) ?? null,
+    album: (t.album as string | null) ?? null,
+    genre: (t.genre as string | null) ?? null,
+    track: (t.track as number | null) ?? null,
+    duration: (t.duration as number | null) ?? null,
+    size: t.size as number,
+    mtime: t.mtime as string,
+    coverArt: (t.coverArt as string | null) ?? null,
+    hasEmbeddedArt: false,
+  }));
+  return {
+    version: 5 as const,
     scannedAt: blob.scannedAt as string,
     tracks,
   };
@@ -124,6 +146,10 @@ export function upgradeMusicIndex(blob: unknown): {
   }
   if (raw.version === 3) {
     raw = upgradeV3ToV4(raw as IndexVersion<3>) as unknown as typeof raw;
+    wasUpgraded = true;
+  }
+  if (raw.version === 4) {
+    raw = upgradeV4ToV5(raw as IndexVersion<4>) as unknown as typeof raw;
     wasUpgraded = true;
   }
   return { index: raw as unknown as T.MusicIndex, wasUpgraded };

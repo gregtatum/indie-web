@@ -67,6 +67,8 @@ export interface TrackMetadata {
   mtime: string;
   /** Client path to a cover image file in the album directory, or null if none found. */
   coverArt: string | null;
+  /** True if the audio file contains at least one embedded APIC picture frame. */
+  hasEmbeddedArt: boolean;
 }
 
 /**
@@ -92,7 +94,7 @@ export interface TrackMetadata {
  * backfilled fields (e.g. genre: null) are incomplete vs. a fresh scan.
  */
 export interface MusicIndex {
-  version: 4;
+  version: 5;
   scannedAt: string;
   tracks: TrackMetadata[];
 }
@@ -103,6 +105,11 @@ export interface RawTagEntry {
   value: string;
   /** Base64-encoded binary payload. Present when the tag value contains binary data (e.g. APIC embedded pictures). */
   binary?: string;
+}
+
+export interface WriteFolderArtResponse {
+  /** Client path of the written cover art file (e.g. /Artist/Album/Folder.jpg). */
+  coverArtPath: string;
 }
 
 export interface TrackTagsResponse {

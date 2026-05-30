@@ -165,6 +165,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             artUrl={artUrl}
             coverArtPath={track.coverArt ?? null}
             tagsState={tagsState}
+            trackPath={track.path}
+            serverUrl={server.url}
           />
         ) : (
           <div className="editTrackModalArtwork">

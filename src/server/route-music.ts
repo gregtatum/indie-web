@@ -11,7 +11,7 @@ import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
-const MUSIC_INDEX_VERSION = 4 as const;
+const MUSIC_INDEX_VERSION = 5 as const;
 
 const COVER_ART_FILENAMES = [
   'cover.jpg',
@@ -239,6 +239,35 @@ export function musicRoute(mountPath: string) {
     await finished(stream);
   });
 
+  /**
+   * Extracts the first embedded APIC picture from an audio file and writes it
+   * as Folder.jpg (or Folder.png) in the same directory.
+   * Accepts a ?path= query parameter pointing to the audio file.
+   */
+  route.post(
+    '/write-folder-art',
+    async (req): Promise<T.WriteFolderArtResponse> => {
+      const clientPath = req.query.path;
+      if (typeof clientPath !== 'string' || !clientPath) {
+        throw new ClientError('Missing path query parameter.');
+      }
+      const resolvedPath = resolveMountedPath(clientPath, mountPath);
+      const meta = await parseFile(resolvedPath);
+      const picture = meta.common.picture?.[0];
+      if (!picture) {
+        throw new ClientError('No embedded picture found in this file.');
+      }
+      const filename =
+        picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
+      const dirFullPath = dirname(resolvedPath);
+      const dirClientPath = dirname(clientPath.startsWith('/')
+        ? clientPath
+        : '/' + clientPath);
+      await fs.writeFile(join(dirFullPath, filename), picture.data);
+      return { coverArtPath: join(dirClientPath, filename) };
+    },
+  );
+
   return route.router;
 }
 
@@ -335,6 +364,7 @@ async function performScan(
       let genre: string | null = null;
       let track: number | null = null;
       let duration: number | null = null;
+      let hasEmbeddedArt = false;
       try {
         const meta = await parseFile(fullPath, { duration: true });
         title = meta.common.title ?? null;
@@ -343,6 +373,18 @@ async function performScan(
         genre = meta.common.genre?.[0] ?? null;
         track = meta.common.track.no ?? null;
         duration = meta.format.duration ?? null;
+        hasEmbeddedArt = (meta.common.picture?.length ?? 0) > 0;
+
+        // If no folder art exists but this file has an embedded picture,
+        // write it to disk so the standard cover-art endpoint can serve it.
+        if (!coverArt && hasEmbeddedArt) {
+          const picture = meta.common.picture![0];
+          const filename =
+            picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
+          await fs.writeFile(join(dirFullPath, filename), picture.data);
+          coverArt = join(dirClientPath, filename);
+          coverArtDirCache.set(dirClientPath, coverArt);
+        }
       } catch {
         // If tag reading fails, store what we have.
       }
@@ -357,6 +399,7 @@ async function performScan(
         size,
         mtime,
         coverArt,
+        hasEmbeddedArt,
       });
     }
 
