@@ -96,7 +96,7 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
-    if (!resolvedPath || resolvedPath === mountPath.getRiskyRawPath()) {
+    if (!resolvedPath || mountPath.isEqualToMountPath(resolvedPath)) {
       throw new ClientError('Invalid path.');
     }
 
@@ -122,7 +122,7 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
-    if (!resolvedPath || resolvedPath === mountPath.getRiskyRawPath()) {
+    if (!resolvedPath || mountPath.isEqualToMountPath(resolvedPath)) {
       throw new ClientError('Invalid path.');
     }
 

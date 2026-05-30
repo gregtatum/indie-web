@@ -300,7 +300,7 @@ export class MountPath {
   #mountPath: string;
 
   constructor(mountPath: string) {
-    this.#mountPath = mountPath;
+    this.#mountPath = resolve(mountPath);
   }
 
   /**
@@ -309,6 +309,13 @@ export class MountPath {
    */
   getRiskyRawPath() {
     return this.#mountPath;
+  }
+
+  /**
+   * See if the resolved path is equal to the mount path.
+   */
+  isEqualToMountPath(path: string) {
+    return this.#mountPath === resolve(path);
   }
 
   logPath() {
