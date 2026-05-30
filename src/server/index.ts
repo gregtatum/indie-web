@@ -5,7 +5,7 @@ import Express, {
   type Response,
   type NextFunction,
 } from 'express';
-import { colors } from './utils.ts';
+import { colors, MountPath } from './utils.ts';
 import { fileStoreRoute } from './route-file-store.ts';
 import { musicRoute } from './route-music.ts';
 import cors from 'cors';
@@ -28,7 +28,12 @@ export function startServer(): ExpressApp {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore - For some reason this is erroring only when live serving the files.
   const dirname = url.fileURLToPath(new URL('.', import.meta.url));
-  const mountPath = process.env.MOUNT_PATH ?? path.join(dirname, '../../mount');
+
+  const mountPath = new MountPath(
+    process.env.MOUNT_PATH ?? path.join(dirname, '../../mount'),
+  );
+  mountPath.logPath();
+  mountPath.validate();
 
   app.use('/file-store', fileStoreRoute(mountPath));
   app.use('/music', musicRoute(mountPath));

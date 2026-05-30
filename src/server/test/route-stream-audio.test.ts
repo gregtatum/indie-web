@@ -16,8 +16,8 @@ describe('GET /music/stream-audio', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/music', musicRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
     });
     await writeFile(join(server.mountDir, 'audio.mp3'), FILE_CONTENT);
   });

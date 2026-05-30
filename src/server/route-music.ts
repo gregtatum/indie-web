@@ -1,12 +1,13 @@
 import {
   ApiRoute,
   ClientError,
+  MountPath,
   NotFoundError,
   RequestConflict,
 } from './utils.ts';
 import type { T } from './index.ts';
 import { createReadStream, Dirent, promises as fs } from 'node:fs';
-import { join, extname, resolve, dirname } from 'node:path';
+import { join, extname, dirname } from 'node:path';
 import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 
@@ -31,7 +32,7 @@ const AUDIO_EXTENSIONS = new Set([
   '.aac',
 ]);
 
-export function musicRoute(mountPath: string) {
+export function musicRoute(mountPath: MountPath) {
   const route = new ApiRoute();
   let scanInProgress = false;
 
@@ -39,7 +40,7 @@ export function musicRoute(mountPath: string) {
    * Returns the current music index, or 404 if no scan has been run yet.
    */
   route.get('/music-index', async (): Promise<T.MusicIndex> => {
-    const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
+    const indexPath = join(mountPath.getRiskyRawPath(), MUSIC_INDEX_FILENAME);
     try {
       const contents = await fs.readFile(indexPath, 'utf-8');
       return JSON.parse(contents) as T.MusicIndex;
@@ -122,7 +123,7 @@ export function musicRoute(mountPath: string) {
       return;
     }
 
-    const resolvedPath = resolveMountedPath(clientPath, mountPath);
+    const resolvedPath = mountPath.resolve(clientPath);
 
     let stats: Awaited<ReturnType<typeof fs.stat>>;
     try {
@@ -197,7 +198,7 @@ export function musicRoute(mountPath: string) {
     if (typeof clientPath !== 'string' || !clientPath) {
       throw new ClientError('Missing path query parameter.');
     }
-    const resolvedPath = resolveMountedPath(clientPath, mountPath);
+    const resolvedPath = mountPath.resolve(clientPath);
     const meta = await parseFile(resolvedPath);
     const native = Object.entries(meta.native ?? {}).map(
       ([format, frames]) => ({
@@ -225,7 +226,7 @@ export function musicRoute(mountPath: string) {
       return;
     }
 
-    const resolvedPath = resolveMountedPath(clientPath, mountPath);
+    const resolvedPath = mountPath.resolve(clientPath);
 
     let stats: Awaited<ReturnType<typeof fs.stat>>;
     try {
@@ -263,7 +264,7 @@ export function musicRoute(mountPath: string) {
       if (typeof clientPath !== 'string' || !clientPath) {
         throw new ClientError('Missing path query parameter.');
       }
-      const resolvedPath = resolveMountedPath(clientPath, mountPath);
+      const resolvedPath = mountPath.resolve(clientPath);
       const meta = await parseFile(resolvedPath);
       const picture = meta.common.picture?.[0];
       if (!picture) {
@@ -294,10 +295,10 @@ interface ScanCallbacks {
  * atomically, and fires optional progress callbacks.
  */
 async function performScan(
-  mountPath: string,
+  mountPath: MountPath,
   callbacks?: ScanCallbacks,
 ): Promise<T.MusicIndex> {
-  const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
+  const indexPath = mountPath.join(MUSIC_INDEX_FILENAME);
   const tmpPath = indexPath + '.tmp';
 
   // Read the existing index to enable incremental scanning: individual track
@@ -323,7 +324,8 @@ async function performScan(
     // No existing index — scan all files.
   }
 
-  const audioFiles = await findAudioFiles(mountPath, mountPath);
+  const rawMountPath = mountPath.getRiskyRawPath();
+  const audioFiles = await findAudioFiles(rawMountPath, rawMountPath);
   callbacks?.onTotalTracksCounted(audioFiles.length);
 
   // Cache cover art lookups per album directory — probed once per unique dir.
@@ -429,19 +431,6 @@ async function performScan(
   await fs.rename(tmpPath, indexPath);
 
   return index;
-}
-
-function resolveMountedPath(clientPath: string, mountPath: string): string {
-  if (!clientPath.startsWith('/')) {
-    clientPath = '/' + clientPath;
-  }
-  const resolvedPath = resolve(mountPath, '.' + clientPath);
-  if (!resolvedPath.startsWith(mountPath + '/') && resolvedPath !== mountPath) {
-    throw new ClientError(
-      'Invalid path: Access outside of the mount is not allowed.',
-    );
-  }
-  return resolvedPath;
 }
 
 function isBinary(value: unknown): value is Buffer | Uint8Array {

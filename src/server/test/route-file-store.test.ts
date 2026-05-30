@@ -48,8 +48,8 @@ describe('POST /file-store/list-files', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/file-store', fileStoreRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
     });
   });
 
@@ -138,8 +138,8 @@ describe('POST /file-store/save-blob', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/file-store', fileStoreRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
     });
   });
 
@@ -212,8 +212,8 @@ describe('POST /file-store/load-blob', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/file-store', fileStoreRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
     });
   });
 
@@ -270,8 +270,8 @@ describe('POST /file-store/create-folder', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/file-store', fileStoreRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
     });
   });
 
@@ -335,8 +335,8 @@ describe('POST /file-store/move', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/file-store', fileStoreRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
     });
   });
 
@@ -414,8 +414,8 @@ describe('POST /file-store/compress-folder', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/file-store', fileStoreRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
     });
   });
 

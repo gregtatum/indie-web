@@ -15,8 +15,8 @@ describe('GET /music/music-index', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/music', musicRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
     });
   });
 
@@ -35,8 +35,8 @@ describe('POST /music/music-index/scan', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/music', musicRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
     });
   });
 
@@ -208,8 +208,8 @@ describe('POST /music/music-index/scan incremental behavior', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/music', musicRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
     });
   });
 
@@ -264,8 +264,8 @@ describe('GET /music/music-index/scan (SSE)', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/music', musicRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
     });
   });
 
@@ -349,8 +349,8 @@ describe('POST /music/music-index/scan stale-cache bypass', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/music', musicRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
     });
   });
 
@@ -409,8 +409,8 @@ describe('POST /music/music-index/scan APIC backfill', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/music', musicRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
     });
   });
 
@@ -523,8 +523,8 @@ describe('GET /music/music-index after scan', () => {
   let server: TestServer;
 
   before(async () => {
-    server = await createTestServer((app, mountDir) => {
-      app.use('/music', musicRoute(mountDir));
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
     });
   });
 

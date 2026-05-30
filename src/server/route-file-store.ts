@@ -2,15 +2,15 @@ import {
   ApiRoute,
   ClientError,
   RequestConflict,
+  MountPath,
   ServerError,
 } from './utils.ts';
 import type { T } from './index.ts';
-import { resolve, join, basename } from 'node:path';
+import { join, basename } from 'node:path';
 import { createReadStream, promises as fs, type Stats } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
 import archiver from 'archiver';
 import { finished } from 'stream/promises';
-import { statSync } from 'fs';
 
 const ignoredFiles = new Set(['.DS_Store']);
 
@@ -18,32 +18,14 @@ interface ListFilesRequest {
   path: string;
 }
 
-function checkMountPath(mountPath: string) {
-  if (mountPath[mountPath.length - 1] === '/') {
-    throw new Error('The mount path should not end in a trailing slash.');
-  }
-
-  let isDirectory = false;
-  try {
-    isDirectory = statSync(mountPath).isDirectory();
-  } catch (error) {
-    console.error(error);
-  }
-  if (!isDirectory) {
-    throw new Error(
-      `${mountPath} is not a directory. Did you forget to add /app/mount to the docker-compose volume?`,
-    );
-  }
-}
-
 /**
  * The mount path should not have a trailing slash.
  */
-export function fileStoreRoute(mountPath: string) {
+export function fileStoreRoute(mountPath: MountPath) {
   const route = new ApiRoute();
 
-  checkMountPath(mountPath);
-  console.log('Mounting', mountPath);
+  mountPath.logPath();
+  mountPath.validate();
 
   route.get('/', async (): Promise<{ routes: string[] }> => {
     return { routes: route.routes.map((r) => r.toString()) };
@@ -59,9 +41,8 @@ export function fileStoreRoute(mountPath: string) {
     }
     const listFilesRequest: ListFilesRequest = { path };
 
-    const resolvedPath = resolveMountedPath(
+    const resolvedPath = mountPath.resolve(
       listFilesRequest.path,
-      mountPath,
       true /* expectedFolder */,
     );
 
@@ -87,7 +68,7 @@ export function fileStoreRoute(mountPath: string) {
         // const mountPath = '/mount/path/'
         // const entryPath = '/mount/path/foobar'
         // const clientPath = '/foobar'
-        const clientPath = entryPath.slice(mountPath.length);
+        const clientPath = entryPath.slice(mountPath.getRiskyRawPath().length);
 
         listing.push(getMetadata(clientPath, await fs.stat(entryPath)));
       } catch (error) {
@@ -106,8 +87,8 @@ export function fileStoreRoute(mountPath: string) {
       throw new ClientError('Invalid or missing path in metadata.');
     }
 
-    const resolvedPath = resolveMountedPath(clientPath, mountPath);
-    if (resolvedPath === mountPath) {
+    const resolvedPath = mountPath.resolve(clientPath);
+    if (resolvedPath === mountPath.getRiskyRawPath()) {
       throw new ClientError('Invalid path.');
     }
 
@@ -132,8 +113,8 @@ export function fileStoreRoute(mountPath: string) {
       throw new ClientError('Invalid or missing path in metadata.');
     }
 
-    const resolvedPath = resolveMountedPath(clientPath, mountPath);
-    if (resolvedPath === mountPath) {
+    const resolvedPath = mountPath.resolve(clientPath);
+    if (resolvedPath === mountPath.getRiskyRawPath()) {
       throw new ClientError('Invalid path.');
     }
 
@@ -156,8 +137,8 @@ export function fileStoreRoute(mountPath: string) {
         throw new ClientError('Missing fromPath or toPath in move request.');
       }
 
-      const fromResolved = resolveMountedPath(fromPath, mountPath);
-      const toResolved = resolveMountedPath(toPath, mountPath);
+      const fromResolved = mountPath.resolve(fromPath);
+      const toResolved = mountPath.resolve(toPath);
       await rename(fromResolved, toResolved);
       const stats = await fs.stat(toResolved);
       return getMetadata(toPath, stats);
@@ -170,7 +151,7 @@ export function fileStoreRoute(mountPath: string) {
       throw new ClientError('Missing folderPath in create-folder request.');
     }
 
-    const resolvedPath = resolveMountedPath(folderPath, mountPath);
+    const resolvedPath = mountPath.resolve(folderPath);
     await mkdir(resolvedPath, { recursive: true });
     return getFolderMetadata(folderPath);
   });
@@ -182,7 +163,7 @@ export function fileStoreRoute(mountPath: string) {
       return;
     }
 
-    const resolvedPath = resolveMountedPath(path, mountPath);
+    const resolvedPath = mountPath.resolve(path);
 
     if (!(await doesFolderExist(resolvedPath))) {
       throw new RequestConflict(
@@ -271,38 +252,6 @@ function getFileMetadata(clientPath: string, stats: Stats): T.FileMetadata {
     isDownloadable: true,
     hash: '',
   };
-}
-
-/**
- * Always check that a file path is within the mount.
- */
-function resolveMountedPath(
-  clientPath: string,
-  mountPath: string,
-  expectedFolder = false,
-) {
-  if (!clientPath.startsWith('/')) {
-    clientPath = '/' + clientPath;
-  }
-  let resolvedPath = resolve(
-    mountPath,
-    // Convert an absolute path to a relative one.
-    '.' + clientPath,
-  );
-
-  if (expectedFolder && resolvedPath[resolvedPath.length - 1] !== '/') {
-    // Add the trailing slash if it's missing.
-    resolvedPath += '/';
-  }
-
-  if (!resolvedPath.startsWith(mountPath + '/') && resolvedPath !== mountPath) {
-    console.error('Resolved path:', resolvedPath);
-    throw new ClientError(
-      'Invalid path: Access outside of the mount is not allowed.',
-    );
-  }
-
-  return resolvedPath;
 }
 
 function parseHeaderRequest(metaHeader?: string): Record<string, string> {

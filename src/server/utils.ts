@@ -1,4 +1,6 @@
 import Express from 'express';
+import { resolve, join } from 'node:path';
+import { statSync } from 'fs';
 
 export const colors = {
   Reset: '\x1b[0m',
@@ -287,4 +289,83 @@ export class NotAuthorizedError extends RouteError {
  */
 export class RequestConflict extends RouteError {
   status = 409;
+}
+
+/**
+ * All file system path resolution for mounts MUST go through this utility class as
+ * this helps guard against mount path escapes. Ideally the server is mounted through
+ * Docker containerized paths to prevent this as well, but we should be extra careful.
+ */
+export class MountPath {
+  #mountPath: string;
+
+  constructor(mountPath: string) {
+    this.#mountPath = mountPath;
+  }
+
+  /**
+   * Do no path manipulation with this string. Ideally this method should be removed
+   * and anything that needs a string access can be validated for path escapes here.
+   */
+  getRiskyRawPath() {
+    return this.#mountPath;
+  }
+
+  logPath() {
+    console.log('Mounting', this.#mountPath);
+  }
+
+  /**
+   * Equivalent to node:path's resolve function, but built with safety checks.
+   */
+  resolve(clientPath: string, expectedFolder = false): string {
+    if (!clientPath.startsWith('/')) {
+      clientPath = '/' + clientPath;
+    }
+    let resolvedPath = resolve(
+      this.#mountPath,
+      // Convert an absolute path to a relative one.
+      '.' + clientPath,
+    );
+
+    if (expectedFolder && resolvedPath[resolvedPath.length - 1] !== '/') {
+      // Add the trailing slash if it's missing.
+      resolvedPath += '/';
+    }
+
+    if (
+      !resolvedPath.startsWith(this.#mountPath + '/') &&
+      resolvedPath !== this.#mountPath
+    ) {
+      console.error('Resolved path:', resolvedPath);
+      throw new ClientError(
+        'Invalid path: Access outside of the mount is not allowed.',
+      );
+    }
+
+    return resolvedPath;
+  }
+
+  join(path: string) {
+    // TODO - Prevent mount path escapes!
+    return join(this.#mountPath, path);
+  }
+
+  validate() {
+    if (this.#mountPath[this.#mountPath.length - 1] === '/') {
+      throw new Error('The mount path should not end in a trailing slash.');
+    }
+
+    let isDirectory = false;
+    try {
+      isDirectory = statSync(this.#mountPath).isDirectory();
+    } catch (error) {
+      console.error(error);
+    }
+    if (!isDirectory) {
+      throw new Error(
+        `${this.#mountPath} is not a directory. Did you forget to add /app/mount to the docker-compose volume?`,
+      );
+    }
+  }
 }

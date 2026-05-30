@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
 import Express from 'express';
+import { MountPath } from '../utils.ts';
 
 export interface TestServer {
   baseUrl: string;
@@ -77,13 +78,13 @@ export function withLogs(
  * Call close() in after() to shut down the server and delete the temp dir.
  */
 export async function createTestServer(
-  setupRoutes: (app: Express.Application, mountDir: string) => void,
+  setupRoutes: (app: Express.Application, mountPath: MountPath) => void,
 ): Promise<TestServer> {
   const mountDir = await mkdtemp(join(tmpdir(), 'indie-web-test-'));
 
   const app = Express();
   app.use(Express.json());
-  setupRoutes(app, mountDir);
+  setupRoutes(app, new MountPath(mountDir));
 
   const server = await new Promise<ReturnType<typeof createServer>>(
     (resolve, reject) => {
