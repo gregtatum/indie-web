@@ -7,7 +7,7 @@ import {
 } from './utils.ts';
 import type { T } from './index.ts';
 import { createReadStream, Dirent, promises as fs } from 'node:fs';
-import { join, extname, dirname } from 'node:path';
+import { extname, dirname } from 'node:path';
 import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 
@@ -40,7 +40,7 @@ export function musicRoute(mountPath: MountPath) {
    * Returns the current music index, or 404 if no scan has been run yet.
    */
   route.get('/music-index', async (): Promise<T.MusicIndex> => {
-    const indexPath = join(mountPath.getRiskyRawPath(), MUSIC_INDEX_FILENAME);
+    const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
     try {
       const contents = await fs.readFile(indexPath, 'utf-8');
       return JSON.parse(contents) as T.MusicIndex;
@@ -276,8 +276,11 @@ export function musicRoute(mountPath: MountPath) {
       const dirClientPath = dirname(
         clientPath.startsWith('/') ? clientPath : '/' + clientPath,
       );
-      await fs.writeFile(join(dirFullPath, filename), picture.data);
-      return { coverArtPath: join(dirClientPath, filename) };
+      await fs.writeFile(
+        mountPath.joinWithinMount(dirFullPath, filename),
+        picture.data,
+      );
+      return { coverArtPath: dirClientPath + '/' + filename };
     },
   );
 
@@ -298,7 +301,7 @@ async function performScan(
   mountPath: MountPath,
   callbacks?: ScanCallbacks,
 ): Promise<T.MusicIndex> {
-  const indexPath = mountPath.join(MUSIC_INDEX_FILENAME);
+  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
   const tmpPath = indexPath + '.tmp';
 
   // Read the existing index to enable incremental scanning: individual track
@@ -325,7 +328,7 @@ async function performScan(
   }
 
   const rawMountPath = mountPath.getRiskyRawPath();
-  const audioFiles = await findAudioFiles(rawMountPath, rawMountPath);
+  const audioFiles = await findAudioFiles(rawMountPath, mountPath);
   callbacks?.onTotalTracksCounted(audioFiles.length);
 
   // Cache cover art lookups per album directory — probed once per unique dir.
@@ -352,7 +355,7 @@ async function performScan(
         for (const name of COVER_ART_FILENAMES) {
           const actual = entryMap.get(name.toLowerCase());
           if (actual) {
-            coverArt = join(dirClientPath, actual);
+            coverArt = dirClientPath + '/' + actual;
             break;
           }
         }
@@ -395,8 +398,11 @@ async function performScan(
           const picture = meta.common.picture![0];
           const filename =
             picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
-          await fs.writeFile(join(dirFullPath, filename), picture.data);
-          coverArt = join(dirClientPath, filename);
+          await fs.writeFile(
+            mountPath.joinWithinMount(dirFullPath, filename),
+            picture.data,
+          );
+          coverArt = dirClientPath + '/' + filename;
           coverArtDirCache.set(dirClientPath, coverArt);
         }
       } catch {
@@ -485,7 +491,7 @@ function serializeTag(value: unknown): { value: string; binary?: string } {
 
 async function findAudioFiles(
   dirPath: string,
-  mountPath: string,
+  mountPath: MountPath,
 ): Promise<Array<{ clientPath: string; fullPath: string }>> {
   const results: Array<{ clientPath: string; fullPath: string }> = [];
 
@@ -502,14 +508,14 @@ async function findAudioFiles(
       continue;
     }
 
-    const fullPath = join(dirPath, entry.name);
+    const fullPath = mountPath.joinWithinMount(dirPath, entry.name);
 
     if (entry.isDirectory()) {
       const nested = await findAudioFiles(fullPath, mountPath);
       results.push(...nested);
     } else if (entry.isFile()) {
       if (AUDIO_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
-        const clientPath = fullPath.slice(mountPath.length);
+        const clientPath = fullPath.slice(mountPath.getRiskyRawPath().length);
         results.push({ clientPath, fullPath });
       }
     }

@@ -6,7 +6,7 @@ import {
   ServerError,
 } from './utils.ts';
 import type { T } from './index.ts';
-import { join, basename } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { createReadStream, promises as fs, type Stats } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
 import archiver from 'archiver';
@@ -62,7 +62,7 @@ export function fileStoreRoute(mountPath: MountPath) {
       if (ignoredFiles.has(entry.name)) {
         continue;
       }
-      const entryPath = join(resolvedPath, entry.name);
+      const entryPath = mountPath.joinWithinMount(resolvedPath, entry.name);
       try {
         // Slice off the mount path, but retain the final '/'.
         // const mountPath = '/mount/path/'
@@ -98,7 +98,7 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
 
     const buffer = Buffer.concat(chunks);
-    await mkdir(join(resolvedPath, '..'), { recursive: true });
+    await mkdir(dirname(resolvedPath), { recursive: true });
     await writeFile(resolvedPath, buffer);
 
     const stats = await fs.stat(resolvedPath);

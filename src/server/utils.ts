@@ -338,7 +338,7 @@ export class MountPath {
       resolvedPath !== this.#mountPath
     ) {
       console.error('Resolved path:', resolvedPath);
-      throw new ClientError(
+      throw new Error(
         'Invalid path: Access outside of the mount is not allowed.',
       );
     }
@@ -346,9 +346,34 @@ export class MountPath {
     return resolvedPath;
   }
 
-  join(path: string) {
-    // TODO - Prevent mount path escapes!
-    return join(this.#mountPath, path);
+  /**
+   * Joins a path part to the existing mount.
+   */
+  joinOnMount(pathPart: string): string {
+    const joined = join(this.#mountPath, pathPart);
+    if (
+      !joined.startsWith(this.#mountPath + '/') &&
+      joined !== this.#mountPath
+    ) {
+      throw new Error('Resolved path escapes the mount.');
+    }
+    return joined;
+  }
+
+  /**
+   * Runs "node:path" join and ensures the path is within the mount.
+   */
+  joinWithinMount(...paths: string[]): string {
+    const joined = join(...(paths as [string, ...string[]]));
+    if (
+      !joined.startsWith(this.#mountPath + '/') &&
+      joined !== this.#mountPath
+    ) {
+      throw new Error(
+        'Invalid path: Access outside of the mount is not allowed.',
+      );
+    }
+    return joined;
   }
 
   validate() {
