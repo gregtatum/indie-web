@@ -4,6 +4,7 @@ import {
   MountPath,
   NotFoundError,
   RequestConflict,
+  throttle,
 } from './utils.ts';
 import type { T } from './index.ts';
 import { createReadStream, Dirent, promises as fs } from 'node:fs';
@@ -102,14 +103,18 @@ export function musicRoute(mountPath: MountPath) {
     }
 
     scanInProgress = true;
+    const sendProgress = throttle(
+      (scanCount: number, path: string) =>
+        sendData({ type: 'progress', scanCount, path }),
+      500,
+    );
     try {
       const index = await performScan(mountPath, {
         onTotalTracksCounted(count) {
           sendData({ type: 'total', count });
         },
         onTrackScanned(scanCount, path) {
-          // TODO - This should use a 500ms throttling.
-          sendData({ type: 'progress', scanCount, path });
+          sendProgress(scanCount, path);
         },
       });
       sendData({ type: 'done', tracks: index.tracks });
