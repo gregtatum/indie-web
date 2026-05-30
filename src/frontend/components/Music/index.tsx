@@ -7,7 +7,7 @@ import './index.css';
 
 type ScanPhase = 'idle' | 'scanning' | 'done' | 'error';
 interface ScanProgress {
-  scanned: number;
+  scanCount: number;
   total: number | null;
 }
 
@@ -40,7 +40,7 @@ export function Music() {
       return;
     }
     setScanPhase('scanning');
-    setScanProgress({ scanned: 0, total: null });
+    setScanProgress({ scanCount: 0, total: null });
     setStatusMessage(null);
 
     const eventSource = new EventSource(`${server.url}/music/music-index/scan`);
@@ -50,12 +50,12 @@ export function Music() {
       const data = JSON.parse(event.data);
       switch (data.type) {
         case 'total':
-          setScanProgress({ scanned: 0, total: data.count });
+          setScanProgress({ scanCount: 0, total: data.count });
           break;
         case 'progress':
           setScanProgress((p) => ({
             total: p?.total ?? null,
-            scanned: data.scanned,
+            scanCount: data.scanCount,
           }));
           break;
         case 'done':
@@ -87,7 +87,7 @@ export function Music() {
   let displayMessage: string | null = null;
   if (scanPhase === 'scanning') {
     if (scanProgress?.total !== null && scanProgress?.total !== undefined) {
-      displayMessage = `Scanning… ${scanProgress.scanned} / ${scanProgress.total} files`;
+      displayMessage = `Scanning… ${scanProgress.scanCount} / ${scanProgress.total} files`;
     } else {
       displayMessage = 'Scanning…';
     }

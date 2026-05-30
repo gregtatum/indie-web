@@ -64,7 +64,7 @@ export function musicRoute(mountPath: string) {
     }
     scanInProgress = true;
     try {
-      return await performScan(mountPath);
+      return performScan(mountPath);
     } finally {
       scanInProgress = false;
     }
@@ -74,34 +74,38 @@ export function musicRoute(mountPath: string) {
    * SSE endpoint that streams scan progress in real time.
    * Events: total → progress × N → done (or error).
    */
-  route.addBlobRoute('GET', '/music-index/scan', async (_req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+  route.addBlobRoute('GET', '/music-index/scan', async (_request, response) => {
+    response.setHeader('Content-Type', 'text/event-stream');
+    response.setHeader('Cache-Control', 'no-cache');
+    response.setHeader('Connection', 'keep-alive');
+    response.flushHeaders();
 
-    function send(event: Record<string, unknown>) {
-      res.write('data: ' + JSON.stringify(event) + '\n\n');
+    function sendData(event: Record<string, unknown>) {
+      response.write('data: ' + JSON.stringify(event) + '\n\n');
     }
 
     if (scanInProgress) {
-      send({ type: 'error', message: 'A scan is already in progress.' });
-      res.end();
+      sendData({ type: 'error', message: 'A scan is already in progress.' });
+      response.end();
       return;
     }
 
     scanInProgress = true;
     try {
       const index = await performScan(mountPath, {
-        onTotal: (count) => send({ type: 'total', count }),
-        onProgress: (scanned, path) =>
-          send({ type: 'progress', scanned, path }),
+        onTotalTracksCounted(count) {
+          sendData({ type: 'total', count });
+        },
+        onTrackScanned(scanCount, path) {
+          // TODO - This should use a 500ms throttling.
+          sendData({ type: 'progress', scanCount, path });
+        },
       });
-      send({ type: 'done', tracks: index.tracks });
-      res.end();
+      sendData({ type: 'done', tracks: index.tracks });
+      response.end();
     } catch (err: any) {
-      send({ type: 'error', message: err?.message ?? 'Scan failed.' });
-      res.end();
+      sendData({ type: 'error', message: err?.message ?? 'Scan failed.' });
+      response.end();
     } finally {
       scanInProgress = false;
     }
@@ -109,7 +113,7 @@ export function musicRoute(mountPath: string) {
 
   /**
    * Streams an audio file with HTTP range request support so the browser
-   * <audio> element can seek. Accepts a ?path= query parameter.
+   * <audio> element can seek. Accepts a `path` query parameter.
    */
   route.addBlobRoute('GET', '/stream-audio', async (req, res) => {
     const clientPath = req.query.path;
@@ -268,9 +272,9 @@ export function musicRoute(mountPath: string) {
       const filename =
         picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
       const dirFullPath = dirname(resolvedPath);
-      const dirClientPath = dirname(clientPath.startsWith('/')
-        ? clientPath
-        : '/' + clientPath);
+      const dirClientPath = dirname(
+        clientPath.startsWith('/') ? clientPath : '/' + clientPath,
+      );
       await fs.writeFile(join(dirFullPath, filename), picture.data);
       return { coverArtPath: join(dirClientPath, filename) };
     },
@@ -280,8 +284,8 @@ export function musicRoute(mountPath: string) {
 }
 
 interface ScanCallbacks {
-  onTotal?: (count: number) => void;
-  onProgress?: (scanned: number, path: string) => void;
+  onTotalTracksCounted: (count: number) => void;
+  onTrackScanned: (scanCount: number, path: string) => void;
 }
 
 /**
@@ -291,7 +295,7 @@ interface ScanCallbacks {
  */
 async function performScan(
   mountPath: string,
-  callbacks: ScanCallbacks = {},
+  callbacks?: ScanCallbacks,
 ): Promise<T.MusicIndex> {
   const indexPath = join(mountPath, MUSIC_INDEX_FILENAME);
   const tmpPath = indexPath + '.tmp';
@@ -320,7 +324,7 @@ async function performScan(
   }
 
   const audioFiles = await findAudioFiles(mountPath, mountPath);
-  callbacks.onTotal?.(audioFiles.length);
+  callbacks?.onTotalTracksCounted(audioFiles.length);
 
   // Cache cover art lookups per album directory — probed once per unique dir.
   const coverArtDirCache = new Map<string, string | null>();
@@ -411,7 +415,7 @@ async function performScan(
       });
     }
 
-    callbacks.onProgress?.(i + 1, clientPath);
+    callbacks?.onTrackScanned(i + 1, clientPath);
   }
 
   const index: T.MusicIndex = {
