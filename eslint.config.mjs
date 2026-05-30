@@ -1,5 +1,8 @@
 import globals from 'globals';
 import { baseConfigs } from './eslint.base.mjs';
+import { noPathInServer } from './src/shared/lint/js/no-path-in-server.mjs';
+
+const indieWebPlugin = { rules: { 'no-path-in-server': noPathInServer } };
 
 export default [
   {
@@ -46,6 +49,7 @@ export default [
   // Server
   {
     files: ['src/server/**/*.ts'],
+    plugins: { 'indie-web': indieWebPlugin },
     languageOptions: {
       parserOptions: {
         project: ['./src/server/tsconfig.json'],
@@ -54,11 +58,18 @@ export default [
         ecmaFeatures: { jsx: true },
       },
     },
+    rules: {
+      'indie-web/no-path-in-server': 'error',
+    },
+  },
+  {
+    files: ['src/server/utils.ts', 'src/server/test/**/*.ts'],
+    rules: { 'indie-web/no-path-in-server': 'off' },
   },
 
   // Config and build files
   {
-    files: ['*.js', '*.mjs'],
+    files: ['*.js', '*.mjs', 'src/shared/lint/**/*.mjs'],
     languageOptions: {
       globals: { ...globals.node },
       parserOptions: {

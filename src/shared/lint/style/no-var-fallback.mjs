@@ -17,14 +17,21 @@ const messages = ruleMessages(ruleName, {
 
 const meta = { url: 'https://github.com/gregtatum/indie-web', fixable: false };
 
+/**
+ * @param {any} primary
+ * @returns {function(any, any): void}
+ */
 function rule(primary) {
   return (root, result) => {
-    if (!validateOptions(result, ruleName, { actual: primary })) return;
-    root.walkDecls((decl) => {
+    if (!validateOptions(result, ruleName, { actual: primary })) {
+      return;
+    }
+    root.walkDecls((/** @type {any} */ decl) => {
       const parsed = valueParser(decl.value);
       parsed.walk((node) => {
-        if (node.type !== 'function' || node.value.toLowerCase() !== 'var')
+        if (node.type !== 'function' || node.value.toLowerCase() !== 'var') {
           return;
+        }
         const hasFallback = node.nodes.some(
           (n) => n.type === 'div' && n.value === ',',
         );
