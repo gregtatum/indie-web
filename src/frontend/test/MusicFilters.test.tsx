@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import * as React from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { Provider } from 'react-redux';
@@ -48,12 +54,6 @@ beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
 });
 
-// Renders the current URL search string into the DOM so tests can assert URL changes.
-function LocationDisplay() {
-  const { search } = useLocation();
-  return <output data-testid="location-search">{search}</output>;
-}
-
 function setup(search = '') {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
@@ -70,21 +70,28 @@ function setup(search = '') {
     },
   );
 
+  let currentLocation: ReturnType<typeof useLocation>;
+  // Captures the location during the React update cycle.
+  function LocationCapture() {
+    currentLocation = useLocation();
+    return null;
+  }
+
   render(
     <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music${search}`]}>
       <Provider store={store as any}>
         <AppRoutes />
-        <LocationDisplay />
+        <LocationCapture />
       </Provider>
     </MemoryRouter>,
   );
 
-  return { store };
+  return { store, getLocation: () => currentLocation };
 }
 
 describe('music filter URL serialization', () => {
   it('clicking a genre filter updates the URL', async () => {
-    setup();
+    const { getLocation } = setup();
 
     const rock = await screen.findByText('Rock');
     await act(async () => {
@@ -92,9 +99,7 @@ describe('music filter URL serialization', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('location-search').textContent).toContain(
-        'genre=Rock',
-      );
+      expect(getLocation().search).toContain('genre=Rock');
     });
   });
 
