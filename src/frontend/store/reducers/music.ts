@@ -10,27 +10,32 @@ export type MusicPlaybackStatus =
 
 export type FolderArtSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
-interface FolderArtSave {
-  status: FolderArtSaveStatus;
-  version: number;
-}
-
-const folderArtSaveInitial: FolderArtSave = { status: 'idle', version: 0 };
-
-function folderArtSave(
-  state: FolderArtSave = folderArtSaveInitial,
+function folderArtSaveStatus(
+  state: FolderArtSaveStatus = 'idle',
   action: T.Action,
-): FolderArtSave {
+): FolderArtSaveStatus {
   switch (action.type) {
     case 'music-folder-art-save-start':
-      return { ...state, status: 'saving' };
+      return 'saving';
     case 'music-folder-art-save-success':
-      return { status: 'saved', version: state.version + 1 };
+      return 'saved';
     case 'music-folder-art-save-error':
-      return { ...state, status: 'error' };
+      return 'error';
     case 'set-music-selected-tracks':
     case 'view-music':
-      return folderArtSaveInitial;
+      return 'idle';
+    default:
+      return state;
+  }
+}
+
+function folderArtVersion(state = 0, action: T.Action): number {
+  switch (action.type) {
+    case 'music-folder-art-save-success':
+      return state + 1;
+    case 'set-music-selected-tracks':
+    case 'view-music':
+      return 0;
     default:
       return state;
   }
@@ -154,7 +159,8 @@ const combinedMusicReducer = combineReducers({
   playingTrackPath,
   playbackStatus,
   playbackQueue,
-  folderArtSave,
+  folderArtSaveStatus,
+  folderArtVersion,
 });
 
 type MusicState = ReturnType<typeof combinedMusicReducer>;

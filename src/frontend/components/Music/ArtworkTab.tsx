@@ -67,10 +67,12 @@ function ArtworkSection({
   src,
   details,
   children,
+  reloading = false,
 }: {
   src: string;
   details: DetailItem[];
   children?: React.ReactNode;
+  reloading?: boolean;
 }) {
   const [naturalWidth, setNaturalWidth] = React.useState<number | null>(null);
   const [resolution, setResolution] = React.useState<string>('');
@@ -116,7 +118,7 @@ function ArtworkSection({
             )}
           </div>
         ))}
-        {resolution && (
+        {resolution && !reloading && (
           <div className="artworkSectionDetailsRow">
             <span className="artworkSectionDetailsKey">Resolution</span>
             <span>{resolution}</span>
@@ -141,6 +143,7 @@ export function ArtworkTab({
   const { getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
   const version = $$.getMusicFolderArtVersion();
+  const saveStatus = $$.getMusicFolderArtSaveStatus();
 
   const apics = React.useMemo(() => {
     if (tagsState.status !== 'loaded') {
@@ -196,6 +199,7 @@ export function ArtworkTab({
           <ArtworkSection
             key={version}
             src={artUrl}
+            reloading={saveStatus === 'saving'}
             details={[
               {
                 key: 'File',

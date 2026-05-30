@@ -90,11 +90,11 @@ export function getMusicPlaybackQueue(state: State): T.TrackMetadata[] {
 }
 
 export function getMusicFolderArtSaveStatus(state: State): FolderArtSaveStatus {
-  return getMusic(state).folderArtSave.status;
+  return getMusic(state).folderArtSaveStatus;
 }
 
 export function getMusicFolderArtVersion(state: State): number {
-  return getMusic(state).folderArtSave.version;
+  return getMusic(state).folderArtVersion;
 }
 
 /**
