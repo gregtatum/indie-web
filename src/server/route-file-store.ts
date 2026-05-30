@@ -45,6 +45,9 @@ export function fileStoreRoute(mountPath: MountPath) {
       listFilesRequest.path,
       true /* expectedFolder */,
     );
+    if (!resolvedPath) {
+      throw new ClientError('Invalid path.');
+    }
 
     if (!(await doesFolderExist(resolvedPath))) {
       throw mountPath.makeError(
@@ -65,6 +68,9 @@ export function fileStoreRoute(mountPath: MountPath) {
         continue;
       }
       const entryPath = mountPath.joinWithinMount(resolvedPath, entry.name);
+      if (!entryPath) {
+        continue;
+      }
       try {
         // Slice off the mount path, but retain the final '/'.
         // const mountPath = '/mount/path/'
@@ -90,7 +96,7 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
-    if (resolvedPath === mountPath.getRiskyRawPath()) {
+    if (!resolvedPath || resolvedPath === mountPath.getRiskyRawPath()) {
       throw new ClientError('Invalid path.');
     }
 
@@ -116,7 +122,7 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
-    if (resolvedPath === mountPath.getRiskyRawPath()) {
+    if (!resolvedPath || resolvedPath === mountPath.getRiskyRawPath()) {
       throw new ClientError('Invalid path.');
     }
 
@@ -141,6 +147,9 @@ export function fileStoreRoute(mountPath: MountPath) {
 
       const fromResolved = mountPath.resolve(fromPath);
       const toResolved = mountPath.resolve(toPath);
+      if (!fromResolved || !toResolved) {
+        throw new ClientError('Invalid path.');
+      }
       await rename(fromResolved, toResolved);
       const stats = await fs.stat(toResolved);
       return getMetadata(toPath, stats);
@@ -154,6 +163,9 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
 
     const resolvedPath = mountPath.resolve(folderPath);
+    if (!resolvedPath) {
+      throw new ClientError('Invalid path.');
+    }
     await mkdir(resolvedPath, { recursive: true });
     return getFolderMetadata(folderPath);
   });
@@ -166,6 +178,10 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
 
     const resolvedPath = mountPath.resolve(path);
+    if (!resolvedPath) {
+      res.status(400).send('Invalid path.');
+      return;
+    }
 
     if (!(await doesFolderExist(resolvedPath))) {
       throw mountPath.makeError(

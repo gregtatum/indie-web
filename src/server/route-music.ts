@@ -41,6 +41,9 @@ export function musicRoute(mountPath: MountPath) {
    */
   route.get('/music-index', async (): Promise<T.MusicIndex> => {
     const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
+    if (!indexPath) {
+      throw new Error('Unexpected: MUSIC_INDEX_FILENAME escaped the mount.');
+    }
     try {
       const contents = await fs.readFile(indexPath, 'utf-8');
       return JSON.parse(contents) as T.MusicIndex;
@@ -124,6 +127,10 @@ export function musicRoute(mountPath: MountPath) {
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      res.status(400).send('Invalid path.');
+      return;
+    }
 
     let stats: Awaited<ReturnType<typeof fs.stat>>;
     try {
@@ -199,6 +206,9 @@ export function musicRoute(mountPath: MountPath) {
       throw new ClientError('Missing path query parameter.');
     }
     const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      throw new ClientError('Invalid path.');
+    }
     const meta = await parseFile(resolvedPath);
     const native = Object.entries(meta.native ?? {}).map(
       ([format, frames]) => ({
@@ -227,6 +237,10 @@ export function musicRoute(mountPath: MountPath) {
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      res.status(400).send('Invalid path.');
+      return;
+    }
 
     let stats: Awaited<ReturnType<typeof fs.stat>>;
     try {
@@ -265,6 +279,9 @@ export function musicRoute(mountPath: MountPath) {
         throw new ClientError('Missing path query parameter.');
       }
       const resolvedPath = mountPath.resolve(clientPath);
+      if (!resolvedPath) {
+        throw new ClientError('Invalid path.');
+      }
       const meta = await parseFile(resolvedPath);
       const picture = meta.common.picture?.[0];
       if (!picture) {
@@ -276,10 +293,11 @@ export function musicRoute(mountPath: MountPath) {
       const dirClientPath = dirname(
         clientPath.startsWith('/') ? clientPath : '/' + clientPath,
       );
-      await fs.writeFile(
-        mountPath.joinWithinMount(dirFullPath, filename),
-        picture.data,
-      );
+      const artPath = mountPath.joinWithinMount(dirFullPath, filename);
+      if (!artPath) {
+        throw new Error('Unexpected: art path escaped the mount.');
+      }
+      await fs.writeFile(artPath, picture.data);
       return { coverArtPath: dirClientPath + '/' + filename };
     },
   );
@@ -303,6 +321,9 @@ async function performScan(
 ): Promise<T.MusicIndex> {
   const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
   const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.tmp');
+  if (!indexPath || !tmpPath) {
+    throw new Error('Unexpected: index path escaped the mount.');
+  }
 
   // Read the existing index to enable incremental scanning: individual track
   // entries whose mtime and size are unchanged can skip tag re-parsing.
@@ -398,10 +419,11 @@ async function performScan(
           const picture = meta.common.picture![0];
           const filename =
             picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
-          await fs.writeFile(
-            mountPath.joinWithinMount(dirFullPath, filename),
-            picture.data,
-          );
+          const artPath = mountPath.joinWithinMount(dirFullPath, filename);
+          if (!artPath) {
+            throw new Error('Unexpected: cover art path escaped the mount.');
+          }
+          await fs.writeFile(artPath, picture.data);
           coverArt = dirClientPath + '/' + filename;
           coverArtDirCache.set(dirClientPath, coverArt);
         }
@@ -509,6 +531,9 @@ async function findAudioFiles(
     }
 
     const fullPath = mountPath.joinWithinMount(dirPath, entry.name);
+    if (!fullPath) {
+      continue;
+    }
 
     if (entry.isDirectory()) {
       const nested = await findAudioFiles(fullPath, mountPath);

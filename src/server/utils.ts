@@ -318,7 +318,7 @@ export class MountPath {
   /**
    * Equivalent to node:path's resolve function, but built with safety checks.
    */
-  resolve(clientPath: string, expectedFolder = false): string {
+  resolve(clientPath: string, expectedFolder = false): string | null {
     if (!clientPath.startsWith('/')) {
       clientPath = '/' + clientPath;
     }
@@ -338,40 +338,37 @@ export class MountPath {
       resolvedPath !== this.#mountPath
     ) {
       console.error('Resolved path:', resolvedPath);
-      throw new Error(
-        'Invalid path: Access outside of the mount is not allowed.',
-      );
+      return null;
     }
 
     return resolvedPath;
   }
 
   /**
-   * Joins a path part to the existing mount.
+   * Joins a path part to the existing mount and only returns a result if the path is
+   * within the mount.
    */
-  joinOnMount(pathPart: string): string {
+  joinOnMount(pathPart: string): string | null {
     const joined = join(this.#mountPath, pathPart);
     if (
       !joined.startsWith(this.#mountPath + '/') &&
       joined !== this.#mountPath
     ) {
-      throw new Error('Resolved path escapes the mount.');
+      return null;
     }
     return joined;
   }
 
   /**
-   * Runs "node:path" join and ensures the path is within the mount.
+   * Runs "node:path" join and only returns a result if the path is within the mount.
    */
-  joinWithinMount(...paths: string[]): string {
+  joinWithinMount(...paths: string[]): string | null {
     const joined = join(...(paths as [string, ...string[]]));
     if (
       !joined.startsWith(this.#mountPath + '/') &&
       joined !== this.#mountPath
     ) {
-      throw new Error(
-        'Invalid path: Access outside of the mount is not allowed.',
-      );
+      return null;
     }
     return joined;
   }
