@@ -376,6 +376,18 @@ export class MountPath {
     return joined;
   }
 
+  /**
+   * Creates an error that includes the path. This avoid exposing string concatenation
+   * to risky codepaths that can include mount escapes.
+   */
+  makeError<E extends Error>(
+    ErrorClass: new (message: string) => E,
+    format: string,
+    path: string,
+  ): E {
+    return new ErrorClass(format.replace('%s', path));
+  }
+
   validate() {
     if (this.#mountPath[this.#mountPath.length - 1] === '/') {
       throw new Error('The mount path should not end in a trailing slash.');

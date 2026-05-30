@@ -302,7 +302,7 @@ async function performScan(
   callbacks?: ScanCallbacks,
 ): Promise<T.MusicIndex> {
   const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
-  const tmpPath = indexPath + '.tmp';
+  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.tmp');
 
   // Read the existing index to enable incremental scanning: individual track
   // entries whose mtime and size are unchanged can skip tag re-parsing.

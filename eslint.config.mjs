@@ -1,8 +1,14 @@
 import globals from 'globals';
 import { baseConfigs } from './eslint.base.mjs';
 import { noPathInServer } from './src/shared/lint/js/no-path-in-server.mjs';
+import { noMountPathConcat } from './src/shared/lint/js/no-mount-path-concat.mjs';
 
-const indieWebPlugin = { rules: { 'no-path-in-server': noPathInServer } };
+const indieWebPlugin = {
+  rules: {
+    'no-path-in-server': noPathInServer,
+    'no-mount-path-concat': noMountPathConcat,
+  },
+};
 
 export default [
   {
@@ -60,11 +66,15 @@ export default [
     },
     rules: {
       'indie-web/no-path-in-server': 'error',
+      'indie-web/no-mount-path-concat': 'error',
     },
   },
   {
     files: ['src/server/utils.ts', 'src/server/test/**/*.ts'],
-    rules: { 'indie-web/no-path-in-server': 'off' },
+    rules: {
+      'indie-web/no-path-in-server': 'off',
+      'indie-web/no-mount-path-concat': 'off',
+    },
   },
 
   // Config and build files

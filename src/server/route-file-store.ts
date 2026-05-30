@@ -47,8 +47,10 @@ export function fileStoreRoute(mountPath: MountPath) {
     );
 
     if (!(await doesFolderExist(resolvedPath))) {
-      throw new RequestConflict(
-        'The requested path was not a folder: ' + resolvedPath,
+      throw mountPath.makeError(
+        RequestConflict,
+        'The requested path was not a folder: %s',
+        resolvedPath,
       );
     }
 
@@ -166,8 +168,10 @@ export function fileStoreRoute(mountPath: MountPath) {
     const resolvedPath = mountPath.resolve(path);
 
     if (!(await doesFolderExist(resolvedPath))) {
-      throw new RequestConflict(
-        'The requested path was not a folder: ' + resolvedPath,
+      throw mountPath.makeError(
+        RequestConflict,
+        'The requested path was not a folder: %s',
+        resolvedPath,
       );
     }
     try {
