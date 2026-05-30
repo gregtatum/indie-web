@@ -37,6 +37,13 @@ export function musicRoute(mountPath: MountPath) {
   let scanInProgress = false;
 
   /**
+   * List out the routes that are available, just as a simple hint.
+   */
+  route.get('/', async (): Promise<{ routes: string[] }> => {
+    return { routes: route.routes.map((r) => r.toString()) };
+  });
+
+  /**
    * Returns the current music index, or 404 if no scan has been run yet.
    */
   route.get('/music-index', async (): Promise<T.MusicIndex> => {
