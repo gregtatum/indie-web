@@ -22,9 +22,8 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     const [contextTrackPath, setContextTrackPath] = React.useState<
       string | null
     >(null);
-    const [editTrackPath, setEditTrackPath] = React.useState<string | null>(
-      null,
-    );
+    const [searchParams, setSearchParams] = Router.useSearchParams();
+    const editTrackPath = searchParams.get('edit');
     const anchorRef = React.useRef<HTMLElement | null>(null);
 
     React.useImperativeHandle(ref, () => ({
@@ -83,7 +82,11 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
               key: 'edit',
               children: 'Edit',
               onClick() {
-                setEditTrackPath(contextTrackPath);
+                setSearchParams((prev) => {
+                  const params = new URLSearchParams(prev);
+                  params.set('edit', contextTrackPath);
+                  return params;
+                });
               },
             } as MenuButton,
             {
@@ -114,7 +117,13 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
         )}
         <EditTrackModal
           trackPath={editTrackPath}
-          onClose={() => setEditTrackPath(null)}
+          onClose={() => {
+            setSearchParams((prev) => {
+              const params = new URLSearchParams(prev);
+              params.delete('edit');
+              return params;
+            });
+          }}
         />
       </>
     );

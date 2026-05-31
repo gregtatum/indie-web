@@ -195,6 +195,56 @@ describe('music view toggle', () => {
   });
 });
 
+describe('edit track modal URL serialization', () => {
+  it('pushes edit param on open and close, with back navigation restoring each state', async () => {
+    const { getLocation, getNavigate } = setup();
+
+    (window.fetch as FetchMockSandbox).get(
+      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+      { body: JSON.stringify({ native: [] }), status: 200 },
+    );
+
+    const sovayTrack = await screen.findByText('Sovay');
+
+    await act(async () => {
+      fireEvent.contextMenu(sovayTrack);
+    });
+
+    const editButton = await screen.findByRole('button', { name: 'Edit' });
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('edit')).toBe(
+        '/Indie/Andrew Bird/The Mysterious Production of Eggs/Sovay.mp3',
+      );
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('edit')).toBeNull();
+    });
+
+    act(() => getNavigate()(-1));
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('edit')).toBe(
+        '/Indie/Andrew Bird/The Mysterious Production of Eggs/Sovay.mp3',
+      );
+    });
+
+    act(() => getNavigate()(-1));
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('edit')).toBeNull();
+    });
+  });
+});
+
 describe('music filter URL deserialization', () => {
   it('uses the genre', async () => {
     const { store } = setup('?genre=Indie');
