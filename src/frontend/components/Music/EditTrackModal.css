@@ -201,19 +201,7 @@
 
 .editTrackModalTagLogButton {
   flex-shrink: 0;
-  font-size: var(--font-size-small);
-  font-family: inherit;
-  padding: 4px 10px;
-  border: 1px solid var(--light-border);
-  border-radius: var(--button-border-radius);
-  background: var(--surface-subtle);
-  color: var(--text-interactive);
-  cursor: pointer;
   white-space: nowrap;
-}
-
-.editTrackModalTagLogButton:hover {
-  background: var(--surface-subtle-hover);
 }
 
 .editTrackModalArtworkSections {

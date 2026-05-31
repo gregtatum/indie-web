@@ -80,7 +80,7 @@ export function TagsTab({ tagsState }: Props) {
                           readOnly
                         />
                         <button
-                          className="editTrackModalTagLogButton"
+                          className="button editTrackModalTagLogButton"
                           onClick={() => {
                             const bytes = Uint8Array.from(atob(binary), (c) =>
                               c.charCodeAt(0),
