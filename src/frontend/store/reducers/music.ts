@@ -126,6 +126,20 @@ function selectedTrackPaths(state: string[] = [], action: T.Action): string[] {
   }
 }
 
+function editTrackPath(
+  state: string | null = null,
+  action: T.Action,
+): string | null {
+  switch (action.type) {
+    case 'set-music-edit-track-path':
+      return action.path;
+    case 'view-music':
+      return null;
+    default:
+      return state;
+  }
+}
+
 function needsRescan(state = false, action: T.Action): boolean {
   switch (action.type) {
     case 'set-music-tracks':
@@ -152,6 +166,7 @@ function playbackQueue(
 }
 
 const combinedMusicReducer = combineReducers({
+  editTrackPath,
   panelSelections,
   tracks,
   selectedTrackPaths,

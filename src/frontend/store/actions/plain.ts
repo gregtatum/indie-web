@@ -401,3 +401,7 @@ export function musicFolderArtSaveSuccess() {
 export function musicFolderArtSaveError() {
   return { type: 'music-folder-art-save-error' as const };
 }
+
+export function setMusicEditTrackPath(path: string | null) {
+  return { type: 'set-music-edit-track-path' as const, path };
+}

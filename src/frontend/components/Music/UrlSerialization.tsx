@@ -7,9 +7,11 @@ export function useMusicUrlSerialization(): {
 } {
   const panelSelections = $$.getMusicPanelSelections();
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
+  const editTrackPath = $$.getMusicEditTrackPath();
   const { dispatch } = Hooks.useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const isFirstRender = React.useRef(true);
+  const isFirstEditRender = React.useRef(true);
 
   // Initialize filter state from URL params on mount.
   React.useEffect(
@@ -35,6 +37,13 @@ export function useMusicUrlSerialization(): {
       // Run once on mount.
     ],
   );
+
+  // Sync edit param from URL to Redux — handles back/forward navigation
+  // and the initial load.
+  const editFromUrl = searchParams.get('edit');
+  React.useEffect(() => {
+    dispatch(A.setMusicEditTrackPath(editFromUrl));
+  }, [editFromUrl]);
 
   // Replace URL params when filter state changes. Skips the first
   // render so the mount effect above can dispatch before this runs.
@@ -73,6 +82,36 @@ export function useMusicUrlSerialization(): {
       { replace: true },
     );
   }, [panelSelections, selectedTrackPaths, setSearchParams]);
+
+  // Keep a ref so Effect D always uses the latest setSearchParams without
+  // triggering re-runs when it changes due to URL navigation.
+  const setSearchParamsRef = React.useRef(setSearchParams);
+  setSearchParamsRef.current = setSearchParams;
+
+  // Push URL when the edit track changes in Redux. Skips the first render
+  // and no-ops when the URL already matches (e.g. after back/forward navigation
+  // synced URL → Redux and we don't want to push a duplicate entry).
+  // setSearchParams is intentionally excluded from deps — including it causes
+  // Effect D to re-fire on back/forward navigation (when setSearchParams gets a
+  // new reference) with a stale editTrackPath, producing an incorrect push.
+  React.useEffect(() => {
+    if (isFirstEditRender.current) {
+      isFirstEditRender.current = false;
+      return;
+    }
+    if (editTrackPath === editFromUrl) {
+      return;
+    }
+    setSearchParamsRef.current((prev) => {
+      const params = new URLSearchParams(prev);
+      if (editTrackPath) {
+        params.set('edit', editTrackPath);
+      } else {
+        params.delete('edit');
+      }
+      return params;
+    });
+  }, [editTrackPath]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isFilesView = searchParams.get('view') === 'files';
 

@@ -26,6 +26,10 @@ export function getMusicPanelSelections(
   return getMusic(state).panelSelections;
 }
 
+export function getMusicEditTrackPath(state: State): string | null {
+  return getMusic(state).editTrackPath;
+}
+
 export function getMusicNeedsRescan(state: State): boolean {
   return getMusic(state).needsRescan;
 }
