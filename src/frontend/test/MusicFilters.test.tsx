@@ -13,6 +13,7 @@ import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
 import type { FetchMockSandbox } from 'fetch-mock';
+import { mockServerListFiles } from './utils/fixtures';
 
 const FAKE_SERVER: T.FileStoreServer = {
   id: 'test-music',
@@ -70,6 +71,15 @@ function setup(search = '') {
       status: 200,
     },
   );
+  const genreFolders: T.FolderListing = [
+    ...new Set(TRACKS.map((t) => t.genre).filter(Boolean)),
+  ].map((genre) => ({
+    type: 'folder' as const,
+    name: genre!,
+    path: `/${genre}`,
+    id: `id:/${genre}`,
+  }));
+  mockServerListFiles(FAKE_SERVER, genreFolders);
 
   let currentLocation: ReturnType<typeof useLocation>;
   let currentNavigate: ReturnType<typeof useNavigate>;

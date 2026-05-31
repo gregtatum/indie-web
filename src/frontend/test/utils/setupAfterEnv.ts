@@ -49,7 +49,9 @@ beforeEach(function () {
     originalConsoleWarn.call(console, message, ...rest);
   });
   global.indexedDB = new IDBFactory();
-  (global as any).fetch = fetchMockJest.sandbox();
+  const fetchSandbox = fetchMockJest.sandbox();
+  fetchSandbox.config.warnOnFallback = false;
+  (global as any).fetch = fetchSandbox;
   (global as any).Headers = Headers;
   (global as any).Request = Request;
   (global as any).Response = Response;

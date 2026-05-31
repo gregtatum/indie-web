@@ -179,6 +179,16 @@ export function createFolderMetadataReference(
   };
 }
 
+export function mockServerListFiles(
+  server: T.FileStoreServer,
+  listing: T.FolderListing = [],
+): void {
+  (window.fetch as FetchMockSandbox).post(
+    `${server.url}/file-store/list-files`,
+    { body: JSON.stringify(listing), status: 200 },
+  );
+}
+
 export function mockDropboxAccessToken(store: T.Store) {
   const accessToken = 'faketoken';
   const expiresIn = 14399;
