@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { $$, A, Hooks, T } from 'frontend';
+import { ensureNever } from 'frontend/utils';
+
+type SetSearchParams = ReturnType<typeof useSearchParams>[1];
 
 /**
  * Synchronize the URL state with the Redux state. Certain items get persisted
@@ -9,17 +12,50 @@ import { $$, A, Hooks, T } from 'frontend';
 export function useMusicUrlSerialization(): {
   isFilesView: boolean;
 } {
+  const [searchParams, setSearchParams] = useSearchParams();
+  useFilterUrlSync(searchParams, setSearchParams);
+  useEditModalUrlSync(searchParams, setSearchParams);
+  return { isFilesView: searchParams.get('view') === 'files' };
+}
+
+/**
+ * Returns the active tab for the edit modal given the raw URL value and whether
+ * the modal is open. Tab is only meaningful when the modal is open; an invalid
+ * or missing value defaults to 'details'.
+ */
+function parseTabFromUrl(
+  raw: string | null,
+  editFromUrl: string | null,
+): T.MusicEditTab | null {
+  if (!editFromUrl || !raw) {
+    return null;
+  }
+  const editTab: T.MusicEditTab = raw as T.MusicEditTab;
+  switch (editTab) {
+    case 'details':
+    case 'artwork':
+    case 'id3':
+      return editTab;
+    default:
+      // Use ensureNever to exhaustively check this type.
+      ensureNever(editTab);
+      return null;
+  }
+}
+
+/**
+ * Sync the filters and selected track with the URL.
+ */
+function useFilterUrlSync(
+  searchParams: URLSearchParams,
+  setSearchParams: SetSearchParams,
+) {
   const panelSelections = $$.getMusicPanelSelections();
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
-  const editTrackPath = $$.getMusicEditTrackPath();
-  const editTab = $$.getMusicEditTab();
   const { dispatch } = Hooks.useStore();
-  const [searchParams, setSearchParams] = useSearchParams();
   const isFirstRender = React.useRef(true);
-  const isFirstEditRender = React.useRef(true);
-  const isFirstTabRender = React.useRef(true);
 
-  // Initialize filter state from URL params on mount.
+  // Initialize the Redux store from the URLs on the initial load.
   React.useEffect(
     () => {
       const genres = searchParams.getAll('genre');
@@ -44,26 +80,7 @@ export function useMusicUrlSerialization(): {
     ],
   );
 
-  // TODO - Split the modal hooks into their own hook for better code organization.
-  // Track filters can also use their own hook.
-
-  // The "edit' param is used when editing tracks. edit=/path/to/track.mp3
-  // It opens the edit model.
-  const editFromUrl = searchParams.get('edit');
-  // TODO - This should do some light validation, but converting a (string) => T.MusicEditTab | null.
-  // Then if it's null AND the editFromUrl exists set it the first tab. This should happen
-  // outside of the hook here.
-  const tabFromUrl = searchParams.get('tab') as T.MusicEditTab | null;
-
-  React.useEffect(() => {
-    dispatch(A.setMusicEditTrackPath(editFromUrl));
-  }, [editFromUrl]);
-  React.useEffect(() => {
-    dispatch(A.setMusicEditTab(tabFromUrl ?? 'details'));
-  }, [tabFromUrl]);
-
-  // Replace URL params when filter state changes. Skips the first
-  // render so the mount effect above can dispatch before this runs.
+  // Synchronize the URLs from the Redux store.
   React.useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -99,12 +116,53 @@ export function useMusicUrlSerialization(): {
       { replace: true },
     );
   }, [panelSelections, selectedTrackPaths, setSearchParams]);
+}
 
-  // Keep a ref so Effect D always uses the latest setSearchParams without
-  // triggering re-runs when it changes due to URL navigation.
+function useEditModalUrlSync(
+  searchParams: URLSearchParams,
+  setSearchParams: SetSearchParams,
+) {
+  const editTrackPath = $$.getMusicEditTrackPath();
+  const editTab = $$.getMusicEditTab();
+  const { dispatch } = Hooks.useStore();
+
+  const editFromUrl = searchParams.get('edit');
+  const tabFromUrl = parseTabFromUrl(searchParams.get('tab'), editFromUrl);
+
+  const isFirstEditRender = React.useRef(true);
+  const isFirstTabRender = React.useRef(true);
+
   const setSearchParamsRef = React.useRef(setSearchParams);
   setSearchParamsRef.current = setSearchParams;
 
+  // Refs let us read the current Redux values inside the URL→Redux effects
+  // without adding them as deps. Adding them as deps would cause those effects
+  // to fire on Redux-driven changes and revert the Redux state back to the URL.
+  const editTrackPathRef = React.useRef(editTrackPath);
+  editTrackPathRef.current = editTrackPath;
+  const editTabRef = React.useRef(editTab);
+  editTabRef.current = editTab;
+
+  // Initialize Redux from the URL on mount and react to URL-driven changes
+  // (e.g., browser back). Unlike the filter sync, the edit URL is not replaced
+  // in-place, so navigating back can close the modal and must update Redux.
+  // The guards skip redundant dispatches when the URL changed because Redux
+  // just updated it.
+  React.useEffect(() => {
+    if (editFromUrl !== editTrackPathRef.current) {
+      dispatch(A.setMusicEditTrackPath(editFromUrl));
+    }
+  }, [editFromUrl]);
+
+  React.useEffect(() => {
+    if (tabFromUrl !== null && tabFromUrl !== editTabRef.current) {
+      dispatch(A.setMusicEditTab(tabFromUrl));
+    }
+  }, [tabFromUrl]);
+
+  // isFirstEditRender/isFirstTabRender guard the Redux→URL direction from
+  // firing on the initial render, which would overwrite the URL params before
+  // the URL→Redux effects above have had a chance to initialize Redux.
   React.useEffect(() => {
     if (isFirstEditRender.current) {
       isFirstEditRender.current = false;
@@ -146,8 +204,4 @@ export function useMusicUrlSerialization(): {
       { replace: true },
     );
   }, [editTab]);
-
-  const isFilesView = searchParams.get('view') === 'files';
-
-  return { isFilesView };
 }
