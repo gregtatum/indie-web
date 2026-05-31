@@ -20,13 +20,15 @@ interface DetailItem {
   onClick?: () => void;
 }
 
-function FolderArtOverwriteButton({
-  trackPath,
-  serverUrl,
-}: {
+interface OverwriteButtonProps {
   trackPath: string;
   serverUrl: string;
-}) {
+}
+
+function OverwriteButton({
+  trackPath,
+  serverUrl,
+}: OverwriteButtonProps) {
   const dispatch = Hooks.useDispatch();
   const saveStatus = $$.getMusicFolderArtSaveStatus();
 
@@ -75,6 +77,7 @@ function ArtworkSection({
   reloading?: boolean;
 }) {
   const [naturalWidth, setNaturalWidth] = React.useState<number | null>(null);
+  // The resolution of the underlying image's pixels
   const [resolution, setResolution] = React.useState<string>('');
   const [imgError, setImgError] = React.useState(false);
 
@@ -86,11 +89,11 @@ function ArtworkSection({
         <img
           className="artworkSectionImage"
           src={src}
-          style={naturalWidth !== null ? { maxWidth: naturalWidth } : undefined}
-          onLoad={(e) => {
-            const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
-            setNaturalWidth(w);
-            setResolution(`${w} × ${h}`);
+          style={naturalWidth ? { maxWidth: naturalWidth } : undefined}
+          onLoad={(event) => {
+            const img: HTMLImageElement = event.currentTarget;
+            setNaturalWidth(img.naturalWidth);
+            setResolution(`${img.width} × ${img.height}`);
           }}
           onError={() => setImgError(true)}
         />
@@ -210,7 +213,7 @@ export function ArtworkTab({
             ]}
           >
             {apics.length > 0 && (
-              <FolderArtOverwriteButton
+              <OverwriteButton
                 trackPath={trackPath}
                 serverUrl={serverUrl}
               />
