@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { $$, A, Hooks } from 'frontend';
 import { ListFiles } from '../ListFiles';
 import { MusicLibraryView } from './MusicLibraryView';
@@ -16,7 +16,7 @@ export function Music() {
   const server = $$.getCurrentServerOrNull();
   const needsRescan = $$.getMusicNeedsRescan();
   const { dispatch } = Hooks.useStore();
-  const { isFilesView, librarySearch, filesSearch } = useMusicUrlSerialization();
+  const { isFilesView } = useMusicUrlSerialization();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [scanProgress, setScanProgress] = React.useState<ScanProgress | null>(
@@ -119,13 +119,13 @@ export function Music() {
         ) : null}
         <div className="musicViewToggle">
           <Link
-            to={{ search: librarySearch }}
+            to={{ search: '' }}
             className={`button musicViewToggleButton${!isFilesView ? ' musicViewToggleButton-active' : ''}`}
           >
             Library
           </Link>
           <Link
-            to={{ search: filesSearch }}
+            to={{ search: 'view=files' }}
             className={`button musicViewToggleButton${isFilesView ? ' musicViewToggleButton-active' : ''}`}
           >
             Files

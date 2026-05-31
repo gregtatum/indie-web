@@ -4,8 +4,6 @@ import { $$, A, Hooks } from 'frontend';
 
 export function useMusicUrlSerialization(): {
   isFilesView: boolean;
-  librarySearch: string;
-  filesSearch: string;
 } {
   const panelSelections = $$.getMusicPanelSelections();
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
@@ -78,13 +76,5 @@ export function useMusicUrlSerialization(): {
 
   const isFilesView = searchParams.get('view') === 'files';
 
-  const libraryParams = new URLSearchParams(searchParams);
-  libraryParams.delete('view');
-  const librarySearch = libraryParams.toString();
-
-  const filesParams = new URLSearchParams(searchParams);
-  filesParams.set('view', 'files');
-  const filesSearch = filesParams.toString();
-
-  return { isFilesView, librarySearch, filesSearch };
+  return { isFilesView };
 }
