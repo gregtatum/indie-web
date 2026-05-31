@@ -7,7 +7,7 @@ import {
   within,
 } from '@testing-library/react';
 import * as React from 'react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
@@ -72,9 +72,11 @@ function setup(search = '') {
   );
 
   let currentLocation: ReturnType<typeof useLocation>;
-  // Captures the location during the React update cycle.
+  let currentNavigate: ReturnType<typeof useNavigate>;
+  // Captures the location and navigate during the React update cycle.
   function LocationCapture() {
     currentLocation = useLocation();
+    currentNavigate = useNavigate();
     return null;
   }
 
@@ -87,7 +89,11 @@ function setup(search = '') {
     </MemoryRouter>,
   );
 
-  return { store, getLocation: () => currentLocation };
+  return {
+    store,
+    getLocation: () => currentLocation,
+    getNavigate: () => currentNavigate,
+  };
 }
 
 function getParams(search: string): URLSearchParams {
@@ -157,6 +163,24 @@ describe('music URL serialization', () => {
         'Indie',
         'Jazz',
       ]);
+    });
+  });
+});
+
+describe('music view toggle', () => {
+  it('pushes onto history so back navigation returns to the previous view', async () => {
+    const { getLocation, getNavigate } = setup();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Files' }));
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('view')).toBe('files');
+    });
+
+    act(() => getNavigate()(-1));
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('view')).toBeNull();
     });
   });
 });

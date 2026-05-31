@@ -165,14 +165,11 @@ export function Music() {
             type="button"
             className={`button musicViewToggleButton${!isFilesView ? ' musicViewToggleButton-active' : ''}`}
             onClick={() =>
-              setSearchParams(
-                (prev) => {
-                  const p = new URLSearchParams(prev);
-                  p.delete('view');
-                  return p;
-                },
-                { replace: true },
-              )
+              setSearchParams((prev) => {
+                const p = new URLSearchParams(prev);
+                p.delete('view');
+                return p;
+              })
             }
           >
             Library
@@ -181,14 +178,11 @@ export function Music() {
             type="button"
             className={`button musicViewToggleButton${isFilesView ? ' musicViewToggleButton-active' : ''}`}
             onClick={() =>
-              setSearchParams(
-                (prev) => {
-                  const p = new URLSearchParams(prev);
-                  p.set('view', 'files');
-                  return p;
-                },
-                { replace: true },
-              )
+              setSearchParams((prev) => {
+                const p = new URLSearchParams(prev);
+                p.set('view', 'files');
+                return p;
+              })
             }
           >
             Files
