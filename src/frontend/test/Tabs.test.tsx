@@ -1,6 +1,6 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import * as React from 'react';
-import { useState } from 'react';
+import { act, useState } from 'react';
 import { Tabs } from 'frontend/components/Tabs';
 
 const TABS = [

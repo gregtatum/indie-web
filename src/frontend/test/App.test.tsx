@@ -1,6 +1,7 @@
 import { createStore } from 'frontend/store/create-store';
 import { AppRoutes } from 'frontend/components/App';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import * as React from 'react';
 import { A, $, T } from 'frontend';
 import { Provider } from 'react-redux';
