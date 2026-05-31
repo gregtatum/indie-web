@@ -59,7 +59,7 @@ export function TagsTab({ tagsState }: Props) {
         tags.length === 0 ? null : (
           <div key={format}>
             <div className="editTrackModalTagsFormat">{format}</div>
-            <div className="editTrackModalTagsBlock">
+            <div className="editTrackModalGrid">
               {sortTags(tags).map(({ id, value, binary }, i) => {
                 const label =
                   id3FrameLabels[id as keyof typeof id3FrameLabels] ?? id;
@@ -67,14 +67,14 @@ export function TagsTab({ tagsState }: Props) {
                   id3FrameTooltips[id as keyof typeof id3FrameTooltips];
                 const title = tooltip ? `${id} – ${tooltip}` : id;
                 return (
-                  <div key={i} className="editTrackModalTagRow">
-                    <span className="editTrackModalTagLabel" title={title}>
+                  <div key={i} className="editTrackModalRow">
+                    <span className="editTrackModalLabel" title={title}>
                       {label}
                     </span>
                     {binary !== undefined ? (
                       <div className="editTrackModalTagBinaryCell">
                         <input
-                          className="editTrackModalTagInput editTrackModalTagInput-binary"
+                          className="editTrackModalInput editTrackModalInput-readonly editTrackModalInput-binary"
                           value={value}
                           title={title}
                           readOnly
@@ -102,7 +102,7 @@ export function TagsTab({ tagsState }: Props) {
                       </div>
                     ) : (
                       <input
-                        className="editTrackModalTagInput"
+                        className="editTrackModalInput editTrackModalInput-readonly"
                         value={value}
                         readOnly
                       />

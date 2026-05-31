@@ -111,7 +111,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
 
     if (isSplitField(field)) {
       detailRows.push(
-        <label key={field.key} className="editTrackModalField">
+        <label key={field.key} className="editTrackModalRow">
           <span className="editTrackModalLabel">{field.label}</span>
           <div className="editTrackModalSplitInput">
             <input
@@ -134,7 +134,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       );
     } else {
       detailRows.push(
-        <label key={field.key} className="editTrackModalField">
+        <label key={field.key} className="editTrackModalRow">
           <span className="editTrackModalLabel">{field.label}</span>
           <input
             className="editTrackModalInput"
@@ -152,7 +152,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     {
       id: 'details' as T.MusicEditTab,
       label: 'Details',
-      panel: <div className="editTrackModalDetails">{detailRows}</div>,
+      panel: <div className="editTrackModalDetails editTrackModalGrid">{detailRows}</div>,
     },
     {
       id: 'artwork' as T.MusicEditTab,

@@ -33,16 +33,19 @@
   text-overflow: ellipsis;
 }
 
-.editTrackModalDetails {
+.editTrackModalGrid {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: max-content 1fr;
   align-items: center;
-  gap: 10px 16px;
+  gap: 6px 12px;
+}
+
+.editTrackModalDetails {
   padding: 20px 24px;
   background: var(--modal-bg);
 }
 
-.editTrackModalField {
+.editTrackModalRow {
   display: contents;
 }
 
@@ -51,14 +54,14 @@
   color: var(--text-label);
   font-weight: 500;
   text-align: right;
-  text-transform: lowercase;
-  letter-spacing: 0.01em;
+  white-space: nowrap;
+  min-width: 100px;
 }
 
 .editTrackModalInput {
-  font-size: var(--font-size-normal);
+  font-size: var(--font-size-small);
   font-family: inherit;
-  padding: 6px 10px;
+  padding: 5px 8px;
   border: 1px solid var(--light-border);
   border-radius: var(--button-border-radius);
   background: var(--modal-bg);
@@ -73,8 +76,17 @@
   box-shadow: var(--box-shadow-focus);
 }
 
+.editTrackModalInput-readonly {
+  background: var(--surface-raised);
+}
+
 .editTrackModalInput-short {
   max-width: 80px;
+}
+
+.editTrackModalInput-binary {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .editTrackModalGroupHeader {
@@ -150,43 +162,6 @@
   text-align: center;
 }
 
-.editTrackModalTagsBlock {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  align-items: center;
-  gap: 6px 12px;
-}
-
-.editTrackModalTagRow {
-  display: contents;
-}
-
-.editTrackModalTagLabel {
-  font-size: var(--font-size-small);
-  text-align: right;
-  color: var(--text-label);
-  white-space: nowrap;
-  min-width: 100px;
-}
-
-.editTrackModalTagInput {
-  font-size: var(--font-size-small);
-  font-family: inherit;
-  padding: 5px 8px;
-  border: 1px solid var(--light-border);
-  border-radius: var(--button-border-radius);
-  background: var(--surface-raised);
-  color: var(--text-body);
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.editTrackModalTagInput-binary {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
 .editTrackModalTagBinaryCell {
   display: flex;
   gap: 6px;
@@ -194,7 +169,7 @@
   min-width: 0;
 }
 
-.editTrackModalTagBinaryCell .editTrackModalTagInput {
+.editTrackModalTagBinaryCell .editTrackModalInput {
   flex: 1;
   min-width: 0;
 }
