@@ -195,6 +195,49 @@ describe('music view toggle', () => {
   });
 });
 
+describe('edit track modal tab URL serialization', () => {
+  it('replaces tab param when switching tabs, back navigation skips tab history', async () => {
+    const { getLocation, getNavigate } = setup();
+
+    (window.fetch as FetchMockSandbox).get(
+      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+      { body: JSON.stringify({ native: [] }), status: 200 },
+    );
+
+    const sovayTrack = await screen.findByText('Sovay');
+
+    await act(async () => {
+      fireEvent.contextMenu(sovayTrack);
+    });
+
+    const editButton = await screen.findByRole('button', { name: 'Edit' });
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('edit')).toBeTruthy();
+    });
+
+    const artworkTab = await screen.findByRole('tab', { name: 'Artwork' });
+    await act(async () => {
+      fireEvent.click(artworkTab);
+    });
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('tab')).toBe('artwork');
+    });
+
+    // Tab uses replace, so back skips past both tabs to before the modal
+    act(() => getNavigate()(-1));
+
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('edit')).toBeNull();
+      expect(getParams(getLocation().search).get('tab')).toBeNull();
+    });
+  });
+});
+
 describe('edit track modal URL serialization', () => {
   it('pushes edit param on open and close, with back navigation restoring each state', async () => {
     const { getLocation, getNavigate } = setup();

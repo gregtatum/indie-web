@@ -140,6 +140,22 @@ function editTrackPath(
   }
 }
 
+function editTab(
+  state: T.MusicEditTab = 'details',
+  action: T.Action,
+): T.MusicEditTab {
+  switch (action.type) {
+    case 'set-music-edit-tab':
+      return action.tab;
+    case 'set-music-edit-track-path':
+      return 'details';
+    case 'view-music':
+      return 'details';
+    default:
+      return state;
+  }
+}
+
 function needsRescan(state = false, action: T.Action): boolean {
   switch (action.type) {
     case 'set-music-tracks':
@@ -167,6 +183,7 @@ function playbackQueue(
 
 const combinedMusicReducer = combineReducers({
   editTrackPath,
+  editTab,
   panelSelections,
   tracks,
   selectedTrackPaths,

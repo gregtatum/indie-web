@@ -30,6 +30,10 @@ export function getMusicEditTrackPath(state: State): string | null {
   return getMusic(state).editTrackPath;
 }
 
+export function getMusicEditTab(state: State): T.MusicEditTab {
+  return getMusic(state).editTab;
+}
+
 export function getMusicNeedsRescan(state: State): boolean {
   return getMusic(state).needsRescan;
 }

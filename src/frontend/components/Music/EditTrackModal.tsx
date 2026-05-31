@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { $$ } from 'frontend';
+import { $$, A, Hooks, T } from 'frontend';
 import { Modal } from 'frontend/components/Modal';
 import { Tabs } from 'frontend/components/Tabs';
 import { ArtworkTab } from './ArtworkTab';
@@ -14,8 +14,6 @@ import {
 } from 'frontend/logic/music/tags';
 import type { TrackTagsResponse } from 'shared/@types/shared';
 import './EditTrackModal.css';
-
-type TabId = 'details' | 'artwork' | 'id3';
 
 const GROUP_LABELS: Record<string, string> = {
   core: 'Identity',
@@ -33,8 +31,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const tracks = $$.getMusicTracks();
   const track = tracks.find((t) => t.path === trackPath) ?? null;
   const server = $$.getCurrentServerOrNull();
+  const activeTab = $$.getMusicEditTab();
+  const dispatch = Hooks.useDispatch();
 
-  const [activeTab, setActiveTab] = React.useState<TabId>('details');
   const [formState, setFormState] = React.useState<DetailFieldValues>(
     emptyDetailFieldValues,
   );
@@ -50,7 +49,6 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   React.useEffect(() => {
     setFormState(detailFieldValues(track, null));
     setTagsState({ status: 'loading' });
-    setActiveTab('details');
   }, [trackPath]);
 
   // Fetch tags once per track
@@ -152,12 +150,12 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
 
   const tabs = [
     {
-      id: 'details' as TabId,
+      id: 'details' as T.MusicEditTab,
       label: 'Details',
       panel: <div className="editTrackModalDetails">{detailRows}</div>,
     },
     {
-      id: 'artwork' as TabId,
+      id: 'artwork' as T.MusicEditTab,
       label: 'Artwork',
       panel:
         track && server ? (
@@ -175,7 +173,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         ),
     },
     {
-      id: 'id3' as TabId,
+      id: 'id3' as T.MusicEditTab,
       label: 'ID3',
       panel: track ? (
         <TagsTab tagsState={tagsState} />
@@ -204,7 +202,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         <Tabs
           tabs={tabs}
           activeTab={activeTab}
-          onChange={(id) => setActiveTab(id as TabId)}
+          onChange={(id) => dispatch(A.setMusicEditTab(id as T.MusicEditTab))}
         />
       </div>
     </Modal>
