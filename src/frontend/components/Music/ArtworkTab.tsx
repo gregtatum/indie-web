@@ -25,10 +25,7 @@ interface OverwriteButtonProps {
   serverUrl: string;
 }
 
-function OverwriteButton({
-  trackPath,
-  serverUrl,
-}: OverwriteButtonProps) {
+function OverwriteButton({ trackPath, serverUrl }: OverwriteButtonProps) {
   const dispatch = Hooks.useDispatch();
   const saveStatus = $$.getMusicFolderArtSaveStatus();
 
@@ -127,9 +124,7 @@ function ArtworkSection({
             <span>{resolution}</span>
           </div>
         )}
-        {children && (
-          <div className="artworkSectionDetailsRow">{children}</div>
-        )}
+        {children && <div className="artworkSectionDetailsRow">{children}</div>}
       </div>
     </div>
   );
@@ -213,10 +208,7 @@ export function ArtworkTab({
             ]}
           >
             {apics.length > 0 && (
-              <OverwriteButton
-                trackPath={trackPath}
-                serverUrl={serverUrl}
-              />
+              <OverwriteButton trackPath={trackPath} serverUrl={serverUrl} />
             )}
           </ArtworkSection>
         </div>
