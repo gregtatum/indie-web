@@ -171,7 +171,7 @@ describe('music view toggle', () => {
   it('pushes onto history so back navigation returns to the previous view', async () => {
     const { getLocation, getNavigate } = setup();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Files' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Files' }));
 
     await waitFor(() => {
       expect(getParams(getLocation().search).get('view')).toBe('files');

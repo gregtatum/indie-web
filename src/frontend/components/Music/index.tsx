@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { $$, A, Hooks } from 'frontend';
 import { ListFiles } from '../ListFiles';
 import { MusicLibraryView } from './MusicLibraryView';
@@ -76,6 +76,14 @@ export function Music() {
   }
 
   const isFilesView = searchParams.get('view') === 'files';
+
+  const libraryParams = new URLSearchParams(searchParams);
+  libraryParams.delete('view');
+  const librarySearch = libraryParams.toString();
+
+  const filesParams = new URLSearchParams(searchParams);
+  filesParams.set('view', 'files');
+  const filesSearch = filesParams.toString();
 
   function handleScan() {
     if (!server || scanPhase === 'scanning') {
@@ -161,32 +169,18 @@ export function Music() {
           </span>
         ) : null}
         <div className="musicViewToggle">
-          <button
-            type="button"
+          <Link
+            to={{ search: librarySearch }}
             className={`button musicViewToggleButton${!isFilesView ? ' musicViewToggleButton-active' : ''}`}
-            onClick={() =>
-              setSearchParams((prev) => {
-                const p = new URLSearchParams(prev);
-                p.delete('view');
-                return p;
-              })
-            }
           >
             Library
-          </button>
-          <button
-            type="button"
+          </Link>
+          <Link
+            to={{ search: filesSearch }}
             className={`button musicViewToggleButton${isFilesView ? ' musicViewToggleButton-active' : ''}`}
-            onClick={() =>
-              setSearchParams((prev) => {
-                const p = new URLSearchParams(prev);
-                p.set('view', 'files');
-                return p;
-              })
-            }
           >
             Files
-          </button>
+          </Link>
         </div>
       </div>
       {isFilesView ? <ListFiles /> : <MusicLibraryView />}
