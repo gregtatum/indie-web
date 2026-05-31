@@ -189,7 +189,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
 
   return (
     <Modal isOpen={!!trackPath} onClose={onClose}>
-      <div className="editTrackModal">
+      <div className="music editTrackModal">
         <div className="editTrackModalHeader">
           <div className="editTrackModalHeaderTitle">
             {track?.title ?? 'Unknown Title'}

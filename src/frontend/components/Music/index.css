@@ -1,8 +1,4 @@
 .music {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-
   --border-color: #ddd;
   --music-gap: 12px;
   --music-padding-v: 8px;
@@ -12,6 +8,31 @@
   --music-item-font-size: 14px;
   --success-color: green;
   --error-color: red;
+
+  /* Surfaces */
+  --modal-bg: #fff;
+  --surface-raised: #fafafa;
+  --surface-subtle: #f0f0f0;
+  --surface-subtle-hover: #e4e4e4;
+  --album-art-bg: #ccc;
+
+  /* Text hierarchy */
+  --text-heading: #111;
+  --text-body: #000;
+  --text-label: #666;
+  --text-muted: #888;
+  --text-interactive: #444;
+
+  /* Effects */
+  --header-shadow: 0 5px 5px #0000000d, 0 10px 10px #00000003;
+
+  /* Typography */
+  --modal-header-font-size: 18px;
+}
+.musicContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 
   & .listFiles {
     min-height: 0;
@@ -133,7 +154,7 @@
   opacity: 0.5;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 5px 5px #0000000d, 0 10px 10px #00000003;
+  box-shadow: var(--header-shadow);
 }
 
 .musicFilterPanelList {
@@ -194,7 +215,7 @@
   user-select: none;
   position: relative;
   z-index: 1;
-  box-shadow: 0 5px 5px #0000000d, 0 10px 10px #00000003;
+  box-shadow: var(--header-shadow);
 }
 
 .musicTracksHeaderCell {
@@ -356,7 +377,7 @@
   width: 48px;
   height: 48px;
   border-radius: 4px;
-  background: #ccc;
+  background: var(--album-art-bg);
   flex-shrink: 0;
   overflow: hidden;
 }

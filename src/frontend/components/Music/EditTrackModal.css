@@ -8,7 +8,7 @@
 
 .editTrackModalHeader {
   padding: 20px 48px 20px 24px;
-  background: #fff;
+  background: var(--modal-bg);
   border-bottom: 1px solid var(--light-border);
   display: flex;
   flex-direction: column;
@@ -17,9 +17,9 @@
 }
 
 .editTrackModalHeaderTitle {
-  font-size: 18px;
+  font-size: var(--modal-header-font-size);
   font-weight: 600;
-  color: #111;
+  color: var(--text-heading);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -27,7 +27,7 @@
 
 .editTrackModalHeaderMeta {
   font-size: var(--font-size-small);
-  color: #666;
+  color: var(--text-label);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -39,7 +39,7 @@
   align-items: center;
   gap: 10px 16px;
   padding: 20px 24px;
-  background: #fff;
+  background: var(--modal-bg);
 }
 
 .editTrackModalField {
@@ -48,7 +48,7 @@
 
 .editTrackModalLabel {
   font-size: var(--font-size-small);
-  color: #666;
+  color: var(--text-label);
   font-weight: 500;
   text-align: right;
   text-transform: lowercase;
@@ -61,8 +61,8 @@
   padding: 6px 10px;
   border: 1px solid var(--light-border);
   border-radius: var(--button-border-radius);
-  background: #fff;
-  color: #000;
+  background: var(--modal-bg);
+  color: var(--text-body);
   outline: none;
   width: 100%;
   box-sizing: border-box;
@@ -80,7 +80,7 @@
 .editTrackModalGroupHeader {
   grid-column: 1 / -1;
   font-size: var(--font-size-small);
-  color: #aaa;
+  color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -104,7 +104,7 @@
 
 .editTrackModalSplitSep {
   font-size: var(--font-size-small);
-  color: #bbb;
+  color: var(--text-muted);
 }
 
 .editTrackModalArtwork {
@@ -112,7 +112,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: var(--modal-bg);
   min-height: 200px;
 }
 
@@ -124,19 +124,19 @@
 }
 
 .editTrackModalArtworkEmpty {
-  color: #999;
+  color: var(--text-muted);
   font-size: var(--font-size-small);
 }
 
 .editTrackModalTags {
   padding: 0 24px 20px;
-  background: #fff;
+  background: var(--modal-bg);
   overflow-y: auto;
 }
 
 .editTrackModalTagsFormat {
   font-size: var(--font-size-small);
-  color: #999;
+  color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -145,7 +145,7 @@
 
 .editTrackModalTagsLoading {
   padding: 24px 0;
-  color: #999;
+  color: var(--text-muted);
   font-size: var(--font-size-small);
   text-align: center;
 }
@@ -164,7 +164,7 @@
 .editTrackModalTagLabel {
   font-size: var(--font-size-small);
   text-align: right;
-  color: #666;
+  color: var(--text-label);
   white-space: nowrap;
   min-width: 100px;
 }
@@ -175,15 +175,15 @@
   padding: 5px 8px;
   border: 1px solid var(--light-border);
   border-radius: var(--button-border-radius);
-  background: #fafafa;
-  color: #000;
+  background: var(--surface-raised);
+  color: var(--text-body);
   outline: none;
   width: 100%;
   box-sizing: border-box;
 }
 
 .editTrackModalTagInput-binary {
-  color: #aaa;
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -206,19 +206,19 @@
   padding: 4px 10px;
   border: 1px solid var(--light-border);
   border-radius: var(--button-border-radius);
-  background: #f0f0f0;
-  color: #444;
+  background: var(--surface-subtle);
+  color: var(--text-interactive);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .editTrackModalTagLogButton:hover {
-  background: #e4e4e4;
+  background: var(--surface-subtle-hover);
 }
 
 .editTrackModalArtworkSections {
   padding: 20px 24px;
-  background: #fff;
+  background: var(--modal-bg);
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -243,7 +243,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #999;
+  color: var(--text-muted);
 }
 
 .artworkSaveFolderBtn {
@@ -252,14 +252,14 @@
   border-radius: var(--button-border-radius);
   border: 1px solid var(--light-border);
   background: transparent;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .artworkSaveFolderBtn:hover:not(:disabled) {
-  border-color: #aaa;
-  color: #555;
+  border-color: var(--text-muted);
+  color: var(--text-interactive);
 }
 
 .artworkSaveFolderBtn:disabled {
@@ -284,7 +284,7 @@
 
 .artworkSectionError {
   font-size: var(--font-size-small);
-  color: #aaa;
+  color: var(--text-muted);
   font-style: italic;
   padding: 8px 0;
 }
@@ -299,11 +299,11 @@
   display: flex;
   gap: 12px;
   font-size: var(--font-size-small);
-  color: #888;
+  color: var(--text-muted);
 }
 
 .artworkSectionDetailsKey {
-  color: #bbb;
+  color: var(--text-muted);
   min-width: 72px;
 }
 
@@ -317,11 +317,11 @@
   cursor: pointer;
   text-align: left;
   text-decoration: underline;
-  text-decoration-color: #ccc;
+  text-decoration-color: var(--text-muted);
   word-break: break-all;
 }
 
 .artworkSectionDetailsLink:hover {
-  color: #444;
-  text-decoration-color: #888;
+  color: var(--text-interactive);
+  text-decoration-color: var(--text-muted);
 }

@@ -102,7 +102,7 @@ export function Music() {
   }
 
   return (
-    <div className="music">
+    <div className="music musicContainer">
       <div className="musicToolbar">
         <button
           type="button"
