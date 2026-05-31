@@ -1,23 +1,23 @@
 .tabs {
   display: flex;
   gap: 4px;
-  padding: 6px 8px;
+  padding: 8px 12px;
   background: var(--button-background);
   border-bottom: 1px solid var(--light-border);
   flex-shrink: 0;
 }
 
 .tabsButton {
-  padding: 0.2em 0.8em;
-  border: 1px solid var(--button-border);
+  padding: 8px 15px;
+  border: none;
   border-radius: var(--button-border-radius);
   background: var(--button-background);
   color: var(--button-color);
-  font-size: var(--font-size-small);
   font-family: inherit;
   font-weight: 500;
   cursor: pointer;
   opacity: var(--button-opacity);
+  font-size: var(--font-size-small);
 }
 
 .tabsButton:hover {
