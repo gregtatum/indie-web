@@ -1,4 +1,4 @@
-/* eslint-env node */
+/* global process */
 /* eslint-disable no-undef */
 import fs from 'fs';
 import path from 'path';
