@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import * as React from 'react';
@@ -23,6 +23,52 @@ const v1Fixture = readFileSync(
   join(__dirname, 'fixtures/music-index-v1.json'),
   'utf-8',
 );
+
+function buildMp3WithTags(tags: {
+  title?: string;
+  artist?: string;
+  album?: string;
+  genre?: string;
+}): Buffer {
+  function frame(id: string, content: Buffer): Buffer {
+    const header = Buffer.alloc(10);
+    header.write(id, 0, 4, 'ascii');
+    header.writeUInt32BE(content.length, 4);
+    header.writeUInt16BE(0, 8);
+    return Buffer.concat([header, content]);
+  }
+  function textFrame(id: string, text: string): Buffer {
+    return frame(
+      id,
+      Buffer.concat([Buffer.from([0x00]), Buffer.from(text, 'latin1')]),
+    );
+  }
+  const frames: Buffer[] = [];
+  if (tags.title) {
+    frames.push(textFrame('TIT2', tags.title));
+  }
+  if (tags.artist) {
+    frames.push(textFrame('TPE1', tags.artist));
+  }
+  if (tags.album) {
+    frames.push(textFrame('TALB', tags.album));
+  }
+  if (tags.genre) {
+    frames.push(textFrame('TCON', tags.genre));
+  }
+  const frameData = Buffer.concat(frames);
+  const id3Header = Buffer.alloc(10);
+  id3Header.write('ID3', 0, 3, 'ascii');
+  id3Header.writeUInt8(3, 3);
+  id3Header.writeUInt8(0, 4);
+  id3Header.writeUInt8(0, 5);
+  const size = frameData.length;
+  id3Header.writeUInt8((size >> 21) & 0x7f, 6);
+  id3Header.writeUInt8((size >> 14) & 0x7f, 7);
+  id3Header.writeUInt8((size >> 7) & 0x7f, 8);
+  id3Header.writeUInt8(size & 0x7f, 9);
+  return Buffer.concat([id3Header, frameData]);
+}
 
 // Minimal valid MP3: ID3v2.3 header with no frames (11 bytes).
 // Enough for the server to recognise it as an audio file without needing
@@ -283,4 +329,119 @@ describe('<Music> with real server', () => {
     await screen.findByText(/Found \d+ tracks\./);
     await screen.findByRole('button', { name: 'Scan Library' });
   });
+
+  it('edits a track title and persists it to the MP3 file', async () => {
+    await writeFile(
+      join(getServer().mountDir, 'EditTest.mp3'),
+      buildMp3WithTags({ title: 'Original Title', artist: 'Test Artist' }),
+    );
+
+    setup();
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await screen.findByText(/Found \d+ tracks\./);
+
+    const trackEl = await screen.findByText('Original Title');
+    await act(async () => {
+      fireEvent.contextMenu(trackEl);
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    });
+
+    // Wait for tags to fully load — the TagsTab shows "Loading…" while in-flight;
+    // it's kept in the DOM even when the Details tab is active, so we can wait for
+    // it to disappear without switching tabs.
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).toBeNull();
+      expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
+        'Original Title',
+      );
+    });
+
+    const titleInput = screen.getByLabelText('Title') as HTMLInputElement;
+    await act(async () => {
+      await userEvent.clear(titleInput);
+      await userEvent.type(titleInput, 'Updated Title');
+    });
+
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    // Save complete when the button is disabled again (isDirty is false).
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+
+    // Confirm the tag was written by re-fetching from the real server.
+    const tagsRes = await fetch(
+      `${getServer().baseUrl}/music/track-tags?path=${encodeURIComponent('/EditTest.mp3')}`,
+    );
+    const tagsData = (await tagsRes.json()) as {
+      native: Array<{
+        format: string;
+        tags: Array<{ id: string; value: string }>;
+      }>;
+    };
+    const allTags = tagsData.native.flatMap((b) => b.tags);
+    expect(allTags.find((t) => t.id === 'TIT2')?.value).toBe('Updated Title');
+  }, 30_000);
+
+  it('requires double-close to discard unsaved changes', async () => {
+    await writeFile(
+      join(getServer().mountDir, 'CloseTest.mp3'),
+      buildMp3WithTags({ title: 'Close Test Track' }),
+    );
+
+    setup();
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await screen.findByText(/Found \d+ tracks\./);
+
+    const trackEl = await screen.findByText('Close Test Track');
+    await act(async () => {
+      fireEvent.contextMenu(trackEl);
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    });
+
+    await waitFor(() => {
+      expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
+        'Close Test Track',
+      );
+    });
+
+    await act(async () => {
+      await userEvent.clear(screen.getByLabelText('Title') as HTMLInputElement);
+      await userEvent.type(
+        screen.getByLabelText('Title') as HTMLInputElement,
+        'Changed Title',
+      );
+    });
+
+    // First close — modal should stay open, warning should appear.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+    expect(screen.queryByRole('dialog')).not.toBeNull();
+    await screen.findByText('Close one more time to discard changes');
+
+    // Second close — modal should close.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  }, 30_000);
 });

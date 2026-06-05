@@ -12,7 +12,10 @@ import {
   type TrackTagsLoadState,
   type DetailFieldValues,
 } from 'frontend/logic/music/tags';
-import type { TrackTagsResponse } from 'shared/@types/shared';
+import type {
+  TrackTagsResponse,
+  WriteTrackTagsResponse,
+} from 'shared/@types/shared';
 import './EditTrackModal.css';
 
 const GROUP_LABELS: Record<string, string> = {
@@ -27,6 +30,8 @@ interface Props {
   onClose: () => void;
 }
 
+type SaveStatus = 'idle' | 'saving' | 'error';
+
 export function EditTrackModal({ trackPath, onClose }: Props) {
   const tracks = $$.getMusicTracks();
   const track = tracks.find((t) => t.path === trackPath) ?? null;
@@ -40,15 +45,30 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const [tagsState, setTagsState] = React.useState<TrackTagsLoadState>({
     status: 'loading',
   });
+  const [baselineFormState, setBaselineFormState] =
+    React.useState<DetailFieldValues>(emptyDetailFieldValues);
+  const [saveStatus, setSaveStatus] = React.useState<SaveStatus>('idle');
+  const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
+  // Tracks whether the user has made any edits since the modal last opened/reset.
+  // A ref (not state) so the tags-load effect always reads the latest value without
+  // needing to be in its dependency array.
+  const hasUserEdited = React.useRef(false);
 
   function setField(key: string, value: string) {
+    hasUserEdited.current = true;
+    setCloseConfirmPending(false);
     setFormState((prev) => ({ ...prev, [key]: value }));
   }
 
   // Reset the form immediately from TrackMetadata when track changes
   React.useEffect(() => {
-    setFormState(detailFieldValues(track, null));
+    const vals = detailFieldValues(track, null);
+    setFormState(vals);
+    setBaselineFormState(vals);
     setTagsState({ status: 'loading' });
+    setSaveStatus('idle');
+    setCloseConfirmPending(false);
+    hasUserEdited.current = false;
   }, [trackPath]);
 
   // Fetch tags once per track
@@ -84,12 +104,114 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     };
   }, [trackPath, server?.url]);
 
-  // Upgrade form state when tags load
+  // Upgrade form state and baseline when tags load
   React.useEffect(() => {
     if (tagsState.status === 'loaded') {
-      setFormState(detailFieldValues(track, tagsState.data));
+      const vals = detailFieldValues(track, tagsState.data);
+      setBaselineFormState(vals);
+      // Only sync formState to the full tag values if the user hasn't started editing.
+      // The ref is always current so this check is race-free.
+      if (!hasUserEdited.current) {
+        setFormState(vals);
+      }
     }
   }, [tagsState]);
+
+  const isDirty = React.useMemo(() => {
+    for (const key of Object.keys(baselineFormState)) {
+      if ((formState[key] ?? '') !== (baselineFormState[key] ?? '')) {
+        return true;
+      }
+    }
+    return false;
+  }, [formState, baselineFormState]);
+
+  function handleClose() {
+    if (isDirty) {
+      if (closeConfirmPending) {
+        onClose();
+      } else {
+        setCloseConfirmPending(true);
+      }
+    } else {
+      onClose();
+    }
+  }
+
+  async function handleSave() {
+    if (!server || !trackPath || !isDirty || saveStatus === 'saving') {
+      return;
+    }
+
+    const changes: Array<{ frameId: string; value: string }> = [];
+    for (const field of DETAIL_FIELDS) {
+      if (isSplitField(field)) {
+        const numVal = formState[field.key] ?? '';
+        const totalVal = formState[field.totalKey] ?? '';
+        const combined = totalVal ? `${numVal}/${totalVal}` : numVal;
+        const baseNum = baselineFormState[field.key] ?? '';
+        const baseTotal = baselineFormState[field.totalKey] ?? '';
+        const baseCombined = baseTotal ? `${baseNum}/${baseTotal}` : baseNum;
+        if (combined !== baseCombined) {
+          changes.push({ frameId: field.frameId, value: combined });
+        }
+      } else {
+        const current = formState[field.key] ?? '';
+        const base = baselineFormState[field.key] ?? '';
+        if (current !== base) {
+          changes.push({ frameId: field.frameId, value: current });
+        }
+      }
+    }
+    if (changes.length === 0) {
+      return;
+    }
+
+    setSaveStatus('saving');
+    try {
+      const res = await fetch(`${server.url}/music/write-track-tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: trackPath, changes }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `${res.status}`);
+      }
+      await (res.json() as Promise<WriteTrackTagsResponse>);
+
+      setBaselineFormState({ ...formState });
+      setSaveStatus('idle');
+      setCloseConfirmPending(false);
+
+      // Optimistically patch Redux for fields that live in TrackMetadata.
+      // needsRescan:true surfaces the "Rescan recommended" button.
+      const updatedTracks = tracks.map((t) => {
+        if (t.path !== trackPath) {
+          return t;
+        }
+        const updated = { ...t };
+        for (const { frameId, value } of changes) {
+          if (frameId === 'TIT2') {
+            updated.title = value || null;
+          } else if (frameId === 'TPE1') {
+            updated.artist = value || null;
+          } else if (frameId === 'TALB') {
+            updated.album = value || null;
+          } else if (frameId === 'TCON') {
+            updated.genre = value || null;
+          } else if (frameId === 'TRCK') {
+            const num = parseInt(value.split('/')[0], 10);
+            updated.track = isNaN(num) ? null : num;
+          }
+        }
+        return updated;
+      });
+      dispatch(A.setMusicTracks(updatedTracks, true));
+    } catch {
+      setSaveStatus('error');
+    }
+  }
 
   const artUrl =
     server && track?.coverArt
@@ -152,7 +274,11 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     {
       id: 'details' as T.MusicEditTab,
       label: 'Details',
-      panel: <div className="editTrackModalDetails editTrackModalGrid">{detailRows}</div>,
+      panel: (
+        <div className="editTrackModalDetails editTrackModalGrid">
+          {detailRows}
+        </div>
+      ),
     },
     {
       id: 'artwork' as T.MusicEditTab,
@@ -186,7 +312,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   ];
 
   return (
-    <Modal isOpen={!!trackPath} onClose={onClose}>
+    <Modal isOpen={!!trackPath} onClose={handleClose}>
       <div className="music editTrackModal">
         <div className="editTrackModalHeader">
           <div className="editTrackModalHeaderTitle">
@@ -204,6 +330,29 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           activeTab={activeTab}
           onChange={(id) => dispatch(A.setMusicEditTab(id as T.MusicEditTab))}
         />
+        <div className="editTrackModalFooter">
+          {closeConfirmPending && (
+            <span className="editTrackModalCloseWarning">
+              Close one more time to discard changes
+            </span>
+          )}
+          <button
+            type="button"
+            className="editTrackModalSaveBtn"
+            disabled={
+              !isDirty ||
+              saveStatus === 'saving' ||
+              tagsState.status === 'loading'
+            }
+            onClick={() => void handleSave()}
+          >
+            {saveStatus === 'saving'
+              ? 'Saving…'
+              : saveStatus === 'error'
+                ? 'Save failed — retry'
+                : 'Save'}
+          </button>
+        </div>
       </div>
     </Modal>
   );

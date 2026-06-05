@@ -118,3 +118,15 @@ export interface TrackTagsResponse {
     tags: RawTagEntry[];
   }>;
 }
+
+export interface TrackTagUpdate {
+  frameId: string;
+  value: string;
+}
+
+export interface WriteTrackTagsRequest {
+  path: string;
+  changes: TrackTagUpdate[];
+}
+
+export interface WriteTrackTagsResponse {}

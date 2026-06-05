@@ -6,6 +6,7 @@ import {
   RequestConflict,
   throttle,
 } from './utils.ts';
+import NodeID3 from 'node-id3';
 import type { T } from './index.ts';
 import { createReadStream, Dirent, promises as fs } from 'node:fs';
 import { extname, dirname } from 'node:path';
@@ -32,6 +33,20 @@ const AUDIO_EXTENSIONS = new Set([
   '.wav',
   '.aac',
 ]);
+
+const FRAME_ID_TO_NODE_ID3: Record<string, string> = {
+  TIT2: 'title',
+  TPE1: 'artist',
+  TPE2: 'performerInfo',
+  TALB: 'album',
+  TRCK: 'trackNumber',
+  TPOS: 'partOfSet',
+  TYER: 'year',
+  TCON: 'genre',
+  TBPM: 'bpm',
+  TCOM: 'composer',
+  TEXT: 'textWriter',
+};
 
 export function musicRoute(mountPath: MountPath) {
   const route = new ApiRoute();
@@ -308,6 +323,59 @@ export function musicRoute(mountPath: MountPath) {
       }
       await fs.writeFile(artPath, picture.data);
       return { coverArtPath: dirClientPath + '/' + filename };
+    },
+  );
+
+  /**
+   * Writes one or more ID3 tag frames to an MP3 file in-place.
+   * Accepts { path, changes: [{ frameId, value }] }. Uses a diff approach —
+   * only the specified frames are rewritten; all others are preserved.
+   * Only MP3 (ID3v2.x) files are supported.
+   */
+  route.post(
+    '/write-track-tags',
+    async (req): Promise<T.WriteTrackTagsResponse> => {
+      const { path: clientPath, changes } = req.body as T.WriteTrackTagsRequest;
+      if (typeof clientPath !== 'string' || !clientPath) {
+        throw new ClientError('Missing path in request body.');
+      }
+      if (!Array.isArray(changes) || changes.length === 0) {
+        throw new ClientError('Missing or empty changes array.');
+      }
+      const resolvedPath = mountPath.resolve(clientPath);
+      if (!resolvedPath) {
+        throw new ClientError('Invalid path.');
+      }
+      if (extname(resolvedPath).toLowerCase() !== '.mp3') {
+        throw new ClientError('Only MP3 files are supported for tag writing.');
+      }
+      try {
+        await fs.stat(resolvedPath);
+      } catch (err: any) {
+        if (err?.code === 'ENOENT') {
+          throw new NotFoundError('File not found.');
+        }
+        throw err;
+      }
+
+      const tags: Record<string, unknown> = {};
+      for (const { frameId, value } of changes) {
+        if (frameId === 'COMM') {
+          tags.comment = { language: 'eng', shortText: '', text: value };
+        } else {
+          const prop = FRAME_ID_TO_NODE_ID3[frameId];
+          if (!prop) {
+            throw new ClientError(`Unsupported frame ID: ${frameId}`);
+          }
+          tags[prop] = value;
+        }
+      }
+
+      const result = NodeID3.update(tags, resolvedPath);
+      if (result instanceof Error) {
+        throw result;
+      }
+      return {};
     },
   );
 

@@ -13,7 +13,8 @@
     "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "music-metadata": "^11.12.3"
+    "music-metadata": "^11.12.3",
+    "node-id3": "^0.2.9"
   },
   "devDependencies": {
     "@types/archiver": "^6.0.3",

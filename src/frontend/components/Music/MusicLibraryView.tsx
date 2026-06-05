@@ -37,8 +37,17 @@ function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
 
 export function MusicLibraryView() {
   const server = $$.getCurrentServerOrNull();
+  const tracks = $$.getMusicTracks();
   const { dispatch } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
+
+  // When a scan dispatches tracks into Redux, clear any "not found" error so
+  // the library view shows the newly scanned tracks without requiring a reload.
+  React.useEffect(() => {
+    if (error && tracks.length > 0) {
+      setError(null);
+    }
+  }, [tracks.length]);
 
   React.useEffect(() => {
     if (!server) {
