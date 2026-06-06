@@ -71,7 +71,7 @@ function checkEnv() {
   return env;
 }
 
-function renderInteractive(results, activeIndex = -1) {
+function renderInteractive(results, runningTasks = new Set()) {
   if (renderInteractive.hasRendered) {
     process.stdout.write(`\x1b[${checks.length}F`);
   }
@@ -79,7 +79,7 @@ function renderInteractive(results, activeIndex = -1) {
   for (let index = 0; index < checks.length; index += 1) {
     const check = checks[index];
     const result = results.get(check.task);
-    const line = formatRow(check, result, { isRunning: index === activeIndex });
+    const line = formatRow(check, result, { isRunning: runningTasks.has(check.task) });
 
     process.stdout.write(`\x1b[2K${line}\n`);
   }
@@ -161,8 +161,12 @@ function printFailures(results) {
 function cleanTaskOutput(result) {
   return result.output
     .split("\n")
-    .filter((line) => !line.startsWith(`task: Failed to run task "${result.task}"`))
+    .filter((line) => !stripAnsi(line).startsWith(`task: Failed to run task "${result.task}"`))
     .join("\n");
+}
+
+function stripAnsi(text) {
+  return text.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
 function printResults(results) {
@@ -176,46 +180,59 @@ function printResults(results) {
 }
 
 async function main() {
-  const results = [];
   const resultsByTask = new Map();
 
   if (isInteractive) {
-    renderInteractive(resultsByTask);
+    await runInteractiveChecks(resultsByTask);
+  } else {
+    await runNonInteractiveChecks(resultsByTask);
   }
 
-  for (let index = 0; index < checks.length; index += 1) {
-    const check = checks[index];
-
-    if (isInteractive) {
-      renderInteractive(resultsByTask, index);
-    } else {
-      console.log(formatRow(check, undefined, { isRunning: true }));
-    }
-
-    const result = await runCheck(check);
-    results.push(result);
-    resultsByTask.set(check.task, result);
-
-    if (isInteractive) {
-      renderInteractive(resultsByTask);
-    } else {
-      console.log(formatRow(check, result));
-    }
-
-    if (!isInteractive && result.exitCode !== 0) {
-      break;
-    }
-  }
-
-  if (isInteractive && renderInteractive.hasRendered) {
-    console.log();
-  }
+  const results = checks
+    .map((check) => resultsByTask.get(check.task))
+    .filter((result) => result);
 
   printFailures(results);
   printResults(results);
 
   if (results.some((result) => result.exitCode !== 0)) {
     process.exitCode = 1;
+  }
+}
+
+async function runInteractiveChecks(resultsByTask) {
+  const runningTasks = new Set(checks.map((check) => check.task));
+
+  renderInteractive(resultsByTask, runningTasks);
+
+  await Promise.all(
+    checks.map(async (check) => {
+      const result = await runCheck(check);
+      resultsByTask.set(check.task, result);
+      runningTasks.delete(check.task);
+      renderInteractive(resultsByTask, runningTasks);
+    }),
+  );
+
+  if (renderInteractive.hasRendered) {
+    console.log();
+  }
+}
+
+async function runNonInteractiveChecks(resultsByTask) {
+  for (let index = 0; index < checks.length; index += 1) {
+    const check = checks[index];
+
+    console.log(formatRow(check, undefined, { isRunning: true }));
+
+    const result = await runCheck(check);
+    resultsByTask.set(check.task, result);
+
+    console.log(formatRow(check, result));
+
+    if (result.exitCode !== 0) {
+      break;
+    }
   }
 }
 
