@@ -54,6 +54,10 @@ function statusGlyph(result, { isRunning = false } = {}) {
 }
 
 function formatRow(check, result, { isRunning = false } = {}) {
+  if (!isInteractive) {
+    return formatPlainRow(check, result, { isRunning });
+  }
+
   const label = check.label.padEnd(labelWidth);
   const suffix = isRunning
     ? ' running...'
@@ -62,6 +66,21 @@ function formatRow(check, result, { isRunning = false } = {}) {
       : '';
 
   return `${statusGlyph(result, { isRunning })} ${label}${suffix}`;
+}
+
+function formatPlainRow(check, result, { isRunning = false } = {}) {
+  const label = check.label.padEnd(labelWidth);
+
+  if (isRunning) {
+    return `RUN  ${label}`;
+  }
+
+  if (!result) {
+    return `WAIT ${label}`;
+  }
+
+  const status = result.exitCode === 0 ? 'PASS' : 'FAIL';
+  return `${status} ${label} ${formatDuration(result.durationMs)}`;
 }
 
 function checkEnv() {
@@ -180,20 +199,30 @@ function printFailures(results) {
     return;
   }
 
-  console.log(styled('✖ Failures', 'bold', 'red'));
-  console.log(styled('──────────', 'red'));
+  if (isInteractive) {
+    console.log(styled('✖ Failures', 'bold', 'red'));
+    console.log(styled('──────────', 'red'));
+  } else {
+    console.log('FAILURES');
+  }
 
   for (const result of failures) {
     console.log();
-    console.log(
-      `${styled('┌─', 'red')} ${styled(result.label, 'bold', 'red')} failed ` +
-        `${styled(`exit ${result.exitCode}`, 'red')}  ` +
-        `${styled(`run: task ${result.task}`, 'dim')}`,
-    );
-    console.log(
-      `${styled('│', 'red')} ${styled(`task --silent --exit-code ${result.task}`, 'dim')}`,
-    );
-    console.log(`${styled('└─ output', 'red')}`);
+    if (isInteractive) {
+      console.log(
+        `${styled('┌─', 'red')} ${styled(result.label, 'bold', 'red')} failed ` +
+          `${styled(`exit ${result.exitCode}`, 'red')}  ` +
+          `${styled(`run: task ${result.task}`, 'dim')}`,
+      );
+      console.log(
+        `${styled('│', 'red')} ${styled(`task --silent --exit-code ${result.task}`, 'dim')}`,
+      );
+      console.log(`${styled('└─ output', 'red')}`);
+    } else {
+      console.log(`FAIL ${result.label} exit ${result.exitCode} | run: task ${result.task}`);
+      console.log(`cmd: task --silent --exit-code ${result.task}`);
+      console.log('output:');
+    }
     const output = cleanTaskOutput(result);
     process.stdout.write(output || '(no output)\n');
     if (output && !output.endsWith('\n')) {
@@ -221,8 +250,12 @@ function stripAnsi(text) {
 }
 
 function printResults(results) {
-  console.log(styled('◆ Results', 'bold', 'cyan'));
-  console.log(styled('─────────', 'cyan'));
+  if (isInteractive) {
+    console.log(styled('◆ Results', 'bold', 'cyan'));
+    console.log(styled('─────────', 'cyan'));
+  } else {
+    console.log('RESULTS');
+  }
 
   for (const result of results) {
     const retry = result.exitCode === 0 ? '' : `  run: task ${result.task}`;
