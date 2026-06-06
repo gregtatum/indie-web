@@ -89,14 +89,16 @@ function renderInteractive(results, runningTasks = new Set()) {
 
 renderInteractive.hasRendered = false;
 
-function runCheck(check) {
+function startCheck(check) {
   const startedAt = Date.now();
   const child = spawn("task", ["--silent", "--exit-code", check.task], {
+    detached: true,
     env: checkEnv(),
     stdio: ["ignore", "pipe", "pipe"],
   });
 
   let output = "";
+  let settled = false;
 
   child.stdout.on("data", (chunk) => {
     output += chunk;
@@ -106,9 +108,17 @@ function runCheck(check) {
     output += chunk;
   });
 
-  return new Promise((resolve) => {
+  const promise = new Promise((resolve) => {
+    function finish(result) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(result);
+    }
+
     child.on("error", (error) => {
-      resolve({
+      finish({
         ...check,
         startedAt,
         durationMs: Date.now() - startedAt,
@@ -117,16 +127,41 @@ function runCheck(check) {
       });
     });
 
-    child.on("close", (exitCode) => {
-      resolve({
+    child.on("close", (exitCode, signal) => {
+      finish({
         ...check,
         startedAt,
         durationMs: Date.now() - startedAt,
-        exitCode,
+        exitCode: exitCode ?? 1,
+        signal,
         output,
       });
     });
   });
+
+  return {
+    check,
+    promise,
+    kill() {
+      if (settled || child.killed) {
+        return;
+      }
+      killCheckProcess(child, "SIGTERM");
+      setTimeout(() => {
+        if (!settled) {
+          killCheckProcess(child, "SIGKILL");
+        }
+      }, 1000).unref();
+    },
+  };
+}
+
+function killCheckProcess(child, signal) {
+  try {
+    process.kill(-child.pid, signal);
+  } catch {
+    child.kill(signal);
+  }
 }
 
 function printFailures(results) {
@@ -202,14 +237,15 @@ async function main() {
 
 async function runInteractiveChecks(resultsByTask) {
   const runningTasks = new Set(checks.map((check) => check.task));
+  const checkProcesses = checks.map((check) => startCheck(check));
 
   renderInteractive(resultsByTask, runningTasks);
 
   await Promise.all(
-    checks.map(async (check) => {
-      const result = await runCheck(check);
-      resultsByTask.set(check.task, result);
-      runningTasks.delete(check.task);
+    checkProcesses.map(async (checkProcess) => {
+      const result = await checkProcess.promise;
+      resultsByTask.set(checkProcess.check.task, result);
+      runningTasks.delete(checkProcess.check.task);
       renderInteractive(resultsByTask, runningTasks);
     }),
   );
@@ -220,18 +256,42 @@ async function runInteractiveChecks(resultsByTask) {
 }
 
 async function runNonInteractiveChecks(resultsByTask) {
-  for (let index = 0; index < checks.length; index += 1) {
-    const check = checks[index];
-
+  const checkProcesses = checks.map((check) => {
     console.log(formatRow(check, undefined, { isRunning: true }));
+    return startCheck(check);
+  });
 
-    const result = await runCheck(check);
-    resultsByTask.set(check.task, result);
+  let firstFailure = null;
+  const successfulResults = [];
 
-    console.log(formatRow(check, result));
+  await Promise.all(
+    checkProcesses.map(async (checkProcess) => {
+      const result = await checkProcess.promise;
+      if (result.exitCode !== 0) {
+        if (!firstFailure) {
+          firstFailure = result;
+          resultsByTask.set(result.task, result);
+          console.log(formatRow(result, result));
 
-    if (result.exitCode !== 0) {
-      break;
+          for (const otherProcess of checkProcesses) {
+            if (otherProcess !== checkProcess) {
+              otherProcess.kill();
+            }
+          }
+        }
+        return;
+      }
+
+      if (!firstFailure) {
+        successfulResults.push(result);
+      }
+    }),
+  );
+
+  if (!firstFailure) {
+    for (const result of successfulResults) {
+      resultsByTask.set(result.task, result);
+      console.log(formatRow(result, result));
     }
   }
 }
