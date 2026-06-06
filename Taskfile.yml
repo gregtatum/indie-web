@@ -39,12 +39,7 @@ tasks:
     cmds:
       - |
         eval "$(node src/shared/scripts/select-site.mjs)"
-        SITE="$SITE" task --parallel start-ts start-webpack start-docs-watch
-
-  start-ts:
-    desc: Start TypeScript in watch mode
-    cmds:
-      - tsc --noEmit --watch --project src/tsconfig.json
+        SITE="$SITE" task --parallel start-webpack start-docs-watch
 
   start-webpack:
     desc: Start Webpack server for the selected site
