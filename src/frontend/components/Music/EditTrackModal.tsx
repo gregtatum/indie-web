@@ -310,6 +310,12 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       ),
     },
   ];
+  let saveButtonLabel = 'Save';
+  if (saveStatus === 'saving') {
+    saveButtonLabel = 'Saving…';
+  } else if (saveStatus === 'error') {
+    saveButtonLabel = 'Save failed — retry';
+  }
 
   return (
     <Modal isOpen={!!trackPath} onClose={handleClose}>
@@ -346,11 +352,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             }
             onClick={() => void handleSave()}
           >
-            {saveStatus === 'saving'
-              ? 'Saving…'
-              : saveStatus === 'error'
-                ? 'Save failed — retry'
-                : 'Save'}
+            {saveButtonLabel}
           </button>
         </div>
       </div>

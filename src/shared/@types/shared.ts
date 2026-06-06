@@ -129,4 +129,4 @@ export interface WriteTrackTagsRequest {
   changes: TrackTagUpdate[];
 }
 
-export interface WriteTrackTagsResponse {}
+export type WriteTrackTagsResponse = Record<string, never>;
