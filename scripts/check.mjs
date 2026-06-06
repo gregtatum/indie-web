@@ -11,8 +11,10 @@ const checks = [
 const isInteractive = Boolean(process.stdout.isTTY);
 const labelWidth = Math.max(...checks.map((check) => check.label.length));
 const colors = {
+  bold: "\x1b[1m",
   green: "\x1b[32m",
   red: "\x1b[31m",
+  cyan: "\x1b[36m",
   dim: "\x1b[2m",
   reset: "\x1b[0m",
 };
@@ -26,6 +28,15 @@ function color(text, colorName) {
     return text;
   }
   return `${colors[colorName]}${text}${colors.reset}`;
+}
+
+function styled(text, ...colorNames) {
+  if (!isInteractive) {
+    return text;
+  }
+
+  const prefix = colorNames.map((colorName) => colors[colorName]).join("");
+  return `${prefix}${text}${colors.reset}`;
 }
 
 function statusGlyph(result, { isRunning = false } = {}) {
@@ -125,14 +136,18 @@ function printFailures(results) {
     return;
   }
 
-  console.log("Failures");
-  console.log("========");
+  console.log(styled("✖ Failures", "bold", "red"));
+  console.log(styled("──────────", "red"));
 
   for (const result of failures) {
     console.log();
-    console.log(`${result.label} failed with exit code ${result.exitCode}`);
-    console.log(`Command: task --silent --exit-code ${result.task}`);
-    console.log("--------");
+    console.log(
+      `${styled("┌─", "red")} ${styled(result.label, "bold", "red")} failed ` +
+        `${styled(`exit ${result.exitCode}`, "red")}  ` +
+        `${styled(`run: task ${result.task}`, "dim")}`,
+    );
+    console.log(`${styled("│", "red")} ${styled(`task --silent --exit-code ${result.task}`, "dim")}`);
+    console.log(`${styled("└─ output", "red")}`);
     const output = cleanTaskOutput(result);
     process.stdout.write(output || "(no output)\n");
     if (output && !output.endsWith("\n")) {
@@ -151,8 +166,8 @@ function cleanTaskOutput(result) {
 }
 
 function printResults(results) {
-  console.log("Results");
-  console.log("=======");
+  console.log(styled("◆ Results", "bold", "cyan"));
+  console.log(styled("─────────", "cyan"));
 
   for (const result of results) {
     const retry = result.exitCode === 0 ? "" : `  run: task ${result.task}`;
