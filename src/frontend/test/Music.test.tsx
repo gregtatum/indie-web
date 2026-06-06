@@ -1,23 +1,12 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
-import * as React from 'react';
-import { Provider } from 'react-redux';
-import { MemoryRouter } from 'react-router-dom';
-import { writeFile, rm } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { AppRoutes } from 'frontend/components/App';
-import { createStore } from 'frontend/store/create-store';
-import { A, T } from 'frontend';
-import type { FetchMockSandbox } from 'fetch-mock';
 import { readFileSync } from 'node:fs';
-import {
-  startMusicTestServer,
-  type MusicTestServer,
-} from './utils/musicTestServer';
-import { NodeEventSource } from './utils/nodeEventSource';
-// node-fetch provides real HTTP for the fetch-mock sandbox's fallbackToNetwork.
-import nodeFetch from 'node-fetch';
+import { removeMusicIndex, useMusicTestServer } from './utils/music/server';
+import { buildMinimalMp3, buildMp3WithTags } from './utils/music/files';
+import { renderMusicApp } from './utils/music/render';
 
 const v1Fixture = readFileSync(
   join(__dirname, 'fixtures/music-index-v1.json'),
@@ -32,122 +21,6 @@ if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
     process.stderr.write(`LOCALHOST_BIND_SKIPPED_TEST ${name}\n`);
   };
   it.skip('localhost-dependent tests skipped by check runner', () => {});
-}
-
-function buildMp3WithTags(
-  tags: Partial<{
-    title: string;
-    artist: string;
-    album: string;
-    genre: string;
-  }>,
-): Buffer {
-  function frame(id: string, content: Buffer): Buffer {
-    const header = Buffer.alloc(10);
-    header.write(id, 0, 4, 'ascii');
-    header.writeUInt32BE(content.length, 4);
-    header.writeUInt16BE(0, 8);
-    return Buffer.concat([header, content]);
-  }
-  function textFrame(id: string, text: string): Buffer {
-    return frame(
-      id,
-      Buffer.concat([Buffer.from([0x00]), Buffer.from(text, 'latin1')]),
-    );
-  }
-  const frames: Buffer[] = [];
-  if (tags.title) {
-    frames.push(textFrame('TIT2', tags.title));
-  }
-  if (tags.artist) {
-    frames.push(textFrame('TPE1', tags.artist));
-  }
-  if (tags.album) {
-    frames.push(textFrame('TALB', tags.album));
-  }
-  if (tags.genre) {
-    frames.push(textFrame('TCON', tags.genre));
-  }
-  const frameData = Buffer.concat(frames);
-  const id3Header = Buffer.alloc(10);
-  id3Header.write('ID3', 0, 3, 'ascii');
-  id3Header.writeUInt8(3, 3);
-  id3Header.writeUInt8(0, 4);
-  id3Header.writeUInt8(0, 5);
-  const size = frameData.length;
-  id3Header.writeUInt8((size >> 21) & 0x7f, 6);
-  id3Header.writeUInt8((size >> 14) & 0x7f, 7);
-  id3Header.writeUInt8((size >> 7) & 0x7f, 8);
-  id3Header.writeUInt8(size & 0x7f, 9);
-  return Buffer.concat([id3Header, frameData]);
-}
-
-// Minimal valid MP3: ID3v2.3 header with no frames (11 bytes).
-// Enough for the server to recognise it as an audio file without needing
-// the full music-metadata tag parsing to succeed.
-function buildMinimalMp3(): Buffer {
-  const header = Buffer.alloc(10);
-  header.write('ID3', 0, 3, 'ascii');
-  header.writeUInt8(3, 3); // version 2.3
-  header.writeUInt8(0, 4); // revision
-  header.writeUInt8(0, 5); // flags
-  header.writeUInt32BE(0, 6); // size = 0 (no frames)
-  return header;
-}
-
-/**
- * Handles the lifecycle of starting and stopping the real music test server,
- * and installs the EventSource polyfill + fetch routing needed by each test.
- */
-function useMusicTestServer() {
-  let server: MusicTestServer | null = null;
-
-  beforeAll(async () => {
-    server = await startMusicTestServer();
-  }, 15_000);
-
-  beforeEach(() => {
-    // Install the NodeEventSource polyfill so the Music component can use
-    // EventSource in jsdom (which has no native implementation).
-    (global as any).EventSource = NodeEventSource;
-
-    // setupAfterEnv replaces window.fetch with a fetch-mock sandbox. We replace
-    // it again with a wrapper that routes requests to the real test server through
-    // node-fetch (direct HTTP), while everything else still goes to the sandbox
-    // (returning 404 by default for unrelated calls).
-    const sandbox = window.fetch as FetchMockSandbox;
-    sandbox.config.fallbackToNetwork = false;
-    (global as any).fetch = async (
-      input: RequestInfo | URL,
-      init?: RequestInit,
-    ) => {
-      let url: string;
-      if (typeof input === 'string') {
-        url = input;
-      } else if (input instanceof URL) {
-        url = input.toString();
-      } else {
-        url = (input as Request).url;
-      }
-      if (url.startsWith(getServer().baseUrl)) {
-        return nodeFetch(url, init as any) as any;
-      }
-      return sandbox(input instanceof URL ? url : input, init);
-    };
-  });
-
-  afterAll(async () => {
-    await server?.close();
-  });
-
-  function getServer(): MusicTestServer {
-    if (!server) {
-      throw new Error('Music test server not started');
-    }
-    return server;
-  }
-
-  return { getServer };
 }
 
 describe('<Music> with real server', () => {
@@ -169,32 +42,11 @@ describe('<Music> with real server', () => {
     // All tests share a single server and mount directory for the lifetime of this
     // describe block. Tests that write .music-index.json (e.g. the v1 upgrade
     // tests) would otherwise leave stale state that silently affects later tests.
-    await rm(join(getServer().mountDir, '.music-index.json'), {
-      force: true,
-    });
+    await removeMusicIndex(getServer());
   });
 
   function setup(search = '') {
-    const server = getServer();
-    const testServer: T.FileStoreServer = {
-      url: server.baseUrl,
-      name: 'Test Music',
-      id: 'test-music',
-      storeType: 'music',
-    };
-
-    const store = createStore();
-    store.dispatch(A.addFileStoreServer(testServer));
-
-    render(
-      <MemoryRouter initialEntries={[`/${testServer.id}/music${search}`]}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
-
-    return { store, testServer };
+    return renderMusicApp({ server: getServer(), search });
   }
 
   it('renders the Scan Library button', async () => {
