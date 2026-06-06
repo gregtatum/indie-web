@@ -14,10 +14,10 @@ tasks:
       SITE=browserchords task build
     cmds:
       - |
-        eval "$(node scripts/select-site.mjs)"
+        eval "$(node src/shared/scripts/select-site.mjs)"
         rm -rf dist
         NODE_ENV=production SITE="$SITE" webpack
-        SITE="$SITE" node scripts/build-docs.mjs
+        SITE="$SITE" node src/shared/scripts/build-docs.mjs
 
   build-docs:
     desc: |
@@ -26,8 +26,8 @@ tasks:
       SITE=browserchords task build-docs
     cmds:
       - |
-        eval "$(node scripts/select-site.mjs)"
-        SITE="$SITE" node scripts/build-docs.mjs
+        eval "$(node src/shared/scripts/select-site.mjs)"
+        SITE="$SITE" node src/shared/scripts/build-docs.mjs
 
   check-updates:
     desc: Check for package updates
@@ -38,7 +38,7 @@ tasks:
     desc: Start one of the Indie Web projects.
     cmds:
       - |
-        eval "$(node scripts/select-site.mjs)"
+        eval "$(node src/shared/scripts/select-site.mjs)"
         SITE="$SITE" task --parallel start-ts start-webpack start-docs-watch
 
   start-ts:
@@ -59,7 +59,7 @@ tasks:
           --watch docs \
           --watch data/common/shared.css \
           --ext md,html,css \
-          --exec "node scripts/build-docs.mjs"
+          --exec "node src/shared/scripts/build-docs.mjs"
 
   start-server:
     desc: Start the server in development mode
@@ -118,7 +118,7 @@ tasks:
     desc: Run all checks in a blazing fast configuration with only failures reported.
     silent: true
     cmds:
-      - node scripts/check.mjs
+      - node src/shared/scripts/check.mjs
 
   docker-server:
     desc: Run the server from docker.

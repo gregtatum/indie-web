@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import { marked } from 'marked';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(rootDir, '..');
+const projectRoot = path.resolve(rootDir, '../../..');
 
 const allowedSites = new Set(['floppydisk', 'browserchords']);
 
@@ -247,7 +247,8 @@ async function buildSidebarEntries() {
       const { frontmatter, body } = parseFrontmatter(applyEnv(markdownText));
       const tokens = marked.lexer(body);
       const title =
-        frontmatter.title || titleFromTokens(tokens, path.basename(filePath, '.md'));
+        frontmatter.title ||
+        titleFromTokens(tokens, path.basename(filePath, '.md'));
       const order = parseNumber(frontmatter.order) ?? 1000;
       const section = frontmatter.section || 'Docs';
       entries.push({

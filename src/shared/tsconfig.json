@@ -7,5 +7,5 @@
     // "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["**/*"],
+  "include": ["**/*.ts", "**/*.tsx", "@types/**/*.d.ts"],
 }

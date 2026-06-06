@@ -101,7 +101,12 @@ export default [
 
   // Config and build files
   {
-    files: ['*.js', '*.mjs', 'src/shared/lint/**/*.mjs'],
+    files: [
+      '*.js',
+      '*.mjs',
+      'src/shared/lint/**/*.mjs',
+      'src/shared/scripts/**/*.mjs',
+    ],
     languageOptions: {
       globals: { ...globals.node },
       parserOptions: {

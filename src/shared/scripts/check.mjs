@@ -59,11 +59,12 @@ function formatRow(check, result, { isRunning = false } = {}) {
   }
 
   const label = check.label.padEnd(labelWidth);
-  const suffix = isRunning
-    ? ' running...'
-    : result
-      ? ` ${formatDuration(result.durationMs)}`
-      : '';
+  let suffix = '';
+  if (isRunning) {
+    suffix = ' running...';
+  } else if (result) {
+    suffix = ` ${formatDuration(result.durationMs)}`;
+  }
 
   return `${statusGlyph(result, { isRunning })} ${label}${suffix}`;
 }
@@ -219,7 +220,9 @@ function printFailures(results) {
       );
       console.log(`${styled('└─ output', 'red')}`);
     } else {
-      console.log(`FAIL ${result.label} exit ${result.exitCode} | run: task ${result.task}`);
+      console.log(
+        `FAIL ${result.label} exit ${result.exitCode} | run: task ${result.task}`,
+      );
       console.log(`cmd: task --silent --exit-code ${result.task}`);
       console.log('output:');
     }
@@ -246,7 +249,8 @@ function cleanTaskOutput(result) {
 }
 
 function stripAnsi(text) {
-  return text.replace(/\x1b\[[0-9;]*m/g, '');
+  const escapeCharacter = String.fromCharCode(27);
+  return text.replace(new RegExp(`${escapeCharacter}\\[[0-9;]*m`, 'g'), '');
 }
 
 function printResults(results) {
