@@ -68,20 +68,21 @@ tasks:
       - '[ -d "node_modules" ] || npm install'
       - npm run start-dev
 
-  lint:
-    desc: Run ESLint linter
+  lint-js:
+    desc: Lint the JavaScript files.
     cmds:
       - eslint "*.{js,mjs}" 'src'
-
-  lint-fix:
-    desc: Run ESLint linter with fixes
-    cmds:
-      - eslint "*.{js,mjs}" 'src' --fix
 
   lint-css:
     desc: Run stylelint CSS linter (no var() fallback values allowed)
     cmds:
       - stylelint 'src/**/*.css' 'data/**/*.css' 'docs/**/*.css'
+
+  lint-fix:
+    desc: Automatically fix linting errors for all linters.
+    cmds:
+      - eslint "*.{js,mjs}" 'src' --fix
+      - stylelint 'src/**/*.css' 'data/**/*.css' 'docs/**/*.css' --fix
 
   bundle-size:
     desc: Calculate the bundle size
@@ -97,12 +98,12 @@ tasks:
       - tsc --noEmit --project src/server/tsconfig.json
       - tsc --noEmit --project src/shared/tsconfig.json
 
-  test:
-    desc: Run tests
+  test-frontend:
+    desc: Run the front-end tests
     cmds:
       - env NODE_ENV=test jest
 
-  test-coverage:
+  test-frontend-coverage:
     desc: Run tests with coverage report
     cmds:
       - "env NODE_ENV=test jest --coverage"
@@ -113,13 +114,17 @@ tasks:
     cmds:
       - node --disable-warning=ExperimentalWarning --test src/server/test/*.test.ts
 
-  test-all:
-    desc: Run lint, TypeScript check, and tests
+  # TODO
+  check-quick:
+    desc: Do a quick run to make sure that everythign is clean. Preferred command for agentic workflows.
+
+  check:
+    desc: Do a full (slow) run with logs to make sure that everything is clean.
     cmds:
-      - task: lint
+      - task: lint-js
       - task: lint-css
       - task: ts
-      - task: test
+      - task: test-frontend
       - task: test-server
 
   docker-server:
