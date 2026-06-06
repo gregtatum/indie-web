@@ -114,18 +114,17 @@ tasks:
     cmds:
       - node --disable-warning=ExperimentalWarning --test src/server/test/*.test.ts
 
-  # TODO
-  check-quick:
-    desc: Do a quick run to make sure that everythign is clean. Preferred command for agentic workflows.
+  check-static:
+    desc: Run checks with summarized output.
+    silent: true
+    cmds:
+      - node scripts/check.mjs
 
   check:
-    desc: Do a full (slow) run with logs to make sure that everything is clean.
+    desc: Run checks with summarized output.
+    silent: true
     cmds:
-      - task: lint-js
-      - task: lint-css
-      - task: ts
-      - task: test-frontend
-      - task: test-server
+      - node scripts/check.mjs
 
   docker-server:
     desc: Run the server from docker.
