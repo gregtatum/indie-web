@@ -35,19 +35,23 @@ function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
   );
 }
 
-export function MusicLibraryView() {
+interface MusicLibraryViewProps {
+  completedScanCount: number;
+}
+
+export function MusicLibraryView({
+  completedScanCount,
+}: MusicLibraryViewProps) {
   const server = $$.getCurrentServerOrNull();
-  const tracks = $$.getMusicTracks();
   const { dispatch } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
 
-  // When a scan dispatches tracks into Redux, clear any "not found" error so
-  // the library view shows the newly scanned tracks without requiring a reload.
   React.useEffect(() => {
-    if (error && tracks.length > 0) {
+    if (completedScanCount > 0) {
+      // Clear out any stale errors.
       setError(null);
     }
-  }, [tracks.length]);
+  }, [completedScanCount]);
 
   React.useEffect(() => {
     if (!server) {
@@ -67,6 +71,7 @@ export function MusicLibraryView() {
         }
         const { index, wasUpgraded } = upgradeMusicIndex(await res.json());
         dispatch(A.setMusicTracks(index.tracks, wasUpgraded));
+        setError(null);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
           return;

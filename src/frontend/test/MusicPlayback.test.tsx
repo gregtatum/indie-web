@@ -71,7 +71,7 @@ function setup() {
   render(
     <MemoryRouter>
       <Provider store={store as any}>
-        <MusicLibraryView />
+        <MusicLibraryView completedScanCount={0} />
       </Provider>
     </MemoryRouter>,
   );

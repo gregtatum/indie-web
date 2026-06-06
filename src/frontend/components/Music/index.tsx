@@ -19,6 +19,7 @@ export function Music() {
   const { isFilesView } = useMusicUrlSerialization();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [completedScanCount, setCompletedScanCount] = React.useState(0);
   const [scanProgress, setScanProgress] = React.useState<ScanProgress | null>(
     null,
   );
@@ -63,6 +64,7 @@ export function Music() {
           setScanProgress(null);
           setStatusMessage(`Found ${data.tracks.length} tracks.`);
           dispatch(A.setMusicTracks(data.tracks, false));
+          setCompletedScanCount((count) => count + 1);
           break;
         case 'error':
           eventSource.close();
@@ -132,7 +134,11 @@ export function Music() {
           </Link>
         </div>
       </div>
-      {isFilesView ? <ListFiles /> : <MusicLibraryView />}
+      {isFilesView ? (
+        <ListFiles />
+      ) : (
+        <MusicLibraryView completedScanCount={completedScanCount} />
+      )}
     </div>
   );
 }
