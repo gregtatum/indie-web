@@ -242,9 +242,9 @@ function printFailures(results) {
 
 function printSkippedTests(results) {
   const skippedTests = results.flatMap((result) => {
-    return extractSkippedTests(result).map((testName) => ({
+    return extractSkippedTests(result).map((skippedTest) => ({
       label: result.label,
-      testName,
+      ...skippedTest,
     }));
   });
 
@@ -253,14 +253,18 @@ function printSkippedTests(results) {
   }
 
   if (isInteractive) {
-    console.log(styled('◇ Skipped Tests', 'bold', 'cyan'));
+    console.log(styled('◇ Skipped For Sandboxing Restriction', 'bold', 'cyan'));
     console.log(styled('───────────────', 'cyan'));
+    console.log('localhost bind unavailable');
   } else {
-    console.log('SKIPPED TESTS');
+    console.log(
+      'SKIPPED FOR SANDBOXING RESTRICTION (localhost bind unavailable)',
+    );
   }
 
   for (const skippedTest of skippedTests) {
-    console.log(`${skippedTest.label}: ${skippedTest.testName}`);
+    const line = `${skippedTest.label}: ${skippedTest.testName}`;
+    console.log(isInteractive ? line : `[skip] ${line}`);
   }
 
   console.log();
@@ -275,20 +279,6 @@ function extractSkippedTests(result) {
     );
     if (checkMarkerMatch) {
       addSkippedTest(skippedTests, checkMarkerMatch[1]);
-      continue;
-    }
-
-    const jestMatch = line.match(/^\s*○ skipped (.+)$/);
-    if (jestMatch) {
-      addSkippedTest(skippedTests, jestMatch[1]);
-      continue;
-    }
-
-    const tapMatch = line.match(
-      /^\s*(?:ok|not ok) \d+ - (.+?) # SKIP(?: .*)?$/,
-    );
-    if (tapMatch) {
-      addSkippedTest(skippedTests, tapMatch[1]);
     }
   }
 
@@ -296,10 +286,7 @@ function extractSkippedTests(result) {
 }
 
 function addSkippedTest(skippedTests, testName) {
-  if (testName === 'localhost-dependent tests skipped by check runner') {
-    return;
-  }
-  skippedTests.push(testName);
+  skippedTests.push({ testName });
 }
 
 function cleanTaskOutput(result) {
@@ -320,12 +307,12 @@ function stripAnsi(text) {
 }
 
 function printResults(results) {
-  if (isInteractive) {
-    console.log(styled('◆ Results', 'bold', 'cyan'));
-    console.log(styled('─────────', 'cyan'));
-  } else {
-    console.log('RESULTS');
+  if (!isInteractive) {
+    return;
   }
+
+  console.log(styled('◆ Results', 'bold', 'cyan'));
+  console.log(styled('─────────', 'cyan'));
 
   for (const result of results) {
     const retry = result.exitCode === 0 ? '' : `  run: task ${result.task}`;
