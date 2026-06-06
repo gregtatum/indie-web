@@ -6,20 +6,15 @@ import { MemoryRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
-import { MusicLibraryView } from 'frontend/components/Music/MusicLibraryView';
-
-// AudioContext is unavailable in jsdom, but the real useAudioPlayer hook is safe
-// to use in tests: without a server URL in the store, Effect 1 exits early (no
-// fetch), Effect 2 exits early (no AudioBuffer), and AudioContext is never
-// created. Button clicks dispatch real Redux actions — we assert on store state.
-
-// The virtualizer reads offsetHeight/offsetWidth to determine how many rows to
-// render. Jsdom returns 0 for both, so without this the virtualizer renders
-// nothing and tests cannot find track elements.
-beforeEach(() => {
-  jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
-  jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
-});
+import { AppRoutes } from 'frontend/components/App';
+import { writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import nodeFetch from 'node-fetch';
+import {
+  startMusicTestServer,
+  type MusicTestServer,
+} from './utils/musicTestServer';
 
 // When a new music index upgrader is written (bumping CURRENT_MUSIC_INDEX_VERSION),
 // add a representative track here with the new field populated.
@@ -65,18 +60,97 @@ const TRACKS: T.TrackMetadata[] = [
   },
 ];
 
+const jestDescribe = globalThis.describe;
+let describe: (name: string, fn: () => void) => void = jestDescribe;
+if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
+  // The check runner enables this in sandboxes that cannot bind localhost.
+  describe = (name) => {
+    process.stderr.write(`LOCALHOST_BIND_SKIPPED_TEST ${name}\n`);
+  };
+  it.skip('localhost-dependent tests skipped by check runner', () => {});
+}
+
+/**
+ * Handles the lifecycle of starting and stopping the real music test server,
+ * and installs fetch routing needed by each test.
+ */
+function useMusicTestServer() {
+  let server: MusicTestServer | null = null;
+
+  beforeAll(async () => {
+    server = await startMusicTestServer();
+  }, 15_000);
+
+  beforeEach(() => {
+    (global as any).fetch = nodeFetch;
+  });
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  function getServer(): MusicTestServer {
+    if (!server) {
+      throw new Error('Music test server not started');
+    }
+    return server;
+  }
+
+  return { getServer };
+}
+
+function writeMusicIndex(server: MusicTestServer) {
+  writeFileSync(
+    join(server.mountDir, '.music-index.json'),
+    JSON.stringify({
+      version: 4,
+      scannedAt: '2024-01-01T00:00:00Z',
+      tracks: TRACKS,
+    }),
+  );
+}
+
 function setup() {
+  const server = getServer();
+  const testServer: T.FileStoreServer = {
+    url: server.baseUrl,
+    name: 'Test Music',
+    id: 'test-music',
+    storeType: 'music',
+  };
+  writeMusicIndex(server);
+
   const store = createStore();
-  store.dispatch(A.setMusicTracks(TRACKS, false));
+  store.dispatch(A.addFileStoreServer(testServer));
+
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[`/${testServer.id}/music`]}>
       <Provider store={store as any}>
-        <MusicLibraryView completedScanCount={0} />
+        <AppRoutes />
       </Provider>
     </MemoryRouter>,
   );
+
+  act(() => {
+    store.dispatch(A.setMusicTracks(TRACKS, false));
+  });
+
   return { store };
 }
+
+const { getServer } = useMusicTestServer();
+
+// Provide offset values so that tests render somewhat realistically.
+beforeEach(() => {
+  jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+  jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+});
+
+afterEach(async () => {
+  await rm(join(getServer().mountDir, '.music-index.json'), {
+    force: true,
+  });
+});
 
 describe('track interactions', () => {
   it('double-clicking a track loads it for playback', async () => {
