@@ -46,6 +46,20 @@ function formatRow(check, result, { isRunning = false } = {}) {
   return `${statusGlyph(result, { isRunning })} ${label}${suffix}`;
 }
 
+function checkEnv() {
+  const env = {
+    ...process.env,
+    TERM: process.env.TERM || "xterm-256color",
+  };
+
+  if (isInteractive) {
+    env.FORCE_COLOR = "1";
+    delete env.NO_COLOR;
+  }
+
+  return env;
+}
+
 function renderInteractive(results, activeIndex = -1) {
   if (renderInteractive.hasRendered) {
     process.stdout.write(`\x1b[${checks.length}F`);
@@ -67,6 +81,7 @@ renderInteractive.hasRendered = false;
 function runCheck(check) {
   const startedAt = Date.now();
   const child = spawn("task", ["--silent", "--exit-code", check.task], {
+    env: checkEnv(),
     stdio: ["ignore", "pipe", "pipe"],
   });
 
