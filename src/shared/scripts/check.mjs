@@ -6,6 +6,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 
 const checks = [
   { task: 'lint-js', label: 'Lint JS' },
@@ -15,6 +16,8 @@ const checks = [
   { task: 'test-server', label: 'Test Server' },
 ];
 
+const skipLocalhostTestsEnv = 'INDIE_WEB_SKIP_LOCALHOST_TESTS';
+let checkEnvOverrides = {};
 const isInteractive = Boolean(process.stdout.isTTY);
 const labelWidth = Math.max(...checks.map((check) => check.label.length));
 const colors = {
@@ -87,6 +90,7 @@ function formatPlainRow(check, result, { isRunning = false } = {}) {
 function checkEnv() {
   const env = {
     ...process.env,
+    ...checkEnvOverrides,
     TERM: process.env.TERM || 'xterm-256color',
   };
 
@@ -236,6 +240,68 @@ function printFailures(results) {
   console.log();
 }
 
+function printSkippedTests(results) {
+  const skippedTests = results.flatMap((result) => {
+    return extractSkippedTests(result).map((testName) => ({
+      label: result.label,
+      testName,
+    }));
+  });
+
+  if (skippedTests.length === 0) {
+    return;
+  }
+
+  if (isInteractive) {
+    console.log(styled('◇ Skipped Tests', 'bold', 'cyan'));
+    console.log(styled('───────────────', 'cyan'));
+  } else {
+    console.log('SKIPPED TESTS');
+  }
+
+  for (const skippedTest of skippedTests) {
+    console.log(`${skippedTest.label}: ${skippedTest.testName}`);
+  }
+
+  console.log();
+}
+
+function extractSkippedTests(result) {
+  const skippedTests = [];
+
+  for (const line of stripAnsi(result.output).split('\n')) {
+    const checkMarkerMatch = line.match(
+      /^\s*(?:#\s*)?LOCALHOST_BIND_SKIPPED_TEST (.+)$/,
+    );
+    if (checkMarkerMatch) {
+      addSkippedTest(skippedTests, checkMarkerMatch[1]);
+      continue;
+    }
+
+    const jestMatch = line.match(/^\s*○ skipped (.+)$/);
+    if (jestMatch) {
+      addSkippedTest(skippedTests, jestMatch[1]);
+      continue;
+    }
+
+    const tapMatch = line.match(
+      /^\s*(?:ok|not ok) \d+ - (.+?) # SKIP(?: .*)?$/,
+    );
+    if (tapMatch) {
+      addSkippedTest(skippedTests, tapMatch[1]);
+    }
+  }
+
+  return skippedTests;
+}
+
+function addSkippedTest(skippedTests, testName) {
+  if (testName === 'localhost-dependent tests skipped by check runner') {
+    return;
+  }
+  skippedTests.push(testName);
+}
+
 function cleanTaskOutput(result) {
   return result.output
     .split('\n')
@@ -269,6 +335,7 @@ function printResults(results) {
 
 async function main() {
   const resultsByTask = new Map();
+  await configureCheckEnvironment();
 
   if (isInteractive) {
     await runInteractiveChecks(resultsByTask);
@@ -281,6 +348,7 @@ async function main() {
     .filter((result) => result);
 
   printFailures(results);
+  printSkippedTests(results);
   printResults(results);
 
   if (results.some((result) => result.exitCode !== 0)) {
@@ -347,6 +415,34 @@ async function runNonInteractiveChecks(resultsByTask) {
       console.log(formatRow(result, result));
     }
   }
+}
+
+async function configureCheckEnvironment() {
+  if (await canBindLocalhost()) {
+    return;
+  }
+
+  checkEnvOverrides = {
+    [skipLocalhostTestsEnv]: '1',
+  };
+}
+
+async function canBindLocalhost() {
+  return new Promise((resolve) => {
+    const server = createServer();
+    let settled = false;
+
+    function finish(canBind) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      server.close(() => resolve(canBind));
+    }
+
+    server.once('error', () => finish(false));
+    server.listen(0, '127.0.0.1', () => finish(true));
+  });
 }
 
 await main();
