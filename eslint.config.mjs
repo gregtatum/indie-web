@@ -3,12 +3,15 @@ import { baseConfigs } from './eslint.base.mjs';
 import { noPathInServer } from './src/shared/lint/js/no-path-in-server.mjs';
 import { noMountPathConcat } from './src/shared/lint/js/no-mount-path-concat.mjs';
 import { multilineJsdocDeclarationComments } from './src/shared/lint/js/multiline-jsdoc-declaration-comments.mjs';
+import { preferPartialForOptionalObjectType } from './src/shared/lint/ts/prefer-partial-for-optional-object-type.mjs';
 
 const indieWebPlugin = {
   rules: {
     'no-path-in-server': noPathInServer,
     'no-mount-path-concat': noMountPathConcat,
     'multiline-jsdoc-declaration-comments': multilineJsdocDeclarationComments,
+    'prefer-partial-for-optional-object-type':
+      preferPartialForOptionalObjectType,
   },
 };
 
@@ -27,6 +30,14 @@ export default [
     plugins: { 'indie-web': indieWebPlugin },
     rules: {
       'indie-web/multiline-jsdoc-declaration-comments': 'error',
+    },
+  },
+
+  // TypeScript
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      'indie-web/prefer-partial-for-optional-object-type': 'error',
     },
   },
 

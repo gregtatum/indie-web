@@ -24,12 +24,14 @@ const v1Fixture = readFileSync(
   'utf-8',
 );
 
-function buildMp3WithTags(tags: {
-  title?: string;
-  artist?: string;
-  album?: string;
-  genre?: string;
-}): Buffer {
+function buildMp3WithTags(
+  tags: Partial<{
+    title: string;
+    artist: string;
+    album: string;
+    genre: string;
+  }>,
+): Buffer {
   function frame(id: string, content: Buffer): Buffer {
     const header = Buffer.alloc(10);
     header.write(id, 0, 4, 'ascii');

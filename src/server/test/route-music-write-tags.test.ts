@@ -133,7 +133,7 @@ describe('POST /music/write-track-tags — frame-ID mapping', () => {
 
       const meta = await parseFile(filePath);
       const comm = findFrameValue(meta, 'COMM') as
-        | { language?: string; description?: string; text?: string }
+        | Partial<{ language: string; description: string; text: string }>
         | undefined;
       assert.ok(comm, 'COMM frame should exist');
       assert.equal(comm.text, 'Some comment text');

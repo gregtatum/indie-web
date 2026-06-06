@@ -221,11 +221,11 @@ class WorkerIDBFS extends FileStoreCache {
     try {
       return await this.#workerClient.requestIDBFS<T>(this.#name, method, args);
     } catch (error) {
-      const payload = error as {
-        kind?: 'idb-error';
-        message?: string;
-        isNotFound?: boolean;
-      };
+      const payload = error as Partial<{
+        kind: 'idb-error';
+        message: string;
+        isNotFound: boolean;
+      }>;
       if (payload?.kind === 'idb-error') {
         if (payload.isNotFound) {
           throw IDBError.notFound(payload.message);
