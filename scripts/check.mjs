@@ -1,22 +1,29 @@
-import { spawn } from "node:child_process";
+/**
+ * Runs the repo's check tasks with concise, task-focused feedback instead of streaming
+ * every tool log. Interactive terminals get a parallel full run with a live summary,
+ * while non-TTY agentic runs start in parallel and report the first completed failure so
+ * agentic repair loops get fast, focused feedback.
+ */
+
+import { spawn } from 'node:child_process';
 
 const checks = [
-  { task: "lint-js", label: "Lint JS" },
-  { task: "lint-css", label: "Lint CSS" },
-  { task: "ts", label: "TypeScript" },
-  { task: "test-frontend", label: "Test frontend" },
-  { task: "test-server", label: "Test server" },
+  { task: 'lint-js', label: 'Lint JS' },
+  { task: 'lint-css', label: 'Lint CSS' },
+  { task: 'ts', label: 'TypeScript' },
+  { task: 'test-frontend', label: 'Test Frontend' },
+  { task: 'test-server', label: 'Test Server' },
 ];
 
 const isInteractive = Boolean(process.stdout.isTTY);
 const labelWidth = Math.max(...checks.map((check) => check.label.length));
 const colors = {
-  bold: "\x1b[1m",
-  green: "\x1b[32m",
-  red: "\x1b[31m",
-  cyan: "\x1b[36m",
-  dim: "\x1b[2m",
-  reset: "\x1b[0m",
+  bold: '\x1b[1m',
+  green: '\x1b[32m',
+  red: '\x1b[31m',
+  cyan: '\x1b[36m',
+  dim: '\x1b[2m',
+  reset: '\x1b[0m',
 };
 
 function formatDuration(durationMs) {
@@ -35,24 +42,24 @@ function styled(text, ...colorNames) {
     return text;
   }
 
-  const prefix = colorNames.map((colorName) => colors[colorName]).join("");
+  const prefix = colorNames.map((colorName) => colors[colorName]).join('');
   return `${prefix}${text}${colors.reset}`;
 }
 
 function statusGlyph(result, { isRunning = false } = {}) {
   if (!result) {
-    return isRunning ? color("•", "dim") : color("·", "dim");
+    return isRunning ? color('•', 'dim') : color('·', 'dim');
   }
-  return result.exitCode === 0 ? color("✓", "green") : color("x", "red");
+  return result.exitCode === 0 ? color('✓', 'green') : color('x', 'red');
 }
 
 function formatRow(check, result, { isRunning = false } = {}) {
   const label = check.label.padEnd(labelWidth);
   const suffix = isRunning
-    ? " running..."
+    ? ' running...'
     : result
       ? ` ${formatDuration(result.durationMs)}`
-      : "";
+      : '';
 
   return `${statusGlyph(result, { isRunning })} ${label}${suffix}`;
 }
@@ -60,11 +67,11 @@ function formatRow(check, result, { isRunning = false } = {}) {
 function checkEnv() {
   const env = {
     ...process.env,
-    TERM: process.env.TERM || "xterm-256color",
+    TERM: process.env.TERM || 'xterm-256color',
   };
 
   if (isInteractive) {
-    env.FORCE_COLOR = "1";
+    env.FORCE_COLOR = '1';
     delete env.NO_COLOR;
   }
 
@@ -79,7 +86,9 @@ function renderInteractive(results, runningTasks = new Set()) {
   for (let index = 0; index < checks.length; index += 1) {
     const check = checks[index];
     const result = results.get(check.task);
-    const line = formatRow(check, result, { isRunning: runningTasks.has(check.task) });
+    const line = formatRow(check, result, {
+      isRunning: runningTasks.has(check.task),
+    });
 
     process.stdout.write(`\x1b[2K${line}\n`);
   }
@@ -91,20 +100,20 @@ renderInteractive.hasRendered = false;
 
 function startCheck(check) {
   const startedAt = Date.now();
-  const child = spawn("task", ["--silent", "--exit-code", check.task], {
+  const child = spawn('task', ['--silent', '--exit-code', check.task], {
     detached: true,
     env: checkEnv(),
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  let output = "";
+  let output = '';
   let settled = false;
 
-  child.stdout.on("data", (chunk) => {
+  child.stdout.on('data', (chunk) => {
     output += chunk;
   });
 
-  child.stderr.on("data", (chunk) => {
+  child.stderr.on('data', (chunk) => {
     output += chunk;
   });
 
@@ -117,7 +126,7 @@ function startCheck(check) {
       resolve(result);
     }
 
-    child.on("error", (error) => {
+    child.on('error', (error) => {
       finish({
         ...check,
         startedAt,
@@ -127,7 +136,7 @@ function startCheck(check) {
       });
     });
 
-    child.on("close", (exitCode, signal) => {
+    child.on('close', (exitCode, signal) => {
       finish({
         ...check,
         startedAt,
@@ -146,10 +155,10 @@ function startCheck(check) {
       if (settled || child.killed) {
         return;
       }
-      killCheckProcess(child, "SIGTERM");
+      killCheckProcess(child, 'SIGTERM');
       setTimeout(() => {
         if (!settled) {
-          killCheckProcess(child, "SIGKILL");
+          killCheckProcess(child, 'SIGKILL');
         }
       }, 1000).unref();
     },
@@ -171,22 +180,24 @@ function printFailures(results) {
     return;
   }
 
-  console.log(styled("✖ Failures", "bold", "red"));
-  console.log(styled("──────────", "red"));
+  console.log(styled('✖ Failures', 'bold', 'red'));
+  console.log(styled('──────────', 'red'));
 
   for (const result of failures) {
     console.log();
     console.log(
-      `${styled("┌─", "red")} ${styled(result.label, "bold", "red")} failed ` +
-        `${styled(`exit ${result.exitCode}`, "red")}  ` +
-        `${styled(`run: task ${result.task}`, "dim")}`,
+      `${styled('┌─', 'red')} ${styled(result.label, 'bold', 'red')} failed ` +
+        `${styled(`exit ${result.exitCode}`, 'red')}  ` +
+        `${styled(`run: task ${result.task}`, 'dim')}`,
     );
-    console.log(`${styled("│", "red")} ${styled(`task --silent --exit-code ${result.task}`, "dim")}`);
-    console.log(`${styled("└─ output", "red")}`);
+    console.log(
+      `${styled('│', 'red')} ${styled(`task --silent --exit-code ${result.task}`, 'dim')}`,
+    );
+    console.log(`${styled('└─ output', 'red')}`);
     const output = cleanTaskOutput(result);
-    process.stdout.write(output || "(no output)\n");
-    if (output && !output.endsWith("\n")) {
-      process.stdout.write("\n");
+    process.stdout.write(output || '(no output)\n');
+    if (output && !output.endsWith('\n')) {
+      process.stdout.write('\n');
     }
   }
 
@@ -195,21 +206,26 @@ function printFailures(results) {
 
 function cleanTaskOutput(result) {
   return result.output
-    .split("\n")
-    .filter((line) => !stripAnsi(line).startsWith(`task: Failed to run task "${result.task}"`))
-    .join("\n");
+    .split('\n')
+    .filter(
+      (line) =>
+        !stripAnsi(line).startsWith(
+          `task: Failed to run task "${result.task}"`,
+        ),
+    )
+    .join('\n');
 }
 
 function stripAnsi(text) {
-  return text.replace(/\x1b\[[0-9;]*m/g, "");
+  return text.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
 function printResults(results) {
-  console.log(styled("◆ Results", "bold", "cyan"));
-  console.log(styled("─────────", "cyan"));
+  console.log(styled('◆ Results', 'bold', 'cyan'));
+  console.log(styled('─────────', 'cyan'));
 
   for (const result of results) {
-    const retry = result.exitCode === 0 ? "" : `  run: task ${result.task}`;
+    const retry = result.exitCode === 0 ? '' : `  run: task ${result.task}`;
     console.log(`${formatRow(result, result)}${retry}`);
   }
 }

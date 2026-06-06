@@ -114,14 +114,8 @@ tasks:
     cmds:
       - node --disable-warning=ExperimentalWarning --test src/server/test/*.test.ts
 
-  check-static:
-    desc: Run checks with summarized output.
-    silent: true
-    cmds:
-      - node scripts/check.mjs
-
   check:
-    desc: Run checks with summarized output.
+    desc: Run all checks in a blazing fast configuration with only failures reported.
     silent: true
     cmds:
       - node scripts/check.mjs
