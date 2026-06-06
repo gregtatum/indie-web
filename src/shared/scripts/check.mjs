@@ -307,7 +307,7 @@ function stripAnsi(text) {
 }
 
 function printResults(results) {
-  if (!isInteractive) {
+  if (!isInteractive || results.every((result) => result.exitCode === 0)) {
     return;
   }
 
