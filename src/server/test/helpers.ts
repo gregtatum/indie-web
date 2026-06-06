@@ -6,6 +6,16 @@ import { createServer } from 'node:http';
 import Express from 'express';
 import { MountPath } from '../utils.ts';
 
+export const AUDIO_PAYLOAD = Buffer.concat([
+  // The mpeg audio frame header.
+  Buffer.from([0xff, 0xfb, 0x90, 0x44]),
+  // The faked audio data payload.
+  Buffer.alloc(
+    256, // Size of the placeholder audio payload.
+    0x41, // Repeated filler byte ('A').
+  ),
+]);
+
 export interface TestServer {
   baseUrl: string;
   mountDir: string;
@@ -138,18 +148,18 @@ export const MINIMAL_JPEG = Buffer.from([
   0x00, 0x3f, 0x00, 0xfb, 0xd2, 0x8a, 0x28, 0x03, 0xff, 0xd9,
 ]);
 
+interface Mp3Tags {
+  title: string;
+  artist: string;
+  album: string;
+  genre: string;
+  apic: Buffer;
+}
+
 /**
- * Builds a minimal MP3 buffer containing ID3v2.3 tags.
- * Pass `apic` to embed an APIC (Attached Picture) frame; defaults to no embedded art.
- * There is no actual audio data, so duration will be null when parsed.
+ * Builds a minimal MP3 with ID3v2.3 tags and a faked audio payload.
  */
-export function buildMp3WithTags(tags: {
-  title?: string;
-  artist?: string;
-  album?: string;
-  genre?: string;
-  apic?: Buffer;
-}): Buffer {
+export function buildMp3WithTags(tags: Partial<Mp3Tags> = {}): Buffer {
   const frames: Buffer[] = [];
 
   function frame(id: string, content: Buffer): Buffer {
@@ -201,6 +211,7 @@ export function buildMp3WithTags(tags: {
   id3Header.writeUInt8(3, 3); // version 2.3
   id3Header.writeUInt8(0, 4); // revision
   id3Header.writeUInt8(0, 5); // flags
+
   // Size as syncsafe integer (4 x 7 bits)
   const size = frameData.length;
   id3Header.writeUInt8((size >> 21) & 0x7f, 6);
@@ -208,5 +219,5 @@ export function buildMp3WithTags(tags: {
   id3Header.writeUInt8((size >> 7) & 0x7f, 8);
   id3Header.writeUInt8(size & 0x7f, 9);
 
-  return Buffer.concat([id3Header, frameData]);
+  return Buffer.concat([id3Header, frameData, AUDIO_PAYLOAD]);
 }
