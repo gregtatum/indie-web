@@ -18,7 +18,10 @@ export const noMountPathConcat = {
         '(e.g. mountPath.joinOnMount(base + suffix) instead of mountPath.joinOnMount(base) + suffix).',
     },
   },
-  /** @param {any} context */
+
+  /**
+   * @param {any} context
+   */
   create(context) {
     const sourceCode = context.getSourceCode();
 
@@ -26,7 +29,9 @@ export const noMountPathConcat = {
     /** @type {WeakMap<object, Set<string>>} */
     const mountVarsByScope = new WeakMap();
 
-    /** @param {any} node */
+    /**
+     * @param {any} node
+     */
     function isMountPathCall(node) {
       return (
         node.type === 'CallExpression' &&
@@ -51,7 +56,9 @@ export const noMountPathConcat = {
       return false;
     }
 
-    /** @param {any} node */
+    /**
+     * @param {any} node
+     */
     function isMountValue(node) {
       if (isMountPathCall(node)) {
         return true;
@@ -63,7 +70,9 @@ export const noMountPathConcat = {
     }
 
     return {
-      /** @param {any} node */
+      /**
+       * @param {any} node
+       */
       VariableDeclarator(node) {
         if (
           node.init &&
@@ -79,7 +88,10 @@ export const noMountPathConcat = {
           vars.add(node.id.name);
         }
       },
-      /** @param {any} node */
+
+      /**
+       * @param {any} node
+       */
       BinaryExpression(node) {
         if (node.operator !== '+') {
           return;
@@ -88,7 +100,10 @@ export const noMountPathConcat = {
           context.report({ node, messageId: 'noPathConcat' });
         }
       },
-      /** @param {any} node */
+
+      /**
+       * @param {any} node
+       */
       TemplateLiteral(node) {
         for (const expr of node.expressions) {
           if (isMountValue(expr)) {

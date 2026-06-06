@@ -31,13 +31,19 @@ import * as T from 'shared/@types/shared';
  *      add a test, and wire it into `upgradeMusicIndex`. Nothing else changes.
  */
 
-/** Loosely-typed shape of a serialized MusicIndex at version N. */
+/**
+ * Loosely-typed shape of a serialized MusicIndex at version N.
+ */
 type IndexVersion<N extends number> = { version: N } & Record<string, unknown>;
 
-/** The version number of the current MusicIndex format. */
+/**
+ * The version number of the current MusicIndex format.
+ */
 export const CURRENT_MUSIC_INDEX_VERSION = 5 satisfies T.MusicIndex['version'];
 
-/** v1 → v2: backfill genre as null (v1 had no genre field). */
+/**
+ * v1 → v2: backfill genre as null (v1 had no genre field).
+ */
 function upgradeV1ToV2(blob: IndexVersion<1>): IndexVersion<2> {
   const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
     path: t.path as string,
@@ -56,7 +62,9 @@ function upgradeV1ToV2(blob: IndexVersion<1>): IndexVersion<2> {
   } as unknown as IndexVersion<2>;
 }
 
-/** v2 → v3: backfill track as null (v2 had no track number field). */
+/**
+ * v2 → v3: backfill track as null (v2 had no track number field).
+ */
 function upgradeV2ToV3(blob: IndexVersion<2>): IndexVersion<3> {
   const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
     path: t.path as string,
@@ -76,7 +84,9 @@ function upgradeV2ToV3(blob: IndexVersion<2>): IndexVersion<3> {
   } as unknown as IndexVersion<3>;
 }
 
-/** v3 → v4: backfill coverArt as null (v3 had no cover art field). */
+/**
+ * v3 → v4: backfill coverArt as null (v3 had no cover art field).
+ */
 function upgradeV3ToV4(blob: IndexVersion<3>): IndexVersion<4> {
   const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
     path: t.path as string,
@@ -97,7 +107,9 @@ function upgradeV3ToV4(blob: IndexVersion<3>): IndexVersion<4> {
   } as unknown as IndexVersion<4>;
 }
 
-/** v4 → v5: backfill hasEmbeddedArt as false (v4 had no embedded art field). */
+/**
+ * v4 → v5: backfill hasEmbeddedArt as false (v4 had no embedded art field).
+ */
 function upgradeV4ToV5(blob: IndexVersion<4>): T.MusicIndex {
   const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
     path: t.path as string,

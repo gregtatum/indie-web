@@ -2,11 +2,13 @@ import globals from 'globals';
 import { baseConfigs } from './eslint.base.mjs';
 import { noPathInServer } from './src/shared/lint/js/no-path-in-server.mjs';
 import { noMountPathConcat } from './src/shared/lint/js/no-mount-path-concat.mjs';
+import { multilineJsdocDeclarationComments } from './src/shared/lint/js/multiline-jsdoc-declaration-comments.mjs';
 
 const indieWebPlugin = {
   rules: {
     'no-path-in-server': noPathInServer,
     'no-mount-path-concat': noMountPathConcat,
+    'multiline-jsdoc-declaration-comments': multilineJsdocDeclarationComments,
   },
 };
 
@@ -18,6 +20,15 @@ export default [
     ],
   },
   ...baseConfigs,
+
+  // Indie-web plugin: applies across all source files.
+  {
+    files: ['src/**/*.{ts,tsx,js,jsx,mjs}'],
+    plugins: { 'indie-web': indieWebPlugin },
+    rules: {
+      'indie-web/multiline-jsdoc-declaration-comments': 'error',
+    },
+  },
 
   // Frontend
   {

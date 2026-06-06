@@ -11,10 +11,14 @@ export const noPathInServer = {
         'to avoid security issues from file mount escapes.',
     },
   },
-  /** @param {any} context */
+  /**
+   * @param {any} context
+   */
   create(context) {
     return {
-      /** @param {any} node */
+      /**
+       * @param {any} node
+       */
       ImportDeclaration(node) {
         if (node.source.value !== 'node:path' && node.source.value !== 'path') {
           return;
