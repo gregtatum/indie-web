@@ -281,7 +281,7 @@ describe('POST /music/music-index/scan incremental behavior', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          path: '/edited-title.mp3',
+          paths: ['/edited-title.mp3'],
           changes: [{ frameId: 'TIT2', value: 'Updated Title' }],
         }),
       });
@@ -309,6 +309,65 @@ describe('POST /music/music-index/scan incremental behavior', () => {
         (track: { path: string }) => track.path === '/edited-title.mp3',
       );
       assert.equal(track.title, 'Updated Title');
+    }),
+  );
+
+  it(
+    'updates the durable index once for successful bulk tag writes',
+    withLogs([], async () => {
+      await writeFile(
+        join(server.mountDir, 'bulk-index-a.mp3'),
+        buildMp3WithTags({ genre: 'Old Genre' }),
+      );
+      await writeFile(
+        join(server.mountDir, 'bulk-index-b.mp3'),
+        buildMp3WithTags({ genre: 'Old Genre' }),
+      );
+      await writeFile(
+        join(server.mountDir, 'bulk-index-note.txt'),
+        'not audio',
+      );
+
+      await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+
+      const writeRes = await fetch(`${server.baseUrl}/music/write-track-tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paths: [
+            '/bulk-index-a.mp3',
+            '/missing-bulk-index.mp3',
+            '/bulk-index-note.txt',
+            '/bulk-index-b.mp3',
+          ],
+          changes: [{ frameId: 'TCON', value: 'New Genre' }],
+        }),
+      });
+      assert.equal(writeRes.status, 200);
+      assert.deepEqual(await writeRes.json(), {
+        updated: ['/bulk-index-a.mp3', '/bulk-index-b.mp3'],
+        errors: [
+          { path: '/missing-bulk-index.mp3', message: 'File not found.' },
+          {
+            path: '/bulk-index-note.txt',
+            message: 'Only MP3 files are supported for tag writing.',
+          },
+        ],
+      });
+
+      const indexRes = await fetch(`${server.baseUrl}/music/music-index`);
+      assert.equal(indexRes.status, 200);
+      const index = await indexRes.json();
+      const tracks = new Map<string, { genre: string | null }>(
+        index.tracks.map((track: { path: string; genre: string | null }) => [
+          track.path,
+          { genre: track.genre },
+        ]),
+      );
+      assert.equal(tracks.get('/bulk-index-a.mp3')?.genre, 'New Genre');
+      assert.equal(tracks.get('/bulk-index-b.mp3')?.genre, 'New Genre');
     }),
   );
 });

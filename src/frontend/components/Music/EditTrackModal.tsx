@@ -171,7 +171,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       const res = await fetch(`${server.url}/music/write-track-tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: trackPath, changes }),
+        body: JSON.stringify({ paths: [trackPath], changes }),
       });
       if (!res.ok) {
         const text = await res.text();

@@ -43,13 +43,14 @@ function getBytesAfterId3(buffer: Buffer): Buffer {
 
 async function writeTrackTags(
   server: TestServer,
-  clientPath: string,
+  clientPath: string | string[],
   changes: Array<{ frameId: string; value: string }>,
 ) {
+  const paths = Array.isArray(clientPath) ? clientPath : [clientPath];
   return fetch(`${server.baseUrl}/music/write-track-tags`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path: clientPath, changes }),
+    body: JSON.stringify({ paths, changes }),
   });
 }
 
@@ -230,6 +231,93 @@ describe('POST /music/write-track-tags — diff semantics', () => {
       assert.equal(meta.common.title, 'Multi Title');
       assert.equal(meta.common.artist, 'Multi Artist');
       assert.equal(meta.common.album, 'Multi Album');
+    }),
+  );
+});
+
+describe('POST /music/write-track-tags — bulk semantics', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  it(
+    'applies the same changes to multiple files in one request',
+    withLogs([], async () => {
+      const firstPath = join(server.mountDir, 'bulk-a.mp3');
+      const secondPath = join(server.mountDir, 'bulk-b.mp3');
+      await writeFile(firstPath, buildMp3WithTags({ genre: 'Old Genre' }));
+      await writeFile(secondPath, buildMp3WithTags({ genre: 'Old Genre' }));
+
+      const res = await writeTrackTags(
+        server,
+        ['/bulk-a.mp3', '/bulk-b.mp3'],
+        [{ frameId: 'TCON', value: 'New Genre' }],
+      );
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), {
+        updated: ['/bulk-a.mp3', '/bulk-b.mp3'],
+        errors: [],
+      });
+
+      const firstMeta = await parseFile(firstPath);
+      const secondMeta = await parseFile(secondPath);
+      assert.deepEqual(firstMeta.common.genre, ['New Genre']);
+      assert.deepEqual(secondMeta.common.genre, ['New Genre']);
+    }),
+  );
+
+  it(
+    'continues after per-file failures and reports the failed paths',
+    withLogs([], async () => {
+      const filePath = join(server.mountDir, 'bulk-valid.mp3');
+      await writeFile(filePath, buildMp3WithTags({ album: 'Old Album' }));
+      await writeFile(join(server.mountDir, 'bulk-note.txt'), 'not audio');
+
+      const res = await writeTrackTags(
+        server,
+        ['/bulk-valid.mp3', '/missing.mp3', '/bulk-note.txt'],
+        [{ frameId: 'TALB', value: 'New Album' }],
+      );
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), {
+        updated: ['/bulk-valid.mp3'],
+        errors: [
+          { path: '/missing.mp3', message: 'File not found.' },
+          {
+            path: '/bulk-note.txt',
+            message: 'Only MP3 files are supported for tag writing.',
+          },
+        ],
+      });
+
+      const meta = await parseFile(filePath);
+      assert.equal(meta.common.album, 'New Album');
+    }),
+  );
+
+  it(
+    'rejects unsupported frame IDs before writing any file',
+    withLogs(['Unsupported frame ID: XXXX'], async () => {
+      const firstPath = join(server.mountDir, 'unsupported-a.mp3');
+      const secondPath = join(server.mountDir, 'unsupported-b.mp3');
+      await writeFile(firstPath, buildMp3WithTags({ title: 'Original A' }));
+      await writeFile(secondPath, buildMp3WithTags({ title: 'Original B' }));
+
+      const res = await writeTrackTags(
+        server,
+        ['/unsupported-a.mp3', '/unsupported-b.mp3'],
+        [{ frameId: 'XXXX', value: 'Should Not Write' }],
+      );
+      assert.equal(res.status, 400);
+
+      const firstMeta = await parseFile(firstPath);
+      const secondMeta = await parseFile(secondPath);
+      assert.equal(firstMeta.common.title, 'Original A');
+      assert.equal(secondMeta.common.title, 'Original B');
     }),
   );
 });

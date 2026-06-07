@@ -125,8 +125,11 @@ export interface TrackTagUpdate {
 }
 
 export interface WriteTrackTagsRequest {
-  path: string;
+  paths: string[];
   changes: TrackTagUpdate[];
 }
 
-export type WriteTrackTagsResponse = Record<string, never>;
+export interface WriteTrackTagsResponse {
+  updated: string[];
+  errors: Array<{ path: string; message: string }>;
+}

@@ -273,7 +273,7 @@ describe('edit track modal', () => {
       expect(writeRequests).toHaveLength(1);
     });
     expect(writeRequests[0]).toEqual({
-      path: '/music/a.mp3',
+      paths: ['/music/a.mp3'],
       changes: [{ frameId: 'TIT2', value: 'User Edited Title' }],
     });
   });
