@@ -501,9 +501,7 @@ describe('edit track modal', () => {
 
     expect(screen.getByText('Edit 201 Tracks')).toBeTruthy();
     expect(
-      screen.getByText(
-        'Showing library scan info. ID3 tags have not been loaded for all 201 tracks.',
-      ),
+      screen.getByText('Using track details from the library scan.'),
     ).toBeTruthy();
     expect(trackTagsFetchCount).toBe(0);
     expect(
@@ -514,15 +512,177 @@ describe('edit track modal', () => {
     ).toBe('Not loaded');
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Load all files' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Load all 201 tracks' }),
+      );
     });
 
     await waitFor(() => {
       expect(trackTagsFetchCount).toBe(201);
     });
-    expect(screen.queryByText(/Showing library scan info/)).toBeNull();
+    expect(screen.queryByText(/Using track details/)).toBeNull();
     expect(
       (screen.getByLabelText('Composer') as HTMLInputElement).placeholder,
     ).toBe('');
+  });
+
+  it('discards bulk edits and disables fields while loading all ID3 tags', async () => {
+    const manyTracks: T.TrackMetadata[] = Array.from(
+      { length: 201 },
+      (_, i) => ({
+        ...TRACKS[0],
+        path: `/music/${i}.mp3`,
+        title: `Song ${i}`,
+        artist: i === 0 ? 'Artist A' : 'Artist B',
+        track: i + 1,
+      }),
+    );
+    const store = createStore();
+    store.dispatch(A.addFileStoreServer(FAKE_SERVER));
+    const signals: AbortSignal[] = [];
+
+    (window.fetch as FetchMockSandbox).get(
+      `${FAKE_SERVER.url}/music/music-index`,
+      {
+        body: JSON.stringify({
+          version: 4,
+          scannedAt: '2024-01-01T00:00:00Z',
+          tracks: manyTracks,
+        }),
+        status: 200,
+      },
+    );
+    (window.fetch as FetchMockSandbox).get(
+      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+      (_url, opts: any) => {
+        signals.push(opts.signal);
+        return new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+      },
+    );
+
+    render(
+      <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    const track = await screen.findByText('Song 0');
+    await act(async () => {
+      store.dispatch(A.setMusicSelectedTracks(manyTracks.map((t) => t.path)));
+    });
+    await act(async () => {
+      fireEvent.contextMenu(track);
+    });
+    await act(async () => {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Edit Selection' }),
+      );
+    });
+
+    const albumInput = screen.getByLabelText('Album') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(albumInput, { target: { value: 'Unsaved Album' } });
+    });
+    expect(albumInput.value).toBe('Unsaved Album');
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Load all 201 tracks' }),
+      );
+    });
+
+    const resetAlbumInput = screen.getByLabelText('Album') as HTMLInputElement;
+    expect(resetAlbumInput.value).toBe('Album A');
+    expect(resetAlbumInput.disabled).toBe(true);
+    expect(screen.getByText('Loading ID3 tags: 0 / 201')).toBeTruthy();
+
+    await waitFor(() => {
+      expect(signals.length).toBeGreaterThan(0);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+  });
+
+  it('keeps scan values and offers retry when bulk ID3 loading fails', async () => {
+    const manyTracks: T.TrackMetadata[] = Array.from(
+      { length: 201 },
+      (_, i) => ({
+        ...TRACKS[0],
+        path: `/music/${i}.mp3`,
+        title: `Song ${i}`,
+        artist: i === 0 ? 'Artist A' : 'Artist B',
+        track: i + 1,
+      }),
+    );
+    const store = createStore();
+    store.dispatch(A.addFileStoreServer(FAKE_SERVER));
+    let trackTagsFetchCount = 0;
+
+    (window.fetch as FetchMockSandbox).get(
+      `${FAKE_SERVER.url}/music/music-index`,
+      {
+        body: JSON.stringify({
+          version: 4,
+          scannedAt: '2024-01-01T00:00:00Z',
+          tracks: manyTracks,
+        }),
+        status: 200,
+      },
+    );
+    (window.fetch as FetchMockSandbox).get(
+      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+      () => {
+        trackTagsFetchCount++;
+        if (trackTagsFetchCount === 1) {
+          return { body: 'Nope', status: 500 };
+        }
+        return { body: JSON.stringify({ native: [] }), status: 200 };
+      },
+    );
+
+    render(
+      <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    const track = await screen.findByText('Song 0');
+    await act(async () => {
+      store.dispatch(A.setMusicSelectedTracks(manyTracks.map((t) => t.path)));
+    });
+    await act(async () => {
+      fireEvent.contextMenu(track);
+    });
+    await act(async () => {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Edit Selection' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Load all 201 tracks' }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Could not load ID3 tags for 1 tracks.'),
+      ).toBeTruthy();
+    });
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
+    expect(
+      (screen.getByLabelText('Composer') as HTMLInputElement).placeholder,
+    ).toBe('Not loaded');
   });
 });

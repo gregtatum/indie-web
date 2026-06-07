@@ -63,6 +63,27 @@
   line-height: 1.35;
 }
 
+.editTrackModalIndexNoticeLoading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.editTrackModalLoadProgress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--light-border);
+}
+
+.editTrackModalLoadProgressFill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--primary-color);
+  transition: width 120ms linear;
+}
+
 .editTrackModalIndexNoticeButton {
   flex-shrink: 0;
   font: inherit;
