@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import * as React from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -62,7 +62,16 @@ beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
 });
 
-function setup(tracks = TRACKS) {
+interface SetupOptions {
+  trackTagsResponse?:
+    | {
+        body: string;
+        status: number;
+      }
+    | (() => Promise<{ body: string; status: number }>);
+}
+
+function setup(tracks = TRACKS, options: SetupOptions = {}) {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
 
@@ -80,7 +89,10 @@ function setup(tracks = TRACKS) {
 
   (window.fetch as FetchMockSandbox).get(
     new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-    { body: JSON.stringify({ native: [] }), status: 200 },
+    options.trackTagsResponse ?? {
+      body: JSON.stringify({ native: [] }),
+      status: 200,
+    },
   );
 
   render(
@@ -286,5 +298,85 @@ describe('edit track modal', () => {
     expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
       'Rock',
     );
+  });
+
+  // TODO - Keep late-loading live tags from turning untouched stale index values into save changes, so user edits cannot accidentally clobber newer tag data.
+  it('characterizes stale indexed fields as save changes when tags load after user edits', async () => {
+    const staleTracks: T.TrackMetadata[] = [
+      {
+        ...TRACKS[0],
+        title: 'Indexed Title',
+        artist: 'Indexed Artist',
+      },
+    ];
+    let resolveTags: (response: { body: string; status: number }) => void;
+    const tagsPromise = new Promise<{ body: string; status: number }>(
+      (resolve) => {
+        resolveTags = resolve;
+      },
+    );
+    const writeRequests: Array<{
+      path: string;
+      changes: Array<{ frameId: string; value: string }>;
+    }> = [];
+
+    setup(staleTracks, {
+      trackTagsResponse: () => tagsPromise,
+    });
+    (window.fetch as FetchMockSandbox).post(
+      `${FAKE_SERVER.url}/music/write-track-tags`,
+      (_url, opts: any) => {
+        writeRequests.push(JSON.parse(opts.body));
+        return { body: JSON.stringify({}), status: 200 };
+      },
+    );
+
+    await openEditModal('Indexed Title');
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
+      'Indexed Title',
+    );
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Title'), {
+        target: { value: 'User Edited Title' },
+      });
+    });
+
+    await act(async () => {
+      resolveTags!({
+        body: JSON.stringify({
+          native: [
+            {
+              format: 'ID3v2.3',
+              tags: [
+                { id: 'TIT2', value: 'Live Title' },
+                { id: 'TPE1', value: 'Live Artist' },
+              ],
+            },
+          ],
+        }),
+        status: 200,
+      });
+      await tagsPromise;
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).toBeNull();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+
+    await waitFor(() => {
+      expect(writeRequests).toHaveLength(1);
+    });
+    expect(writeRequests[0]).toMatchObject({
+      path: '/music/a.mp3',
+      changes: expect.arrayContaining([
+        { frameId: 'TIT2', value: 'User Edited Title' },
+        { frameId: 'TPE1', value: 'Indexed Artist' },
+      ]),
+    });
   });
 });

@@ -266,6 +266,65 @@ describe('POST /music/music-index/scan incremental behavior', () => {
       assert.ok(!paths.includes('/to-delete.mp3'));
     }),
   );
+
+  // TODO - Make tag edits and the durable music index coordinate, so saving tags does not leave /music-index serving stale metadata until a manual rescan.
+  it(
+    'characterizes tag writes as stale in the index until the next scan',
+    withLogs([], async () => {
+      const filePath = join(server.mountDir, 'edited-title.mp3');
+      await writeFile(filePath, buildMp3WithTags({ title: 'Original Title' }));
+
+      await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+
+      const writeRes = await fetch(`${server.baseUrl}/music/write-track-tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: '/edited-title.mp3',
+          changes: [{ frameId: 'TIT2', value: 'Updated Title' }],
+        }),
+      });
+      assert.equal(writeRes.status, 200);
+
+      const tagsRes = await fetch(
+        `${server.baseUrl}/music/track-tags?path=${encodeURIComponent(
+          '/edited-title.mp3',
+        )}`,
+      );
+      assert.equal(tagsRes.status, 200);
+      const tagsData = await tagsRes.json();
+      const allTags = tagsData.native.flatMap(
+        (block: { tags: Array<{ id: string; value: string }> }) => block.tags,
+      );
+      assert.equal(
+        allTags.find((tag: { id: string }) => tag.id === 'TIT2')?.value,
+        'Updated Title',
+      );
+
+      const staleIndexRes = await fetch(`${server.baseUrl}/music/music-index`);
+      assert.equal(staleIndexRes.status, 200);
+      const staleIndex = await staleIndexRes.json();
+      const staleTrack = staleIndex.tracks.find(
+        (track: { path: string }) => track.path === '/edited-title.mp3',
+      );
+      assert.equal(staleTrack.title, 'Original Title');
+
+      const rescanRes = await fetch(
+        `${server.baseUrl}/music/music-index/scan`,
+        {
+          method: 'POST',
+        },
+      );
+      assert.equal(rescanRes.status, 200);
+      const rescannedIndex = await rescanRes.json();
+      const rescannedTrack = rescannedIndex.tracks.find(
+        (track: { path: string }) => track.path === '/edited-title.mp3',
+      );
+      assert.equal(rescannedTrack.title, 'Updated Title');
+    }),
+  );
 });
 
 describe('GET /music/music-index/scan (SSE)', () => {

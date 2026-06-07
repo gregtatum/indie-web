@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { writeFile } from 'node:fs/promises';
@@ -262,6 +262,197 @@ describe('<Music> with real server', () => {
     };
     const allTags = tagsData.native.flatMap((b) => b.tags);
     expect(allTags.find((t) => t.id === 'TIT2')?.value).toBe('Updated Title');
+  }, 30_000);
+
+  // TODO - Persist or reload edited track metadata consistently, so a saved edit does not disappear when the music view reloads the stale index.
+  it('characterizes edit saves as optimistic until a rescan reloads the index', async () => {
+    await writeFile(
+      join(getServer().mountDir, 'Optimistic.mp3'),
+      buildMp3WithTags({ title: 'Indexed Title', artist: 'Test Artist' }),
+    );
+
+    setup();
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await screen.findByText(/Found \d+ tracks\./);
+
+    await act(async () => {
+      fireEvent.contextMenu(await screen.findByText('Indexed Title'));
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).toBeNull();
+      expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
+        'Indexed Title',
+      );
+    });
+
+    await act(async () => {
+      await userEvent.clear(screen.getByLabelText('Title'));
+      await userEvent.type(screen.getByLabelText('Title'), 'Saved Title');
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+
+    await screen.findByText('Saved Title', { selector: '.musicTrackTitle' });
+    await screen.findByRole('button', {
+      name: 'Scan Library (updates detected)',
+    });
+
+    // A fresh app render reloads the durable .music-index.json, which has not
+    // been updated by the tag write. The edited tag is in the MP3, but the
+    // library falls back to the stale index and the rescan flag is lost.
+    cleanup();
+    setup();
+    await screen.findByText('Indexed Title');
+    expect(screen.queryByText('Saved Title')).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: 'Scan Library (updates detected)',
+      }),
+    ).toBeNull();
+  }, 30_000);
+
+  // TODO - Decide how saving tags should update the library source of truth, so users do not need a separate rescan to make edits durable in the index.
+  it('characterizes rescanning after an edit as reconciling the library index', async () => {
+    await writeFile(
+      join(getServer().mountDir, 'RescanEdit.mp3'),
+      buildMp3WithTags({ title: 'Before Rescan', artist: 'Test Artist' }),
+    );
+
+    setup();
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await screen.findByText(/Found \d+ tracks\./);
+
+    await act(async () => {
+      fireEvent.contextMenu(await screen.findByText('Before Rescan'));
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).toBeNull();
+      expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
+        'Before Rescan',
+      );
+    });
+
+    await act(async () => {
+      await userEvent.clear(screen.getByLabelText('Title'));
+      await userEvent.type(screen.getByLabelText('Title'), 'After Rescan');
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', {
+          name: 'Scan Library (updates detected)',
+        }),
+      );
+    });
+
+    await screen.findByText(/Found \d+ tracks\./);
+    await screen.findByText('After Rescan', { selector: '.musicTrackTitle' });
+    await screen.findByRole('button', { name: 'Scan Library' });
+  }, 30_000);
+
+  // TODO - Refresh or invalidate loaded raw tag data after saving details, so the ID3 tab does not show stale frame values in an open editor.
+  it('characterizes already-loaded raw tags as stale after saving details', async () => {
+    await writeFile(
+      join(getServer().mountDir, 'RawTags.mp3'),
+      buildMp3WithTags({ title: 'Raw Old Title', artist: 'Test Artist' }),
+    );
+
+    setup();
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await screen.findByText(/Found \d+ tracks\./);
+
+    await act(async () => {
+      fireEvent.contextMenu(await screen.findByText('Raw Old Title'));
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).toBeNull();
+      expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
+        'Raw Old Title',
+      );
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
+    });
+    expect(
+      screen
+        .getAllByDisplayValue('Raw Old Title')
+        .some((input) =>
+          (input as HTMLInputElement).classList.contains(
+            'editTrackModalInput-readonly',
+          ),
+        ),
+    ).toBe(true);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Details' }));
+    });
+    await act(async () => {
+      await userEvent.clear(screen.getByLabelText('Title'));
+      await userEvent.type(screen.getByLabelText('Title'), 'Raw New Title');
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
+    });
+    expect(
+      screen
+        .getAllByDisplayValue('Raw Old Title')
+        .some((input) =>
+          (input as HTMLInputElement).classList.contains(
+            'editTrackModalInput-readonly',
+          ),
+        ),
+    ).toBe(true);
   }, 30_000);
 
   it('requires double-close to discard unsaved changes', async () => {
