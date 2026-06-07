@@ -608,17 +608,26 @@ async function updateIndexAfterTrackTagWrite(
   updatedTrack.mtime = stats.mtime.toISOString();
 
   for (const { frameId, value } of changes) {
-    if (frameId === 'TIT2') {
-      updatedTrack.title = value || null;
-    } else if (frameId === 'TPE1') {
-      updatedTrack.artist = value || null;
-    } else if (frameId === 'TALB') {
-      updatedTrack.album = value || null;
-    } else if (frameId === 'TCON') {
-      updatedTrack.genre = value || null;
-    } else if (frameId === 'TRCK') {
-      const num = parseInt(value.split('/')[0], 10);
-      updatedTrack.track = isNaN(num) ? null : num;
+    switch (frameId) {
+      case 'TIT2':
+        updatedTrack.title = value || null;
+        break;
+      case 'TPE1':
+        updatedTrack.artist = value || null;
+        break;
+      case 'TALB':
+        updatedTrack.album = value || null;
+        break;
+      case 'TCON':
+        updatedTrack.genre = value || null;
+        break;
+      case 'TRCK': {
+        const num = parseInt(value.split('/')[0], 10);
+        updatedTrack.track = isNaN(num) ? null : num;
+        break;
+      }
+      default:
+        break;
     }
   }
 
