@@ -51,13 +51,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>('idle');
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
   const tagRequestId = React.useRef(0);
-  // Tracks whether the user has made any edits since the modal last opened/reset.
-  // A ref (not state) so the tags-load effect always reads the latest value without
-  // needing to be in its dependency array.
-  const hasUserEdited = React.useRef(false);
 
   function setField(key: string, value: string) {
-    hasUserEdited.current = true;
     setCloseConfirmPending(false);
     setFormState((prev) => ({ ...prev, [key]: value }));
   }
@@ -97,7 +92,6 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     setTagsState({ status: 'loading' });
     setSaveStatus('idle');
     setCloseConfirmPending(false);
-    hasUserEdited.current = false;
   }, [trackPath]);
 
   // Load the ID3 tab frame values when opening or switching tracks.
@@ -113,11 +107,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     if (tagsState.status === 'loaded') {
       const vals = detailFieldValues(track, tagsState.data);
       setBaselineFormState(vals);
-      // Only sync formState to the full tag values if the user hasn't started editing.
-      // The ref is always current so this check is race-free.
-      if (!hasUserEdited.current) {
-        setFormState(vals);
-      }
+      setFormState(vals);
     }
   }, [tagsState]);
 
@@ -143,7 +133,12 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }
 
   async function handleSave() {
-    if (!trackPath || !isDirty || saveStatus === 'saving') {
+    if (
+      !trackPath ||
+      !isDirty ||
+      saveStatus === 'saving' ||
+      tagsState.status !== 'loaded'
+    ) {
       return;
     }
 
@@ -221,6 +216,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const artUrl = track?.coverArt
     ? `${server.url}/music/cover-art?path=${encodeURIComponent(track.coverArt)}`
     : null;
+  const detailsEditingDisabled = tagsState.status !== 'loaded';
 
   // Build the Details panel by iterating detailFields
   let lastGroup: string | null = null;
@@ -245,6 +241,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
               type="text"
               inputMode="numeric"
               value={formState[field.key]}
+              disabled={detailsEditingDisabled}
               onChange={(e) => setField(field.key, e.target.value)}
             />
             <span className="editTrackModalSplitSep">of</span>
@@ -253,6 +250,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
               type="text"
               inputMode="numeric"
               value={formState[field.totalKey]}
+              disabled={detailsEditingDisabled}
               onChange={(e) => setField(field.totalKey, e.target.value)}
             />
           </div>
@@ -267,6 +265,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             type="text"
             inputMode={field.type === 'number' ? 'numeric' : 'text'}
             value={formState[field.key]}
+            disabled={detailsEditingDisabled}
             onChange={(e) => setField(field.key, e.target.value)}
           />
         </label>,
@@ -351,7 +350,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             disabled={
               !isDirty ||
               saveStatus === 'saving' ||
-              tagsState.status === 'loading'
+              tagsState.status !== 'loaded'
             }
             onClick={() => void handleSave()}
           >

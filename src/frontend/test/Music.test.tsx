@@ -486,9 +486,9 @@ describe('<Music> with real server', () => {
     });
 
     await waitFor(() => {
-      expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
-        'Close Test Track',
-      );
+      const titleInput = screen.getByLabelText('Title') as HTMLInputElement;
+      expect(titleInput.value).toBe('Close Test Track');
+      expect(titleInput.disabled).toBe(false);
     });
 
     await act(async () => {

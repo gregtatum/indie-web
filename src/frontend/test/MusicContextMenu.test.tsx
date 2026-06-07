@@ -253,6 +253,9 @@ describe('edit track modal', () => {
     setup();
     await openEditModal('Song A');
     const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
+    await waitFor(() => {
+      expect(artistInput.disabled).toBe(false);
+    });
     await act(async () => {
       fireEvent.change(artistInput, { target: { value: 'New Artist' } });
     });
@@ -300,8 +303,10 @@ describe('edit track modal', () => {
     );
   });
 
-  // TODO - Keep late-loading live tags from turning untouched stale index values into save changes, so user edits cannot accidentally clobber newer tag data.
-  it('characterizes stale indexed fields as save changes when tags load after user edits', async () => {
+  // The indexed metadata is only a preview while live ID3 tags load. Keeping the
+  // fields disabled until the live tags establish the save baseline prevents
+  // stale index data from being edited or written back over newer ID3 tags.
+  it('does not allow editing stale indexed fields before live tags load', async () => {
     const staleTracks: T.TrackMetadata[] = [
       {
         ...TRACKS[0],
@@ -332,15 +337,17 @@ describe('edit track modal', () => {
     );
 
     await openEditModal('Indexed Title');
-    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
-      'Indexed Title',
-    );
+    const titleInput = screen.getByLabelText('Title') as HTMLInputElement;
+    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
+    const saveButton = screen.getByRole('button', {
+      name: 'Save',
+    }) as HTMLButtonElement;
 
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Title'), {
-        target: { value: 'User Edited Title' },
-      });
-    });
+    expect(titleInput.value).toBe('Indexed Title');
+    expect(artistInput.value).toBe('Indexed Artist');
+    expect(titleInput.disabled).toBe(true);
+    expect(artistInput.disabled).toBe(true);
+    expect(saveButton.disabled).toBe(true);
 
     await act(async () => {
       resolveTags!({
@@ -363,20 +370,69 @@ describe('edit track modal', () => {
     await waitFor(() => {
       expect(screen.queryByText('Loading…')).toBeNull();
     });
+    expect(titleInput.disabled).toBe(false);
+    expect(artistInput.disabled).toBe(false);
+    expect(titleInput.value).toBe('Live Title');
+    expect(artistInput.value).toBe('Live Artist');
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      fireEvent.change(titleInput, {
+        target: { value: 'User Edited Title' },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(saveButton);
     });
 
     await waitFor(() => {
       expect(writeRequests).toHaveLength(1);
     });
-    expect(writeRequests[0]).toMatchObject({
+    expect(writeRequests[0]).toEqual({
       path: '/music/a.mp3',
-      changes: expect.arrayContaining([
-        { frameId: 'TIT2', value: 'User Edited Title' },
-        { frameId: 'TPE1', value: 'Indexed Artist' },
-      ]),
+      changes: [{ frameId: 'TIT2', value: 'User Edited Title' }],
     });
+  });
+
+  it('keeps details editing disabled when live tags fail to load', async () => {
+    const writeRequests: Array<unknown> = [];
+
+    setup(TRACKS, {
+      trackTagsResponse: {
+        body: 'Tag load failed',
+        status: 500,
+      },
+    });
+    (window.fetch as FetchMockSandbox).post(
+      `${FAKE_SERVER.url}/music/write-track-tags`,
+      (_url, opts: any) => {
+        writeRequests.push(JSON.parse(opts.body));
+        return { body: JSON.stringify({}), status: 200 };
+      },
+    );
+
+    await openEditModal('Song A');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/Error: 500/)).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Details' }));
+    });
+
+    expect((screen.getByLabelText('Title') as HTMLInputElement).disabled).toBe(
+      true,
+    );
+    const saveButton = screen.getByRole('button', {
+      name: 'Save',
+    }) as HTMLButtonElement;
+    expect(saveButton.disabled).toBe(true);
+
+    await act(async () => {
+      fireEvent.click(saveButton);
+    });
+    expect(writeRequests).toHaveLength(0);
   });
 });
