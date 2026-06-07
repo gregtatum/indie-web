@@ -30,6 +30,7 @@ const GROUP_LABELS: Record<string, string> = {
 const BULK_LIVE_TAGS_CUTOFF = 200;
 const BULK_TAG_FETCH_CONCURRENCY = 6;
 const BULK_PROGRESS_UPDATE_INTERVAL = 150;
+export const BULK_SMALL_LOAD_NOTICE_DELAY = 1500;
 const TEXT_MIXED_PLACEHOLDER = 'Mixed';
 const NUMBER_MIXED_PLACEHOLDER = '–';
 const NOT_LOADED_PLACEHOLDER = 'Not loaded';
@@ -187,6 +188,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const [bulkTagsState, setBulkTagsState] = React.useState<BulkTagsState>({
     status: 'idle',
   });
+  const [showBulkLoadingNotice, setShowBulkLoadingNotice] =
+    React.useState(false);
   const [bulkForceLoadAll, setBulkForceLoadAll] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>('idle');
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
@@ -195,6 +198,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const bulkTagsByPathRef = React.useRef(new Map<string, TrackTagsResponse>());
   const bulkProgressRef = React.useRef({ loaded: 0, failed: 0, total: 0 });
   const bulkProgressRequestIdRef = React.useRef<number | null>(null);
+  const bulkLoadingNoticeTimeoutRef = React.useRef<number | null>(null);
   const bulkProgressCommit = React.useMemo(
     () =>
       throttle((requestId: number) => {
@@ -214,6 +218,28 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     bulkAbortControllerRef.current?.abort();
     bulkAbortControllerRef.current = null;
     bulkProgressRequestIdRef.current = null;
+    clearBulkLoadingNoticeDelay();
+    setShowBulkLoadingNotice(false);
+  }
+
+  function clearBulkLoadingNoticeDelay() {
+    if (bulkLoadingNoticeTimeoutRef.current !== null) {
+      window.clearTimeout(bulkLoadingNoticeTimeoutRef.current);
+      bulkLoadingNoticeTimeoutRef.current = null;
+    }
+  }
+
+  function scheduleBulkLoadingNotice(total: number) {
+    clearBulkLoadingNoticeDelay();
+    if (total < BULK_LIVE_TAGS_CUTOFF) {
+      setShowBulkLoadingNotice(false);
+      bulkLoadingNoticeTimeoutRef.current = window.setTimeout(() => {
+        bulkLoadingNoticeTimeoutRef.current = null;
+        setShowBulkLoadingNotice(true);
+      }, BULK_SMALL_LOAD_NOTICE_DELAY);
+    } else {
+      setShowBulkLoadingNotice(true);
+    }
   }
 
   function getIndexDetailPresentation() {
@@ -242,6 +268,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       loaded: 0,
       total: editTracks.length,
     });
+    scheduleBulkLoadingNotice(editTracks.length);
     setBulkForceLoadAll(true);
   }
 
@@ -294,6 +321,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         'index',
       );
       setBulkTagsState({ status: 'skipped' });
+      setShowBulkLoadingNotice(false);
       setBaselineFormState(presentation.values);
       setFormState(presentation.values);
       setFormPlaceholders(presentation.placeholders);
@@ -314,6 +342,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       loaded: 0,
       total: currentTracks.length,
     });
+    scheduleBulkLoadingNotice(currentTracks.length);
     try {
       await mapWithConcurrency(
         currentTracks,
@@ -356,6 +385,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         }
         if (bulkProgressRef.current.failed > 0) {
           bulkProgressRequestIdRef.current = null;
+          clearBulkLoadingNoticeDelay();
           setBulkTagsState({
             status: 'error',
             failed: bulkProgressRef.current.failed,
@@ -371,6 +401,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           'tags',
         );
         bulkProgressRequestIdRef.current = null;
+        clearBulkLoadingNoticeDelay();
+        setShowBulkLoadingNotice(false);
         setBulkTagsState({ status: 'loaded', tagsByPath });
         setBaselineFormState(presentation.values);
         setFormState(presentation.values);
@@ -385,6 +417,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       }
       if (requestId === tagRequestId.current) {
         bulkProgressRequestIdRef.current = null;
+        clearBulkLoadingNoticeDelay();
         setBulkTagsState({
           status: 'error',
           failed: Math.max(1, bulkProgressRef.current.failed),
@@ -416,6 +449,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         ? { status: 'loading', loaded: 0, total: editTracks.length }
         : { status: 'idle' },
     );
+    setShowBulkLoadingNotice(false);
     setBulkForceLoadAll(false);
     abortBulkTagLoad();
     setSaveStatus('idle');
@@ -592,7 +626,11 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         </button>
       </div>
     );
-  } else if (isBulkEdit && bulkTagsState.status === 'loading') {
+  } else if (
+    isBulkEdit &&
+    bulkTagsState.status === 'loading' &&
+    showBulkLoadingNotice
+  ) {
     const progress =
       bulkTagsState.total === 0
         ? 0

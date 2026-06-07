@@ -6,6 +6,7 @@ import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
+import { BULK_SMALL_LOAD_NOTICE_DELAY } from 'frontend/components/Music/EditTrackModal';
 import type { FetchMockSandbox } from 'fetch-mock';
 
 const FAKE_SERVER: T.FileStoreServer = {
@@ -399,6 +400,30 @@ describe('edit track modal', () => {
       name: 'Save',
     }) as HTMLButtonElement;
     expect(saveButton.disabled).toBe(true);
+  });
+
+  it('defers the bulk loading progress notice for small selections', async () => {
+    jest.useFakeTimers();
+    const { store } = setup(TRACKS, {
+      trackTagsResponse: () => new Promise(() => {}),
+    });
+
+    await openBulkEditModal(store);
+
+    expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
+    expect((screen.getByLabelText('Artist') as HTMLInputElement).disabled).toBe(
+      true,
+    );
+
+    await act(async () => {
+      jest.advanceTimersByTime(BULK_SMALL_LOAD_NOTICE_DELAY - 1);
+    });
+    expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
+
+    await act(async () => {
+      jest.advanceTimersByTime(1);
+    });
+    expect(screen.getByText('Loading ID3 tags: 0 / 2')).toBeTruthy();
   });
 
   it('shows shared folder artwork only in the bulk editor', async () => {
