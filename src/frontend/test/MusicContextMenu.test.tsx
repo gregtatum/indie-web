@@ -291,6 +291,27 @@ describe('track list keyboard shortcuts', () => {
     ]);
   });
 
+  it('cmd+a preserves the focused track to avoid scrolling the list', async () => {
+    const { store } = setup();
+    const trackC = await screen.findByText('Song C');
+    const trackList = screen.getByRole('listbox', { name: 'Tracks' });
+
+    await act(async () => {
+      fireEvent.click(trackC);
+      trackList.focus();
+      fireEvent.keyDown(document.body, { key: 'a', metaKey: true });
+    });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+      '/music/c.mp3',
+    ]);
+    expect(trackList.getAttribute('aria-activedescendant')).toBe(
+      'music-track-2',
+    );
+  });
+
   it('cmd+e opens the details edit modal for one selected track', async () => {
     const { store } = setup();
     const trackA = await screen.findByText('Song A');

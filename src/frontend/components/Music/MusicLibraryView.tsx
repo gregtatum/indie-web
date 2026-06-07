@@ -861,8 +861,7 @@ function Tracks() {
           case 'a': {
             event.preventDefault();
             const allPaths = currentTracks.map((track) => track.path);
-            anchorPathRef.current = allPaths[0] ?? null;
-            setFocusedPath(allPaths[0] ?? null);
+            anchorPathRef.current = currentPath ?? allPaths[0] ?? null;
             dispatch(A.setMusicSelectedTracks(allPaths));
             return;
           }
