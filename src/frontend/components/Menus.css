@@ -38,8 +38,22 @@
   text-align: left;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 14px;
   border: 2px solid transparent;
   cursor: pointer;
+}
+
+.menusFileButtonLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menusFileButtonShortcut {
+  color: #666;
+  flex: none;
+  font-size: 0.86em;
 }
 
 .menusFileButton:focus,

@@ -845,6 +845,48 @@ function Tracks() {
       const currentIndex = currentPath
         ? currentTracks.findIndex((t) => t.path === currentPath)
         : -1;
+      const isPrimaryShortcut =
+        (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey;
+
+      if (isPrimaryShortcut) {
+        const selectedPaths = $.getMusicSelectedTrackPaths(getState());
+        let shortcutTargetPaths: string[] = [];
+        if (selectedPaths.length > 0) {
+          shortcutTargetPaths = selectedPaths;
+        } else if (currentPath) {
+          shortcutTargetPaths = [currentPath];
+        }
+
+        switch (event.key.toLowerCase()) {
+          case 'a': {
+            event.preventDefault();
+            const allPaths = currentTracks.map((track) => track.path);
+            anchorPathRef.current = allPaths[0] ?? null;
+            setFocusedPath(allPaths[0] ?? null);
+            dispatch(A.setMusicSelectedTracks(allPaths));
+            return;
+          }
+          case 'e': {
+            event.preventDefault();
+            contextMenuRef.current?.edit(shortcutTargetPaths, 'details');
+            return;
+          }
+          case 'i': {
+            event.preventDefault();
+            contextMenuRef.current?.edit(shortcutTargetPaths, 'id3');
+            return;
+          }
+          case 'enter': {
+            event.preventDefault();
+            if (shortcutTargetPaths.length === 1) {
+              contextMenuRef.current?.showInFiles(shortcutTargetPaths[0]);
+            }
+            return;
+          }
+          default:
+            break;
+        }
+      }
 
       switch (event.key) {
         case 'ArrowUp': {

@@ -57,6 +57,7 @@ export interface MenuButton {
   children: React.ReactNode;
   key: string;
   onClick(): void;
+  shortcut?: React.ReactNode;
 }
 
 interface MenuProps {
@@ -227,7 +228,12 @@ export function Menu({
             dismiss();
           }}
         >
-          {button.children}
+          <span className="menusFileButtonLabel">{button.children}</span>
+          {button.shortcut ? (
+            <span className="menusFileButtonShortcut" aria-hidden="true">
+              {button.shortcut}
+            </span>
+          ) : null}
         </button>
       ))}
     </div>

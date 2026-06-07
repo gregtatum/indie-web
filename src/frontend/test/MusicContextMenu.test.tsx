@@ -7,6 +7,7 @@ import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
 import type { FetchMockSandbox } from 'fetch-mock';
+import { mockMusicMediaElement } from './utils/music';
 
 const FAKE_SERVER: T.FileStoreServer = {
   id: 'test-music',
@@ -60,6 +61,7 @@ const TRACKS: T.TrackMetadata[] = [
 beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+  mockMusicMediaElement();
 });
 
 function setup(tracks = TRACKS) {
@@ -76,6 +78,10 @@ function setup(tracks = TRACKS) {
       }),
       status: 200,
     },
+  );
+  (window.fetch as FetchMockSandbox).get(
+    new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+    { body: JSON.stringify({ native: [] }), status: 200 },
   );
 
   render(
@@ -216,5 +222,190 @@ describe('track right-click context menu', () => {
       fireEvent.contextMenu(trackA);
     });
     await screen.findByRole('button', { name: 'Edit Selection' });
+  });
+
+  it('shows shortcut hints without changing menu item names', async () => {
+    setup();
+    const trackA = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.contextMenu(trackA);
+    });
+
+    await screen.findByRole('button', { name: 'Edit' });
+    await screen.findByRole('button', { name: 'Show in Files' });
+    screen.getByText('⌘/Ctrl E');
+    screen.getByText('⌘/Ctrl Enter');
+  });
+
+  it('shows the edit shortcut hint for multi-track selection', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+    });
+    const trackA = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.contextMenu(trackA);
+    });
+
+    await screen.findByRole('button', { name: 'Edit Selection' });
+    screen.getByText('⌘/Ctrl E');
+  });
+});
+
+describe('track list keyboard shortcuts', () => {
+  function focusTrackList() {
+    screen.getByRole('listbox', { name: 'Tracks' }).focus();
+  }
+
+  it('cmd+a selects all filtered tracks when the track list has focus', async () => {
+    const { store } = setup();
+    await screen.findByText('Song A');
+
+    await act(async () => {
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'a', metaKey: true });
+    });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+      '/music/c.mp3',
+    ]);
+  });
+
+  it('ctrl+a selects all filtered tracks when the track list has focus', async () => {
+    const { store } = setup();
+    await screen.findByText('Song A');
+
+    await act(async () => {
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'a', ctrlKey: true });
+    });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+      '/music/c.mp3',
+    ]);
+  });
+
+  it('cmd+e opens the details edit modal for one selected track', async () => {
+    const { store } = setup();
+    const trackA = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.click(trackA);
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'e', metaKey: true });
+    });
+
+    await screen.findByRole('dialog');
+    expect($.getMusicEditTrackPath(store.getState())).toBe('/music/a.mp3');
+    expect($.getMusicEditTab(store.getState())).toBe('details');
+  });
+
+  it('ctrl+e opens the details edit modal for one selected track', async () => {
+    const { store } = setup();
+    const trackA = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.click(trackA);
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'e', ctrlKey: true });
+    });
+
+    await screen.findByRole('dialog');
+    expect($.getMusicEditTrackPath(store.getState())).toBe('/music/a.mp3');
+    expect($.getMusicEditTab(store.getState())).toBe('details');
+  });
+
+  it('cmd+i opens the edit modal on the ID3 tab for one selected track', async () => {
+    const { store } = setup();
+    const trackA = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.click(trackA);
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'i', metaKey: true });
+    });
+
+    await screen.findByRole('dialog');
+    expect($.getMusicEditTrackPath(store.getState())).toBe('/music/a.mp3');
+    expect($.getMusicEditTab(store.getState())).toBe('id3');
+  });
+
+  it('cmd+e opens bulk edit when multiple tracks are selected', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'e', metaKey: true });
+    });
+
+    await screen.findByRole('dialog');
+    screen.getByText('Edit 2 Tracks');
+    expect($.getMusicEditTrackPath(store.getState())).toBe('/music/a.mp3');
+  });
+
+  it('cmd+enter shows one selected track in files', async () => {
+    const { store } = setup();
+    const trackB = await screen.findByText('Song B');
+    await act(async () => {
+      fireEvent.click(trackB);
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'Enter', metaKey: true });
+    });
+
+    expect($.getFileFocusByPath(store.getState())).toMatchObject({
+      '/music': 'b.mp3',
+    });
+  });
+
+  it('cmd+enter does nothing for multi-track selection', async () => {
+    const { store } = setup();
+    await screen.findByText('Song A');
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'Enter', metaKey: true });
+    });
+
+    expect($.getFileFocusByPath(store.getState())).toEqual({});
+  });
+
+  it('does not run track shortcuts when another panel has focus', async () => {
+    const { store } = setup();
+    await screen.findByText('Song A');
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      fireEvent.keyDown(document.body, { key: 'a', metaKey: true });
+    });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
+  });
+
+  it('ignores shifted and alt-modified shortcut keys', async () => {
+    const { store } = setup();
+    await screen.findByText('Song A');
+
+    await act(async () => {
+      focusTrackList();
+      fireEvent.keyDown(document.body, {
+        key: 'a',
+        metaKey: true,
+        shiftKey: true,
+      });
+      fireEvent.keyDown(document.body, {
+        key: 'e',
+        metaKey: true,
+        altKey: true,
+      });
+    });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
+    expect($.getMusicEditTrackPath(store.getState())).toBeNull();
   });
 });

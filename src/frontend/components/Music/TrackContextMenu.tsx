@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { $$, A, Hooks, $ } from 'frontend';
+import { $$, A, Hooks, $, T } from 'frontend';
 import { getDirName, getPathFileName } from 'frontend/utils';
 import { Menu, MenuButton } from 'frontend/components/Menus';
 import { EditTrackModal } from 'frontend/components/Music/EditTrackModal';
@@ -9,7 +9,9 @@ import { EditTrackModal } from 'frontend/components/Music/EditTrackModal';
 const MENU_WIDTH = 200;
 
 export interface TrackContextMenuHandle {
+  edit(trackPaths: string[], tab?: T.MusicEditTab): void;
   open(event: React.MouseEvent, trackPath: string): void;
+  showInFiles(trackPath: string): void;
 }
 
 export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
@@ -25,33 +27,62 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     const editTrackPath = $$.getMusicEditTrackPath();
     const anchorRef = React.useRef<HTMLElement | null>(null);
 
-    React.useImperativeHandle(ref, () => ({
-      open(event, trackPath) {
-        event.preventDefault();
-        const { clientX: x, clientY: y } = event;
-        anchorRef.current = {
-          getBoundingClientRect: () =>
-            ({
-              top: y,
-              bottom: y,
-              left: x,
-              right: x + MENU_WIDTH,
-              width: MENU_WIDTH,
-              height: 0,
-              x,
-              y,
-              toJSON() {
-                return this;
-              },
-            }) as DOMRect,
-          contains: () => false,
-          focus: () => {},
-        } as unknown as HTMLElement;
-        setContextTrackPath(trackPath);
-        setOpenGeneration((n) => n + 1);
-        setOpenEventDetail(event.detail);
+    const editTracks = React.useCallback(
+      (trackPaths: string[], tab: T.MusicEditTab = 'details') => {
+        const trackPath = trackPaths[0] ?? null;
+        dispatch(A.setMusicEditTrackPath(trackPath));
+        if (trackPath && tab !== 'details') {
+          dispatch(A.setMusicEditTab(tab));
+        }
       },
-    }));
+      [dispatch],
+    );
+
+    const showInFiles = React.useCallback(
+      (trackPath: string) => {
+        const state = getState();
+        const fsSlug = $.getCurrentFileStoreSlug(state);
+        const folderPath = getDirName(trackPath);
+        const fileName = getPathFileName(trackPath);
+        dispatch(A.changeFileFocus(folderPath, fileName));
+        navigate(`/${fsSlug}/folder${folderPath}`);
+      },
+      [dispatch, getState, navigate],
+    );
+
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        edit: editTracks,
+        open(event, trackPath) {
+          event.preventDefault();
+          const { clientX: x, clientY: y } = event;
+          anchorRef.current = {
+            getBoundingClientRect: () =>
+              ({
+                top: y,
+                bottom: y,
+                left: x,
+                right: x + MENU_WIDTH,
+                width: MENU_WIDTH,
+                height: 0,
+                x,
+                y,
+                toJSON() {
+                  return this;
+                },
+              }) as DOMRect,
+            contains: () => false,
+            focus: () => {},
+          } as unknown as HTMLElement;
+          setContextTrackPath(trackPath);
+          setOpenGeneration((n) => n + 1);
+          setOpenEventDetail(event.detail);
+        },
+        showInFiles,
+      }),
+      [editTracks, showInFiles],
+    );
 
     const selectedPaths = $$.getMusicSelectedTrackPaths();
     const isMultiSelect = selectedPaths.length > 1;
@@ -80,8 +111,9 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
             {
               key: 'edit-selection',
               children: 'Edit Selection',
+              shortcut: '⌘/Ctrl E',
               onClick() {
-                dispatch(A.setMusicEditTrackPath(selectedPaths[0] ?? null));
+                editTracks(selectedPaths);
               },
             } as MenuButton,
           ]
@@ -91,20 +123,17 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
             {
               key: 'edit',
               children: 'Edit',
+              shortcut: '⌘/Ctrl E',
               onClick() {
-                dispatch(A.setMusicEditTrackPath(contextTrackPath));
+                editTracks([contextTrackPath]);
               },
             } as MenuButton,
             {
               key: 'show-in-files',
               children: 'Show in Files',
+              shortcut: '⌘/Ctrl Enter',
               onClick() {
-                const state = getState();
-                const fsSlug = $.getCurrentFileStoreSlug(state);
-                const folderPath = getDirName(contextTrackPath);
-                const fileName = getPathFileName(contextTrackPath);
-                dispatch(A.changeFileFocus(folderPath, fileName));
-                navigate(`/${fsSlug}/folder${folderPath}`);
+                showInFiles(contextTrackPath);
               },
             } as MenuButton,
           ]
