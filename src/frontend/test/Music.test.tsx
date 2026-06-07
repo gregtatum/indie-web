@@ -375,11 +375,10 @@ describe('<Music> with real server', () => {
     ).toBeNull();
   }, 30_000);
 
-  // TODO - Refresh or invalidate loaded raw tag data after saving details, so the ID3 tab does not show stale frame values in an open editor.
-  it('characterizes already-loaded raw tags as stale after saving details', async () => {
+  it('refreshes the ID3 tab after saving Details changes', async () => {
     await writeFile(
-      join(getServer().mountDir, 'RawTags.mp3'),
-      buildMp3WithTags({ title: 'Raw Old Title', artist: 'Test Artist' }),
+      join(getServer().mountDir, 'Id3Refresh.mp3'),
+      buildMp3WithTags({ title: 'ID3 Old Title', artist: 'Test Artist' }),
     );
 
     setup();
@@ -392,7 +391,7 @@ describe('<Music> with real server', () => {
     await screen.findByText(/Found \d+ tracks\./);
 
     await act(async () => {
-      fireEvent.contextMenu(await screen.findByText('Raw Old Title'));
+      fireEvent.contextMenu(await screen.findByText('ID3 Old Title'));
     });
     await act(async () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
@@ -400,7 +399,7 @@ describe('<Music> with real server', () => {
     await waitFor(() => {
       expect(screen.queryByText('Loading…')).toBeNull();
       expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
-        'Raw Old Title',
+        'ID3 Old Title',
       );
     });
 
@@ -409,7 +408,7 @@ describe('<Music> with real server', () => {
     });
     expect(
       screen
-        .getAllByDisplayValue('Raw Old Title')
+        .getAllByDisplayValue('ID3 Old Title')
         .some((input) =>
           (input as HTMLInputElement).classList.contains(
             'editTrackModalInput-readonly',
@@ -422,7 +421,7 @@ describe('<Music> with real server', () => {
     });
     await act(async () => {
       await userEvent.clear(screen.getByLabelText('Title'));
-      await userEvent.type(screen.getByLabelText('Title'), 'Raw New Title');
+      await userEvent.type(screen.getByLabelText('Title'), 'ID3 New Title');
     });
     await act(async () => {
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -437,15 +436,26 @@ describe('<Music> with real server', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
     });
+    await waitFor(() => {
+      expect(
+        screen
+          .getAllByDisplayValue('ID3 New Title')
+          .some((input) =>
+            (input as HTMLInputElement).classList.contains(
+              'editTrackModalInput-readonly',
+            ),
+          ),
+      ).toBe(true);
+    });
     expect(
       screen
-        .getAllByDisplayValue('Raw Old Title')
+        .queryAllByDisplayValue('ID3 Old Title')
         .some((input) =>
           (input as HTMLInputElement).classList.contains(
             'editTrackModalInput-readonly',
           ),
         ),
-    ).toBe(true);
+    ).toBe(false);
   }, 30_000);
 
   it('requires double-close to discard unsaved changes', async () => {

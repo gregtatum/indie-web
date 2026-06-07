@@ -50,6 +50,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     React.useState<DetailFieldValues>(emptyDetailFieldValues);
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>('idle');
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
+  const tagRequestId = React.useRef(0);
   // Tracks whether the user has made any edits since the modal last opened/reset.
   // A ref (not state) so the tags-load effect always reads the latest value without
   // needing to be in its dependency array.
@@ -60,6 +61,33 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     setCloseConfirmPending(false);
     setFormState((prev) => ({ ...prev, [key]: value }));
   }
+
+  const loadTrackTags = React.useCallback(async () => {
+    if (!trackPath || !server) {
+      return;
+    }
+    const requestId = ++tagRequestId.current;
+    setTagsState({ status: 'loading' });
+    try {
+      const res = await fetch(
+        `${server.url}/music/track-tags?path=${encodeURIComponent(trackPath)}`,
+      );
+      if (!res.ok) {
+        throw new Error(`${res.status} ${res.statusText}`);
+      }
+      const data = (await res.json()) as TrackTagsResponse;
+      if (requestId === tagRequestId.current) {
+        setTagsState({ status: 'loaded', data });
+      }
+    } catch (err: unknown) {
+      if (requestId === tagRequestId.current) {
+        setTagsState({
+          status: 'error',
+          message: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+  }, [trackPath, server?.url]);
 
   // Reset the form immediately from TrackMetadata when track changes
   React.useEffect(() => {
@@ -72,38 +100,13 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     hasUserEdited.current = false;
   }, [trackPath]);
 
-  // Fetch tags once per track
+  // Load the ID3 tab frame values when opening or switching tracks.
   React.useEffect(() => {
-    if (!trackPath || !server) {
-      return () => {};
-    }
-    let cancelled = false;
-    fetch(
-      `${server.url}/music/track-tags?path=${encodeURIComponent(trackPath)}`,
-    )
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`${res.status} ${res.statusText}`);
-        }
-        return res.json() as Promise<TrackTagsResponse>;
-      })
-      .then((data) => {
-        if (!cancelled) {
-          setTagsState({ status: 'loaded', data });
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setTagsState({
-            status: 'error',
-            message: err instanceof Error ? err.message : 'Unknown error',
-          });
-        }
-      });
+    void loadTrackTags();
     return () => {
-      cancelled = true;
+      tagRequestId.current++;
     };
-  }, [trackPath, server?.url]);
+  }, [loadTrackTags]);
 
   // Upgrade form state and baseline when tags load
   React.useEffect(() => {
@@ -209,6 +212,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         return updated;
       });
       dispatch(A.setMusicTracks(updatedTracks, needsRescan));
+      await loadTrackTags();
     } catch {
       setSaveStatus('error');
     }
