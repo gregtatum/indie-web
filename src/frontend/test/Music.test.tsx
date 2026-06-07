@@ -1,9 +1,10 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { A } from 'frontend';
 import {
   buildMinimalMp3,
   buildMp3WithTags,
@@ -266,6 +267,104 @@ describe('<Music> with real server', () => {
     };
     const allTags = tagsData.native.flatMap((b) => b.tags);
     expect(allTags.find((t) => t.id === 'TIT2')?.value).toBe('Updated Title');
+  }, 30_000);
+
+  it('edits genre for a selected album and persists it to each MP3 file', async () => {
+    const albumDir = join(getServer().mountDir, 'Bulk Artist', 'Bulk Album');
+    await mkdir(albumDir, { recursive: true });
+    await writeFile(
+      join(albumDir, 'Track 1.mp3'),
+      buildMp3WithTags({
+        title: 'Bulk Song 1',
+        artist: 'Bulk Artist',
+        album: 'Bulk Album',
+        genre: 'Old Genre',
+      }),
+    );
+    await writeFile(
+      join(albumDir, 'Track 2.mp3'),
+      buildMp3WithTags({
+        title: 'Bulk Song 2',
+        artist: 'Bulk Artist',
+        album: 'Bulk Album',
+        genre: 'Old Genre',
+      }),
+    );
+
+    const { store } = setup();
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await screen.findByText(/Found \d+ tracks\./);
+
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks([
+          '/Bulk Artist/Bulk Album/Track 1.mp3',
+          '/Bulk Artist/Bulk Album/Track 2.mp3',
+        ]),
+      );
+    });
+    await act(async () => {
+      fireEvent.contextMenu(await screen.findByText('Bulk Song 1'));
+    });
+    await act(async () => {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Edit Selection' }),
+      );
+    });
+
+    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
+    await waitFor(() => {
+      expect(genreInput.disabled).toBe(false);
+      expect(genreInput.value).toBe('Old Genre');
+    });
+    await act(async () => {
+      await userEvent.clear(genreInput);
+      await userEvent.type(genreInput, 'New Album Genre');
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+
+    for (const path of [
+      '/Bulk Artist/Bulk Album/Track 1.mp3',
+      '/Bulk Artist/Bulk Album/Track 2.mp3',
+    ]) {
+      const tagsRes = await fetch(
+        `${getServer().baseUrl}/music/track-tags?path=${encodeURIComponent(
+          path,
+        )}`,
+      );
+      const tagsData = (await tagsRes.json()) as {
+        native: Array<{
+          format: string;
+          tags: Array<{ id: string; value: string }>;
+        }>;
+      };
+      const allTags = tagsData.native.flatMap((b) => b.tags);
+      expect(allTags.find((t) => t.id === 'TCON')?.value).toBe(
+        'New Album Genre',
+      );
+    }
+
+    cleanup();
+    setup();
+    await screen.findByText('New Album Genre');
+    expect(
+      screen.queryByRole('button', {
+        name: 'Scan Library (updates detected)',
+      }),
+    ).toBeNull();
   }, 30_000);
 
   it('keeps saved edits visible after reloading the music index', async () => {

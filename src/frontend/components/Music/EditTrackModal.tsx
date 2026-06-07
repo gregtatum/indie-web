@@ -51,6 +51,16 @@ interface Props {
 }
 
 type SaveStatus = 'idle' | 'saving' | 'error';
+type SaveNotice =
+  | {
+      type: 'partial-error';
+      errors: WriteTrackTagsResponse['errors'];
+      index: WriteTrackTagsResponse['index'];
+      attemptedCount: number;
+      updatedCount: number;
+    }
+  | { type: 'index-error'; index: WriteTrackTagsResponse['index'] }
+  | { type: 'technical-error'; message: string };
 type BulkTagsState =
   | { status: 'idle' }
   | { status: 'loading'; loaded: number; total: number }
@@ -157,6 +167,55 @@ async function mapWithConcurrency<T>(
   await Promise.all(workers);
 }
 
+function buildDetailChanges(
+  formState: DetailFieldValues,
+  baselineFormState: DetailFieldValues,
+): Array<{ frameId: string; value: string }> {
+  const changes: Array<{ frameId: string; value: string }> = [];
+  for (const field of DETAIL_FIELDS) {
+    if (isSplitField(field)) {
+      const numVal = formState[field.key] ?? '';
+      const totalVal = formState[field.totalKey] ?? '';
+      const combined = totalVal ? `${numVal}/${totalVal}` : numVal;
+      const baseNum = baselineFormState[field.key] ?? '';
+      const baseTotal = baselineFormState[field.totalKey] ?? '';
+      const baseCombined = baseTotal ? `${baseNum}/${baseTotal}` : baseNum;
+      if (combined !== baseCombined) {
+        changes.push({ frameId: field.frameId, value: combined });
+      }
+    } else {
+      const current = formState[field.key] ?? '';
+      const base = baselineFormState[field.key] ?? '';
+      if (current !== base) {
+        changes.push({ frameId: field.frameId, value: current });
+      }
+    }
+  }
+  return changes;
+}
+
+function applyIndexedTrackChanges(
+  track: T.TrackMetadata,
+  changes: Array<{ frameId: string; value: string }>,
+): T.TrackMetadata {
+  const updated = { ...track };
+  for (const { frameId, value } of changes) {
+    if (frameId === 'TIT2') {
+      updated.title = value || null;
+    } else if (frameId === 'TPE1') {
+      updated.artist = value || null;
+    } else if (frameId === 'TALB') {
+      updated.album = value || null;
+    } else if (frameId === 'TCON') {
+      updated.genre = value || null;
+    } else if (frameId === 'TRCK') {
+      const num = parseInt(value.split('/')[0], 10);
+      updated.track = isNaN(num) ? null : num;
+    }
+  }
+  return updated;
+}
+
 export function EditTrackModal({ trackPath, onClose }: Props) {
   const tracks = $$.getMusicTracks();
   const track = tracks.find((t) => t.path === trackPath) ?? null;
@@ -170,6 +229,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   } else {
     editTracks = [];
   }
+  const editTracksRef = React.useRef<T.TrackMetadata[]>([]);
+  editTracksRef.current = editTracks;
   const server = $$.getCurrentServer();
   const activeTab = $$.getMusicEditTab();
   const needsRescan = $$.getMusicNeedsRescan();
@@ -192,6 +253,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     React.useState(false);
   const [bulkForceLoadAll, setBulkForceLoadAll] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>('idle');
+  const [saveNotice, setSaveNotice] = React.useState<SaveNotice | null>(null);
+  const [showAllSaveErrors, setShowAllSaveErrors] = React.useState(false);
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
   const tagRequestId = React.useRef(0);
   const bulkAbortControllerRef = React.useRef<AbortController | null>(null);
@@ -274,6 +337,11 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
 
   function setField(key: DetailFieldValueKey, value: string) {
     setCloseConfirmPending(false);
+    setSaveNotice(null);
+    setShowAllSaveErrors(false);
+    if (saveStatus === 'error') {
+      setSaveStatus('idle');
+    }
     setFormState((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -311,7 +379,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       return;
     }
     const requestId = ++tagRequestId.current;
-    const currentTracks = editTracks;
+    const currentTracks = editTracksRef.current;
     abortBulkTagLoad();
 
     if (currentTracks.length > BULK_LIVE_TAGS_CUTOFF && !bulkForceLoadAll) {
@@ -430,7 +498,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         bulkAbortControllerRef.current = null;
       }
     }
-  }, [isBulkEdit, bulkTrackKey, bulkForceLoadAll, server.url, tracks]);
+  }, [isBulkEdit, bulkTrackKey, bulkForceLoadAll, server.url]);
 
   // Reset the form immediately from TrackMetadata when track changes
   React.useEffect(() => {
@@ -453,6 +521,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     setBulkForceLoadAll(false);
     abortBulkTagLoad();
     setSaveStatus('idle');
+    setSaveNotice(null);
+    setShowAllSaveErrors(false);
     setCloseConfirmPending(false);
   }, [trackPath, bulkTrackKey, isBulkEdit]);
 
@@ -512,84 +582,101 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }
 
   async function handleSave() {
+    let savePaths: string[] = [];
+    if (isBulkEdit) {
+      savePaths = selectedTrackPaths;
+    } else if (trackPath) {
+      savePaths = [trackPath];
+    }
     if (
-      !trackPath ||
-      isBulkEdit ||
+      savePaths.length === 0 ||
       !isDirty ||
       saveStatus === 'saving' ||
-      tagsState.status !== 'loaded'
+      (!isBulkEdit && tagsState.status !== 'loaded') ||
+      (isBulkEdit && bulkTagsState.status === 'loading')
     ) {
       return;
     }
 
-    const changes: Array<{ frameId: string; value: string }> = [];
-    for (const field of DETAIL_FIELDS) {
-      if (isSplitField(field)) {
-        const numVal = formState[field.key] ?? '';
-        const totalVal = formState[field.totalKey] ?? '';
-        const combined = totalVal ? `${numVal}/${totalVal}` : numVal;
-        const baseNum = baselineFormState[field.key] ?? '';
-        const baseTotal = baselineFormState[field.totalKey] ?? '';
-        const baseCombined = baseTotal ? `${baseNum}/${baseTotal}` : baseNum;
-        if (combined !== baseCombined) {
-          changes.push({ frameId: field.frameId, value: combined });
-        }
-      } else {
-        const current = formState[field.key] ?? '';
-        const base = baselineFormState[field.key] ?? '';
-        if (current !== base) {
-          changes.push({ frameId: field.frameId, value: current });
-        }
-      }
-    }
+    const changes = buildDetailChanges(formState, baselineFormState);
     if (changes.length === 0) {
       return;
     }
 
     setSaveStatus('saving');
+    setSaveNotice(null);
+    setShowAllSaveErrors(false);
     try {
       const res = await fetch(`${server.url}/music/write-track-tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paths: [trackPath], changes }),
+        body: JSON.stringify({ paths: savePaths, changes }),
       });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || `${res.status}`);
       }
-      await (res.json() as Promise<WriteTrackTagsResponse>);
+      const data = await (res.json() as Promise<WriteTrackTagsResponse>);
+      if (data.updated.length === 0) {
+        setSaveStatus('error');
+        setSaveNotice(
+          data.errors.length > 0
+            ? {
+                type: 'partial-error',
+                errors: data.errors,
+                index: data.index,
+                attemptedCount: savePaths.length,
+                updatedCount: data.updated.length,
+              }
+            : {
+                type: 'technical-error',
+                message: 'The server did not update any tracks.',
+              },
+        );
+        return;
+      }
+
+      const updatedPathSet = new Set(data.updated);
+      dispatch(
+        A.setMusicTracks(
+          tracks.map((t) =>
+            updatedPathSet.has(t.path)
+              ? applyIndexedTrackChanges(t, changes)
+              : t,
+          ),
+          needsRescan,
+        ),
+      );
+
+      if (data.errors.length > 0) {
+        setSaveStatus('error');
+        setSaveNotice({
+          type: 'partial-error',
+          errors: data.errors,
+          index: data.index,
+          attemptedCount: savePaths.length,
+          updatedCount: data.updated.length,
+        });
+        return;
+      }
 
       setBaselineFormState({ ...formState });
       setSaveStatus('idle');
       setCloseConfirmPending(false);
 
-      // Patch Redux for fields that live in TrackMetadata. The server also
-      // updates the durable music index as part of the tag write.
-      const updatedTracks = tracks.map((t) => {
-        if (t.path !== trackPath) {
-          return t;
-        }
-        const updated = { ...t };
-        for (const { frameId, value } of changes) {
-          if (frameId === 'TIT2') {
-            updated.title = value || null;
-          } else if (frameId === 'TPE1') {
-            updated.artist = value || null;
-          } else if (frameId === 'TALB') {
-            updated.album = value || null;
-          } else if (frameId === 'TCON') {
-            updated.genre = value || null;
-          } else if (frameId === 'TRCK') {
-            const num = parseInt(value.split('/')[0], 10);
-            updated.track = isNaN(num) ? null : num;
-          }
-        }
-        return updated;
-      });
-      dispatch(A.setMusicTracks(updatedTracks, needsRescan));
-      await loadTrackTags();
-    } catch {
+      if (data.index.status === 'error') {
+        setSaveNotice({ type: 'index-error', index: data.index });
+      }
+      if (!isBulkEdit) {
+        await loadTrackTags();
+      }
+    } catch (error) {
       setSaveStatus('error');
+      setSaveNotice({
+        type: 'technical-error',
+        message:
+          error instanceof Error ? error.message : 'Unable to save tags.',
+      });
     }
   }
 
@@ -610,10 +697,14 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const detailsEditingDisabled = isBulkEdit
     ? bulkTagsState.status === 'loading'
     : tagsState.status !== 'loaded';
-  let detailsIndexNotice: React.ReactNode = null;
+  const detailsNotices: React.ReactNode[] = [];
   if (isBulkEdit && bulkTagsState.status === 'skipped') {
-    detailsIndexNotice = (
-      <div className="editTrackModalIndexNotice" role="status">
+    detailsNotices.push(
+      <div
+        key="index-skipped"
+        className="editTrackModalIndexNotice"
+        role="status"
+      >
         <span className="editTrackModalIndexNoticeText">
           Using track details from the library scan.
         </span>
@@ -624,7 +715,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         >
           Load all {editTracks.length} tracks
         </button>
-      </div>
+      </div>,
     );
   } else if (
     isBulkEdit &&
@@ -635,8 +726,12 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       bulkTagsState.total === 0
         ? 0
         : (bulkTagsState.loaded / bulkTagsState.total) * 100;
-    detailsIndexNotice = (
-      <div className="editTrackModalIndexNotice" role="status">
+    detailsNotices.push(
+      <div
+        key="bulk-loading"
+        className="editTrackModalIndexNotice"
+        role="status"
+      >
         <div className="editTrackModalIndexNoticeLoading">
           <span className="editTrackModalIndexNoticeText">
             Loading ID3 tags: {bulkTagsState.loaded} / {bulkTagsState.total}
@@ -648,11 +743,11 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             />
           </div>
         </div>
-      </div>
+      </div>,
     );
   } else if (isBulkEdit && bulkTagsState.status === 'error') {
-    detailsIndexNotice = (
-      <div className="editTrackModalIndexNotice" role="status">
+    detailsNotices.push(
+      <div key="bulk-error" className="editTrackModalIndexNotice" role="status">
         <span className="editTrackModalIndexNoticeText">
           Could not load ID3 tags for {bulkTagsState.failed} tracks.
         </span>
@@ -663,7 +758,77 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         >
           Retry
         </button>
-      </div>
+      </div>,
+    );
+  }
+  if (saveNotice) {
+    let message: React.ReactNode;
+    let details: React.ReactNode = null;
+    if (saveNotice.type === 'partial-error') {
+      const hiddenCount = saveNotice.errors.length - 3;
+      const visibleErrors = showAllSaveErrors
+        ? saveNotice.errors
+        : saveNotice.errors.slice(0, 3);
+      message = (
+        <>
+          Saved {saveNotice.updatedCount} of {saveNotice.attemptedCount} tracks.
+          Could not save {saveNotice.errors.length} tracks.
+        </>
+      );
+      details = (
+        <>
+          <ul className="editTrackModalNoticeList">
+            {visibleErrors.map((error) => (
+              <li key={`${error.path}:${error.message}`}>
+                <span className="editTrackModalNoticePath">{error.path}</span>
+                <span>{error.message}</span>
+              </li>
+            ))}
+          </ul>
+          {!showAllSaveErrors && hiddenCount > 0 && (
+            <button
+              type="button"
+              className="editTrackModalIndexNoticeButton"
+              onClick={() => setShowAllSaveErrors(true)}
+            >
+              Show all failed tracks
+            </button>
+          )}
+          {saveNotice.index.status === 'error' && saveNotice.index.message && (
+            <div className="editTrackModalNoticeHelp">
+              Music index update failed: {saveNotice.index.message}
+            </div>
+          )}
+        </>
+      );
+    } else if (saveNotice.type === 'index-error') {
+      message = 'Tags were saved, but the library index was not updated.';
+      details = (
+        <div className="editTrackModalNoticeHelp">
+          {saveNotice.index.message} Check the server logs, then scan the
+          library if the list looks stale.
+        </div>
+      );
+    } else {
+      message = 'Could not save track details.';
+      details = (
+        <div className="editTrackModalNoticeHelp">
+          {saveNotice.message} Check the browser console and server logs for the
+          full error.
+        </div>
+      );
+    }
+    detailsNotices.push(
+      <div
+        key="save-notice"
+        className="editTrackModalIndexNotice editTrackModalIndexNotice-error"
+        role="status"
+      >
+        <div className="editTrackModalIndexNoticeLoading">
+          <span className="editTrackModalIndexNoticeText">{message}</span>
+          {details}
+        </div>
+      </div>,
     );
   }
 
@@ -734,7 +899,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       label: 'Details',
       panel: (
         <div className="editTrackModalDetails">
-          {detailsIndexNotice}
+          {detailsNotices}
           <div className="editTrackModalGrid">{detailRows}</div>
         </div>
       ),
@@ -824,10 +989,10 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             type="button"
             className="editTrackModalSaveBtn"
             disabled={
-              isBulkEdit ||
               !isDirty ||
               saveStatus === 'saving' ||
-              tagsState.status !== 'loaded'
+              (!isBulkEdit && tagsState.status !== 'loaded') ||
+              (isBulkEdit && bulkTagsState.status === 'loading')
             }
             onClick={() => void handleSave()}
           >

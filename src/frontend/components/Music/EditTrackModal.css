@@ -59,7 +59,33 @@
   font-size: var(--font-size-small);
 }
 
+.editTrackModalIndexNotice-error {
+  border-color: var(--error-color);
+  background: #fff1f1;
+}
+
 .editTrackModalIndexNoticeText {
+  line-height: 1.35;
+}
+
+.editTrackModalNoticeList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.editTrackModalNoticeList li {
+  line-height: 1.35;
+}
+
+.editTrackModalNoticePath {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.editTrackModalNoticeHelp {
   line-height: 1.35;
 }
 

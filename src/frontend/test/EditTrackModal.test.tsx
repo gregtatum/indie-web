@@ -370,11 +370,25 @@ describe('edit track modal', () => {
     expect(trackInputs[0].placeholder).toBe('–');
   });
 
-  it('keeps ID3 and Save disabled in the bulk editor', async () => {
+  it('keeps ID3 disabled and saves shared bulk genre edits', async () => {
     const { store } = setup();
+    const writeRequests: Array<{
+      paths: string[];
+      changes: Array<{ frameId: string; value: string }>;
+    }> = [];
     (window.fetch as FetchMockSandbox).post(
       `${FAKE_SERVER.url}/music/write-track-tags`,
-      { body: JSON.stringify({}), status: 200 },
+      (_url, opts: any) => {
+        writeRequests.push(JSON.parse(opts.body));
+        return {
+          body: JSON.stringify({
+            updated: ['/music/a.mp3', '/music/b.mp3'],
+            errors: [],
+            index: { status: 'updated', message: null },
+          }),
+          status: 200,
+        };
+      },
     );
 
     await openBulkEditModal(store);
@@ -388,18 +402,156 @@ describe('edit track modal', () => {
     });
     expect(id3Tab.getAttribute('aria-selected')).toBe('false');
 
-    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
+    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
     await waitFor(() => {
-      expect(artistInput.disabled).toBe(false);
+      expect(genreInput.disabled).toBe(false);
     });
     await act(async () => {
-      fireEvent.change(artistInput, { target: { value: 'New Artist' } });
+      fireEvent.change(genreInput, { target: { value: 'New Genre' } });
     });
 
     const saveButton = screen.getByRole('button', {
       name: 'Save',
     }) as HTMLButtonElement;
-    expect(saveButton.disabled).toBe(true);
+    expect(saveButton.disabled).toBe(false);
+    await act(async () => {
+      fireEvent.click(saveButton);
+    });
+
+    await waitFor(() => {
+      expect(writeRequests).toHaveLength(1);
+    });
+    expect(writeRequests[0]).toEqual({
+      paths: ['/music/a.mp3', '/music/b.mp3'],
+      changes: [{ frameId: 'TCON', value: 'New Genre' }],
+    });
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+    const state = store.getState() as any;
+    const tracks = state.music.tracks as T.TrackMetadata[];
+    expect(tracks.find((track) => track.path === '/music/a.mp3')?.genre).toBe(
+      'New Genre',
+    );
+    expect(tracks.find((track) => track.path === '/music/b.mp3')?.genre).toBe(
+      'New Genre',
+    );
+  });
+
+  it('shows all server save errors from a partial bulk failure', async () => {
+    const tracks: T.TrackMetadata[] = [
+      ...TRACKS,
+      {
+        ...TRACKS[0],
+        path: '/music/d.mp3',
+        title: 'Song D',
+      },
+      {
+        ...TRACKS[0],
+        path: '/music/e.mp3',
+        title: 'Song E',
+      },
+      {
+        ...TRACKS[0],
+        path: '/music/f.mp3',
+        title: 'Song F',
+      },
+      {
+        ...TRACKS[0],
+        path: '/music/g.mp3',
+        title: 'Song G',
+      },
+    ];
+    const { store } = setup(tracks);
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks([
+          '/music/a.mp3',
+          '/music/b.mp3',
+          '/music/d.mp3',
+          '/music/e.mp3',
+          '/music/f.mp3',
+        ]),
+      );
+    });
+    (window.fetch as FetchMockSandbox).post(
+      `${FAKE_SERVER.url}/music/write-track-tags`,
+      {
+        body: JSON.stringify({
+          updated: ['/music/a.mp3'],
+          errors: [
+            { path: '/music/b.mp3', message: 'File not found.' },
+            {
+              path: '/music/d.mp3',
+              message: 'Only MP3 files are supported for tag writing.',
+            },
+            { path: '/music/e.mp3', message: 'Permission denied.' },
+            { path: '/music/f.mp3', message: 'Unable to write tags.' },
+          ],
+          index: {
+            status: 'error',
+            message: 'Failed to write music index after writing track tags.',
+          },
+        }),
+        status: 200,
+      },
+    );
+
+    const track = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.contextMenu(track);
+    });
+    await act(async () => {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Edit Selection' }),
+      );
+    });
+    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
+    await waitFor(() => {
+      expect(genreInput.disabled).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.change(genreInput, { target: { value: 'New Genre' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+
+    await screen.findByText('Saved 1 of 5 tracks. Could not save 4 tracks.');
+    expect(screen.getByText('/music/b.mp3')).toBeTruthy();
+    expect(screen.queryByText('/music/f.mp3')).toBeNull();
+    expect(
+      screen.getByText(
+        'Music index update failed: Failed to write music index after writing track tags.',
+      ),
+    ).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Show all failed tracks' }),
+      );
+    });
+    expect(screen.getByText('/music/f.mp3')).toBeTruthy();
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Save failed — retry',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+
+    const state = store.getState() as any;
+    const savedTrack = (state.music.tracks as T.TrackMetadata[]).find(
+      (track) => track.path === '/music/a.mp3',
+    );
+    const failedTrack = (state.music.tracks as T.TrackMetadata[]).find(
+      (track) => track.path === '/music/b.mp3',
+    );
+    expect(savedTrack?.genre).toBe('New Genre');
+    expect(failedTrack?.genre).toBe('Rock');
   });
 
   it('defers the bulk loading progress notice for small selections', async () => {
@@ -549,6 +701,102 @@ describe('edit track modal', () => {
     expect(
       (screen.getByLabelText('Composer') as HTMLInputElement).placeholder,
     ).toBe('');
+  });
+
+  it('saves bulk edits from scanned index values when live tags are skipped', async () => {
+    const manyTracks: T.TrackMetadata[] = Array.from(
+      { length: 201 },
+      (_, i) => ({
+        ...TRACKS[0],
+        path: `/music/${i}.mp3`,
+        title: `Song ${i}`,
+        artist: 'Artist A',
+        genre: 'Old Genre',
+        track: i + 1,
+      }),
+    );
+    const store = createStore();
+    store.dispatch(A.addFileStoreServer(FAKE_SERVER));
+    let trackTagsFetchCount = 0;
+    const writeRequests: Array<{
+      paths: string[];
+      changes: Array<{ frameId: string; value: string }>;
+    }> = [];
+
+    (window.fetch as FetchMockSandbox).get(
+      `${FAKE_SERVER.url}/music/music-index`,
+      {
+        body: JSON.stringify({
+          version: 4,
+          scannedAt: '2024-01-01T00:00:00Z',
+          tracks: manyTracks,
+        }),
+        status: 200,
+      },
+    );
+    (window.fetch as FetchMockSandbox).get(
+      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+      () => {
+        trackTagsFetchCount++;
+        return { body: JSON.stringify({ native: [] }), status: 200 };
+      },
+    );
+    (window.fetch as FetchMockSandbox).post(
+      `${FAKE_SERVER.url}/music/write-track-tags`,
+      (_url, opts: any) => {
+        writeRequests.push(JSON.parse(opts.body));
+        return {
+          body: JSON.stringify({
+            updated: manyTracks.map((track) => track.path),
+            errors: [],
+            index: { status: 'updated', message: null },
+          }),
+          status: 200,
+        };
+      },
+    );
+
+    render(
+      <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    const track = await screen.findByText('Song 0');
+    await act(async () => {
+      store.dispatch(A.setMusicSelectedTracks(manyTracks.map((t) => t.path)));
+    });
+    await act(async () => {
+      fireEvent.contextMenu(track);
+    });
+    await act(async () => {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Edit Selection' }),
+      );
+    });
+
+    expect(
+      screen.getByText('Using track details from the library scan.'),
+    ).toBeTruthy();
+    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
+    expect(genreInput.disabled).toBe(false);
+    await act(async () => {
+      fireEvent.change(genreInput, { target: { value: 'New Genre' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+
+    await waitFor(() => {
+      expect(writeRequests).toHaveLength(1);
+    });
+    expect(trackTagsFetchCount).toBe(0);
+    expect(writeRequests[0]).toEqual({
+      paths: manyTracks.map((track) => track.path),
+      changes: [{ frameId: 'TCON', value: 'New Genre' }],
+    });
   });
 
   it('discards bulk edits and disables fields while loading all ID3 tags', async () => {
