@@ -5,6 +5,8 @@ import './Tabs.css';
 interface Tab {
   id: string;
   label: string;
+  disabled?: boolean;
+  disabledTitle?: string;
   /** Content rendered in the panel area when this tab is active. */
   panel: React.ReactNode;
 }
@@ -26,20 +28,27 @@ interface Props {
  */
 export function Tabs({ tabs, activeTab, onChange }: Props) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const enabledTabs = tabs.filter((tab) => !tab.disabled);
 
   function handleKeyDown(event: React.KeyboardEvent) {
-    const currentIndex = tabs.findIndex((t) => t.id === activeTab);
+    if (enabledTabs.length === 0) {
+      return;
+    }
+    const currentIndex = enabledTabs.findIndex((t) => t.id === activeTab);
+    const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
     let nextIndex: number;
     if (event.key === 'ArrowRight') {
-      nextIndex = (currentIndex + 1) % tabs.length;
+      nextIndex = (safeCurrentIndex + 1) % enabledTabs.length;
     } else if (event.key === 'ArrowLeft') {
-      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      nextIndex =
+        (safeCurrentIndex - 1 + enabledTabs.length) % enabledTabs.length;
     } else {
       return;
     }
     event.preventDefault();
-    onChange(tabs[nextIndex].id);
-    tabRefs.current[nextIndex]?.focus();
+    const nextTab = enabledTabs[nextIndex];
+    onChange(nextTab.id);
+    tabRefs.current[tabs.findIndex((tab) => tab.id === nextTab.id)]?.focus();
   }
 
   return (
@@ -53,9 +62,16 @@ export function Tabs({ tabs, activeTab, onChange }: Props) {
             }}
             role="tab"
             aria-selected={tab.id === activeTab}
-            tabIndex={tab.id === activeTab ? 0 : -1}
+            aria-disabled={tab.disabled ? true : undefined}
+            disabled={tab.disabled}
+            tabIndex={tab.id === activeTab && !tab.disabled ? 0 : -1}
+            title={tab.disabledTitle}
             className={`tabsButton${tab.id === activeTab ? ' tabsButton-active' : ''}`}
-            onClick={() => onChange(tab.id)}
+            onClick={() => {
+              if (!tab.disabled) {
+                onChange(tab.id);
+              }
+            }}
           >
             {tab.label}
           </button>

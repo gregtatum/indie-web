@@ -203,4 +203,18 @@ describe('track right-click context menu', () => {
     await screen.findByRole('button', { name: 'Play Selection' });
     expect(screen.queryByRole('button', { name: 'Show in Files' })).toBeNull();
   });
+
+  it('shows "Edit Selection" for multi-track selection', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+    });
+    const trackA = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.contextMenu(trackA);
+    });
+    await screen.findByRole('button', { name: 'Edit Selection' });
+  });
 });

@@ -118,6 +118,24 @@ describe('edit track modal', () => {
     });
   }
 
+  async function openBulkEditModal(store: ReturnType<typeof createStore>) {
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+    });
+    const track = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.contextMenu(track);
+    });
+    const editButton = await screen.findByRole('button', {
+      name: 'Edit Selection',
+    });
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+  }
+
   it('opens with the right-clicked track fields pre-populated', async () => {
     setup();
     await openEditModal('Song A');
@@ -318,5 +336,173 @@ describe('edit track modal', () => {
       fireEvent.click(saveButton);
     });
     expect(writeRequests).toHaveLength(0);
+  });
+
+  it('opens a bulk Details editor with shared values and mixed placeholders', async () => {
+    const { store } = setup();
+    await openBulkEditModal(store);
+
+    screen.getByRole('dialog');
+    await waitFor(() => {
+      expect(
+        (screen.getByLabelText('Artist') as HTMLInputElement).disabled,
+      ).toBe(false);
+    });
+
+    expect(screen.queryByLabelText('Title')).toBeNull();
+    expect(screen.getByText('Edit 2 Tracks')).toBeTruthy();
+
+    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
+    const albumInput = screen.getByLabelText('Album') as HTMLInputElement;
+    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
+    expect(artistInput.value).toBe('');
+    expect(artistInput.placeholder).toBe('Mixed');
+    expect(albumInput.value).toBe('Album A');
+    expect(albumInput.placeholder).toBe('');
+    expect(genreInput.value).toBe('Rock');
+
+    const trackLabel = screen
+      .getAllByText('Track')
+      .find((node) => node.closest('label'));
+    const trackInputs = trackLabel!.closest('label')!.querySelectorAll('input');
+    expect(trackInputs[0].value).toBe('');
+    expect(trackInputs[0].placeholder).toBe('–');
+  });
+
+  it('keeps ID3 and Save disabled in the bulk editor', async () => {
+    const { store } = setup();
+    (window.fetch as FetchMockSandbox).post(
+      `${FAKE_SERVER.url}/music/write-track-tags`,
+      { body: JSON.stringify({}), status: 200 },
+    );
+
+    await openBulkEditModal(store);
+    const id3Tab = screen.getByRole('tab', {
+      name: 'ID3',
+    }) as HTMLButtonElement;
+    expect(id3Tab.disabled).toBe(true);
+
+    await act(async () => {
+      fireEvent.click(id3Tab);
+    });
+    expect(id3Tab.getAttribute('aria-selected')).toBe('false');
+
+    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
+    await waitFor(() => {
+      expect(artistInput.disabled).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.change(artistInput, { target: { value: 'New Artist' } });
+    });
+
+    const saveButton = screen.getByRole('button', {
+      name: 'Save',
+    }) as HTMLButtonElement;
+    expect(saveButton.disabled).toBe(true);
+  });
+
+  it('shows shared folder artwork only in the bulk editor', async () => {
+    const tracksWithArt: T.TrackMetadata[] = TRACKS.map((track, index) => ({
+      ...track,
+      coverArt:
+        index < 2 ? '/music/Album A/Folder.jpg' : '/music/Album B/Folder.jpg',
+      hasEmbeddedArt: true,
+    }));
+    const { store } = setup(tracksWithArt, {
+      trackTagsResponse: {
+        body: JSON.stringify({
+          native: [
+            {
+              format: 'ID3v2.3',
+              tags: [
+                {
+                  id: 'APIC',
+                  value: 'image/jpeg — Cover (front)',
+                  binary: 'abc123',
+                },
+              ],
+            },
+          ],
+        }),
+        status: 200,
+      },
+    });
+
+    await openBulkEditModal(store);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    expect(await screen.findByText('Folder')).toBeTruthy();
+    expect(screen.getByText('/music/Album A/Folder.jpg')).toBeTruthy();
+    expect(screen.queryByText('Embedded')).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: 'Overwrite with embedded artwork',
+      }),
+    ).toBeNull();
+  });
+
+  it('skips live tag loading above the bulk cutoff', async () => {
+    const manyTracks: T.TrackMetadata[] = Array.from(
+      { length: 201 },
+      (_, i) => ({
+        ...TRACKS[0],
+        path: `/music/${i}.mp3`,
+        title: `Song ${i}`,
+        artist: i === 0 ? 'Artist A' : 'Artist B',
+        track: i + 1,
+      }),
+    );
+    const store = createStore();
+    store.dispatch(A.addFileStoreServer(FAKE_SERVER));
+    let trackTagsFetchCount = 0;
+
+    (window.fetch as FetchMockSandbox).get(
+      `${FAKE_SERVER.url}/music/music-index`,
+      {
+        body: JSON.stringify({
+          version: 4,
+          scannedAt: '2024-01-01T00:00:00Z',
+          tracks: manyTracks,
+        }),
+        status: 200,
+      },
+    );
+    (window.fetch as FetchMockSandbox).get(
+      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+      () => {
+        trackTagsFetchCount++;
+        return { body: JSON.stringify({ native: [] }), status: 200 };
+      },
+    );
+
+    render(
+      <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    const track = await screen.findByText('Song 0');
+    await act(async () => {
+      store.dispatch(A.setMusicSelectedTracks(manyTracks.map((t) => t.path)));
+    });
+    await act(async () => {
+      fireEvent.contextMenu(track);
+    });
+    const editButton = await screen.findByRole('button', {
+      name: 'Edit Selection',
+    });
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+
+    expect(screen.getByText('Edit 201 Tracks')).toBeTruthy();
+    expect(trackTagsFetchCount).toBe(0);
+    expect(
+      (screen.getByLabelText('Artist') as HTMLInputElement).placeholder,
+    ).toBe('Mixed');
   });
 });

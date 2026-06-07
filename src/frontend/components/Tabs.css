@@ -24,6 +24,15 @@
   opacity: 1;
 }
 
+.tabsButton:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.tabsButton:disabled:hover {
+  opacity: 0.45;
+}
+
 .tabsButton:focus {
   outline: var(--outline-focus);
 }

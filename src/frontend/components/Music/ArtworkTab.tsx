@@ -8,6 +8,8 @@ import type { WriteFolderArtResponse } from 'shared/@types/shared';
 interface Props {
   artUrl: string | null;
   coverArtPath: string | null;
+  emptyMessage?: string;
+  hideEmbeddedArt?: boolean;
   tagsState: TrackTagsLoadState;
   trackPath: string;
   serverUrl: string;
@@ -133,6 +135,8 @@ function ArtworkSection({
 export function ArtworkTab({
   artUrl,
   coverArtPath,
+  emptyMessage = 'No artwork found',
+  hideEmbeddedArt = false,
   tagsState,
   trackPath,
   serverUrl,
@@ -144,6 +148,9 @@ export function ArtworkTab({
   const saveStatus = $$.getMusicFolderArtSaveStatus();
 
   const apics = React.useMemo(() => {
+    if (hideEmbeddedArt) {
+      return [];
+    }
     if (tagsState.status !== 'loaded') {
       return [];
     }
@@ -152,7 +159,7 @@ export function ArtworkTab({
       .filter((tag) => tag.id === 'APIC' && tag.binary !== undefined)
       .map((tag) => ({ value: tag.value, binary: tag.binary! }))
       .filter((apic) => !apic.value.startsWith('-->'));
-  }, [tagsState]);
+  }, [hideEmbeddedArt, tagsState]);
 
   const navigateToFile = React.useCallback(
     (filePath: string) => {
@@ -184,7 +191,7 @@ export function ArtworkTab({
   if (!artUrl && (apics.length === 0 || tagsState.status === 'error')) {
     return (
       <div className="editTrackModalArtwork">
-        <div className="editTrackModalArtworkEmpty">No artwork found</div>
+        <div className="editTrackModalArtworkEmpty">{emptyMessage}</div>
       </div>
     );
   }
@@ -207,7 +214,7 @@ export function ArtworkTab({
               },
             ]}
           >
-            {apics.length > 0 && (
+            {!hideEmbeddedArt && apics.length > 0 && (
               <OverwriteButton trackPath={trackPath} serverUrl={serverUrl} />
             )}
           </ArtworkSection>

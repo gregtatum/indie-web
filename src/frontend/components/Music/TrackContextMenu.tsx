@@ -75,6 +75,17 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
           }
         },
       },
+      ...(isMultiSelect
+        ? [
+            {
+              key: 'edit-selection',
+              children: 'Edit Selection',
+              onClick() {
+                dispatch(A.setMusicEditTrackPath(selectedPaths[0] ?? null));
+              },
+            } as MenuButton,
+          ]
+        : []),
       ...(!isMultiSelect && contextTrackPath
         ? [
             {

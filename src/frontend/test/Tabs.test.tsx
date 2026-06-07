@@ -9,9 +9,35 @@ const TABS = [
   { id: 'id3', label: 'ID3', panel: <div>ID3 panel</div> },
 ];
 
+const TABS_WITH_DISABLED_ID3 = [
+  { id: 'details', label: 'Details', panel: <div>Details panel</div> },
+  { id: 'artwork', label: 'Artwork', panel: <div>Artwork panel</div> },
+  {
+    id: 'id3',
+    label: 'ID3',
+    disabled: true,
+    panel: <div>ID3 panel</div>,
+  },
+];
+
 function ControlledTabs({ initial = 'details' }: { initial?: string }) {
   const [activeTab, setActiveTab] = useState(initial);
   return <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />;
+}
+
+function ControlledTabsWithDisabledId3({
+  initial = 'details',
+}: {
+  initial?: string;
+}) {
+  const [activeTab, setActiveTab] = useState(initial);
+  return (
+    <Tabs
+      tabs={TABS_WITH_DISABLED_ID3}
+      activeTab={activeTab}
+      onChange={setActiveTab}
+    />
+  );
 }
 
 /**
@@ -122,5 +148,32 @@ describe('Tabs', () => {
   it('renders the active panel content', () => {
     render(<ControlledTabs initial="artwork" />);
     expect(screen.getByText('Artwork panel')).toBeTruthy();
+  });
+
+  it('does not activate a disabled tab when clicked', () => {
+    render(<ControlledTabsWithDisabledId3 />);
+    act(() => {
+      fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
+    });
+    expect(
+      screen
+        .getByRole('tab', { name: 'Details' })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(
+      screen.getByRole('tab', { name: 'ID3' }).getAttribute('aria-disabled'),
+    ).toBe('true');
+  });
+
+  it('skips disabled tabs during keyboard navigation', () => {
+    render(<ControlledTabsWithDisabledId3 initial="artwork" />);
+    act(() => {
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' });
+    });
+    expect(
+      screen
+        .getByRole('tab', { name: 'Details' })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
   });
 });
