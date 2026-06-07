@@ -2,9 +2,13 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { A, T, $ } from 'frontend';
-import { removeMusicIndex, useMusicTestServer } from './utils/music/server';
-import { writeMusicIndex } from './utils/music/files';
-import { mockMusicMediaElement, renderMusicApp } from './utils/music/render';
+import {
+  mockMusicMediaElement,
+  removeMusicIndex,
+  renderMusicApp,
+  useMusicTestServer,
+  writeMusicIndex,
+} from './utils/music';
 
 // When a new music index upgrader is written (bumping CURRENT_MUSIC_INDEX_VERSION),
 // add a representative track here with the new field populated.

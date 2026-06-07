@@ -4,9 +4,13 @@ import { act } from 'react';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { removeMusicIndex, useMusicTestServer } from './utils/music/server';
-import { buildMinimalMp3, buildMp3WithTags } from './utils/music/files';
-import { renderMusicApp } from './utils/music/render';
+import {
+  buildMinimalMp3,
+  buildMp3WithTags,
+  removeMusicIndex,
+  renderMusicApp,
+  useMusicTestServer,
+} from './utils/music';
 
 const v1Fixture = readFileSync(
   join(__dirname, 'fixtures/music-index-v1.json'),
