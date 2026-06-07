@@ -37,6 +37,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const track = tracks.find((t) => t.path === trackPath) ?? null;
   const server = $$.getCurrentServerOrNull();
   const activeTab = $$.getMusicEditTab();
+  const needsRescan = $$.getMusicNeedsRescan();
   const dispatch = Hooks.useDispatch();
 
   const [formState, setFormState] = React.useState<DetailFieldValues>(
@@ -184,8 +185,8 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       setSaveStatus('idle');
       setCloseConfirmPending(false);
 
-      // Optimistically patch Redux for fields that live in TrackMetadata.
-      // needsRescan:true surfaces the "Rescan recommended" button.
+      // Patch Redux for fields that live in TrackMetadata. The server also
+      // updates the durable music index as part of the tag write.
       const updatedTracks = tracks.map((t) => {
         if (t.path !== trackPath) {
           return t;
@@ -207,7 +208,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         }
         return updated;
       });
-      dispatch(A.setMusicTracks(updatedTracks, true));
+      dispatch(A.setMusicTracks(updatedTracks, needsRescan));
     } catch {
       setSaveStatus('error');
     }

@@ -375,6 +375,12 @@ export function musicRoute(mountPath: MountPath) {
       if (result instanceof Error) {
         throw result;
       }
+      await updateIndexAfterTrackTagWrite(
+        mountPath,
+        clientPath.startsWith('/') ? clientPath : '/' + clientPath,
+        resolvedPath,
+        changes,
+      );
       return {};
     },
   );
@@ -535,6 +541,69 @@ async function performScan(
   await fs.rename(tmpPath, indexPath);
 
   return index;
+}
+
+async function updateIndexAfterTrackTagWrite(
+  mountPath: MountPath,
+  clientPath: string,
+  resolvedPath: string,
+  changes: T.WriteTrackTagsRequest['changes'],
+): Promise<void> {
+  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
+  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.write.tmp');
+  if (!indexPath || !tmpPath) {
+    throw new Error('Unexpected: index path escaped the mount.');
+  }
+
+  let index: T.MusicIndex;
+  try {
+    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      return;
+    }
+    throw error;
+  }
+  if (index.version !== MUSIC_INDEX_VERSION) {
+    return;
+  }
+
+  const trackIndex = index.tracks.findIndex(
+    (track) => track.path === clientPath,
+  );
+  if (trackIndex === -1) {
+    return;
+  }
+
+  const stats = await fs.stat(resolvedPath);
+  const updatedTrack = { ...index.tracks[trackIndex] };
+  updatedTrack.size = stats.size;
+  updatedTrack.mtime = stats.mtime.toISOString();
+
+  for (const { frameId, value } of changes) {
+    if (frameId === 'TIT2') {
+      updatedTrack.title = value || null;
+    } else if (frameId === 'TPE1') {
+      updatedTrack.artist = value || null;
+    } else if (frameId === 'TALB') {
+      updatedTrack.album = value || null;
+    } else if (frameId === 'TCON') {
+      updatedTrack.genre = value || null;
+    } else if (frameId === 'TRCK') {
+      const num = parseInt(value.split('/')[0], 10);
+      updatedTrack.track = isNaN(num) ? null : num;
+    }
+  }
+
+  const updatedIndex: T.MusicIndex = {
+    ...index,
+    scannedAt: new Date().toISOString(),
+    tracks: index.tracks.map((track, i) =>
+      i === trackIndex ? updatedTrack : track,
+    ),
+  };
+  await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
+  await fs.rename(tmpPath, indexPath);
 }
 
 function isBinary(value: unknown): value is Buffer | Uint8Array {

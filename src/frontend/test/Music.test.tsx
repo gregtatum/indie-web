@@ -264,8 +264,7 @@ describe('<Music> with real server', () => {
     expect(allTags.find((t) => t.id === 'TIT2')?.value).toBe('Updated Title');
   }, 30_000);
 
-  // TODO - Persist or reload edited track metadata consistently, so a saved edit does not disappear when the music view reloads the stale index.
-  it('characterizes edit saves as optimistic until a rescan reloads the index', async () => {
+  it('keeps saved edits visible after reloading the music index', async () => {
     await writeFile(
       join(getServer().mountDir, 'Optimistic.mp3'),
       buildMp3WithTags({ title: 'Indexed Title', artist: 'Test Artist' }),
@@ -308,17 +307,16 @@ describe('<Music> with real server', () => {
     });
 
     await screen.findByText('Saved Title', { selector: '.musicTrackTitle' });
-    await screen.findByRole('button', {
-      name: 'Scan Library (updates detected)',
-    });
+    expect(
+      screen.queryByRole('button', {
+        name: 'Scan Library (updates detected)',
+      }),
+    ).toBeNull();
 
-    // A fresh app render reloads the durable .music-index.json, which has not
-    // been updated by the tag write. The edited tag is in the MP3, but the
-    // library falls back to the stale index and the rescan flag is lost.
     cleanup();
     setup();
-    await screen.findByText('Indexed Title');
-    expect(screen.queryByText('Saved Title')).toBeNull();
+    await screen.findByText('Saved Title');
+    expect(screen.queryByText('Indexed Title')).toBeNull();
     expect(
       screen.queryByRole('button', {
         name: 'Scan Library (updates detected)',
@@ -326,8 +324,7 @@ describe('<Music> with real server', () => {
     ).toBeNull();
   }, 30_000);
 
-  // TODO - Decide how saving tags should update the library source of truth, so users do not need a separate rescan to make edits durable in the index.
-  it('characterizes rescanning after an edit as reconciling the library index', async () => {
+  it('does not require a rescan after saving indexed track metadata', async () => {
     await writeFile(
       join(getServer().mountDir, 'RescanEdit.mp3'),
       buildMp3WithTags({ title: 'Before Rescan', artist: 'Test Artist' }),
@@ -369,17 +366,13 @@ describe('<Music> with real server', () => {
       ).toBe(true);
     });
 
-    await act(async () => {
-      await userEvent.click(
-        await screen.findByRole('button', {
-          name: 'Scan Library (updates detected)',
-        }),
-      );
-    });
-
-    await screen.findByText(/Found \d+ tracks\./);
     await screen.findByText('After Rescan', { selector: '.musicTrackTitle' });
     await screen.findByRole('button', { name: 'Scan Library' });
+    expect(
+      screen.queryByRole('button', {
+        name: 'Scan Library (updates detected)',
+      }),
+    ).toBeNull();
   }, 30_000);
 
   // TODO - Refresh or invalidate loaded raw tag data after saving details, so the ID3 tab does not show stale frame values in an open editor.

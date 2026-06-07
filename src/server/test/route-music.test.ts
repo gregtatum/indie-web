@@ -267,9 +267,8 @@ describe('POST /music/music-index/scan incremental behavior', () => {
     }),
   );
 
-  // TODO - Make tag edits and the durable music index coordinate, so saving tags does not leave /music-index serving stale metadata until a manual rescan.
   it(
-    'characterizes tag writes as stale in the index until the next scan',
+    'updates the durable index after writing indexed track tags',
     withLogs([], async () => {
       const filePath = join(server.mountDir, 'edited-title.mp3');
       await writeFile(filePath, buildMp3WithTags({ title: 'Original Title' }));
@@ -303,26 +302,13 @@ describe('POST /music/music-index/scan incremental behavior', () => {
         'Updated Title',
       );
 
-      const staleIndexRes = await fetch(`${server.baseUrl}/music/music-index`);
-      assert.equal(staleIndexRes.status, 200);
-      const staleIndex = await staleIndexRes.json();
-      const staleTrack = staleIndex.tracks.find(
+      const indexRes = await fetch(`${server.baseUrl}/music/music-index`);
+      assert.equal(indexRes.status, 200);
+      const index = await indexRes.json();
+      const track = index.tracks.find(
         (track: { path: string }) => track.path === '/edited-title.mp3',
       );
-      assert.equal(staleTrack.title, 'Original Title');
-
-      const rescanRes = await fetch(
-        `${server.baseUrl}/music/music-index/scan`,
-        {
-          method: 'POST',
-        },
-      );
-      assert.equal(rescanRes.status, 200);
-      const rescannedIndex = await rescanRes.json();
-      const rescannedTrack = rescannedIndex.tracks.find(
-        (track: { path: string }) => track.path === '/edited-title.mp3',
-      );
-      assert.equal(rescannedTrack.title, 'Updated Title');
+      assert.equal(track.title, 'Updated Title');
     }),
   );
 });
