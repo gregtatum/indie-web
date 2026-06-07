@@ -230,6 +230,10 @@ export const getIsDropboxInitiallyExpired = createSelector(
   },
 );
 
+/**
+ * Use this selector on the top-most components when the server isn't known to exist.
+ * Then in sub-components use the dangerous version below, which can throw.
+ */
 export const getCurrentServerOrNull = createSelector(
   getServers,
   getServerId,
@@ -239,6 +243,14 @@ export const getCurrentServerOrNull = createSelector(
     }
     return servers.find((server) => server.id === serverId) ?? null;
   },
+);
+
+/**
+ * Use this selector inside of sub-components when the server is known to exist.
+ */
+export const getCurrentServer = dangerousSelector(
+  getCurrentServerOrNull,
+  'The current server is not available.',
 );
 
 export const getServerFSOrNull = createSelector(

@@ -42,7 +42,7 @@ interface MusicLibraryViewProps {
 export function MusicLibraryView({
   completedScanCount,
 }: MusicLibraryViewProps) {
-  const server = $$.getCurrentServerOrNull();
+  const server = $$.getCurrentServer();
   const { dispatch } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
 
@@ -54,9 +54,6 @@ export function MusicLibraryView({
   }, [completedScanCount]);
 
   React.useEffect(() => {
-    if (!server) {
-      return undefined;
-    }
     const currentServer = server;
     const fetchController = new AbortController();
 
@@ -87,7 +84,7 @@ export function MusicLibraryView({
       // When unmounting the component, cancel the music index fetch.
       fetchController.abort();
     };
-  }, [server?.url]);
+  }, [server.url]);
 
   if (error) {
     return (

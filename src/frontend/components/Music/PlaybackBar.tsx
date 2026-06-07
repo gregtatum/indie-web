@@ -15,7 +15,7 @@ export function PlaybackBar() {
   const trackPath = $$.getMusicPlaybackTrackPath();
   const allTracks = $$.getMusicTracks();
   const playbackQueue = $$.getMusicPlaybackQueue();
-  const server = $$.getCurrentServerOrNull();
+  const server = $$.getCurrentServer();
   const { currentTime, duration, volume, play, pause, seek, setVolume } =
     useAudioPlayer();
 
@@ -23,10 +23,9 @@ export function PlaybackBar() {
     ? (allTracks.find((t) => t.path === trackPath) ?? null)
     : null;
 
-  const artUrl =
-    server && trackMetadata?.coverArt
-      ? `${server.url}/music/cover-art?path=${encodeURIComponent(trackMetadata.coverArt)}`
-      : null;
+  const artUrl = trackMetadata?.coverArt
+    ? `${server.url}/music/cover-art?path=${encodeURIComponent(trackMetadata.coverArt)}`
+    : null;
   const isPlaying = musicPlaybackStatus === 'playing';
 
   const idx = playbackQueue.findIndex((t) => t.path === trackPath);

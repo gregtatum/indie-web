@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
-import { $$, A, Hooks } from 'frontend';
+import { $$, A, Hooks, T } from 'frontend';
 import { ListFiles } from '../ListFiles';
 import { MusicLibraryView } from './MusicLibraryView';
 import { useMusicUrlSerialization } from './UrlSerialization';
@@ -14,6 +14,15 @@ interface ScanProgress {
 
 export function Music() {
   const server = $$.getCurrentServerOrNull();
+
+  if (!server) {
+    return null;
+  }
+
+  return <MusicForServer key={server.url} server={server} />;
+}
+
+function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const needsRescan = $$.getMusicNeedsRescan();
   const { dispatch } = Hooks.useStore();
   const { isFilesView } = useMusicUrlSerialization();
@@ -31,12 +40,8 @@ export function Music() {
     };
   }, []);
 
-  if (!server) {
-    return null;
-  }
-
   function handleScan() {
-    if (!server || scanPhase === 'scanning') {
+    if (scanPhase === 'scanning') {
       return;
     }
     setScanPhase('scanning');

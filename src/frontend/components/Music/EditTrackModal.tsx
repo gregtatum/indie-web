@@ -35,7 +35,7 @@ type SaveStatus = 'idle' | 'saving' | 'error';
 export function EditTrackModal({ trackPath, onClose }: Props) {
   const tracks = $$.getMusicTracks();
   const track = tracks.find((t) => t.path === trackPath) ?? null;
-  const server = $$.getCurrentServerOrNull();
+  const server = $$.getCurrentServer();
   const activeTab = $$.getMusicEditTab();
   const needsRescan = $$.getMusicNeedsRescan();
   const dispatch = Hooks.useDispatch();
@@ -63,7 +63,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }
 
   const loadTrackTags = React.useCallback(async () => {
-    if (!trackPath || !server) {
+    if (!trackPath) {
       return;
     }
     const requestId = ++tagRequestId.current;
@@ -87,7 +87,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         });
       }
     }
-  }, [trackPath, server?.url]);
+  }, [trackPath, server.url]);
 
   // Reset the form immediately from TrackMetadata when track changes
   React.useEffect(() => {
@@ -143,7 +143,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }
 
   async function handleSave() {
-    if (!server || !trackPath || !isDirty || saveStatus === 'saving') {
+    if (!trackPath || !isDirty || saveStatus === 'saving') {
       return;
     }
 
@@ -218,10 +218,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     }
   }
 
-  const artUrl =
-    server && track?.coverArt
-      ? `${server.url}/music/cover-art?path=${encodeURIComponent(track.coverArt)}`
-      : null;
+  const artUrl = track?.coverArt
+    ? `${server.url}/music/cover-art?path=${encodeURIComponent(track.coverArt)}`
+    : null;
 
   // Build the Details panel by iterating detailFields
   let lastGroup: string | null = null;
@@ -288,20 +287,19 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     {
       id: 'artwork' as T.MusicEditTab,
       label: 'Artwork',
-      panel:
-        track && server ? (
-          <ArtworkTab
-            artUrl={artUrl}
-            coverArtPath={track.coverArt ?? null}
-            tagsState={tagsState}
-            trackPath={track.path}
-            serverUrl={server.url}
-          />
-        ) : (
-          <div className="editTrackModalArtwork">
-            <div className="editTrackModalArtworkEmpty">No track selected</div>
-          </div>
-        ),
+      panel: track ? (
+        <ArtworkTab
+          artUrl={artUrl}
+          coverArtPath={track.coverArt ?? null}
+          tagsState={tagsState}
+          trackPath={track.path}
+          serverUrl={server.url}
+        />
+      ) : (
+        <div className="editTrackModalArtwork">
+          <div className="editTrackModalArtworkEmpty">No track selected</div>
+        </div>
+      ),
     },
     {
       id: 'id3' as T.MusicEditTab,
