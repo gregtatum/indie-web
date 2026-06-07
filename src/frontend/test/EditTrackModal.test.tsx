@@ -500,9 +500,29 @@ describe('edit track modal', () => {
     });
 
     expect(screen.getByText('Edit 201 Tracks')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Showing library scan info. ID3 tags have not been loaded for all 201 tracks.',
+      ),
+    ).toBeTruthy();
     expect(trackTagsFetchCount).toBe(0);
     expect(
       (screen.getByLabelText('Artist') as HTMLInputElement).placeholder,
     ).toBe('Mixed');
+    expect(
+      (screen.getByLabelText('Composer') as HTMLInputElement).placeholder,
+    ).toBe('Not loaded');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Load all files' }));
+    });
+
+    await waitFor(() => {
+      expect(trackTagsFetchCount).toBe(201);
+    });
+    expect(screen.queryByText(/Showing library scan info/)).toBeNull();
+    expect(
+      (screen.getByLabelText('Composer') as HTMLInputElement).placeholder,
+    ).toBe('');
   });
 });

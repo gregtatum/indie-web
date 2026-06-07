@@ -170,18 +170,21 @@ export type DetailFieldGroup =
 /**
  * The editable properties shown in the Details tab
  */
-export interface DetailField {
+export interface DetailField<Key extends string = string> {
   frameId: string;
-  key: string;
+  key: Key;
   label: string;
   type: DetailFieldType;
   group: DetailFieldGroup;
 }
 
-export interface SplitDetailField extends DetailField {
+export interface SplitDetailField<
+  Key extends string = string,
+  TotalKey extends string = string,
+> extends DetailField<Key> {
   type: 'split';
   /** State key for the denominator (total) half of "N/total". */
-  totalKey: string;
+  totalKey: TotalKey;
 }
 
 export type AnyDetailField = DetailField | SplitDetailField;
@@ -197,13 +200,11 @@ export type AnyDetailField = DetailField | SplitDetailField;
  *   ...
  *  }
  */
-export type DetailFieldValues = Record<string, string>;
-
 export function isSplitField(field: AnyDetailField): field is SplitDetailField {
   return field.type === 'split';
 }
 
-export const DETAIL_FIELDS: AnyDetailField[] = [
+export const DETAIL_FIELDS = [
   // core
   {
     frameId: 'TIT2',
@@ -241,7 +242,7 @@ export const DETAIL_FIELDS: AnyDetailField[] = [
     label: 'Track',
     type: 'split',
     group: 'position',
-  } as SplitDetailField,
+  },
   {
     frameId: 'TPOS',
     key: 'discNum',
@@ -249,7 +250,7 @@ export const DETAIL_FIELDS: AnyDetailField[] = [
     label: 'Disc',
     type: 'split',
     group: 'position',
-  } as SplitDetailField,
+  },
   {
     frameId: 'TYER',
     key: 'year',
@@ -294,7 +295,15 @@ export const DETAIL_FIELDS: AnyDetailField[] = [
     type: 'text',
     group: 'credits',
   },
-];
+] as const satisfies readonly AnyDetailField[];
+
+export type DetailFieldPrimaryKey = (typeof DETAIL_FIELDS)[number]['key'];
+export type DetailFieldTotalKey = Extract<
+  (typeof DETAIL_FIELDS)[number],
+  { type: 'split' }
+>['totalKey'];
+export type DetailFieldValueKey = DetailFieldPrimaryKey | DetailFieldTotalKey;
+export type DetailFieldValues = Record<DetailFieldValueKey, string>;
 
 export type TrackTagsLoadState =
   | { status: 'loading' }
@@ -305,7 +314,7 @@ export type TrackTagsLoadState =
  * e.g. { title: "", artist: "", albumArtist: "", … }
  */
 export function emptyDetailFieldValues(): DetailFieldValues {
-  const values: DetailFieldValues = {};
+  const values = {} as DetailFieldValues;
   for (const field of DETAIL_FIELDS) {
     values[field.key] = '';
     if (isSplitField(field)) {

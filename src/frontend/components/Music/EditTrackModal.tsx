@@ -9,6 +9,7 @@ import {
   emptyDetailFieldValues,
   detailFieldValues,
   isSplitField,
+  type DetailFieldValueKey,
   type TrackTagsLoadState,
   type DetailFieldValues,
 } from 'frontend/logic/music/tags';
@@ -29,6 +30,17 @@ const BULK_LIVE_TAGS_CUTOFF = 200;
 const BULK_TAG_FETCH_CONCURRENCY = 8;
 const TEXT_MIXED_PLACEHOLDER = 'Mixed';
 const NUMBER_MIXED_PLACEHOLDER = '–';
+const NOT_LOADED_PLACEHOLDER = 'Not loaded';
+
+const INDEXED_DETAIL_FIELD_KEYS: Partial<
+  Record<DetailFieldValueKey, keyof T.TrackMetadata>
+> = {
+  title: 'title',
+  artist: 'artist',
+  album: 'album',
+  genre: 'genre',
+  trackNum: 'track',
+} satisfies Partial<Record<DetailFieldValueKey, keyof T.TrackMetadata>>;
 
 interface Props {
   trackPath: string | null;
@@ -48,9 +60,22 @@ interface DetailFormPresentation {
   placeholders: DetailFieldValues;
 }
 
+function getIndexedDetailValue(
+  track: T.TrackMetadata,
+  key: DetailFieldValueKey,
+): string | null {
+  const metadataKey = INDEXED_DETAIL_FIELD_KEYS[key];
+  if (!metadataKey) {
+    return null;
+  }
+  const value = track[metadataKey];
+  return value === null ? '' : String(value);
+}
+
 function aggregateDetailFieldValues(
   tracks: T.TrackMetadata[],
   tagsByPath: Map<string, TrackTagsResponse> | null,
+  source: 'index' | 'tags',
 ): DetailFormPresentation {
   const values = emptyDetailFieldValues();
   const placeholders = emptyDetailFieldValues();
@@ -59,15 +84,34 @@ function aggregateDetailFieldValues(
     return { values, placeholders };
   }
 
-  const perTrackValues = tracks.map((track) =>
-    detailFieldValues(track, tagsByPath?.get(track.path) ?? null),
-  );
+  const perTrackValues = tracks.map((track) => {
+    if (source === 'tags') {
+      return detailFieldValues(track, tagsByPath?.get(track.path) ?? null);
+    }
+
+    const indexedValues = emptyDetailFieldValues();
+    for (const key of Object.keys(indexedValues) as DetailFieldValueKey[]) {
+      const value = getIndexedDetailValue(track, key);
+      if (value !== null) {
+        indexedValues[key] = value;
+      }
+    }
+    return indexedValues;
+  });
 
   for (const field of DETAIL_FIELDS) {
     const keys = isSplitField(field)
       ? [field.key, field.totalKey]
       : [field.key];
     for (const key of keys) {
+      if (
+        source === 'index' &&
+        getIndexedDetailValue(tracks[0], key) === null
+      ) {
+        values[key] = '';
+        placeholders[key] = NOT_LOADED_PLACEHOLDER;
+        continue;
+      }
       const first = perTrackValues[0][key] ?? '';
       const isMixed = perTrackValues.some((trackValues) => {
         return (trackValues[key] ?? '') !== first;
@@ -137,11 +181,12 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const [bulkTagsState, setBulkTagsState] = React.useState<BulkTagsState>({
     status: 'idle',
   });
+  const [bulkForceLoadAll, setBulkForceLoadAll] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>('idle');
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
   const tagRequestId = React.useRef(0);
 
-  function setField(key: string, value: string) {
+  function setField(key: DetailFieldValueKey, value: string) {
     setCloseConfirmPending(false);
     setFormState((prev) => ({ ...prev, [key]: value }));
   }
@@ -182,8 +227,12 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     const requestId = ++tagRequestId.current;
     const currentTracks = editTracks;
 
-    if (currentTracks.length > BULK_LIVE_TAGS_CUTOFF) {
-      const presentation = aggregateDetailFieldValues(currentTracks, null);
+    if (currentTracks.length > BULK_LIVE_TAGS_CUTOFF && !bulkForceLoadAll) {
+      const presentation = aggregateDetailFieldValues(
+        currentTracks,
+        null,
+        'index',
+      );
       setBulkTagsState({ status: 'skipped' });
       setBaselineFormState(presentation.values);
       setFormState(presentation.values);
@@ -216,6 +265,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         const presentation = aggregateDetailFieldValues(
           currentTracks,
           tagsByPath,
+          'tags',
         );
         setBulkTagsState({ status: 'loaded', tagsByPath });
         setBaselineFormState(presentation.values);
@@ -230,12 +280,12 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         });
       }
     }
-  }, [isBulkEdit, bulkTrackKey, server.url, tracks]);
+  }, [isBulkEdit, bulkTrackKey, bulkForceLoadAll, server.url, tracks]);
 
   // Reset the form immediately from TrackMetadata when track changes
   React.useEffect(() => {
     const presentation = isBulkEdit
-      ? aggregateDetailFieldValues(editTracks, null)
+      ? aggregateDetailFieldValues(editTracks, null, 'index')
       : {
           values: detailFieldValues(track, null),
           placeholders: emptyDetailFieldValues(),
@@ -245,6 +295,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     setFormPlaceholders(presentation.placeholders);
     setTagsState({ status: 'loading' });
     setBulkTagsState(isBulkEdit ? { status: 'loading' } : { status: 'idle' });
+    setBulkForceLoadAll(false);
     setSaveStatus('idle');
     setCloseConfirmPending(false);
   }, [trackPath, bulkTrackKey, isBulkEdit]);
@@ -278,7 +329,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }, [activeTab, dispatch, isBulkEdit]);
 
   const isDirty = React.useMemo(() => {
-    for (const key of Object.keys(baselineFormState)) {
+    for (const key of Object.keys(baselineFormState) as DetailFieldValueKey[]) {
       if ((formState[key] ?? '') !== (baselineFormState[key] ?? '')) {
         return true;
       }
@@ -397,6 +448,21 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const detailsEditingDisabled = isBulkEdit
     ? bulkTagsState.status === 'loading' || bulkTagsState.status === 'error'
     : tagsState.status !== 'loaded';
+  const detailsIndexNotice =
+    isBulkEdit && bulkTagsState.status === 'skipped' ? (
+      <div className="editTrackModalIndexNotice" role="status">
+        <span className="editTrackModalIndexNoticeText">
+          Using track details from the library scan.
+        </span>
+        <button
+          type="button"
+          className="editTrackModalIndexNoticeButton"
+          onClick={() => setBulkForceLoadAll(true)}
+        >
+          Load all {editTracks.length} tracks
+        </button>
+      </div>
+    ) : null;
 
   // Build the Details panel by iterating detailFields
   let lastGroup: string | null = null;
@@ -464,8 +530,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       id: 'details' as T.MusicEditTab,
       label: 'Details',
       panel: (
-        <div className="editTrackModalDetails editTrackModalGrid">
-          {detailRows}
+        <div className="editTrackModalDetails">
+          {detailsIndexNotice}
+          <div className="editTrackModalGrid">{detailRows}</div>
         </div>
       ),
     },
@@ -535,9 +602,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           )}
           {isBulkEdit && (
             <div className="editTrackModalHeaderMeta">
-              {bulkTagsState.status === 'skipped'
-                ? `Using indexed metadata for ${editTracks.length} selected tracks`
-                : `${editTracks.length} selected tracks`}
+              {editTracks.length} selected tracks
             </div>
           )}
         </div>
