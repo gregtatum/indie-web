@@ -355,19 +355,15 @@ export function musicRoute(mountPath: MountPath) {
         }
       }
 
-      await updateIndexAfterTrackTagWrites(
+      const index = await updateIndexAfterTrackTagWrites(
         mountPath,
         updatedTracks,
         changes,
-      ).catch((error) => {
-        console.error(
-          'Failed to update music index after writing track tags.',
-          error,
-        );
-      });
+      );
       return {
         updated: updatedTracks.map((track) => track.clientPath),
         errors,
+        index,
       };
     },
   );
@@ -535,11 +531,23 @@ interface TrackTagWriteResult {
   resolvedPath: string;
 }
 
+type IndexTagWriteResult = T.WriteTrackTagsResponse['index'];
+
 function buildNodeId3Tags(
   changes: T.WriteTrackTagsRequest['changes'],
 ): Record<string, unknown> {
   const tags: Record<string, unknown> = {};
-  for (const { frameId, value } of changes) {
+  for (const change of changes) {
+    if (typeof change !== 'object' || change === null) {
+      throw new ClientError('Invalid tag change.');
+    }
+    const { frameId, value } = change;
+    if (typeof frameId !== 'string' || !frameId) {
+      throw new ClientError('Invalid frame ID.');
+    }
+    if (typeof value !== 'string') {
+      throw new ClientError('Invalid tag value.');
+    }
     if (frameId === 'COMM') {
       tags.comment = { language: 'eng', shortText: '', text: value };
     } else {
@@ -559,41 +567,50 @@ async function writeTrackTagsForPath(
   tags: Record<string, unknown>,
 ): Promise<TrackTagWriteResult | { path: string; message: string }> {
   const pathForError = typeof clientPath === 'string' ? clientPath : '';
-  if (typeof clientPath !== 'string' || !clientPath) {
-    return { path: pathForError, message: 'Invalid path.' };
-  }
-
-  const resolvedPath = mountPath.resolve(clientPath);
-  if (!resolvedPath) {
-    return { path: clientPath, message: 'Invalid path.' };
-  }
-  const normalizedClientPath = mountPath.toClientPath(resolvedPath);
-  if (normalizedClientPath === null) {
-    return { path: clientPath, message: 'Invalid path.' };
-  }
-  if (extname(resolvedPath).toLowerCase() !== '.mp3') {
-    return {
-      path: normalizedClientPath,
-      message: 'Only MP3 files are supported for tag writing.',
-    };
-  }
+  let errorPath = pathForError;
   try {
-    await fs.stat(resolvedPath);
-  } catch (err: any) {
-    if (err?.code === 'ENOENT') {
-      return { path: normalizedClientPath, message: 'File not found.' };
+    if (typeof clientPath !== 'string' || !clientPath) {
+      return { path: pathForError, message: 'Invalid path.' };
     }
+
+    const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      return { path: clientPath, message: 'Invalid path.' };
+    }
+    const normalizedClientPath = mountPath.toClientPath(resolvedPath);
+    if (normalizedClientPath === null) {
+      return { path: clientPath, message: 'Invalid path.' };
+    }
+    errorPath = normalizedClientPath;
+    if (extname(resolvedPath).toLowerCase() !== '.mp3') {
+      return {
+        path: normalizedClientPath,
+        message: 'Only MP3 files are supported for tag writing.',
+      };
+    }
+    try {
+      await fs.stat(resolvedPath);
+    } catch (err: any) {
+      if (err?.code === 'ENOENT') {
+        return { path: normalizedClientPath, message: 'File not found.' };
+      }
+      return {
+        path: normalizedClientPath,
+        message: err instanceof Error ? err.message : 'Unable to read file.',
+      };
+    }
+
+    const result = NodeID3.update(tags, resolvedPath);
+    if (result instanceof Error) {
+      return { path: normalizedClientPath, message: result.message };
+    }
+    return { clientPath: normalizedClientPath, resolvedPath };
+  } catch (error) {
     return {
-      path: normalizedClientPath,
-      message: err instanceof Error ? err.message : 'Unable to read file.',
+      path: errorPath,
+      message: error instanceof Error ? error.message : 'Unable to write tags.',
     };
   }
-
-  const result = NodeID3.update(tags, resolvedPath);
-  if (result instanceof Error) {
-    return { path: normalizedClientPath, message: result.message };
-  }
-  return { clientPath: normalizedClientPath, resolvedPath };
 }
 
 /**
@@ -604,15 +621,17 @@ async function updateIndexAfterTrackTagWrites(
   mountPath: MountPath,
   updatedTracks: TrackTagWriteResult[],
   changes: T.WriteTrackTagsRequest['changes'],
-): Promise<void> {
+): Promise<IndexTagWriteResult> {
   if (updatedTracks.length === 0) {
-    return;
+    return { status: 'skipped', message: 'No tracks were updated.' };
   }
   const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
   const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.write.tmp');
   if (!indexPath || !tmpPath) {
-    console.error('Unexpected: music index path escaped the mount.');
-    return;
+    return {
+      status: 'error',
+      message: 'Unexpected: music index path escaped the mount.',
+    };
   }
 
   let index: T.MusicIndex;
@@ -620,22 +639,28 @@ async function updateIndexAfterTrackTagWrites(
     index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
   } catch (error: any) {
     if (error?.code === 'ENOENT') {
-      return;
+      return { status: 'skipped', message: 'Music index not found.' };
     }
-    console.error(
-      'Failed to read music index after writing track tags.',
-      error,
-    );
-    return;
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to read music index after writing track tags.',
+    };
   }
   if (index.version !== MUSIC_INDEX_VERSION) {
-    return;
+    return {
+      status: 'skipped',
+      message: 'Music index version does not match the server version.',
+    };
   }
 
   const pathToUpdatedTrack = new Map(
     updatedTracks.map((track) => [track.clientPath, track]),
   );
   let didUpdateIndex = false;
+  const statErrors: Array<{ path: string; message: string }> = [];
 
   const tracks = await Promise.all(
     index.tracks.map(async (track) => {
@@ -648,10 +673,13 @@ async function updateIndexAfterTrackTagWrites(
       try {
         stats = await fs.stat(updated.resolvedPath);
       } catch (error) {
-        console.error(
-          `Failed to stat ${updated.clientPath} after writing track tags.`,
-          error,
-        );
+        statErrors.push({
+          path: updated.clientPath,
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to stat updated track.',
+        });
         return track;
       }
       didUpdateIndex = true;
@@ -686,7 +714,18 @@ async function updateIndexAfterTrackTagWrites(
     }),
   );
   if (!didUpdateIndex) {
-    return;
+    if (statErrors.length > 0) {
+      return {
+        status: 'error',
+        message: `Failed to stat updated tracks: ${statErrors
+          .map((error) => error.path)
+          .join(', ')}`,
+      };
+    }
+    return {
+      status: 'skipped',
+      message: 'No updated tracks were present in the music index.',
+    };
   }
 
   const updatedIndex: T.MusicIndex = {
@@ -699,6 +738,23 @@ async function updateIndexAfterTrackTagWrites(
     await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
     await fs.rename(tmpPath, indexPath);
     renamed = true;
+    if (statErrors.length > 0) {
+      return {
+        status: 'error',
+        message: `Some updated tracks could not be patched in the index: ${statErrors
+          .map((error) => error.path)
+          .join(', ')}`,
+      };
+    }
+    return { status: 'updated', message: null };
+  } catch (error) {
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to write music index after writing track tags.',
+    };
   } finally {
     if (!renamed) {
       await fs.unlink(tmpPath).catch((error: any) => {

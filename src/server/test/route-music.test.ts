@@ -346,7 +346,8 @@ describe('POST /music/music-index/scan incremental behavior', () => {
         }),
       });
       assert.equal(writeRes.status, 200);
-      assert.deepEqual(await writeRes.json(), {
+      const writeData = await writeRes.json();
+      assert.deepEqual(writeData, {
         updated: ['/bulk-index-a.mp3', '/bulk-index-b.mp3'],
         errors: [
           { path: '/missing-bulk-index.mp3', message: 'File not found.' },
@@ -355,6 +356,7 @@ describe('POST /music/music-index/scan incremental behavior', () => {
             message: 'Only MP3 files are supported for tag writing.',
           },
         ],
+        index: { status: 'updated', message: null },
       });
 
       const indexRes = await fetch(`${server.baseUrl}/music/music-index`);

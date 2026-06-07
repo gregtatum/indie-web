@@ -129,7 +129,36 @@ export interface WriteTrackTagsRequest {
   changes: TrackTagUpdate[];
 }
 
+/**
+ * Result of applying one shared set of tag changes to one or more tracks.
+ *
+ * A valid request attempts every path. Individual file failures are reported in
+ * `errors` and do not prevent later paths from being attempted. Request-level
+ * validation failures, such as unsupported frame IDs, fail before any file is
+ * written and do not produce this response.
+ */
 export interface WriteTrackTagsResponse {
+  /**
+   * Track paths whose audio files were successfully written.
+   */
   updated: string[];
+  /**
+   * Per-path write failures for files that were skipped or could not be updated.
+   */
   errors: Array<{ path: string; message: string }>;
+  /**
+   * Status of the best-effort durable music index patch after file writes.
+   * Tag writes are authoritative; an index error means files may be updated
+   * while `.music-index.json` remains stale until a later scan or update.
+   */
+  index: {
+    /**
+     * Whether the index was patched, intentionally skipped, or failed.
+     */
+    status: 'updated' | 'skipped' | 'error';
+    /**
+     * Human-readable reason for skipped/error statuses; null when updated.
+     */
+    message: string | null;
+  };
 }

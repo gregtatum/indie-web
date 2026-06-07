@@ -261,6 +261,7 @@ describe('POST /music/write-track-tags — bulk semantics', () => {
       assert.deepEqual(await res.json(), {
         updated: ['/bulk-a.mp3', '/bulk-b.mp3'],
         errors: [],
+        index: { status: 'skipped', message: 'Music index not found.' },
       });
 
       const firstMeta = await parseFile(firstPath);
@@ -292,6 +293,7 @@ describe('POST /music/write-track-tags — bulk semantics', () => {
             message: 'Only MP3 files are supported for tag writing.',
           },
         ],
+        index: { status: 'skipped', message: 'Music index not found.' },
       });
 
       const meta = await parseFile(filePath);
@@ -318,6 +320,27 @@ describe('POST /music/write-track-tags — bulk semantics', () => {
       const secondMeta = await parseFile(secondPath);
       assert.equal(firstMeta.common.title, 'Original A');
       assert.equal(secondMeta.common.title, 'Original B');
+    }),
+  );
+
+  it(
+    'rejects malformed changes before writing any file',
+    withLogs(['Invalid tag value.'], async () => {
+      const filePath = join(server.mountDir, 'malformed-change.mp3');
+      await writeFile(filePath, buildMp3WithTags({ title: 'Original Title' }));
+
+      const res = await fetch(`${server.baseUrl}/music/write-track-tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paths: ['/malformed-change.mp3'],
+          changes: [{ frameId: 'TIT2', value: 42 }],
+        }),
+      });
+      assert.equal(res.status, 400);
+
+      const meta = await parseFile(filePath);
+      assert.equal(meta.common.title, 'Original Title');
     }),
   );
 });
