@@ -346,6 +346,10 @@ export function musicRoute(mountPath: MountPath) {
       if (!resolvedPath) {
         throw new ClientError('Invalid path.');
       }
+      const normalizedClientPath = mountPath.toClientPath(resolvedPath);
+      if (normalizedClientPath === null) {
+        throw new Error('Unexpected: resolved path escaped the mount.');
+      }
       if (extname(resolvedPath).toLowerCase() !== '.mp3') {
         throw new ClientError('Only MP3 files are supported for tag writing.');
       }
@@ -377,10 +381,15 @@ export function musicRoute(mountPath: MountPath) {
       }
       await updateIndexAfterTrackTagWrite(
         mountPath,
-        clientPath.startsWith('/') ? clientPath : '/' + clientPath,
+        normalizedClientPath,
         resolvedPath,
         changes,
-      );
+      ).catch((error) => {
+        console.error(
+          `Failed to update music index after writing tags for ${normalizedClientPath}.`,
+          error,
+        );
+      });
       return {};
     },
   );
@@ -543,6 +552,10 @@ async function performScan(
   return index;
 }
 
+/**
+ * Keeps the durable music index aligned with a successful tag write, so the
+ * next library load does not show stale metadata or force an incremental rescan.
+ */
 async function updateIndexAfterTrackTagWrite(
   mountPath: MountPath,
   clientPath: string,
@@ -552,7 +565,8 @@ async function updateIndexAfterTrackTagWrite(
   const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
   const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.write.tmp');
   if (!indexPath || !tmpPath) {
-    throw new Error('Unexpected: index path escaped the mount.');
+    console.error('Unexpected: music index path escaped the mount.');
+    return;
   }
 
   let index: T.MusicIndex;
@@ -562,7 +576,11 @@ async function updateIndexAfterTrackTagWrite(
     if (error?.code === 'ENOENT') {
       return;
     }
-    throw error;
+    console.error(
+      'Failed to read music index after writing track tags.',
+      error,
+    );
+    return;
   }
   if (index.version !== MUSIC_INDEX_VERSION) {
     return;
@@ -575,7 +593,16 @@ async function updateIndexAfterTrackTagWrite(
     return;
   }
 
-  const stats = await fs.stat(resolvedPath);
+  let stats: Awaited<ReturnType<typeof fs.stat>>;
+  try {
+    stats = await fs.stat(resolvedPath);
+  } catch (error) {
+    console.error(
+      `Failed to stat ${clientPath} after writing track tags.`,
+      error,
+    );
+    return;
+  }
   const updatedTrack = { ...index.tracks[trackIndex] };
   updatedTrack.size = stats.size;
   updatedTrack.mtime = stats.mtime.toISOString();
@@ -602,8 +629,20 @@ async function updateIndexAfterTrackTagWrite(
       i === trackIndex ? updatedTrack : track,
     ),
   };
-  await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
-  await fs.rename(tmpPath, indexPath);
+  let renamed = false;
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
+    await fs.rename(tmpPath, indexPath);
+    renamed = true;
+  } finally {
+    if (!renamed) {
+      await fs.unlink(tmpPath).catch((error: any) => {
+        if (error?.code !== 'ENOENT') {
+          console.error('Failed to clean up temporary music index.', error);
+        }
+      });
+    }
+  }
 }
 
 function isBinary(value: unknown): value is Buffer | Uint8Array {
