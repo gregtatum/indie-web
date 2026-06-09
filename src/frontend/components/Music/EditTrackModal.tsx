@@ -25,7 +25,7 @@ const GROUP_LABELS: Record<string, string> = {
   core: 'Identity',
   position: 'Position',
   classification: 'Classification',
-  credits: 'Credits',
+  notes: 'Notes',
 };
 
 const BULK_LIVE_TAGS_CUTOFF = 200;

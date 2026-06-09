@@ -161,11 +161,7 @@ export const id3FrameTooltips = {
 };
 
 export type DetailFieldType = 'text' | 'number' | 'split';
-export type DetailFieldGroup =
-  | 'core'
-  | 'position'
-  | 'classification'
-  | 'credits';
+export type DetailFieldGroup = 'core' | 'position' | 'classification' | 'notes';
 
 /**
  * The editable properties shown in the Details tab
@@ -234,6 +230,13 @@ export const DETAIL_FIELDS = [
     type: 'text',
     group: 'core',
   },
+  {
+    frameId: 'TCOM',
+    key: 'composer',
+    label: 'Composer',
+    type: 'text',
+    group: 'core',
+  },
   // position — track/disc use "N/total" split inputs
   {
     frameId: 'TRCK',
@@ -273,27 +276,13 @@ export const DETAIL_FIELDS = [
     type: 'number',
     group: 'classification',
   },
-  // credits
-  {
-    frameId: 'TCOM',
-    key: 'composer',
-    label: 'Composer',
-    type: 'text',
-    group: 'credits',
-  },
-  {
-    frameId: 'TEXT',
-    key: 'lyricist',
-    label: 'Lyricist',
-    type: 'text',
-    group: 'credits',
-  },
+  // notes
   {
     frameId: 'COMM',
     key: 'comment',
     label: 'Comment',
     type: 'text',
-    group: 'credits',
+    group: 'notes',
   },
 ] as const satisfies readonly AnyDetailField[];
 
