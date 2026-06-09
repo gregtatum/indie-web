@@ -56,7 +56,7 @@ beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
 });
 
-function setup(search = '') {
+function setup(search = '', tracks = TRACKS) {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
 
@@ -66,13 +66,13 @@ function setup(search = '') {
       body: JSON.stringify({
         version: 4,
         scannedAt: '2024-01-01T00:00:00Z',
-        tracks: TRACKS,
+        tracks,
       }),
       status: 200,
     },
   );
   const genreFolders: T.FolderListing = [
-    ...new Set(TRACKS.map((t) => t.genre).filter(Boolean)),
+    ...new Set(tracks.map((t) => t.genre).filter(Boolean)),
   ].map((genre) => ({
     type: 'folder' as const,
     name: genre!,
@@ -174,6 +174,154 @@ describe('music URL serialization', () => {
         'Jazz',
       ]);
     });
+  });
+
+  it('drops a genre URL param when updated tracks make that filter invalid', async () => {
+    const { store, getLocation } = setup('?genre=Indie');
+
+    await waitFor(() => {
+      expect($.getMusicPanelSelections(store.getState())).toEqual({
+        genre: ['Indie'],
+      });
+    });
+
+    act(() => {
+      store.dispatch(
+        A.setMusicTracks(
+          TRACKS.map((track) =>
+            track.genre === 'Indie'
+              ? { ...track, genre: 'Alternative' }
+              : track,
+          ),
+          false,
+        ),
+      );
+    });
+
+    await waitFor(() => {
+      expect($.getMusicPanelSelections(store.getState())).toEqual({});
+      expect(getParams(getLocation().search).get('genre')).toBeNull();
+    });
+  });
+
+  it('keeps a genre URL param when updated tracks leave that filter valid', async () => {
+    const tracks = [
+      ...TRACKS,
+      {
+        ...TRACKS[0],
+        path: '/Indie/Andrew Bird/Other/Other.mp3',
+        title: 'Other Indie Song',
+      },
+    ];
+    const { store, getLocation } = setup('?genre=Indie', tracks);
+
+    await waitFor(() => {
+      expect($.getMusicPanelSelections(store.getState())).toEqual({
+        genre: ['Indie'],
+      });
+    });
+
+    act(() => {
+      store.dispatch(
+        A.setMusicTracks(
+          tracks.map((track) =>
+            track.title === 'Sovay'
+              ? { ...track, genre: 'Alternative' }
+              : track,
+          ),
+          false,
+        ),
+      );
+    });
+
+    await waitFor(() => {
+      expect($.getMusicPanelSelections(store.getState())).toEqual({
+        genre: ['Indie'],
+      });
+      expect(getParams(getLocation().search).getAll('genre')).toEqual([
+        'Indie',
+      ]);
+    });
+  });
+
+  it('drops an invalid genre filter after bulk editing every matching track', async () => {
+    const tracks = [
+      {
+        ...TRACKS[0],
+        path: '/Indie/Andrew Bird/Album A/Song A.mp3',
+        title: 'Song A',
+        album: 'Album A',
+      },
+      {
+        ...TRACKS[0],
+        path: '/Indie/Andrew Bird/Album A/Song B.mp3',
+        title: 'Song B',
+        album: 'Album A',
+      },
+      TRACKS[1],
+    ];
+    const { store, getLocation } = setup('?genre=Indie', tracks);
+    (window.fetch as FetchMockSandbox).get(
+      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
+      { body: JSON.stringify({ native: [] }), status: 200 },
+    );
+    (window.fetch as FetchMockSandbox).post(
+      `${FAKE_SERVER.url}/music/write-track-tags`,
+      {
+        body: JSON.stringify({
+          updated: [
+            '/Indie/Andrew Bird/Album A/Song A.mp3',
+            '/Indie/Andrew Bird/Album A/Song B.mp3',
+          ],
+          errors: [],
+          index: { status: 'updated', message: null },
+        }),
+        status: 200,
+      },
+    );
+
+    await screen.findByText('Song A');
+    await waitFor(() => {
+      expect($.getMusicPanelSelections(store.getState())).toEqual({
+        genre: ['Indie'],
+      });
+    });
+
+    act(() => {
+      store.dispatch(
+        A.setMusicSelectedTracks([
+          '/Indie/Andrew Bird/Album A/Song A.mp3',
+          '/Indie/Andrew Bird/Album A/Song B.mp3',
+        ]),
+      );
+    });
+    await act(async () => {
+      fireEvent.contextMenu(await screen.findByText('Song A'));
+    });
+    await act(async () => {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Edit Selection' }),
+      );
+    });
+
+    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
+    await waitFor(() => {
+      expect(genreInput.disabled).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.change(genreInput, { target: { value: 'Alternative' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+
+    await waitFor(() => {
+      expect($.getMusicPanelSelections(store.getState())).toEqual({});
+      expect(getParams(getLocation().search).get('genre')).toBeNull();
+    });
+    expect(screen.getByText('Song A')).toBeTruthy();
+    expect(screen.getByText('Song B')).toBeTruthy();
+    expect(screen.getByText('All Blues')).toBeTruthy();
   });
 });
 
