@@ -26,6 +26,10 @@ export function getMusicPanelSelections(
   return getMusic(state).panelSelections;
 }
 
+export function getMusicPanelOrder(state: State): T.MusicPanelType[] {
+  return getMusic(state).panelOrder;
+}
+
 export function getMusicEditTrackPath(state: State): string | null {
   return getMusic(state).editTrackPath;
 }
@@ -37,8 +41,6 @@ export function getMusicEditTab(state: State): T.MusicEditTab {
 export function getMusicNeedsRescan(state: State): boolean {
   return getMusic(state).needsRescan;
 }
-
-const PANEL_ORDER: T.MusicPanelType[] = ['genre', 'artist', 'album'];
 
 function filterByPanel(
   filteredTracks: T.TrackMetadata[],
@@ -71,10 +73,15 @@ function filterByPanel(
 export const getMusicPanelTracks = createSelector(
   getMusicTracks,
   getMusicPanelSelections,
-  (allTracks, panelSelections): Record<T.MusicPanelType, T.TrackMetadata[]> => {
+  getMusicPanelOrder,
+  (
+    allTracks,
+    panelSelections,
+    panelOrder,
+  ): Record<T.MusicPanelType, T.TrackMetadata[]> => {
     const result = {} as Record<T.MusicPanelType, T.TrackMetadata[]>;
     let filtered = allTracks;
-    for (const panel of PANEL_ORDER) {
+    for (const panel of panelOrder) {
       result[panel] = filtered;
       const selections = panelSelections[panel];
       if (selections && selections.length > 0) {
@@ -111,8 +118,9 @@ export function getMusicFolderArtVersion(state: State): number {
 export const getFilteredMusicTracks = createSelector(
   getMusicTracks,
   getMusicPanelSelections,
-  (allTracks, panelSelections) =>
-    PANEL_ORDER.reduce((filtered, panel) => {
+  getMusicPanelOrder,
+  (allTracks, panelSelections, panelOrder) =>
+    panelOrder.reduce((filtered, panel) => {
       const sel = panelSelections[panel];
       return sel && sel.length > 0
         ? filterByPanel(filtered, panel, sel)

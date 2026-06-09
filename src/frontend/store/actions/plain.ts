@@ -351,17 +351,6 @@ export function setMusicSelectedTracks(paths: string[]) {
   };
 }
 
-export function setMusicTracks(
-  tracks: T.TrackMetadata[],
-  needsRescan: boolean,
-) {
-  return {
-    type: 'set-music-tracks' as const,
-    tracks,
-    needsRescan,
-  };
-}
-
 export function musicPlaybackLoad(path: string) {
   return { type: 'music-playback-load' as const, path };
 }

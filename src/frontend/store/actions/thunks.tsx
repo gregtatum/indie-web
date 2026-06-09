@@ -133,6 +133,109 @@ export namespace PlainInternal {
       stem,
     };
   }
+
+  export function setMusicTracks(
+    tracks: T.TrackMetadata[],
+    needsRescan: boolean,
+    panelSelections: Partial<Record<T.MusicPanelType, string[]>>,
+  ) {
+    return {
+      type: 'set-music-tracks' as const,
+      tracks,
+      needsRescan,
+      panelSelections,
+    };
+  }
+}
+
+/**
+ * Sets the current track metadata, either initially, or after editing an individual
+ * piece of metadata. This performs validation to ensure that the panel filter selections
+ * are still valid with the set of tracks. That way if you edit away a genre or some
+ * other filter the filtering logic remains valid.
+ */
+export function setMusicTracks(
+  tracks: T.TrackMetadata[],
+  needsRescan: boolean,
+): Thunk {
+  return (dispatch, getState) => {
+    const existingSelections = $.getMusicPanelSelections(getState());
+    const panelSelections: Partial<Record<T.MusicPanelType, string[]>> = {};
+    let filteredTracks = tracks;
+
+    // Validate the filter values from the panel selection.
+    for (const panel of $.getMusicPanelOrder(getState())) {
+      const selections = existingSelections[panel];
+      if (!selections || selections.length === 0) {
+        continue;
+      }
+
+      let available: Set<string>;
+      switch (panel) {
+        case 'genre':
+          available = new Set(
+            filteredTracks.flatMap((track) =>
+              track.genre === null ? [] : [track.genre],
+            ),
+          );
+          break;
+        case 'artist':
+          available = new Set(
+            filteredTracks.flatMap((track) =>
+              track.artist === null ? [] : [track.artist],
+            ),
+          );
+          break;
+        case 'album':
+          available = new Set(
+            filteredTracks.flatMap((track) =>
+              track.album === null ? [] : [track.album],
+            ),
+          );
+          break;
+        default:
+          available = new Set();
+      }
+
+      const validSelections = selections.filter((selection) => {
+        return available.has(selection);
+      });
+      if (validSelections.length === 0) {
+        continue;
+      }
+
+      panelSelections[panel] = validSelections;
+      switch (panel) {
+        case 'genre':
+          filteredTracks = filteredTracks.filter((track) => {
+            return (
+              track.genre !== null && validSelections.includes(track.genre)
+            );
+          });
+          break;
+        case 'artist':
+          filteredTracks = filteredTracks.filter((track) => {
+            return (
+              track.artist !== null && validSelections.includes(track.artist)
+            );
+          });
+          break;
+        case 'album':
+          filteredTracks = filteredTracks.filter((track) => {
+            return (
+              track.album !== null && validSelections.includes(track.album)
+            );
+          });
+          break;
+        default:
+          break;
+      }
+    }
+
+    dispatch(
+      PlainInternal.setMusicTracks(tracks, needsRescan, panelSelections),
+    );
+  };
 }
 
 export function listFiles(path = ''): Thunk<Promise<void>> {
