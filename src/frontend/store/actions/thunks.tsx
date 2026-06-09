@@ -146,6 +146,14 @@ export namespace PlainInternal {
       panelSelections,
     };
   }
+
+  export function loadMusicPlayback(path: string, selectedTrackPath?: string) {
+    return {
+      type: 'music-playback-load' as const,
+      path,
+      selectedTrackPath,
+    };
+  }
 }
 
 /**
@@ -235,6 +243,25 @@ export function setMusicTracks(
     dispatch(
       PlainInternal.setMusicTracks(tracks, needsRescan, panelSelections),
     );
+  };
+}
+
+/**
+ * Loads a track for playback. If selection is currently following the playing
+ * track, advance selection to the newly loaded track too.
+ */
+export function musicPlaybackLoad(path: string): Thunk {
+  return (dispatch, getState) => {
+    const state = getState();
+    const selectedPaths = $.getMusicSelectedTrackPaths(state);
+    let selectedTrackPath: string | undefined;
+    if (
+      selectedPaths.length === 1 &&
+      selectedPaths[0] === $.getMusicPlaybackTrackPath(state)
+    ) {
+      selectedTrackPath = path;
+    }
+    dispatch(PlainInternal.loadMusicPlayback(path, selectedTrackPath));
   };
 }
 

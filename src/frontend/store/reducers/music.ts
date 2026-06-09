@@ -128,6 +128,8 @@ function tracks(
 
 function selectedTrackPaths(state: string[] = [], action: T.Action): string[] {
   switch (action.type) {
+    case 'music-playback-load':
+      return action.selectedTrackPath ? [action.selectedTrackPath] : state;
     case 'set-music-selected-tracks':
       return action.paths;
     case 'view-music':
@@ -213,17 +215,5 @@ export function musicReducer(
   state: MusicState | undefined,
   action: T.Action,
 ): MusicState {
-  // When loading a new track, if the single selected track matches the currently
-  // playing track, advance the selection to follow the new track.
-  if (
-    action.type === 'music-playback-load' &&
-    state !== undefined &&
-    state.selectedTrackPaths.length === 1 &&
-    state.selectedTrackPaths[0] === state.playingTrackPath
-  ) {
-    const next = combinedMusicReducer(state, action);
-    return { ...next, selectedTrackPaths: [action.path] };
-  }
-  const next = combinedMusicReducer(state, action);
-  return next;
+  return combinedMusicReducer(state, action);
 }
