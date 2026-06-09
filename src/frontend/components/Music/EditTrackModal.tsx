@@ -16,6 +16,7 @@ import {
 } from 'frontend/logic/music/tags';
 import type {
   TrackTagsResponse,
+  WriteTrackTagsRequest,
   WriteTrackTagsResponse,
 } from 'shared/@types/shared';
 import './EditTrackModal.css';
@@ -581,7 +582,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     }
   }
 
-  async function handleSave() {
+  async function handleSave(): Promise<boolean> {
     let savePaths: string[] = [];
     if (isBulkEdit) {
       savePaths = selectedTrackPaths;
@@ -595,22 +596,23 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       (!isBulkEdit && tagsState.status !== 'loaded') ||
       (isBulkEdit && bulkTagsState.status === 'loading')
     ) {
-      return;
+      return false;
     }
 
     const changes = buildDetailChanges(formState, baselineFormState);
     if (changes.length === 0) {
-      return;
+      return false;
     }
 
     setSaveStatus('saving');
     setSaveNotice(null);
     setShowAllSaveErrors(false);
     try {
+      const body: WriteTrackTagsRequest = { paths: savePaths, changes };
       const res = await fetch(`${server.url}/music/write-track-tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paths: savePaths, changes }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const text = await res.text();
@@ -633,7 +635,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
                 message: 'The server did not update any tracks.',
               },
         );
-        return;
+        return false;
       }
 
       const updatedPathSet = new Set(data.updated);
@@ -657,7 +659,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           attemptedCount: savePaths.length,
           updatedCount: data.updated.length,
         });
-        return;
+        return false;
       }
 
       setBaselineFormState({ ...formState });
@@ -670,6 +672,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       if (!isBulkEdit) {
         await loadTrackTags();
       }
+      return true;
     } catch (error) {
       setSaveStatus('error');
       setSaveNotice({
@@ -677,6 +680,14 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         message:
           error instanceof Error ? error.message : 'Unable to save tags.',
       });
+      return false;
+    }
+  }
+
+  async function handleDetailsSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (await handleSave()) {
+      onClose();
     }
   }
 
@@ -898,10 +909,11 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       id: 'details' as T.MusicEditTab,
       label: 'Details',
       panel: (
-        <div className="editTrackModalDetails">
+        <form className="editTrackModalDetails" onSubmit={handleDetailsSubmit}>
           {detailsNotices}
           <div className="editTrackModalGrid">{detailRows}</div>
-        </div>
+          <button type="submit" hidden />
+        </form>
       ),
     },
     {

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import * as React from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -8,6 +9,10 @@ import { A, T } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
 import { BULK_SMALL_LOAD_NOTICE_DELAY } from 'frontend/components/Music/EditTrackModal';
 import type { FetchMockSandbox } from 'fetch-mock';
+import type {
+  WriteTrackTagsRequest,
+  WriteTrackTagsResponse,
+} from 'shared/@types/shared';
 
 const FAKE_SERVER: T.FileStoreServer = {
   id: 'test-music',
@@ -57,6 +62,27 @@ const TRACKS: T.TrackMetadata[] = [
     hasEmbeddedArt: false,
   },
 ];
+
+function mockWriteTrackTags(
+  response: WriteTrackTagsResponse = {
+    updated: ['/music/a.mp3'],
+    errors: [],
+    index: { status: 'updated', message: null },
+  },
+): WriteTrackTagsRequest[] {
+  const requests: WriteTrackTagsRequest[] = [];
+  (window.fetch as FetchMockSandbox).post(
+    `${FAKE_SERVER.url}/music/write-track-tags`,
+    (_url, opts: any) => {
+      requests.push(JSON.parse(opts.body));
+      return {
+        body: JSON.stringify(response),
+        status: 200,
+      };
+    },
+  );
+  return requests;
+}
 
 beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
@@ -165,6 +191,33 @@ describe('edit track modal', () => {
     expect(artistInput.value).toBe('New Artist');
   });
 
+  it('saves and closes when Enter is pressed in the Details form', async () => {
+    const user = userEvent.setup();
+
+    setup();
+    const writeRequests = mockWriteTrackTags();
+
+    await openEditModal('Song A');
+    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
+    await waitFor(() => {
+      expect(artistInput.disabled).toBe(false);
+    });
+
+    await user.clear(artistInput);
+    await user.type(artistInput, 'New Artist{Enter}');
+
+    await waitFor(() => {
+      expect(writeRequests).toHaveLength(1);
+    });
+    expect(writeRequests[0]).toEqual({
+      paths: ['/music/a.mp3'],
+      changes: [{ frameId: 'TPE1', value: 'New Artist' }],
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+  });
+
   it('closes when the close button is clicked', async () => {
     setup();
     await openEditModal('Song A');
@@ -223,21 +276,10 @@ describe('edit track modal', () => {
         resolveTags = resolve;
       },
     );
-    const writeRequests: Array<{
-      path: string;
-      changes: Array<{ frameId: string; value: string }>;
-    }> = [];
-
     setup(staleTracks, {
       trackTagsResponse: () => tagsPromise,
     });
-    (window.fetch as FetchMockSandbox).post(
-      `${FAKE_SERVER.url}/music/write-track-tags`,
-      (_url, opts: any) => {
-        writeRequests.push(JSON.parse(opts.body));
-        return { body: JSON.stringify({}), status: 200 };
-      },
-    );
+    const writeRequests = mockWriteTrackTags();
 
     await openEditModal('Indexed Title');
     const titleInput = screen.getByLabelText('Title') as HTMLInputElement;
@@ -298,21 +340,13 @@ describe('edit track modal', () => {
   });
 
   it('keeps details editing disabled when live tags fail to load', async () => {
-    const writeRequests: Array<unknown> = [];
-
     setup(TRACKS, {
       trackTagsResponse: {
         body: 'Tag load failed',
         status: 500,
       },
     });
-    (window.fetch as FetchMockSandbox).post(
-      `${FAKE_SERVER.url}/music/write-track-tags`,
-      (_url, opts: any) => {
-        writeRequests.push(JSON.parse(opts.body));
-        return { body: JSON.stringify({}), status: 200 };
-      },
-    );
+    const writeRequests = mockWriteTrackTags();
 
     await openEditModal('Song A');
     await act(async () => {
@@ -372,24 +406,11 @@ describe('edit track modal', () => {
 
   it('keeps ID3 disabled and saves shared bulk genre edits', async () => {
     const { store } = setup();
-    const writeRequests: Array<{
-      paths: string[];
-      changes: Array<{ frameId: string; value: string }>;
-    }> = [];
-    (window.fetch as FetchMockSandbox).post(
-      `${FAKE_SERVER.url}/music/write-track-tags`,
-      (_url, opts: any) => {
-        writeRequests.push(JSON.parse(opts.body));
-        return {
-          body: JSON.stringify({
-            updated: ['/music/a.mp3', '/music/b.mp3'],
-            errors: [],
-            index: { status: 'updated', message: null },
-          }),
-          status: 200,
-        };
-      },
-    );
+    const writeRequests = mockWriteTrackTags({
+      updated: ['/music/a.mp3', '/music/b.mp3'],
+      errors: [],
+      index: { status: 'updated', message: null },
+    });
 
     await openBulkEditModal(store);
     const id3Tab = screen.getByRole('tab', {
@@ -477,28 +498,22 @@ describe('edit track modal', () => {
         ]),
       );
     });
-    (window.fetch as FetchMockSandbox).post(
-      `${FAKE_SERVER.url}/music/write-track-tags`,
-      {
-        body: JSON.stringify({
-          updated: ['/music/a.mp3'],
-          errors: [
-            { path: '/music/b.mp3', message: 'File not found.' },
-            {
-              path: '/music/d.mp3',
-              message: 'Only MP3 files are supported for tag writing.',
-            },
-            { path: '/music/e.mp3', message: 'Permission denied.' },
-            { path: '/music/f.mp3', message: 'Unable to write tags.' },
-          ],
-          index: {
-            status: 'error',
-            message: 'Failed to write music index after writing track tags.',
-          },
-        }),
-        status: 200,
+    mockWriteTrackTags({
+      updated: ['/music/a.mp3'],
+      errors: [
+        { path: '/music/b.mp3', message: 'File not found.' },
+        {
+          path: '/music/d.mp3',
+          message: 'Only MP3 files are supported for tag writing.',
+        },
+        { path: '/music/e.mp3', message: 'Permission denied.' },
+        { path: '/music/f.mp3', message: 'Unable to write tags.' },
+      ],
+      index: {
+        status: 'error',
+        message: 'Failed to write music index after writing track tags.',
       },
-    );
+    });
 
     const track = await screen.findByText('Song A');
     await act(async () => {
@@ -718,10 +733,6 @@ describe('edit track modal', () => {
     const store = createStore();
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     let trackTagsFetchCount = 0;
-    const writeRequests: Array<{
-      paths: string[];
-      changes: Array<{ frameId: string; value: string }>;
-    }> = [];
 
     (window.fetch as FetchMockSandbox).get(
       `${FAKE_SERVER.url}/music/music-index`,
@@ -741,20 +752,11 @@ describe('edit track modal', () => {
         return { body: JSON.stringify({ native: [] }), status: 200 };
       },
     );
-    (window.fetch as FetchMockSandbox).post(
-      `${FAKE_SERVER.url}/music/write-track-tags`,
-      (_url, opts: any) => {
-        writeRequests.push(JSON.parse(opts.body));
-        return {
-          body: JSON.stringify({
-            updated: manyTracks.map((track) => track.path),
-            errors: [],
-            index: { status: 'updated', message: null },
-          }),
-          status: 200,
-        };
-      },
-    );
+    const writeRequests = mockWriteTrackTags({
+      updated: manyTracks.map((track) => track.path),
+      errors: [],
+      index: { status: 'updated', message: null },
+    });
 
     render(
       <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
