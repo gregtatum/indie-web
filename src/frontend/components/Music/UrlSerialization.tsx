@@ -5,6 +5,10 @@ import { ensureNever } from 'frontend/utils';
 
 type SetSearchParams = ReturnType<typeof useSearchParams>[1];
 
+function sameStrings(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
+}
+
 /**
  * Synchronize the URL state with the Redux state. Certain items get persisted
  * to the URL. This hook manages that synchronization for all of the music view.
@@ -124,9 +128,12 @@ function useEditModalUrlSync(
 ) {
   const editTrackPath = $$.getMusicEditTrackPath();
   const editTab = $$.getMusicEditTab();
+  const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
   const { dispatch } = Hooks.useStore();
 
   const editFromUrl = searchParams.get('edit');
+  const tracksFromUrl = searchParams.getAll('track');
+  const tracksFromUrlKey = tracksFromUrl.join('\0');
   const tabFromUrl = parseTabFromUrl(searchParams.get('tab'), editFromUrl);
 
   const isFirstEditRender = React.useRef(true);
@@ -142,6 +149,8 @@ function useEditModalUrlSync(
   editTrackPathRef.current = editTrackPath;
   const editTabRef = React.useRef(editTab);
   editTabRef.current = editTab;
+  const selectedTrackPathsRef = React.useRef(selectedTrackPaths);
+  selectedTrackPathsRef.current = selectedTrackPaths;
 
   // Initialize Redux from the URL on mount and react to URL-driven changes
   // (e.g., browser back). Unlike the filter sync, the edit URL is not replaced
@@ -153,6 +162,19 @@ function useEditModalUrlSync(
       dispatch(A.setMusicEditTrackPath(editFromUrl));
     }
   }, [editFromUrl]);
+
+  // Bulk edit URLs store the open modal in `edit` and the selected files in
+  // repeated `track` params. Restore that selection when loading or navigating
+  // to the URL so the modal can derive its bulk-edit state.
+  React.useEffect(() => {
+    if (
+      editFromUrl &&
+      tracksFromUrl.length > 1 &&
+      !sameStrings(tracksFromUrl, selectedTrackPathsRef.current)
+    ) {
+      dispatch(A.setMusicSelectedTracks(tracksFromUrl));
+    }
+  }, [editFromUrl, tracksFromUrlKey]);
 
   React.useEffect(() => {
     if (tabFromUrl !== null && tabFromUrl !== editTabRef.current) {
@@ -188,7 +210,7 @@ function useEditModalUrlSync(
       isFirstTabRender.current = false;
       return;
     }
-    if (editTab === tabFromUrl) {
+    if (editTab === tabFromUrl || (!tabFromUrl && editTab === 'details')) {
       return;
     }
     setSearchParamsRef.current(

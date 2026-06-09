@@ -90,6 +90,13 @@ beforeEach(() => {
 });
 
 interface SetupOptions {
+  search?: string;
+  musicIndexResponse?:
+    | {
+        body: string;
+        status: number;
+      }
+    | (() => Promise<{ body: string; status: number }>);
   trackTagsResponse?:
     | {
         body: string;
@@ -104,7 +111,7 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
 
   (window.fetch as FetchMockSandbox).get(
     `${FAKE_SERVER.url}/music/music-index`,
-    {
+    options.musicIndexResponse ?? {
       body: JSON.stringify({
         version: 4,
         scannedAt: '2024-01-01T00:00:00Z',
@@ -123,7 +130,9 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
   );
 
   render(
-    <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
+    <MemoryRouter
+      initialEntries={[`/${FAKE_SERVER.id}/music${options.search ?? ''}`]}
+    >
       <Provider store={store as any}>
         <AppRoutes />
       </Provider>
@@ -176,6 +185,63 @@ describe('edit track modal', () => {
     expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
       'Rock',
     );
+  });
+
+  it('reopens a bulk edit from URL params after refresh', async () => {
+    setup(TRACKS, {
+      search:
+        '?track=%2Fmusic%2Fa.mp3&track=%2Fmusic%2Fb.mp3&edit=%2Fmusic%2Fa.mp3',
+    });
+
+    await screen.findByText('Edit 2 Tracks');
+    expect(screen.getByText('2 selected tracks')).toBeTruthy();
+    await waitFor(() => {
+      expect(
+        (screen.getByLabelText('Artist') as HTMLInputElement).disabled,
+      ).toBe(false);
+    });
+    expect(screen.queryByLabelText('Title')).toBeNull();
+  });
+
+  it('fills a refreshed bulk edit after the music index loads', async () => {
+    let resolveMusicIndex!: (response: {
+      body: string;
+      status: number;
+    }) => void;
+    setup(TRACKS, {
+      search:
+        '?track=%2Fmusic%2Fa.mp3&track=%2Fmusic%2Fb.mp3&edit=%2Fmusic%2Fa.mp3',
+      musicIndexResponse: () =>
+        new Promise((resolve) => {
+          resolveMusicIndex = resolve;
+        }),
+    });
+
+    await screen.findByText('Edit 0 Tracks');
+
+    await act(async () => {
+      resolveMusicIndex({
+        body: JSON.stringify({
+          version: 4,
+          scannedAt: '2024-01-01T00:00:00Z',
+          tracks: TRACKS,
+        }),
+        status: 200,
+      });
+    });
+
+    await screen.findByText('Edit 2 Tracks');
+    await waitFor(() => {
+      expect((screen.getByLabelText('Album') as HTMLInputElement).value).toBe(
+        'Album A',
+      );
+      expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
+        'Rock',
+      );
+    });
+    expect(
+      (screen.getByLabelText('Artist') as HTMLInputElement).placeholder,
+    ).toBe('Mixed');
   });
 
   it('allows editing the artist field', async () => {

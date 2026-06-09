@@ -232,6 +232,13 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }
   const editTracksRef = React.useRef<T.TrackMetadata[]>([]);
   editTracksRef.current = editTracks;
+  // On refresh the URL selection can be restored before the music index has
+  // loaded. This key changes when selected paths resolve to TrackMetadata rows,
+  // which lets the form reset from real scan values without resetting on every
+  // metadata update after a save.
+  const resolvedEditTrackKey = editTracks
+    .map((editTrack) => editTrack.path)
+    .join('\u0000');
   const server = $$.getCurrentServer();
   const activeTab = $$.getMusicEditTab();
   const needsRescan = $$.getMusicNeedsRescan();
@@ -499,7 +506,13 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         bulkAbortControllerRef.current = null;
       }
     }
-  }, [isBulkEdit, bulkTrackKey, bulkForceLoadAll, server.url]);
+  }, [
+    isBulkEdit,
+    bulkTrackKey,
+    resolvedEditTrackKey,
+    bulkForceLoadAll,
+    server.url,
+  ]);
 
   // Reset the form immediately from TrackMetadata when track changes
   React.useEffect(() => {
@@ -525,7 +538,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     setSaveNotice(null);
     setShowAllSaveErrors(false);
     setCloseConfirmPending(false);
-  }, [trackPath, bulkTrackKey, isBulkEdit]);
+  }, [trackPath, bulkTrackKey, resolvedEditTrackKey, isBulkEdit]);
 
   // Load the ID3 tab frame values when opening or switching tracks.
   React.useEffect(() => {
@@ -548,7 +561,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       setFormState(vals);
       setFormPlaceholders(emptyDetailFieldValues());
     }
-  }, [isBulkEdit, tagsState]);
+  }, [isBulkEdit, tagsState, resolvedEditTrackKey]);
 
   React.useEffect(() => {
     if (isBulkEdit && activeTab === 'id3') {
