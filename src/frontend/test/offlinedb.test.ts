@@ -5,7 +5,6 @@ import {
   createFolderMetadata,
   getFileTree,
 } from './utils/fixtures';
-import { PlainInternal } from 'frontend/store/actions';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { getDirName } from 'frontend/utils';
 
@@ -291,12 +290,11 @@ describe('offline db', () => {
 
     // Signal to the store that moving the file is done so the internal cache there
     // can be updated as well.
-    dispatch(
-      PlainInternal.moveFileDone(
-        '/band/song 3.chopro',
-        createFileMetadata('/band/song 3 (renamed).chopro'),
-      ),
-    );
+    dispatch({
+      type: 'move-file-done',
+      oldPath: '/band/song 3.chopro',
+      metadata: createFileMetadata('/band/song 3 (renamed).chopro'),
+    });
 
     // The database should be updated.
     expect(await wasRejected(idbfs.loadBlob('/band/song 3.chopro'))).toEqual(
@@ -403,12 +401,11 @@ describe('offline db', () => {
 
     // Signal to the store that moving the file is done so the internal cache there
     // can be updated as well.
-    dispatch(
-      PlainInternal.moveFileDone(
-        '/band',
-        createFolderMetadata('/band (moved)'),
-      ),
-    );
+    dispatch({
+      type: 'move-file-done',
+      oldPath: '/band',
+      metadata: createFolderMetadata('/band (moved)'),
+    });
 
     // The store should be up to date as well.
     {
@@ -475,9 +472,12 @@ describe('offline db', () => {
 
     // Signal to the store that moving the file is done so the internal cache there
     // can be updated as well.
-    dispatch(
-      PlainInternal.deleteFileDone(metadata, getDirName(metadata.name), null),
-    );
+    dispatch({
+      type: 'delete-file-done',
+      metadata,
+      folder: getDirName(metadata.name),
+      fileFocus: null,
+    });
 
     // The store should be up to date as well.
     expect(await fetchTextFile('/band/song 3.chopro')).toEqual(null);
@@ -554,9 +554,12 @@ describe('offline db', () => {
 
     // Signal to the store that deleting the file is done so the internal cache there
     // can be updated as well.
-    dispatch(
-      PlainInternal.deleteFileDone(metadata, getDirName(metadata.name), null),
-    );
+    dispatch({
+      type: 'delete-file-done',
+      metadata,
+      folder: getDirName(metadata.name),
+      fileFocus: null,
+    });
 
     // The store should be up to date as well.
     {

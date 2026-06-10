@@ -51,7 +51,7 @@ export type PlainActions =
 /**
  * These should only be used internally in thunks.
  */
-export const PlainInternal = {
+const PlainInternal = {
   addMessage(message: React.ReactNode, generation: number) {
     return { type: 'add-message' as const, message, generation };
   },
