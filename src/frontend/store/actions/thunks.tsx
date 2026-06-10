@@ -19,7 +19,6 @@ import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
 import { FileStoreError } from 'frontend/logic/file-store';
 import { IDBError } from 'frontend/logic/file-store/indexeddb-fs';
-import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 
 function getMetadataFromCache(
   cache: T.ListFilesCache,
@@ -152,9 +151,9 @@ const PlainInternal = {
 
 /**
  * Sets the current track metadata, either initially, or after editing an individual
- * piece of metadata. This performs validation to ensure that the panel filter selections
- * are still valid with the set of tracks. That way if you edit away a genre or some
- * other filter the filtering logic remains valid.
+ * piece of metadata. Panel selections are intentionally preserved here. Selectors
+ * apply only the currently valid portion of those selections when deriving panel
+ * items and track lists.
  */
 export function setMusicTracks(
   tracks: T.TrackMetadata[],
@@ -162,76 +161,9 @@ export function setMusicTracks(
 ): Thunk {
   return (dispatch, getState) => {
     const existingSelections = $.getMusicPanelSelections(getState());
-    const panelSelections: Partial<Record<T.MusicPanelType, string[]>> = {};
-    let filteredTracks = tracks;
-
-    // Validate the filter values from the panel selection.
-    for (const panel of $.getMusicPanelOrder(getState())) {
-      const selections = existingSelections[panel];
-      if (!selections || selections.length === 0) {
-        continue;
-      }
-
-      let available: Set<string>;
-      switch (panel) {
-        case 'genre':
-          available = new Set(
-            filteredTracks.flatMap((track) =>
-              track.genre ? [track.genre] : [],
-            ),
-          );
-          break;
-        case 'artist':
-          available = new Set(
-            filteredTracks.flatMap((track) => {
-              const artist = getTrackFilterArtist(track);
-              return artist ? [artist] : [];
-            }),
-          );
-          break;
-        case 'album':
-          available = new Set(
-            filteredTracks.flatMap((track) =>
-              track.album ? [track.album] : [],
-            ),
-          );
-          break;
-        default:
-          available = new Set();
-      }
-
-      const validSelections = selections.filter((selection) => {
-        return available.has(selection);
-      });
-      if (validSelections.length === 0) {
-        continue;
-      }
-
-      panelSelections[panel] = validSelections;
-      switch (panel) {
-        case 'genre':
-          filteredTracks = filteredTracks.filter((track) => {
-            return track.genre && validSelections.includes(track.genre);
-          });
-          break;
-        case 'artist':
-          filteredTracks = filteredTracks.filter((track) => {
-            const artist = getTrackFilterArtist(track);
-            return artist && validSelections.includes(artist);
-          });
-          break;
-        case 'album':
-          filteredTracks = filteredTracks.filter((track) => {
-            return track.album && validSelections.includes(track.album);
-          });
-          break;
-        default:
-          break;
-      }
-    }
 
     dispatch(
-      PlainInternal.setMusicTracks(tracks, needsRescan, panelSelections),
+      PlainInternal.setMusicTracks(tracks, needsRescan, existingSelections),
     );
   };
 }

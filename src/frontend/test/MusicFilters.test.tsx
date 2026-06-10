@@ -324,7 +324,7 @@ describe('music URL serialization', () => {
     });
   });
 
-  it('drops a genre URL param when updated tracks make that filter invalid', async () => {
+  it('keeps an invalid genre URL param while derived filtering ignores it', async () => {
     const { store, getLocation } = setup('?genre=Indie');
 
     await waitFor(() => {
@@ -347,9 +347,15 @@ describe('music URL serialization', () => {
     });
 
     await waitFor(() => {
-      expect($.getMusicPanelSelections(store.getState())).toEqual({});
-      expect(getParams(getLocation().search).get('genre')).toBeNull();
+      expect($.getMusicPanelSelections(store.getState())).toEqual({
+        genre: ['Indie'],
+      });
+      expect(getParams(getLocation().search).getAll('genre')).toEqual([
+        'Indie',
+      ]);
     });
+    expect(screen.getByText('Sovay')).toBeTruthy();
+    expect(screen.getByText('All Blues')).toBeTruthy();
   });
 
   it('keeps a genre URL param when updated tracks leave that filter valid', async () => {
@@ -392,7 +398,7 @@ describe('music URL serialization', () => {
     });
   });
 
-  it('drops an invalid genre filter after bulk editing every matching track', async () => {
+  it('keeps an invalid genre filter after bulk editing every matching track', async () => {
     const tracks = [
       {
         ...TRACKS[0],
@@ -464,8 +470,12 @@ describe('music URL serialization', () => {
     });
 
     await waitFor(() => {
-      expect($.getMusicPanelSelections(store.getState())).toEqual({});
-      expect(getParams(getLocation().search).get('genre')).toBeNull();
+      expect($.getMusicPanelSelections(store.getState())).toEqual({
+        genre: ['Indie'],
+      });
+      expect(getParams(getLocation().search).getAll('genre')).toEqual([
+        'Indie',
+      ]);
     });
     expect(screen.getByText('Song A')).toBeTruthy();
     expect(screen.getByText('Song B')).toBeTruthy();

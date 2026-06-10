@@ -67,6 +67,50 @@ function filterByPanel(
   }
 }
 
+function getAvailablePanelValues(
+  tracks: T.TrackMetadata[],
+  panel: T.MusicPanelType,
+): Set<string> {
+  switch (panel) {
+    case 'genre':
+      return new Set(
+        tracks.flatMap((track) => (track.genre ? [track.genre] : [])),
+      );
+    case 'artist':
+      return new Set(
+        tracks.flatMap((track) => {
+          const artist = getTrackFilterArtist(track);
+          return artist ? [artist] : [];
+        }),
+      );
+    case 'album':
+      return new Set(
+        tracks.flatMap((track) => (track.album ? [track.album] : [])),
+      );
+    default:
+      throw new UnhandledCaseError(panel, 'MusicPanelType');
+  }
+}
+
+function filterByEffectivePanelSelection(
+  tracks: T.TrackMetadata[],
+  panel: T.MusicPanelType,
+  selections: string[] | undefined,
+): T.TrackMetadata[] {
+  if (!selections || selections.length === 0) {
+    return tracks;
+  }
+
+  const available = getAvailablePanelValues(tracks, panel);
+  const effectiveSelections = selections.filter((selection) =>
+    available.has(selection),
+  );
+
+  return effectiveSelections.length > 0
+    ? filterByPanel(tracks, panel, effectiveSelections)
+    : tracks;
+}
+
 /**
  * For each panel, the tracks available as input to that panel's item list —
  * filtered by all panels to its left. e.g. the album panel receives tracks
@@ -85,10 +129,11 @@ export const getMusicPanelTracks = createSelector(
     let filtered = allTracks;
     for (const panel of panelOrder) {
       result[panel] = filtered;
-      const selections = panelSelections[panel];
-      if (selections && selections.length > 0) {
-        filtered = filterByPanel(filtered, panel, selections);
-      }
+      filtered = filterByEffectivePanelSelection(
+        filtered,
+        panel,
+        panelSelections[panel],
+      );
     }
     return result;
   },
@@ -123,9 +168,10 @@ export const getFilteredMusicTracks = createSelector(
   getMusicPanelOrder,
   (allTracks, panelSelections, panelOrder) =>
     panelOrder.reduce((filtered, panel) => {
-      const sel = panelSelections[panel];
-      return sel && sel.length > 0
-        ? filterByPanel(filtered, panel, sel)
-        : filtered;
+      return filterByEffectivePanelSelection(
+        filtered,
+        panel,
+        panelSelections[panel],
+      );
     }, allTracks),
 );

@@ -32,8 +32,8 @@ function track(
   };
 }
 
-describe('music reducer filter pruning', () => {
-  it('drops a selected genre when it is no longer a valid option', () => {
+describe('music filter derived selections', () => {
+  it('preserves a selected genre and ignores it when it is no longer valid', () => {
     const store = createStore();
     store.dispatch(
       A.setMusicTracks(
@@ -50,7 +50,12 @@ describe('music reducer filter pruning', () => {
       ),
     );
 
-    expect($.getMusicPanelSelections(store.getState())).toEqual({});
+    expect($.getMusicPanelSelections(store.getState())).toEqual({
+      genre: ['Alternative Rock'],
+    });
+    expect(
+      $.getFilteredMusicTracks(store.getState()).map((t) => t.path),
+    ).toEqual(['/new.mp3']);
   });
 
   it('keeps a selected genre when it remains a valid option', () => {
@@ -79,9 +84,12 @@ describe('music reducer filter pruning', () => {
     expect($.getMusicPanelSelections(store.getState())).toEqual({
       genre: ['Alternative Rock'],
     });
+    expect(
+      $.getFilteredMusicTracks(store.getState()).map((t) => t.path),
+    ).toEqual(['/old-b.mp3']);
   });
 
-  it('keeps valid genre selections and drops invalid genre selections', () => {
+  it('keeps stored genre selections and applies only valid selections', () => {
     const store = createStore();
     store.dispatch(
       A.setMusicTracks(
@@ -105,11 +113,14 @@ describe('music reducer filter pruning', () => {
     );
 
     expect($.getMusicPanelSelections(store.getState())).toEqual({
-      genre: ['Jazz'],
+      genre: ['Indie', 'Jazz'],
     });
+    expect(
+      $.getFilteredMusicTracks(store.getState()).map((t) => t.path),
+    ).toEqual(['/jazz.mp3']);
   });
 
-  it('drops artist and album selections that are invalid under upstream filters', () => {
+  it('ignores artist and album selections that are invalid under upstream filters', () => {
     const store = createStore();
     store.dispatch(
       A.setMusicTracks(
@@ -137,6 +148,11 @@ describe('music reducer filter pruning', () => {
 
     expect($.getMusicPanelSelections(store.getState())).toEqual({
       genre: ['Rock'],
+      artist: ['Artist A'],
+      album: ['Album A'],
     });
+    expect(
+      $.getFilteredMusicTracks(store.getState()).map((t) => t.path),
+    ).toEqual(['/rock-b.mp3']);
   });
 });

@@ -70,13 +70,13 @@ if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
   it.skip('localhost-dependent tests skipped by check runner', () => {});
 }
 
-function setup() {
+function setup(tracks: T.TrackMetadata[] = TRACKS) {
   const server = getServer();
-  writeMusicIndex(server, TRACKS);
+  writeMusicIndex(server, tracks);
   const result = renderMusicApp({ server });
 
   act(() => {
-    result.store.dispatch(A.setMusicTracks(TRACKS, false));
+    result.store.dispatch(A.setMusicTracks(tracks, false));
   });
 
   return result;
@@ -617,6 +617,72 @@ describe('filter panels', () => {
     expect(await screen.findByText('Song A')).toBeTruthy();
     expect(screen.getByText('Song B')).toBeTruthy();
     expect(screen.getByText('Song C')).toBeTruthy();
+  });
+
+  it('ignores a stored album selection when changing to an artist without that album', async () => {
+    const tracks: T.TrackMetadata[] = [
+      {
+        ...TRACKS[0],
+        path: '/music/foo.mp3',
+        title: 'Everlong',
+        artist: 'Foo Fighters',
+        album: 'Greatest Hits',
+      },
+      {
+        ...TRACKS[0],
+        path: '/music/daft.mp3',
+        title: 'Get Lucky',
+        artist: 'Daft Punk',
+        album: 'Random Access Memories',
+      },
+    ];
+    const { store } = setup(tracks);
+
+    const artistList = screen.getByRole('listbox', { name: 'artist' });
+    await act(async () => {
+      await userEvent.click(
+        within(artistList).getByRole('option', { name: 'Foo Fighters' }),
+      );
+    });
+
+    const albumList = screen.getByRole('listbox', { name: 'album' });
+    await act(async () => {
+      await userEvent.click(
+        within(albumList).getByRole('option', { name: 'Greatest Hits' }),
+      );
+    });
+    expect(await screen.findByText('Everlong')).toBeTruthy();
+
+    await act(async () => {
+      await userEvent.click(
+        within(artistList).getByRole('option', { name: 'Daft Punk' }),
+      );
+    });
+
+    expect($.getMusicPanelSelections(store.getState())).toEqual({
+      artist: ['Daft Punk'],
+      album: ['Greatest Hits'],
+    });
+    expect(await screen.findByText('Get Lucky')).toBeTruthy();
+    expect(screen.queryByText('Everlong')).toBeNull();
+    expect(
+      within(albumList)
+        .getByRole('option', { name: '« All Albums »' })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
+
+    await act(async () => {
+      await userEvent.click(
+        within(artistList).getByRole('option', { name: 'Foo Fighters' }),
+      );
+    });
+
+    expect($.getMusicPanelSelections(store.getState())).toEqual({
+      artist: ['Foo Fighters'],
+      album: ['Greatest Hits'],
+    });
+    expect(await screen.findByText('Everlong')).toBeTruthy();
+    expect(screen.queryByText('Get Lucky')).toBeNull();
   });
 
   it('Shift+ArrowDown extends the filter panel selection downward', async () => {
