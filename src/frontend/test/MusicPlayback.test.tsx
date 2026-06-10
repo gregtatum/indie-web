@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { A, T, $ } from 'frontend';
@@ -57,6 +57,8 @@ const TRACKS: T.TrackMetadata[] = [
   },
 ];
 
+const MUSIC_PLAYBACK_RESUME_KEY = 'musicPlaybackResume';
+
 const jestDescribe = globalThis.describe;
 let describe: (name: string, fn: () => void) => void = jestDescribe;
 if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
@@ -83,12 +85,14 @@ const { getServer } = useMusicTestServer();
 
 // Provide offset values so that tests render somewhat realistically.
 beforeEach(() => {
+  localStorage.removeItem(MUSIC_PLAYBACK_RESUME_KEY);
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
   mockMusicMediaElement();
 });
 
 afterEach(async () => {
+  localStorage.removeItem(MUSIC_PLAYBACK_RESUME_KEY);
   await removeMusicIndex(getServer());
 });
 
@@ -398,6 +402,110 @@ describe('PlaybackBar', () => {
     const bar = screen.getByRole('region', { name: 'Playback controls' });
     const times = within(bar).getAllByText('0:00');
     expect(times.length).toBe(2); // current time + duration both start at 0:00
+  });
+
+  it('resumes recent playback from localStorage', async () => {
+    let audio: HTMLAudioElement | null = null;
+    jest.spyOn(window, 'Audio').mockImplementation(() => {
+      audio = document.createElement('audio');
+      audio.load = jest.fn();
+      audio.pause = jest.fn();
+      audio.play = jest.fn(() => Promise.resolve());
+      return audio;
+    });
+    const server = getServer();
+    localStorage.setItem(
+      MUSIC_PLAYBACK_RESUME_KEY,
+      JSON.stringify({
+        serverId: 'test-music',
+        serverUrl: server.baseUrl,
+        trackPath: '/music/b.mp3',
+        currentTime: 42,
+        updatedAt: Date.now(),
+      }),
+    );
+
+    const { store } = setup();
+
+    await waitFor(() => {
+      expect($.getMusicPlaybackTrackPath(store.getState())).toBe(
+        '/music/b.mp3',
+      );
+    });
+
+    const resumedAudio = audio as unknown as HTMLAudioElement;
+    act(() => {
+      if (!resumedAudio) {
+        throw new Error('Expected an audio element to be created.');
+      }
+      resumedAudio.dispatchEvent(new Event('loadedmetadata'));
+      resumedAudio.dispatchEvent(new Event('canplay'));
+    });
+
+    await waitFor(() => {
+      expect($.getMusicPlaybackStatus(store.getState())).toBe('paused');
+    });
+    expect(resumedAudio.currentTime).toBe(42);
+    const playButton = screen.getByRole('button', { name: 'Play' });
+    expect((playButton as HTMLButtonElement).disabled).toBe(false);
+
+    await act(async () => {
+      await userEvent.click(playButton);
+    });
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
+  });
+
+  it('does not resume expired playback from localStorage', async () => {
+    const server = getServer();
+    localStorage.setItem(
+      MUSIC_PLAYBACK_RESUME_KEY,
+      JSON.stringify({
+        serverId: 'test-music',
+        serverUrl: server.baseUrl,
+        trackPath: '/music/b.mp3',
+        currentTime: 42,
+        updatedAt: Date.now() - 10_001,
+      }),
+    );
+
+    const { store } = setup();
+
+    await waitFor(() => {
+      expect(localStorage.getItem(MUSIC_PLAYBACK_RESUME_KEY)).toBeNull();
+    });
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBeNull();
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('idle');
+  });
+
+  it('does not write localStorage snapshots on time updates', async () => {
+    let audio: HTMLAudioElement | null = null;
+    jest.spyOn(window, 'Audio').mockImplementation(() => {
+      audio = document.createElement('audio');
+      audio.load = jest.fn();
+      audio.pause = jest.fn();
+      audio.play = jest.fn(() => Promise.resolve());
+      return audio;
+    });
+    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    await setupPlaying();
+
+    await waitFor(() => {
+      expect(audio).not.toBeNull();
+    });
+
+    setItemSpy.mockClear();
+    act(() => {
+      if (!audio) {
+        throw new Error('Expected an audio element to be created.');
+      }
+      audio.currentTime = 12;
+      audio.dispatchEvent(new Event('timeupdate'));
+    });
+
+    expect(setItemSpy).not.toHaveBeenCalledWith(
+      MUSIC_PLAYBACK_RESUME_KEY,
+      expect.any(String),
+    );
   });
 });
 

@@ -32,6 +32,7 @@ function simpleDigest256(_scheme: string, buffer: Uint8Array): ArrayBuffer {
 }
 
 beforeEach(function () {
+  localStorage.removeItem('musicPlaybackResume');
   jest.resetModules();
   jest.spyOn(window, 'scrollBy').mockImplementation();
   jest.spyOn(console, 'warn').mockImplementation((...args) => {

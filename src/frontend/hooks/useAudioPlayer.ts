@@ -1,6 +1,18 @@
 import * as React from 'react';
 import { A, $, Hooks } from 'frontend';
 
+const MUSIC_PLAYBACK_RESUME_KEY = 'musicPlaybackResume';
+const MUSIC_PLAYBACK_RESUME_TIMEOUT_MS = 10_000;
+const MUSIC_PLAYBACK_RESUME_INTERVAL_MS = 5_000;
+
+type MusicPlaybackResume = {
+  serverId: string;
+  serverUrl: string;
+  trackPath: string;
+  currentTime: number;
+  updatedAt: number;
+};
+
 export interface AudioPlayerState {
   currentTime: number;
   duration: number;
@@ -32,8 +44,13 @@ export function useAudioPlayer(): AudioPlayerState {
   const [volume, setVolumeState] = React.useState(1);
 
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const currentTimeRef = React.useRef(0);
   // Tracks whether the current src has loaded enough data to call play().
   const isReadyRef = React.useRef(false);
+  const didAttemptResumeRef = React.useRef(false);
+  const resumeTimeRef = React.useRef<number | null>(null);
+  const shouldPauseAfterResumeRef = React.useRef(false);
+  const lastPersistedSnapshotRef = React.useRef<string | null>(null);
 
   function getAudio(): HTMLAudioElement {
     if (!audioRef.current) {
@@ -45,7 +62,34 @@ export function useAudioPlayer(): AudioPlayerState {
   }
 
   const trackPath = $.getMusicPlaybackTrackPath(getState());
-  const serverUrl = $.getCurrentServerOrNull(getState())?.url ?? '';
+  const server = $.getCurrentServerOrNull(getState());
+  const serverId = $.getServerId(getState());
+  const serverUrl = server?.url ?? '';
+
+  React.useEffect(() => {
+    if (didAttemptResumeRef.current || !serverId || !serverUrl) {
+      return;
+    }
+    didAttemptResumeRef.current = true;
+
+    const resume = readPlaybackResume();
+    if (!resume) {
+      return;
+    }
+
+    if (
+      Date.now() - resume.updatedAt > MUSIC_PLAYBACK_RESUME_TIMEOUT_MS ||
+      resume.serverId !== serverId ||
+      resume.serverUrl !== serverUrl
+    ) {
+      localStorage.removeItem(MUSIC_PLAYBACK_RESUME_KEY);
+      return;
+    }
+
+    resumeTimeRef.current = resume.currentTime;
+    shouldPauseAfterResumeRef.current = true;
+    dispatch(A.musicPlaybackLoad(resume.trackPath));
+  }, [dispatch, serverId, serverUrl]);
 
   React.useEffect(() => {
     if (!trackPath || !serverUrl) {
@@ -54,6 +98,7 @@ export function useAudioPlayer(): AudioPlayerState {
 
     const audio = getAudio();
     isReadyRef.current = false;
+    currentTimeRef.current = 0;
     setCurrentTime(0);
     setDuration(0);
 
@@ -63,6 +108,12 @@ export function useAudioPlayer(): AudioPlayerState {
     function onLoadedMetadata() {
       if (isFinite(audio.duration)) {
         setDuration(audio.duration);
+      }
+      if (resumeTimeRef.current !== null) {
+        audio.currentTime = resumeTimeRef.current;
+        currentTimeRef.current = resumeTimeRef.current;
+        setCurrentTime(resumeTimeRef.current);
+        resumeTimeRef.current = null;
       }
     }
 
@@ -75,9 +126,14 @@ export function useAudioPlayer(): AudioPlayerState {
     function onCanPlay() {
       isReadyRef.current = true;
       dispatch(A.musicPlaybackReady());
+      if (shouldPauseAfterResumeRef.current) {
+        shouldPauseAfterResumeRef.current = false;
+        dispatch(A.musicPlaybackPause());
+      }
     }
 
     function onTimeUpdate() {
+      currentTimeRef.current = audio.currentTime;
       setCurrentTime(audio.currentTime);
     }
 
@@ -117,6 +173,53 @@ export function useAudioPlayer(): AudioPlayerState {
   }, [trackPath, serverUrl]);
 
   const status = $.getMusicPlaybackStatus(getState());
+
+  // Handle persisting of the audio playback on refresh.
+  React.useEffect(() => {
+    if ((status !== 'loading' && status !== 'playing') || !trackPath) {
+      localStorage.removeItem(MUSIC_PLAYBACK_RESUME_KEY);
+      lastPersistedSnapshotRef.current = null;
+      return;
+    }
+
+    persistPlaybackResume();
+
+    const interval = window.setInterval(
+      persistPlaybackResume,
+      MUSIC_PLAYBACK_RESUME_INTERVAL_MS,
+    );
+    window.addEventListener('pagehide', persistPlaybackResume);
+
+    // eslint-disable-next-line consistent-return
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('pagehide', persistPlaybackResume);
+      persistPlaybackResume();
+    };
+
+    function persistPlaybackResume() {
+      const currentTrackPath = trackPath;
+      if (!serverId || !serverUrl || !currentTrackPath) {
+        return;
+      }
+
+      const audio = audioRef.current;
+      const time = audio ? audio.currentTime : currentTimeRef.current;
+      const snapshot = JSON.stringify({
+        serverId,
+        serverUrl,
+        trackPath: currentTrackPath,
+        currentTime: Math.max(0, Math.floor(time)),
+        updatedAt: Date.now(),
+      } satisfies MusicPlaybackResume);
+
+      if (snapshot === lastPersistedSnapshotRef.current) {
+        return;
+      }
+      lastPersistedSnapshotRef.current = snapshot;
+      localStorage.setItem(MUSIC_PLAYBACK_RESUME_KEY, snapshot);
+    }
+  }, [serverId, serverUrl, status, trackPath]);
 
   // Responds to play/pause actions dispatched from outside the hook, such as
   // the Space key handler in the track list.
@@ -159,6 +262,7 @@ export function useAudioPlayer(): AudioPlayerState {
       const audio = audioRef.current;
       if (audio) {
         audio.currentTime = time;
+        currentTimeRef.current = time;
         setCurrentTime(time);
       }
     },
@@ -170,4 +274,36 @@ export function useAudioPlayer(): AudioPlayerState {
       }
     },
   };
+}
+
+function readPlaybackResume(): MusicPlaybackResume | null {
+  const raw = localStorage.getItem(MUSIC_PLAYBACK_RESUME_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (!isPlaybackResume(value)) {
+      return null;
+    }
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+function isPlaybackResume(value: unknown): value is MusicPlaybackResume {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const resume = value as Partial<MusicPlaybackResume>;
+  return (
+    typeof resume.serverId === 'string' &&
+    typeof resume.serverUrl === 'string' &&
+    typeof resume.trackPath === 'string' &&
+    typeof resume.currentTime === 'number' &&
+    typeof resume.updatedAt === 'number'
+  );
 }
