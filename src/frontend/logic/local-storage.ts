@@ -1,5 +1,10 @@
 import * as T from 'frontend/@types';
-import { getNumberProp, getStringProp, sluggify } from 'frontend/utils';
+import {
+  ensureExists,
+  getNumberProp,
+  getStringProp,
+  sluggify,
+} from 'frontend/utils';
 
 export type EditorAutocompleteSettings = {
   markdown: boolean;
@@ -23,43 +28,71 @@ export type MusicTrackColumnWidths = {
  * Wraps one localStorage key with shared read/write/remove behavior. Subclasses
  * own the raw string conversion for each persisted shape.
  */
-abstract class Storage<T> {
-  readonly key: string;
+class Storage<T> {
+  #storageKey: string | null;
 
-  constructor(key: string) {
-    this.key = key;
+  constructor(key?: string) {
+    this.#storageKey = key ?? null;
+  }
+
+  get key(): string {
+    return ensureExists(
+      this.#storageKey,
+      'Expected local storage key to exist',
+    );
+  }
+
+  applyKey(key: string): void {
+    this.#storageKey ??= key;
   }
 
   read(): T {
-    return this.readRaw(window.localStorage.getItem(this.key));
+    const key = ensureExists(
+      this.#storageKey,
+      'Expected local storage key to exist',
+    );
+    return this.readRaw(window.localStorage.getItem(key));
   }
 
   write(value: T): void {
+    const key = ensureExists(
+      this.#storageKey,
+      'Expected local storage key to exist',
+    );
     const raw = this.writeRaw(value);
     if (raw === null) {
-      window.localStorage.removeItem(this.key);
+      window.localStorage.removeItem(key);
     } else {
-      window.localStorage.setItem(this.key, raw);
+      window.localStorage.setItem(key, raw);
     }
   }
 
   remove(): void {
-    window.localStorage.removeItem(this.key);
+    window.localStorage.removeItem(
+      ensureExists(this.#storageKey, 'Expected local storage key to exist'),
+    );
   }
 
-  protected abstract readRaw(raw: string | null): T;
-  protected abstract writeRaw(value: T): string | null;
+  readRaw(raw: string | null): T {
+    void raw;
+    throw new Error('readRaw must be implemented by a storage subclass.');
+  }
+
+  writeRaw(value: T): string | null {
+    void value;
+    throw new Error('writeRaw must be implemented by a storage subclass.');
+  }
 }
 
 /**
  * Stores plain strings without JSON encoding. Writing null removes the key.
  */
 class StringStorage extends Storage<string | null> {
-  protected readRaw(raw: string | null): string | null {
+  readRaw(raw: string | null): string | null {
     return raw;
   }
 
-  protected writeRaw(value: string | null): string | null {
+  writeRaw(value: string | null): string | null {
     return value;
   }
 }
@@ -69,7 +102,7 @@ class StringStorage extends Storage<string | null> {
  * callers can choose the correct feature default.
  */
 class BooleanStorage extends Storage<boolean | null> {
-  protected readRaw(raw: string | null): boolean | null {
+  readRaw(raw: string | null): boolean | null {
     if (raw === 'true') {
       return true;
     }
@@ -79,7 +112,7 @@ class BooleanStorage extends Storage<boolean | null> {
     return null;
   }
 
-  protected writeRaw(value: boolean | null): string | null {
+  writeRaw(value: boolean | null): string | null {
     return value === null ? null : String(value);
   }
 }
@@ -88,7 +121,7 @@ class BooleanStorage extends Storage<boolean | null> {
  * Stores numbers as strings for legacy layout values like splitter offsets.
  */
 class NumberEntry extends Storage<number | null> {
-  protected readRaw(raw: string | null): number | null {
+  readRaw(raw: string | null): number | null {
     if (raw === null) {
       return null;
     }
@@ -96,7 +129,7 @@ class NumberEntry extends Storage<number | null> {
     return Number.isNaN(number) ? null : number;
   }
 
-  protected writeRaw(value: number | null): string | null {
+  writeRaw(value: number | null): string | null {
     return value === null ? null : String(value);
   }
 }
@@ -106,50 +139,49 @@ class NumberEntry extends Storage<number | null> {
  * Malformed or structurally invalid values fall back without mutating storage.
  */
 class JsonStorage<T, DefaultValue> extends Storage<T | DefaultValue> {
-  private parse: (value: unknown) => T | null;
-  private defaultValue: DefaultValue;
+  #parse: (value: unknown) => T | null;
+  #defaultValue: DefaultValue;
 
   constructor(options: {
-    key: string;
+    key?: string;
     defaultValue: DefaultValue;
     parse(value: unknown): T | null;
   }) {
     super(options.key);
-    this.parse = options.parse;
-    this.defaultValue = options.defaultValue;
+    this.#parse = options.parse;
+    this.#defaultValue = options.defaultValue;
   }
 
-  protected readRaw(raw: string | null): T | DefaultValue {
+  readRaw(raw: string | null): T | DefaultValue {
     if (raw === null) {
-      return this.defaultValue;
+      return this.#defaultValue;
     }
     try {
-      const parsed = this.parse(JSON.parse(raw));
-      return parsed === null ? this.defaultValue : parsed;
+      const parsed = this.#parse(JSON.parse(raw));
+      return parsed === null ? this.#defaultValue : parsed;
     } catch {
-      return this.defaultValue;
+      return this.#defaultValue;
     }
   }
 
-  protected writeRaw(value: T | DefaultValue): string {
+  writeRaw(value: T | DefaultValue): string {
     return JSON.stringify(value);
   }
 }
 
 export const localStorageEntries = {
-  fileStoreServer: new StringStorage('fileStoreServer'),
-  appHideEditor: new BooleanStorage('appHideEditor'),
-  appEditorOnly: new BooleanStorage('appEditorOnly'),
-  fileStoreName: new StringStorage('fileStoreName'),
-  openAIApiKey: new StringStorage('openAIAPIKey'),
-  hasOnboarded: new BooleanStorage('hasOnboarded'),
-  experimentalFeatures: new BooleanStorage('experimentalFeatures'),
-  fileStoreCacheEnabled: new BooleanStorage('fileStoreCacheEnabled'),
-  dropboxCodeVerifier: new StringStorage('dropboxCodeVerifier'),
-  dropboxRedirectURL: new StringStorage('dropboxRedirectURL'),
+  fileStoreServer: new StringStorage(),
+  appHideEditor: new BooleanStorage(),
+  appEditorOnly: new BooleanStorage(),
+  fileStoreName: new StringStorage(),
+  openAIAPIKey: new StringStorage(),
+  hasOnboarded: new BooleanStorage(),
+  experimentalFeatures: new BooleanStorage(),
+  fileStoreCacheEnabled: new BooleanStorage(),
+  dropboxCodeVerifier: new StringStorage(),
+  dropboxRedirectURL: new StringStorage(),
 
   dropboxOauth: new JsonStorage({
-    key: 'dropboxOauth',
     defaultValue: null,
     parse(value): T.DropboxOauth | null {
       const accessToken = getStringProp(value, 'accessToken');
@@ -162,7 +194,6 @@ export const localStorageEntries = {
     },
   }),
   fileStoreServers: new JsonStorage({
-    key: 'fileStoreServers',
     defaultValue: [] as T.FileStoreServer[],
     parse(value): T.FileStoreServer[] | null {
       if (!Array.isArray(value)) {
@@ -189,7 +220,6 @@ export const localStorageEntries = {
   }),
 
   editorAutocompleteSettings: new JsonStorage({
-    key: 'editorAutocompleteSettings',
     defaultValue: { markdown: false, chordpro: true },
     parse(value): EditorAutocompleteSettings | null {
       if (!value || typeof value !== 'object') {
@@ -212,7 +242,6 @@ export const localStorageEntries = {
   }),
 
   musicPlaybackResume: new JsonStorage({
-    key: 'musicPlaybackResume',
     defaultValue: null,
     parse(value): MusicPlaybackResume | null {
       const serverId = getStringProp(value, 'serverId');
@@ -234,7 +263,6 @@ export const localStorageEntries = {
   }),
 
   musicTrackColumnWidths: new JsonStorage({
-    key: 'musicTrackColumnWidths',
     defaultValue: null,
     parse(value): MusicTrackColumnWidths | null {
       const artist = getNumberProp(value, 'artist');
@@ -250,6 +278,13 @@ export const localStorageEntries = {
     return new NumberEntry(key);
   },
 };
+
+// Dynamically apply the key names to the classes to avoid duplicating the definitions.
+for (const [key, entry] of Object.entries(localStorageEntries)) {
+  if (entry instanceof Storage) {
+    entry.applyKey(key);
+  }
+}
 
 /**
  * Used for logout and data-removal flows. This intentionally clears every

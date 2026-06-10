@@ -290,7 +290,7 @@ export function setAreStemsActive(isActive: boolean) {
 }
 
 export function setOpenAIApiKey(apiKey: string) {
-  localStorageEntries.openAIApiKey.write(apiKey);
+  localStorageEntries.openAIAPIKey.write(apiKey);
   return {
     type: 'set-open-ai-api-key' as const,
     apiKey,

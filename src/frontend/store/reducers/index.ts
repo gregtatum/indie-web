@@ -610,7 +610,7 @@ function workerClient(
 }
 
 function openAIApiKey(
-  state: string | null = localStorageEntries.openAIApiKey.read(),
+  state: string | null = localStorageEntries.openAIAPIKey.read(),
   action: T.Action,
 ): string | null {
   switch (action.type) {
