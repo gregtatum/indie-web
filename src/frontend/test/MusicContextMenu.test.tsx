@@ -67,6 +67,10 @@ beforeEach(() => {
   mockMusicMediaElement();
 });
 
+function mockPlatform(platform: string) {
+  jest.spyOn(window.navigator, 'platform', 'get').mockReturnValue(platform);
+}
+
 function setup(tracks = TRACKS) {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
@@ -228,6 +232,7 @@ describe('track right-click context menu', () => {
   });
 
   it('shows shortcut hints without changing menu item names', async () => {
+    mockPlatform('Win32');
     setup();
     const trackA = await screen.findByText('Song A');
     await act(async () => {
@@ -236,11 +241,13 @@ describe('track right-click context menu', () => {
 
     await screen.findByRole('button', { name: 'Edit' });
     await screen.findByRole('button', { name: 'Show in Files' });
-    screen.getByText('⌘/Ctrl E');
-    screen.getByText('⌘/Ctrl Enter');
+    screen.getByText('Ctrl E');
+    screen.getByText('Ctrl Enter');
+    expect(screen.queryByText('⌘ E')).toBeNull();
   });
 
   it('shows the edit shortcut hint for multi-track selection', async () => {
+    mockPlatform('MacIntel');
     const { store } = setup();
     await act(async () => {
       store.dispatch(
@@ -253,7 +260,8 @@ describe('track right-click context menu', () => {
     });
 
     await screen.findByRole('button', { name: 'Edit Selection' });
-    screen.getByText('⌘/Ctrl E');
+    screen.getByText('⌘ E');
+    expect(screen.queryByText('Ctrl E')).toBeNull();
   });
 });
 

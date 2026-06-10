@@ -1,7 +1,11 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $$, A, Hooks, $, T } from 'frontend';
-import { getDirName, getPathFileName } from 'frontend/utils';
+import {
+  getDirName,
+  getPathFileName,
+  getPlatformCtrlModifier,
+} from 'frontend/utils';
 import { Menu, MenuButton } from 'frontend/components/Menus';
 import { EditTrackModal } from 'frontend/components/Music/EditTrackModal';
 
@@ -86,6 +90,9 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
 
     const selectedPaths = $$.getMusicSelectedTrackPaths();
     const isMultiSelect = selectedPaths.length > 1;
+    const shortcutModifier = getPlatformCtrlModifier();
+    const editShortcut = `${shortcutModifier} E`;
+    const showInFilesShortcut = `${shortcutModifier} Enter`;
 
     const buttons: MenuButton[] = [
       {
@@ -111,7 +118,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
             {
               key: 'edit-selection',
               children: 'Edit Selection',
-              shortcut: '⌘/Ctrl E',
+              shortcut: editShortcut,
               onClick() {
                 editTracks(selectedPaths);
               },
@@ -123,7 +130,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
             {
               key: 'edit',
               children: 'Edit',
-              shortcut: '⌘/Ctrl E',
+              shortcut: editShortcut,
               onClick() {
                 editTracks([contextTrackPath]);
               },
@@ -131,7 +138,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
             {
               key: 'show-in-files',
               children: 'Show in Files',
-              shortcut: '⌘/Ctrl Enter',
+              shortcut: showInFilesShortcut,
               onClick() {
                 showInFiles(contextTrackPath);
               },

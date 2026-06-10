@@ -64,6 +64,14 @@ export function resetGeneration() {
   _generation = 0;
 }
 
+export function isMacPlatform() {
+  return window.navigator.platform.toLowerCase().includes('mac');
+}
+
+export function getPlatformCtrlModifier() {
+  return isMacPlatform() ? '⌘' : 'Ctrl';
+}
+
 export function maybeGetProperty(value: any, property: string): string | null {
   if (
     value &&
