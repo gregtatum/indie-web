@@ -6,7 +6,7 @@ import {
   id3FrameTooltips,
   sortTags,
   type TrackTagsLoadState,
-} from 'frontend/logic/music/tags';
+} from 'frontend/logic/music/metadata';
 
 interface Props {
   tagsState: TrackTagsLoadState;

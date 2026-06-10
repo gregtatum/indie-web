@@ -2,7 +2,7 @@ import { createSelector } from 'reselect';
 import * as T from 'frontend/@types';
 import { State } from 'frontend/@types';
 import { UnhandledCaseError } from 'frontend/utils';
-import { getTrackFilterArtist } from 'frontend/logic/music/tags';
+import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import type {
   MusicPlaybackStatus,
   FolderArtSaveStatus,

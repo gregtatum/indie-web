@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, Hooks, $, $$ } from 'frontend';
 import { getDirName, getPathFileName } from 'frontend/utils';
-import type { TrackTagsLoadState } from 'frontend/logic/music/tags';
+import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
 import type { WriteFolderArtResponse } from 'shared/@types/shared';
 
 interface Props {

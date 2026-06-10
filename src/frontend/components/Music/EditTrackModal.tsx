@@ -13,7 +13,7 @@ import {
   type DetailFieldValueKey,
   type TrackTagsLoadState,
   type DetailFieldValues,
-} from 'frontend/logic/music/tags';
+} from 'frontend/logic/music/metadata';
 import type {
   TrackTagsResponse,
   WriteTrackTagsRequest,

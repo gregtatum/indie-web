@@ -19,7 +19,7 @@ import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
 import { FileStoreError } from 'frontend/logic/file-store';
 import { IDBError } from 'frontend/logic/file-store/indexeddb-fs';
-import { getTrackFilterArtist } from 'frontend/logic/music/tags';
+import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 
 function getMetadataFromCache(
   cache: T.ListFilesCache,

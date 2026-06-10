@@ -3,7 +3,7 @@ import { $$, T, A, Hooks, $ } from 'frontend';
 import { UnhandledCaseError } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
-import { getTrackFilterArtist } from 'frontend/logic/music/tags';
+import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { PlaybackBar } from './PlaybackBar';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
