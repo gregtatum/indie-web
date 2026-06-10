@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { A, $, Hooks } from 'frontend';
 import {
-  localStorageEntries,
+  persistedState,
   MusicPlaybackResume,
-} from 'frontend/logic/local-storage';
+} from 'frontend/logic/persisted-state';
 
 const MUSIC_PLAYBACK_RESUME_TIMEOUT_MS = 10_000;
 const MUSIC_PLAYBACK_RESUME_INTERVAL_MS = 5_000;
@@ -67,7 +67,7 @@ export function useAudioPlayer(): AudioPlayerState {
     }
     didAttemptResumeRef.current = true;
 
-    const resume = localStorageEntries.musicPlaybackResume.read();
+    const resume = persistedState.musicPlaybackResume.read();
     if (!resume) {
       return;
     }
@@ -77,7 +77,7 @@ export function useAudioPlayer(): AudioPlayerState {
       resume.serverId !== serverId ||
       resume.serverUrl !== serverUrl
     ) {
-      localStorageEntries.musicPlaybackResume.remove();
+      persistedState.musicPlaybackResume.remove();
       return;
     }
 
@@ -172,7 +172,7 @@ export function useAudioPlayer(): AudioPlayerState {
   // Handle persisting of the audio playback on refresh.
   React.useEffect(() => {
     if ((status !== 'loading' && status !== 'playing') || !trackPath) {
-      localStorageEntries.musicPlaybackResume.remove();
+      persistedState.musicPlaybackResume.remove();
       lastPersistedSnapshotRef.current = null;
       return;
     }
@@ -213,7 +213,7 @@ export function useAudioPlayer(): AudioPlayerState {
         return;
       }
       lastPersistedSnapshotRef.current = snapshot;
-      localStorageEntries.musicPlaybackResume.write(snapshotValue);
+      persistedState.musicPlaybackResume.write(snapshotValue);
     }
   }, [serverId, serverUrl, status, trackPath]);
 

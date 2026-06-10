@@ -3,8 +3,8 @@ import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import {
   clearAllLocalStorageForUserDataRemoval,
-  localStorageEntries,
-} from 'frontend/logic/local-storage';
+  persistedState,
+} from 'frontend/logic/persisted-state';
 import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 
@@ -27,7 +27,7 @@ export function setDropboxAccessToken(
     expires,
     refreshToken,
   };
-  localStorageEntries.dropboxOauth.write(oauth);
+  persistedState.dropboxOauth.write(oauth);
 
   return {
     type: 'set-dropbox-oauth' as const,
@@ -179,7 +179,7 @@ export function hideEditor(flag: boolean) {
 }
 
 export function setEditorOnly(isEditorOnly: boolean) {
-  localStorageEntries.appEditorOnly.write(isEditorOnly);
+  persistedState.appEditorOnly.write(isEditorOnly);
   return {
     type: 'set-editor-only' as const,
     isEditorOnly,
@@ -290,7 +290,7 @@ export function setAreStemsActive(isActive: boolean) {
 }
 
 export function setOpenAIApiKey(apiKey: string) {
-  localStorageEntries.openAIAPIKey.write(apiKey);
+  persistedState.openAIAPIKey.write(apiKey);
   return {
     type: 'set-open-ai-api-key' as const,
     apiKey,

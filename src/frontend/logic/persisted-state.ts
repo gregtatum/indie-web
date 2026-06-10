@@ -169,7 +169,12 @@ class JsonStorage<T, DefaultValue> extends Storage<T | DefaultValue> {
   }
 }
 
-export const localStorageEntries = {
+/**
+ * Lightweight durable client-side state that should survive page refreshes and browser
+ * restarts, such as runtime selections, user preferences, OAuth handoff data, and
+ * resumable UI state. Object keys are the storage keys.
+ */
+export const persistedState = {
   fileStoreServer: new StringStorage(),
   appHideEditor: new BooleanStorage(),
   appEditorOnly: new BooleanStorage(),
@@ -280,7 +285,7 @@ export const localStorageEntries = {
 };
 
 // Dynamically apply the key names to the classes to avoid duplicating the definitions.
-for (const [key, entry] of Object.entries(localStorageEntries)) {
+for (const [key, entry] of Object.entries(persistedState)) {
   if (entry instanceof Storage) {
     entry.applyKey(key);
   }

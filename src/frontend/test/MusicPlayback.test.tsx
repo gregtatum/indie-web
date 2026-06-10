@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { A, T, $ } from 'frontend';
-import { localStorageEntries } from 'frontend/logic/local-storage';
+import { persistedState } from 'frontend/logic/persisted-state';
 import {
   mockMusicMediaElement,
   removeMusicIndex,
@@ -58,7 +58,7 @@ const TRACKS: T.TrackMetadata[] = [
   },
 ];
 
-const MUSIC_PLAYBACK_RESUME_KEY = localStorageEntries.musicPlaybackResume.key;
+const MUSIC_PLAYBACK_RESUME_KEY = persistedState.musicPlaybackResume.key;
 
 const jestDescribe = globalThis.describe;
 let describe: (name: string, fn: () => void) => void = jestDescribe;
@@ -86,14 +86,14 @@ const { getServer } = useMusicTestServer();
 
 // Provide offset values so that tests render somewhat realistically.
 beforeEach(() => {
-  localStorageEntries.musicPlaybackResume.remove();
+  persistedState.musicPlaybackResume.remove();
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
   mockMusicMediaElement();
 });
 
 afterEach(async () => {
-  localStorageEntries.musicPlaybackResume.remove();
+  persistedState.musicPlaybackResume.remove();
   await removeMusicIndex(getServer());
 });
 
@@ -415,7 +415,7 @@ describe('PlaybackBar', () => {
       return audio;
     });
     const server = getServer();
-    localStorageEntries.musicPlaybackResume.write({
+    persistedState.musicPlaybackResume.write({
       serverId: 'test-music',
       serverUrl: server.baseUrl,
       trackPath: '/music/b.mp3',
@@ -455,7 +455,7 @@ describe('PlaybackBar', () => {
 
   it('does not resume expired playback from localStorage', async () => {
     const server = getServer();
-    localStorageEntries.musicPlaybackResume.write({
+    persistedState.musicPlaybackResume.write({
       serverId: 'test-music',
       serverUrl: server.baseUrl,
       trackPath: '/music/b.mp3',
@@ -466,7 +466,7 @@ describe('PlaybackBar', () => {
     const { store } = setup();
 
     await waitFor(() => {
-      expect(localStorageEntries.musicPlaybackResume.read()).toBeNull();
+      expect(persistedState.musicPlaybackResume.read()).toBeNull();
     });
     expect($.getMusicPlaybackTrackPath(store.getState())).toBeNull();
     expect($.getMusicPlaybackStatus(store.getState())).toBe('idle');

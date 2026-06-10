@@ -5,12 +5,12 @@ import { FilesIndex } from 'frontend/logic/files-index';
 import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 import { toFileStoreName } from 'frontend/logic/app-logic';
-import { localStorageEntries } from 'frontend/logic/local-storage';
+import { persistedState } from 'frontend/logic/persisted-state';
 import { languageCoachReducer } from './language-coach';
 import { musicReducer } from './music';
 
 function dropboxOauth(
-  state: T.DropboxOauth | null = localStorageEntries.dropboxOauth.read(),
+  state: T.DropboxOauth | null = persistedState.dropboxOauth.read(),
   action: T.Action,
 ): T.DropboxOauth | null {
   switch (action.type) {
@@ -24,7 +24,7 @@ function dropboxOauth(
 }
 
 export function serverId(
-  state: string | null = localStorageEntries.fileStoreServer.read(),
+  state: string | null = persistedState.fileStoreServer.read(),
   action: T.Action,
 ): string | null {
   switch (action.type) {
@@ -32,14 +32,14 @@ export function serverId(
     case 'change-file-system': {
       const { fileStoreServer } = action;
       if (fileStoreServer) {
-        localStorageEntries.fileStoreServer.write(fileStoreServer.id);
+        persistedState.fileStoreServer.write(fileStoreServer.id);
       } else {
-        localStorageEntries.fileStoreServer.remove();
+        persistedState.fileStoreServer.remove();
       }
       return action.fileStoreServer?.id ?? null;
     }
     case 'view-music': {
-      localStorageEntries.fileStoreServer.write(action.fileStoreServer.id);
+      persistedState.fileStoreServer.write(action.fileStoreServer.id);
       return action.fileStoreServer.id;
     }
     default:
@@ -48,14 +48,14 @@ export function serverId(
 }
 
 function servers(
-  state: T.FileStoreServer[] = localStorageEntries.fileStoreServers.read(),
+  state: T.FileStoreServer[] = persistedState.fileStoreServers.read(),
   action: T.Action,
 ): T.FileStoreServer[] {
   switch (action.type) {
     case 'add-server': {
       const { server } = action;
       const servers = [...state, server];
-      localStorageEntries.fileStoreServers.write(servers);
+      persistedState.fileStoreServers.write(servers);
       return servers;
     }
     case 'remove-server': {
@@ -64,7 +64,7 @@ function servers(
           server.url !== action.server.url &&
           server.name !== action.server.name,
       );
-      localStorageEntries.fileStoreServers.write(servers);
+      persistedState.fileStoreServers.write(servers);
       return servers;
     }
     case 'update-server': {
@@ -78,7 +78,7 @@ function servers(
           servers.push(server);
         }
       }
-      localStorageEntries.fileStoreServers.write(servers);
+      persistedState.fileStoreServers.write(servers);
       return servers;
     }
     default:
@@ -437,16 +437,16 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
 }
 
 function hideEditor(
-  state: boolean = localStorageEntries.appHideEditor.read() ?? true,
+  state: boolean = persistedState.appHideEditor.read() ?? true,
   action: T.Action,
 ): boolean {
   switch (action.type) {
     case 'hide-editor':
-      localStorageEntries.appHideEditor.write(action.flag);
+      persistedState.appHideEditor.write(action.flag);
       return action.flag;
     case 'set-editor-only':
       if (action.isEditorOnly) {
-        localStorageEntries.appHideEditor.write(false);
+        persistedState.appHideEditor.write(false);
         return false;
       }
       return state;
@@ -456,7 +456,7 @@ function hideEditor(
 }
 
 function getDefaultEditorOnly() {
-  const value = localStorageEntries.appEditorOnly.read();
+  const value = persistedState.appEditorOnly.read();
   if (value === null) {
     return window.innerWidth <= 500;
   }
@@ -472,7 +472,7 @@ function editorOnly(
       return action.isEditorOnly;
     case 'hide-editor':
       if (action.flag) {
-        localStorageEntries.appEditorOnly.write(false);
+        persistedState.appEditorOnly.write(false);
         return false;
       }
       return state;
@@ -522,7 +522,7 @@ function shouldHideHeader(state: boolean = false, action: T.Action): boolean {
  * Remember the previously viewed file system name.
  */
 function getSavedFSName() {
-  return toFileStoreName(localStorageEntries.fileStoreName.read()) ?? 'browser';
+  return toFileStoreName(persistedState.fileStoreName.read()) ?? 'browser';
 }
 
 function currentFileStoreName(
@@ -532,13 +532,13 @@ function currentFileStoreName(
   switch (action.type) {
     case 'change-file-system': {
       const { fileStoreName } = action;
-      localStorageEntries.fileStoreName.write(fileStoreName);
+      persistedState.fileStoreName.write(fileStoreName);
       return fileStoreName;
     }
     case 'view-list-files':
       return action.fileStoreName;
     case 'view-music':
-      localStorageEntries.fileStoreName.write('server');
+      persistedState.fileStoreName.write('server');
       return 'server';
     default:
       return state;
@@ -610,7 +610,7 @@ function workerClient(
 }
 
 function openAIApiKey(
-  state: string | null = localStorageEntries.openAIAPIKey.read(),
+  state: string | null = persistedState.openAIAPIKey.read(),
   action: T.Action,
 ): string | null {
   switch (action.type) {
@@ -622,12 +622,12 @@ function openAIApiKey(
 }
 
 function hasOnboarded(
-  state: boolean = localStorageEntries.hasOnboarded.read() ?? false,
+  state: boolean = persistedState.hasOnboarded.read() ?? false,
   action: T.Action,
 ): boolean {
   switch (action.type) {
     case 'set-has-onboarded':
-      localStorageEntries.hasOnboarded.write(action.value);
+      persistedState.hasOnboarded.write(action.value);
       return action.value;
     default:
       return state;
@@ -638,16 +638,16 @@ function getEditorAutocompleteDefaults(): {
   markdown: boolean;
   chordpro: boolean;
 } {
-  return localStorageEntries.editorAutocompleteSettings.read();
+  return persistedState.editorAutocompleteSettings.read();
 }
 
 function experimentalFeatures(
-  state: boolean = localStorageEntries.experimentalFeatures.read() ?? false,
+  state: boolean = persistedState.experimentalFeatures.read() ?? false,
   action: T.Action,
 ): boolean {
   switch (action.type) {
     case 'set-experimental-features':
-      localStorageEntries.experimentalFeatures.write(action.value);
+      persistedState.experimentalFeatures.write(action.value);
       return action.value;
     default:
       return state;
@@ -660,7 +660,7 @@ function fileStoreCacheEnabled(
 ): boolean {
   switch (action.type) {
     case 'set-file-store-cache-enabled':
-      localStorageEntries.fileStoreCacheEnabled.write(action.value);
+      persistedState.fileStoreCacheEnabled.write(action.value);
       return action.value;
     default:
       return state;
@@ -668,7 +668,7 @@ function fileStoreCacheEnabled(
 }
 
 function getFileStoreCacheEnabledDefault(): boolean {
-  return localStorageEntries.fileStoreCacheEnabled.read() ?? true;
+  return persistedState.fileStoreCacheEnabled.read() ?? true;
 }
 
 function editorAutocompleteSettings(
@@ -684,7 +684,7 @@ function editorAutocompleteSettings(
         ...state,
         [action.editor]: action.value,
       };
-      localStorageEntries.editorAutocompleteSettings.write(nextState);
+      persistedState.editorAutocompleteSettings.write(nextState);
       return nextState;
     }
     default:

@@ -4,7 +4,7 @@ import { UnhandledCaseError } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
-import { localStorageEntries } from 'frontend/logic/local-storage';
+import { persistedState } from 'frontend/logic/persisted-state';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { PlaybackBar } from './PlaybackBar';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
@@ -138,7 +138,7 @@ function clampColumnWidths(prev: ColumnWidths, maxWidth: number): ColumnWidths {
 }
 
 function loadColumnWidths(): ColumnWidths {
-  const columnWidths = localStorageEntries.musicTrackColumnWidths.read();
+  const columnWidths = persistedState.musicTrackColumnWidths.read();
   if (columnWidths) {
     return {
       artist: Math.max(COL_MIN_WIDTH, columnWidths.artist),
@@ -154,7 +154,7 @@ function useColumnWidths() {
 
   React.useEffect(() => {
     // TODO - Let's debounce this to something like 500ms.
-    localStorageEntries.musicTrackColumnWidths.write(columnWidths);
+    persistedState.musicTrackColumnWidths.write(columnWidths);
   }, [columnWidths]);
 
   return { columnWidths, setColumnWidths };

@@ -4,7 +4,7 @@ const fetchMockJest =
   require('fetch-mock-jest') as typeof import('fetch-mock-jest');
 import { Headers, Request, Response } from 'node-fetch';
 import { resetTestGeneration } from './fixtures';
-import { localStorageEntries } from 'frontend/logic/local-storage';
+import { persistedState } from 'frontend/logic/persisted-state';
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { Blob } from 'node:buffer';
@@ -34,7 +34,7 @@ function simpleDigest256(_scheme: string, buffer: Uint8Array): ArrayBuffer {
 }
 
 beforeEach(function () {
-  localStorageEntries.musicPlaybackResume.remove();
+  persistedState.musicPlaybackResume.remove();
   jest.resetModules();
   jest.spyOn(window, 'scrollBy').mockImplementation();
   jest.spyOn(console, 'warn').mockImplementation((...args) => {
