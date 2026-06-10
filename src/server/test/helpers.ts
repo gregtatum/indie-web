@@ -151,6 +151,7 @@ export const MINIMAL_JPEG = Buffer.from([
 interface Mp3Tags {
   title: string;
   artist: string;
+  albumArtist: string;
   album: string;
   genre: string;
   apic: Buffer;
@@ -183,6 +184,9 @@ export function buildMp3WithTags(tags: Partial<Mp3Tags> = {}): Buffer {
   }
   if (tags.artist) {
     frames.push(textFrame('TPE1', tags.artist));
+  }
+  if (tags.albumArtist) {
+    frames.push(textFrame('TPE2', tags.albumArtist));
   }
   if (tags.album) {
     frames.push(textFrame('TALB', tags.album));

@@ -28,6 +28,7 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/Indie/Andrew Bird/The Mysterious Production of Eggs/Sovay.mp3',
     title: 'Sovay',
     artist: 'Andrew Bird',
+    albumArtist: null,
     album: 'The Mysterious Production of Eggs',
     genre: 'Indie',
     track: 1,
@@ -41,6 +42,7 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/Jazz/Miles Davis/Kind of Blue/All Blues.mp3',
     title: 'All Blues',
     artist: 'Miles Davis',
+    albumArtist: null,
     album: 'Kind of Blue',
     genre: 'Jazz',
     track: 2,
@@ -58,6 +60,7 @@ function makeTracks(count: number): T.TrackMetadata[] {
     path: `/Mass Edit/Song ${i}.mp3`,
     title: `Song ${i}`,
     artist: 'Mass Artist',
+    albumArtist: null,
     album: 'Mass Album',
     genre: 'Mass Genre',
     track: i + 1,
@@ -81,7 +84,7 @@ function setup(search = '', tracks = TRACKS) {
     `${FAKE_SERVER.url}/music/music-index`,
     {
       body: JSON.stringify({
-        version: 4,
+        version: 6,
         scannedAt: '2024-01-01T00:00:00Z',
         tracks,
       }),
@@ -128,6 +131,46 @@ function getParams(search: string): URLSearchParams {
 }
 
 describe('music URL serialization', () => {
+  it('filters artists by album artist first and falls back to artist', async () => {
+    const tracks: T.TrackMetadata[] = [
+      {
+        ...TRACKS[0],
+        path: '/Dance/Daft Punk/Random Access Memories/Instant Crush.mp3',
+        title: 'Instant Crush',
+        artist: 'Daft Punk feat. Julian Casablancas',
+        albumArtist: 'Daft Punk',
+        album: 'Random Access Memories',
+        genre: 'Dance',
+      },
+      {
+        ...TRACKS[0],
+        path: '/Indie/Andrew Bird/The Mysterious Production of Eggs/Sovay.mp3',
+        title: 'Sovay',
+        artist: 'Andrew Bird',
+        albumArtist: '',
+      },
+    ];
+    setup('', tracks);
+
+    const artistPanel = screen.getByRole('listbox', { name: 'artist' });
+    fireEvent.click(
+      await within(artistPanel).findByRole('option', { name: 'Daft Punk' }),
+    );
+
+    expect(await screen.findByText('Instant Crush')).toBeTruthy();
+    expect(screen.queryByText('Sovay')).toBeNull();
+
+    fireEvent.click(
+      within(artistPanel).getByRole('option', { name: 'Daft Punk' }),
+    );
+    fireEvent.click(
+      await within(artistPanel).findByRole('option', { name: 'Andrew Bird' }),
+    );
+
+    expect(await screen.findByText('Sovay')).toBeTruthy();
+    expect(screen.queryByText('Instant Crush')).toBeNull();
+  });
+
   it('updates the URL when clicking through filters and track selections', async () => {
     const { getLocation } = setup();
 

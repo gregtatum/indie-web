@@ -41,6 +41,7 @@ const INDEXED_DETAIL_FIELD_KEYS: Partial<
 > = {
   title: 'title',
   artist: 'artist',
+  albumArtist: 'albumArtist',
   album: 'album',
   genre: 'genre',
   trackNum: 'track',
@@ -205,6 +206,8 @@ function applyIndexedTrackChanges(
       updated.title = value || null;
     } else if (frameId === 'TPE1') {
       updated.artist = value || null;
+    } else if (frameId === 'TPE2') {
+      updated.albumArtist = value || null;
     } else if (frameId === 'TALB') {
       updated.album = value || null;
     } else if (frameId === 'TCON') {

@@ -14,7 +14,7 @@ import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
-const MUSIC_INDEX_VERSION = 5 as const;
+export const MUSIC_INDEX_VERSION = 6 as const;
 
 const COVER_ART_FILENAMES = [
   'cover.jpg',
@@ -463,6 +463,7 @@ async function performScan(
     } else {
       let title: string | null = null;
       let artist: string | null = null;
+      let albumArtist: string | null = null;
       let album: string | null = null;
       let genre: string | null = null;
       let track: number | null = null;
@@ -472,6 +473,7 @@ async function performScan(
         const meta = await parseFile(fullPath, { duration: true });
         title = meta.common.title ?? null;
         artist = meta.common.artist ?? null;
+        albumArtist = meta.common.albumartist ?? null;
         album = meta.common.album ?? null;
         genre = meta.common.genre?.[0] ?? null;
         track = meta.common.track.no ?? null;
@@ -499,6 +501,7 @@ async function performScan(
         path: clientPath,
         title,
         artist,
+        albumArtist,
         album,
         genre,
         track,
@@ -694,6 +697,9 @@ async function updateIndexAfterTrackTagWrites(
             break;
           case 'TPE1':
             updatedTrack.artist = value || null;
+            break;
+          case 'TPE2':
+            updatedTrack.albumArtist = value || null;
             break;
           case 'TALB':
             updatedTrack.album = value || null;

@@ -21,6 +21,7 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/music/a.mp3',
     title: 'Song A',
     artist: 'Artist A',
+    albumArtist: null,
     album: 'Album A',
     genre: 'Rock',
     track: 1,
@@ -34,6 +35,7 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/music/b.mp3',
     title: 'Song B',
     artist: 'Artist B',
+    albumArtist: null,
     album: 'Album A',
     genre: 'Rock',
     track: 2,
@@ -47,6 +49,7 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/music/c.mp3',
     title: 'Song C',
     artist: 'Artist A',
+    albumArtist: null,
     album: 'Album B',
     genre: 'Jazz',
     track: 1,
@@ -72,7 +75,7 @@ function setup(tracks = TRACKS) {
     `${FAKE_SERVER.url}/music/music-index`,
     {
       body: JSON.stringify({
-        version: 4,
+        version: 6,
         scannedAt: '2024-01-01T00:00:00Z',
         tracks,
       }),

@@ -6,6 +6,7 @@ exports[`upgradeMusicIndex v1 → current upgrades a v1 index to current 1`] = `
   "tracks": [
     {
       "album": "Test Album",
+      "albumArtist": null,
       "artist": "Test Artist",
       "coverArt": null,
       "duration": 180.5,
@@ -19,6 +20,7 @@ exports[`upgradeMusicIndex v1 → current upgrades a v1 index to current 1`] = `
     },
     {
       "album": null,
+      "albumArtist": null,
       "artist": null,
       "coverArt": null,
       "duration": null,
@@ -31,7 +33,7 @@ exports[`upgradeMusicIndex v1 → current upgrades a v1 index to current 1`] = `
       "track": null,
     },
   ],
-  "version": 5,
+  "version": 6,
 }
 `;
 
@@ -41,6 +43,7 @@ exports[`upgradeMusicIndex v2 → current upgrades a v2 index to current 1`] = `
   "tracks": [
     {
       "album": "Test Album",
+      "albumArtist": null,
       "artist": "Test Artist",
       "coverArt": null,
       "duration": 180.5,
@@ -54,6 +57,7 @@ exports[`upgradeMusicIndex v2 → current upgrades a v2 index to current 1`] = `
     },
     {
       "album": null,
+      "albumArtist": null,
       "artist": null,
       "coverArt": null,
       "duration": null,
@@ -66,7 +70,7 @@ exports[`upgradeMusicIndex v2 → current upgrades a v2 index to current 1`] = `
       "track": null,
     },
   ],
-  "version": 5,
+  "version": 6,
 }
 `;
 
@@ -76,6 +80,7 @@ exports[`upgradeMusicIndex v3 → current upgrades a v3 index to current 1`] = `
   "tracks": [
     {
       "album": "Test Album",
+      "albumArtist": null,
       "artist": "Test Artist",
       "coverArt": null,
       "duration": 180.5,
@@ -89,6 +94,7 @@ exports[`upgradeMusicIndex v3 → current upgrades a v3 index to current 1`] = `
     },
     {
       "album": null,
+      "albumArtist": null,
       "artist": null,
       "coverArt": null,
       "duration": null,
@@ -101,7 +107,7 @@ exports[`upgradeMusicIndex v3 → current upgrades a v3 index to current 1`] = `
       "track": null,
     },
   ],
-  "version": 5,
+  "version": 6,
 }
 `;
 
@@ -111,6 +117,7 @@ exports[`upgradeMusicIndex v4 → current upgrades a v4 index to current 1`] = `
   "tracks": [
     {
       "album": "Test Album",
+      "albumArtist": null,
       "artist": "Test Artist",
       "coverArt": "/Artist/Album/Folder.jpg",
       "duration": 180.5,
@@ -124,6 +131,7 @@ exports[`upgradeMusicIndex v4 → current upgrades a v4 index to current 1`] = `
     },
     {
       "album": null,
+      "albumArtist": null,
       "artist": null,
       "coverArt": null,
       "duration": null,
@@ -136,6 +144,43 @@ exports[`upgradeMusicIndex v4 → current upgrades a v4 index to current 1`] = `
       "track": null,
     },
   ],
-  "version": 5,
+  "version": 6,
+}
+`;
+
+exports[`upgradeMusicIndex v5 → current upgrades a v5 index to current 1`] = `
+{
+  "scannedAt": "2025-01-01T00:00:00.000Z",
+  "tracks": [
+    {
+      "album": "Test Album",
+      "albumArtist": null,
+      "artist": "Test Artist",
+      "coverArt": "/Artist/Album/Folder.jpg",
+      "duration": 180.5,
+      "genre": "Rock",
+      "hasEmbeddedArt": false,
+      "mtime": "2024-12-01T00:00:00.000Z",
+      "path": "/Artist/Album/track.mp3",
+      "size": 3145728,
+      "title": "Test Track",
+      "track": 1,
+    },
+    {
+      "album": null,
+      "albumArtist": null,
+      "artist": null,
+      "coverArt": null,
+      "duration": null,
+      "genre": null,
+      "hasEmbeddedArt": false,
+      "mtime": "2024-11-01T00:00:00.000Z",
+      "path": "/no-tags.mp3",
+      "size": 1024,
+      "title": null,
+      "track": null,
+    },
+  ],
+  "version": 6,
 }
 `;

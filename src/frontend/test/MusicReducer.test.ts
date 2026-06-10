@@ -5,6 +5,7 @@ const BASE_TRACK: T.TrackMetadata = {
   path: '/base.mp3',
   title: 'Base',
   artist: 'Base Artist',
+  albumArtist: null,
   album: 'Base Album',
   genre: 'Base Genre',
   track: 1,

@@ -56,6 +56,8 @@ export interface TrackMetadata {
   path: string;
   title: string | null;
   artist: string | null;
+  /** Album-level artist used for library grouping; falls back to artist when missing. */
+  albumArtist: string | null;
   album: string | null;
   genre: string | null;
   /** Track number within its album. */
@@ -94,7 +96,7 @@ export interface TrackMetadata {
  * backfilled fields (e.g. genre: null) are incomplete vs. a fresh scan.
  */
 export interface MusicIndex {
-  version: 5;
+  version: 6;
   scannedAt: string;
   tracks: TrackMetadata[];
 }

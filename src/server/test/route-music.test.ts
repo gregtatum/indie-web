@@ -2,7 +2,7 @@ import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { musicRoute } from '../route-music.ts';
+import { MUSIC_INDEX_VERSION, musicRoute } from '../route-music.ts';
 import {
   createTestServer,
   buildMp3WithTags,
@@ -78,13 +78,14 @@ describe('POST /music/music-index/scan', () => {
   );
 
   it(
-    'extracts ID3 tags (title, artist, album) from mp3 files',
+    'extracts ID3 tags (title, artist, album artist, album) from mp3 files',
     withLogs([], async () => {
       await writeFile(
         join(server.mountDir, 'tagged.mp3'),
         buildMp3WithTags({
           title: 'My Song',
           artist: 'My Artist',
+          albumArtist: 'My Album Artist',
           album: 'My Album',
         }),
       );
@@ -99,6 +100,7 @@ describe('POST /music/music-index/scan', () => {
       assert.ok(track, 'tagged.mp3 should appear in the index');
       assert.equal(track.title, 'My Song');
       assert.equal(track.artist, 'My Artist');
+      assert.equal(track.albumArtist, 'My Album Artist');
       assert.equal(track.album, 'My Album');
     }),
   );
@@ -507,7 +509,7 @@ describe('POST /music/music-index/scan stale-cache bypass', () => {
       });
       assert.equal(res.status, 200);
       const index = await res.json();
-      assert.equal(index.version, 5);
+      assert.equal(index.version, MUSIC_INDEX_VERSION);
 
       const track = index.tracks.find(
         (t: { path: string }) => t.path === '/cached.mp3',

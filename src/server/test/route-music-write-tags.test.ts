@@ -1,6 +1,6 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFile, readFile } from 'node:fs/promises';
+import { writeFile, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import type { IAudioMetadata, ITag } from 'music-metadata';
@@ -268,6 +268,47 @@ describe('POST /music/write-track-tags — bulk semantics', () => {
       const secondMeta = await parseFile(secondPath);
       assert.deepEqual(firstMeta.common.genre, ['New Genre']);
       assert.deepEqual(secondMeta.common.genre, ['New Genre']);
+    }),
+  );
+
+  it(
+    'patches album artist in the durable music index',
+    withLogs([], async () => {
+      const filePath = join(server.mountDir, 'indexed-album-artist.mp3');
+      await writeFile(
+        filePath,
+        buildMp3WithTags({
+          title: 'Indexed Album Artist',
+          artist: 'Track Artist',
+          albumArtist: 'Old Album Artist',
+        }),
+      );
+
+      const scanRes = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+      assert.equal(scanRes.status, 200);
+
+      const res = await writeTrackTags(server, '/indexed-album-artist.mp3', [
+        { frameId: 'TPE2', value: 'New Album Artist' },
+      ]);
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), {
+        updated: ['/indexed-album-artist.mp3'],
+        errors: [],
+        index: { status: 'updated', message: null },
+      });
+
+      const index = JSON.parse(
+        await readFile(join(server.mountDir, '.music-index.json'), 'utf-8'),
+      );
+      const track = index.tracks.find(
+        (t: { path: string }) => t.path === '/indexed-album-artist.mp3',
+      );
+      assert.ok(track);
+      assert.equal(track.artist, 'Track Artist');
+      assert.equal(track.albumArtist, 'New Album Artist');
+      await rm(join(server.mountDir, '.music-index.json'));
     }),
   );
 

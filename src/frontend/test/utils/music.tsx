@@ -24,6 +24,7 @@ export function buildMp3WithTags(
   tags: Partial<{
     title: string;
     artist: string;
+    albumArtist: string;
     album: string;
     genre: string;
   }>,
@@ -47,6 +48,9 @@ export function buildMp3WithTags(
   }
   if (tags.artist) {
     frames.push(textFrame('TPE1', tags.artist));
+  }
+  if (tags.albumArtist) {
+    frames.push(textFrame('TPE2', tags.albumArtist));
   }
   if (tags.album) {
     frames.push(textFrame('TALB', tags.album));
@@ -84,16 +88,15 @@ export function buildMinimalMp3(): Buffer {
 export function writeMusicIndex(
   server: MusicTestServer,
   tracks: Types.TrackMetadata[],
-  needsRescan = false,
 ): void {
+  const index: Types.MusicIndex = {
+    version: 6,
+    scannedAt: '2024-01-01T00:00:00Z',
+    tracks,
+  };
   writeFileSync(
     join(server.mountDir, '.music-index.json'),
-    JSON.stringify({
-      version: 4,
-      scannedAt: '2024-01-01T00:00:00Z',
-      tracks,
-      needsRescan,
-    }),
+    JSON.stringify(index),
   );
 }
 

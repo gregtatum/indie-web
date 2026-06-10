@@ -299,6 +299,10 @@ export type TrackTagsLoadState =
   | { status: 'loaded'; data: TrackTagsResponse }
   | { status: 'error'; message: string };
 
+export function getTrackFilterArtist(track: TrackMetadata): string | null {
+  return track.albumArtist || track.artist;
+}
+
 /**
  * e.g. { title: "", artist: "", albumArtist: "", … }
  */
@@ -355,6 +359,9 @@ export function detailFieldValues(
     }
     if (!state.artist && track.artist) {
       state.artist = track.artist;
+    }
+    if (!state.albumArtist && track.albumArtist) {
+      state.albumArtist = track.albumArtist;
     }
     if (!state.album && track.album) {
       state.album = track.album;

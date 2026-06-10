@@ -19,6 +19,7 @@ import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
 import { FileStoreError } from 'frontend/logic/file-store';
 import { IDBError } from 'frontend/logic/file-store/indexeddb-fs';
+import { getTrackFilterArtist } from 'frontend/logic/music/tags';
 
 function getMetadataFromCache(
   cache: T.ListFilesCache,
@@ -183,21 +184,22 @@ export function setMusicTracks(
         case 'genre':
           available = new Set(
             filteredTracks.flatMap((track) =>
-              track.genre === null ? [] : [track.genre],
+              track.genre ? [track.genre] : [],
             ),
           );
           break;
         case 'artist':
           available = new Set(
-            filteredTracks.flatMap((track) =>
-              track.artist === null ? [] : [track.artist],
-            ),
+            filteredTracks.flatMap((track) => {
+              const artist = getTrackFilterArtist(track);
+              return artist ? [artist] : [];
+            }),
           );
           break;
         case 'album':
           available = new Set(
             filteredTracks.flatMap((track) =>
-              track.album === null ? [] : [track.album],
+              track.album ? [track.album] : [],
             ),
           );
           break;
@@ -216,23 +218,18 @@ export function setMusicTracks(
       switch (panel) {
         case 'genre':
           filteredTracks = filteredTracks.filter((track) => {
-            return (
-              track.genre !== null && validSelections.includes(track.genre)
-            );
+            return track.genre && validSelections.includes(track.genre);
           });
           break;
         case 'artist':
           filteredTracks = filteredTracks.filter((track) => {
-            return (
-              track.artist !== null && validSelections.includes(track.artist)
-            );
+            const artist = getTrackFilterArtist(track);
+            return artist && validSelections.includes(artist);
           });
           break;
         case 'album':
           filteredTracks = filteredTracks.filter((track) => {
-            return (
-              track.album !== null && validSelections.includes(track.album)
-            );
+            return track.album && validSelections.includes(track.album);
           });
           break;
         default:

@@ -2,6 +2,7 @@ import { createSelector } from 'reselect';
 import * as T from 'frontend/@types';
 import { State } from 'frontend/@types';
 import { UnhandledCaseError } from 'frontend/utils';
+import { getTrackFilterArtist } from 'frontend/logic/music/tags';
 import type {
   MusicPlaybackStatus,
   FolderArtSaveStatus,
@@ -53,9 +54,10 @@ function filterByPanel(
         (t) => t.genre && selections.includes(t.genre),
       );
     case 'artist':
-      return filteredTracks.filter(
-        (t) => t.artist && selections.includes(t.artist),
-      );
+      return filteredTracks.filter((t) => {
+        const artist = getTrackFilterArtist(t);
+        return artist && selections.includes(artist);
+      });
     case 'album':
       return filteredTracks.filter(
         (t) => t.album && selections.includes(t.album),
