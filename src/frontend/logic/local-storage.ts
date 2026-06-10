@@ -19,13 +19,11 @@ export type MusicTrackColumnWidths = {
   album: number;
 };
 
-type Parser<T> = (value: unknown) => T | null;
-
 /**
  * Wraps one localStorage key with shared read/write/remove behavior. Subclasses
  * own the raw string conversion for each persisted shape.
  */
-abstract class LocalStorageEntry<T> {
+abstract class Storage<T> {
   readonly key: string;
 
   constructor(key: string) {
@@ -56,7 +54,7 @@ abstract class LocalStorageEntry<T> {
 /**
  * Stores plain strings without JSON encoding. Writing null removes the key.
  */
-class StringEntry extends LocalStorageEntry<string | null> {
+class StringStorage extends Storage<string | null> {
   protected readRaw(raw: string | null): string | null {
     return raw;
   }
@@ -70,7 +68,7 @@ class StringEntry extends LocalStorageEntry<string | null> {
  * Stores booleans as "true" / "false" strings. Unknown values read as null so
  * callers can choose the correct feature default.
  */
-class BooleanEntry extends LocalStorageEntry<boolean | null> {
+class BooleanStorage extends Storage<boolean | null> {
   protected readRaw(raw: string | null): boolean | null {
     if (raw === 'true') {
       return true;
@@ -89,7 +87,7 @@ class BooleanEntry extends LocalStorageEntry<boolean | null> {
 /**
  * Stores numbers as strings for legacy layout values like splitter offsets.
  */
-class NumberEntry extends LocalStorageEntry<number | null> {
+class NumberEntry extends Storage<number | null> {
   protected readRaw(raw: string | null): number | null {
     if (raw === null) {
       return null;
@@ -107,17 +105,21 @@ class NumberEntry extends LocalStorageEntry<number | null> {
  * Stores structured values as JSON and validates only their shape on read.
  * Malformed or structurally invalid values fall back without mutating storage.
  */
-class JsonEntry<T> extends LocalStorageEntry<T> {
-  private parse: Parser<T>;
-  private defaultValue: T;
+class JsonStorage<T, DefaultValue> extends Storage<T | DefaultValue> {
+  private parse: (value: unknown) => T | null;
+  private defaultValue: DefaultValue;
 
-  constructor(key: string, parse: Parser<T>, defaultValue: T) {
-    super(key);
-    this.parse = parse;
-    this.defaultValue = defaultValue;
+  constructor(options: {
+    key: string;
+    defaultValue: DefaultValue;
+    parse(value: unknown): T | null;
+  }) {
+    super(options.key);
+    this.parse = options.parse;
+    this.defaultValue = options.defaultValue;
   }
 
-  protected readRaw(raw: string | null): T {
+  protected readRaw(raw: string | null): T | DefaultValue {
     if (raw === null) {
       return this.defaultValue;
     }
@@ -129,152 +131,122 @@ class JsonEntry<T> extends LocalStorageEntry<T> {
     }
   }
 
-  protected writeRaw(value: T): string {
+  protected writeRaw(value: T | DefaultValue): string {
     return JSON.stringify(value);
   }
 }
 
-/**
- * Validates the persisted OAuth token bundle without checking expiration.
- */
-function parseDropboxOauth(value: unknown): T.DropboxOauth | null {
-  const accessToken = getStringProp(value, 'accessToken');
-  const refreshToken = getStringProp(value, 'refreshToken');
-  const expires = getNumberProp(value, 'expires');
-  if (accessToken !== null && refreshToken !== null && expires !== null) {
-    return { accessToken, refreshToken, expires };
-  }
-  return null;
-}
-
-/**
- * Keeps backward compatibility with older saved servers that did not have an id
- * or storeType by deriving the same defaults the old reader used.
- */
-function parseFileStoreServers(value: unknown): T.FileStoreServer[] | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-
-  const servers: T.FileStoreServer[] = [];
-  for (const serverUnknown of value) {
-    const url = getStringProp(serverUnknown, 'url');
-    const name = getStringProp(serverUnknown, 'name');
-    let id = getStringProp(serverUnknown, 'id');
-    const rawStoreType = getStringProp(serverUnknown, 'storeType');
-    const storeType: T.FileStoreServer['storeType'] =
-      rawStoreType === 'music' ? 'music' : 'files';
-    if (url && name) {
-      if (!id) {
-        id = sluggify(name);
-      }
-      servers.push({ url, name, id, storeType });
-    }
-  }
-  return servers;
-}
-
-/**
- * Reads editor autocomplete settings with per-editor defaults. Missing fields
- * are valid because older persisted values may not include every editor.
- */
-function parseEditorAutocompleteSettings(
-  value: unknown,
-): EditorAutocompleteSettings | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-  return {
-    markdown: Boolean(getBooleanishProp(value, 'markdown')),
-    chordpro: Boolean(getBooleanishProp(value, 'chordpro') ?? true),
-  };
-}
-
-/**
- * Validates the shape of a resume snapshot. Freshness and server matching are
- * playback correctness checks, so they stay in the audio player hook.
- */
-function parseMusicPlaybackResume(value: unknown): MusicPlaybackResume | null {
-  const serverId = getStringProp(value, 'serverId');
-  const serverUrl = getStringProp(value, 'serverUrl');
-  const trackPath = getStringProp(value, 'trackPath');
-  const currentTime = getNumberProp(value, 'currentTime');
-  const updatedAt = getNumberProp(value, 'updatedAt');
-  if (
-    serverId !== null &&
-    serverUrl !== null &&
-    trackPath !== null &&
-    currentTime !== null &&
-    updatedAt !== null
-  ) {
-    return { serverId, serverUrl, trackPath, currentTime, updatedAt };
-  }
-  return null;
-}
-
-/**
- * Validates saved column widths. UI constraints such as minimum width are
- * applied by the music table code that consumes this value.
- */
-function parseMusicTrackColumnWidths(
-  value: unknown,
-): MusicTrackColumnWidths | null {
-  const artist = getNumberProp(value, 'artist');
-  const album = getNumberProp(value, 'album');
-  if (artist !== null && album !== null) {
-    return { artist, album };
-  }
-  return null;
-}
-
-/**
- * Reads optional boolean object fields while rejecting non-boolean values.
- */
-function getBooleanishProp(object: unknown, key: string): boolean | null {
-  if (!object || typeof object !== 'object') {
-    return null;
-  }
-  const value = (object as Record<string, unknown>)[key];
-  return typeof value === 'boolean' ? value : null;
-}
-
 export const localStorageEntries = {
-  dropboxOauth: new JsonEntry<T.DropboxOauth | null>(
-    'dropboxOauth',
-    parseDropboxOauth,
-    null,
-  ),
-  fileStoreServers: new JsonEntry<T.FileStoreServer[]>(
-    'fileStoreServers',
-    parseFileStoreServers,
-    [],
-  ),
-  fileStoreServer: new StringEntry('fileStoreServer'),
-  appHideEditor: new BooleanEntry('appHideEditor'),
-  appEditorOnly: new BooleanEntry('appEditorOnly'),
-  fileStoreName: new StringEntry('fileStoreName'),
-  openAIApiKey: new StringEntry('openAIAPIKey'),
-  hasOnboarded: new BooleanEntry('hasOnboarded'),
-  editorAutocompleteSettings: new JsonEntry<EditorAutocompleteSettings>(
-    'editorAutocompleteSettings',
-    parseEditorAutocompleteSettings,
-    { markdown: false, chordpro: true },
-  ),
-  experimentalFeatures: new BooleanEntry('experimentalFeatures'),
-  fileStoreCacheEnabled: new BooleanEntry('fileStoreCacheEnabled'),
-  dropboxCodeVerifier: new StringEntry('dropboxCodeVerifier'),
-  dropboxRedirectURL: new StringEntry('dropboxRedirectURL'),
-  musicPlaybackResume: new JsonEntry<MusicPlaybackResume | null>(
-    'musicPlaybackResume',
-    parseMusicPlaybackResume,
-    null,
-  ),
-  musicTrackColumnWidths: new JsonEntry<MusicTrackColumnWidths | null>(
-    'musicTrackColumnWidths',
-    parseMusicTrackColumnWidths,
-    null,
-  ),
-  splitterOffset(key: string): LocalStorageEntry<number | null> {
+  fileStoreServer: new StringStorage('fileStoreServer'),
+  appHideEditor: new BooleanStorage('appHideEditor'),
+  appEditorOnly: new BooleanStorage('appEditorOnly'),
+  fileStoreName: new StringStorage('fileStoreName'),
+  openAIApiKey: new StringStorage('openAIAPIKey'),
+  hasOnboarded: new BooleanStorage('hasOnboarded'),
+  experimentalFeatures: new BooleanStorage('experimentalFeatures'),
+  fileStoreCacheEnabled: new BooleanStorage('fileStoreCacheEnabled'),
+  dropboxCodeVerifier: new StringStorage('dropboxCodeVerifier'),
+  dropboxRedirectURL: new StringStorage('dropboxRedirectURL'),
+
+  dropboxOauth: new JsonStorage({
+    key: 'dropboxOauth',
+    defaultValue: null,
+    parse(value): T.DropboxOauth | null {
+      const accessToken = getStringProp(value, 'accessToken');
+      const refreshToken = getStringProp(value, 'refreshToken');
+      const expires = getNumberProp(value, 'expires');
+      if (accessToken !== null && refreshToken !== null && expires !== null) {
+        return { accessToken, refreshToken, expires };
+      }
+      return null;
+    },
+  }),
+  fileStoreServers: new JsonStorage({
+    key: 'fileStoreServers',
+    defaultValue: [] as T.FileStoreServer[],
+    parse(value): T.FileStoreServer[] | null {
+      if (!Array.isArray(value)) {
+        return null;
+      }
+
+      const servers: T.FileStoreServer[] = [];
+      for (const serverUnknown of value) {
+        const url = getStringProp(serverUnknown, 'url');
+        const name = getStringProp(serverUnknown, 'name');
+        let id = getStringProp(serverUnknown, 'id');
+        const rawStoreType = getStringProp(serverUnknown, 'storeType');
+        const storeType: T.FileStoreServer['storeType'] =
+          rawStoreType === 'music' ? 'music' : 'files';
+        if (url && name) {
+          if (!id) {
+            id = sluggify(name);
+          }
+          servers.push({ url, name, id, storeType });
+        }
+      }
+      return servers;
+    },
+  }),
+
+  editorAutocompleteSettings: new JsonStorage({
+    key: 'editorAutocompleteSettings',
+    defaultValue: { markdown: false, chordpro: true },
+    parse(value): EditorAutocompleteSettings | null {
+      if (!value || typeof value !== 'object') {
+        return null;
+      }
+
+      function getBooleanishProp(object: unknown, key: string): boolean | null {
+        if (!object || typeof object !== 'object') {
+          return null;
+        }
+        const value = (object as Record<string, unknown>)[key];
+        return typeof value === 'boolean' ? value : null;
+      }
+
+      return {
+        markdown: Boolean(getBooleanishProp(value, 'markdown')),
+        chordpro: Boolean(getBooleanishProp(value, 'chordpro') ?? true),
+      };
+    },
+  }),
+
+  musicPlaybackResume: new JsonStorage({
+    key: 'musicPlaybackResume',
+    defaultValue: null,
+    parse(value): MusicPlaybackResume | null {
+      const serverId = getStringProp(value, 'serverId');
+      const serverUrl = getStringProp(value, 'serverUrl');
+      const trackPath = getStringProp(value, 'trackPath');
+      const currentTime = getNumberProp(value, 'currentTime');
+      const updatedAt = getNumberProp(value, 'updatedAt');
+      if (
+        serverId !== null &&
+        serverUrl !== null &&
+        trackPath !== null &&
+        currentTime !== null &&
+        updatedAt !== null
+      ) {
+        return { serverId, serverUrl, trackPath, currentTime, updatedAt };
+      }
+      return null;
+    },
+  }),
+
+  musicTrackColumnWidths: new JsonStorage({
+    key: 'musicTrackColumnWidths',
+    defaultValue: null,
+    parse(value): MusicTrackColumnWidths | null {
+      const artist = getNumberProp(value, 'artist');
+      const album = getNumberProp(value, 'album');
+      if (artist !== null && album !== null) {
+        return { artist, album };
+      }
+      return null;
+    },
+  }),
+
+  splitterOffset(key: string): Storage<number | null> {
     return new NumberEntry(key);
   },
 };
