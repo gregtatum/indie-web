@@ -11,7 +11,9 @@ import { createServer } from 'node:net';
 const checks = [
   { task: 'lint-js', label: 'Lint JS' },
   { task: 'lint-css', label: 'Lint CSS' },
-  { task: 'ts', label: 'TypeScript' },
+  { task: 'ts-frontend', label: 'TypeScript Frontend' },
+  { task: 'ts-server', label: 'TypeScript Server' },
+  { task: 'ts-shared', label: 'TypeScript Shared' },
   { task: 'test-frontend', label: 'Test Frontend' },
   { task: 'test-server', label: 'Test Server' },
 ];

@@ -89,8 +89,21 @@ tasks:
   ts:
     desc: TypeScript compilation check
     cmds:
+      - task --parallel ts-frontend ts-server ts-shared
+
+  ts-frontend:
+    desc: TypeScript compilation check for src/frontend
+    cmds:
       - tsc --noEmit --project src/frontend/tsconfig.json
+
+  ts-server:
+    desc: TypeScript compilation check for src/server
+    cmds:
       - tsc --noEmit --project src/server/tsconfig.json
+
+  ts-shared:
+    desc: TypeScript compilation check for src/shared
+    cmds:
       - tsc --noEmit --project src/shared/tsconfig.json
 
   test-frontend:
