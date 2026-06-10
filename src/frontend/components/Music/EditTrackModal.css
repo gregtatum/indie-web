@@ -16,7 +16,37 @@
   flex-shrink: 0;
 }
 
+.editTrackModalHeader-sharedAlbum {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.editTrackModalHeaderArtwork {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  overflow: hidden;
+  border-radius: var(--button-border-radius);
+  background: var(--album-art-bg);
+}
+
+.editTrackModalHeaderArtwork img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.editTrackModalHeaderAlbumDetails {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .editTrackModalHeaderTitle {
+  margin: 0;
   font-size: var(--modal-header-font-size);
   font-weight: 600;
   color: var(--text-heading);

@@ -252,9 +252,9 @@ describe('music URL serialization', () => {
       store.dispatch(A.setMusicEditTrackPath(tracks[0].path));
     });
 
-    await screen.findByText(
-      `Edit ${MUSIC_URL_SERIALIZATION_CUTOFF + 1} Tracks`,
-    );
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'Mass Album' })).toBeTruthy();
+    });
     await waitFor(() => {
       const params = getParams(getLocation().search);
       expect(params.getAll('track')).toEqual([]);

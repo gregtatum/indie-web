@@ -721,6 +721,30 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const artUrl = sharedCoverArt
     ? `${server.url}/music/cover-art?path=${encodeURIComponent(sharedCoverArt)}`
     : null;
+  let sharedAlbumHeader: { album: string; artist: string } | null = null;
+  if (isBulkEdit && editTracks.length > 0) {
+    const firstAlbum = editTracks[0].album;
+    if (firstAlbum && editTracks.every((t) => t.album === firstAlbum)) {
+      const firstAlbumArtist = editTracks[0].albumArtist;
+      const firstArtist = editTracks[0].artist;
+      let artist = 'Various Artists';
+      if (
+        firstAlbumArtist &&
+        editTracks.every((t) => t.albumArtist === firstAlbumArtist)
+      ) {
+        artist = firstAlbumArtist;
+      } else if (
+        firstArtist &&
+        editTracks.every((t) => t.artist === firstArtist)
+      ) {
+        artist = firstArtist;
+      }
+      sharedAlbumHeader = {
+        album: firstAlbum,
+        artist,
+      };
+    }
+  }
   const detailsEditingDisabled = isBulkEdit
     ? bulkTagsState.status === 'loading'
     : tagsState.status !== 'loaded';
@@ -980,26 +1004,69 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   }
   const effectiveActiveTab =
     isBulkEdit && activeTab === 'id3' ? 'details' : activeTab;
+  let headerTitle = track?.title ?? 'Unknown Title';
+  if (sharedAlbumHeader) {
+    headerTitle = sharedAlbumHeader.album;
+  } else if (isBulkEdit) {
+    headerTitle = `Edit ${editTracks.length} Tracks`;
+  }
 
   return (
-    <Modal isOpen={!!trackPath} onClose={handleClose}>
+    <Modal
+      isOpen={!!trackPath}
+      onClose={handleClose}
+      ariaLabelledBy="edit-track-modal-title"
+    >
       <div className="music editTrackModal">
-        <div className="editTrackModalHeader">
-          <div className="editTrackModalHeaderTitle">
-            {isBulkEdit
-              ? `Edit ${editTracks.length} Tracks`
-              : (track?.title ?? 'Unknown Title')}
-          </div>
-          {!isBulkEdit && track?.artist && (
-            <div className="editTrackModalHeaderMeta">{track.artist}</div>
-          )}
-          {!isBulkEdit && track?.album && (
-            <div className="editTrackModalHeaderMeta">{track.album}</div>
-          )}
-          {isBulkEdit && (
-            <div className="editTrackModalHeaderMeta">
-              {editTracks.length} selected tracks
-            </div>
+        <div
+          className={
+            sharedAlbumHeader
+              ? 'editTrackModalHeader editTrackModalHeader-sharedAlbum'
+              : 'editTrackModalHeader'
+          }
+        >
+          {sharedAlbumHeader ? (
+            <>
+              <div className="editTrackModalHeaderArtwork">
+                {artUrl ? (
+                  <img
+                    src={artUrl}
+                    alt={`${sharedAlbumHeader.album} artwork`}
+                  />
+                ) : null}
+              </div>
+              <div className="editTrackModalHeaderAlbumDetails">
+                <div className="editTrackModalHeaderMeta">
+                  {sharedAlbumHeader.artist}
+                </div>
+                <h2
+                  id="edit-track-modal-title"
+                  className="editTrackModalHeaderTitle"
+                >
+                  {headerTitle}
+                </h2>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2
+                id="edit-track-modal-title"
+                className="editTrackModalHeaderTitle"
+              >
+                {headerTitle}
+              </h2>
+              {!isBulkEdit && track?.artist && (
+                <div className="editTrackModalHeaderMeta">{track.artist}</div>
+              )}
+              {!isBulkEdit && track?.album && (
+                <div className="editTrackModalHeaderMeta">{track.album}</div>
+              )}
+              {isBulkEdit && (
+                <div className="editTrackModalHeaderMeta">
+                  {editTracks.length} selected tracks
+                </div>
+              )}
+            </>
           )}
         </div>
         <Tabs

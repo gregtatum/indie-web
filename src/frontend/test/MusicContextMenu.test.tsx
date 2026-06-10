@@ -367,8 +367,7 @@ describe('track list keyboard shortcuts', () => {
       fireEvent.keyDown(document.body, { key: 'e', metaKey: true });
     });
 
-    await screen.findByRole('dialog');
-    screen.getByText('Edit 2 Tracks');
+    await screen.findByRole('dialog', { name: 'Album A' });
     expect($.getMusicEditTrackPath(store.getState())).toBe('/music/a.mp3');
   });
 

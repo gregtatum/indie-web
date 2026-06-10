@@ -5,6 +5,7 @@ import './Modal.css';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  ariaLabelledBy?: string;
   children: React.ReactNode;
 }
 
@@ -24,7 +25,7 @@ interface Props {
  * index.html (DOM order), hooks/index.tsx (overlayPortal, modalPortal), Popup.tsx.
  * Update all of these if the stacking strategy changes.
  */
-export function Modal({ isOpen, onClose, children }: Props) {
+export function Modal({ isOpen, onClose, ariaLabelledBy, children }: Props) {
   const boxRef = React.useRef<HTMLDivElement>(null);
 
   Hooks.useEscape(onClose, isOpen);
@@ -48,6 +49,7 @@ export function Modal({ isOpen, onClose, children }: Props) {
         ref={boxRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={ariaLabelledBy}
         tabIndex={-1}
       >
         <button

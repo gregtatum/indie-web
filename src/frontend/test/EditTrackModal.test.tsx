@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import * as React from 'react';
@@ -26,7 +32,7 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/music/a.mp3',
     title: 'Song A',
     artist: 'Artist A',
-    albumArtist: null,
+    albumArtist: 'Album Artist A',
     album: 'Album A',
     genre: 'Rock',
     track: 1,
@@ -40,7 +46,7 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/music/b.mp3',
     title: 'Song B',
     artist: 'Artist B',
-    albumArtist: null,
+    albumArtist: 'Album Artist A',
     album: 'Album A',
     genre: 'Rock',
     track: 2,
@@ -54,7 +60,7 @@ const TRACKS: T.TrackMetadata[] = [
     path: '/music/c.mp3',
     title: 'Song C',
     artist: 'Artist A',
-    albumArtist: null,
+    albumArtist: 'Album Artist B',
     album: 'Album B',
     genre: 'Jazz',
     track: 1,
@@ -116,7 +122,7 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
     `${FAKE_SERVER.url}/music/music-index`,
     options.musicIndexResponse ?? {
       body: JSON.stringify({
-        version: 4,
+        version: 6,
         scannedAt: '2024-01-01T00:00:00Z',
         tracks,
       }),
@@ -146,6 +152,10 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
 }
 
 describe('edit track modal', () => {
+  function getDialog(name: string) {
+    return screen.getByRole('dialog', { name });
+  }
+
   async function openEditModal(trackText: string) {
     const track = await screen.findByText(trackText);
     await act(async () => {
@@ -178,7 +188,7 @@ describe('edit track modal', () => {
   it('opens with the right-clicked track fields pre-populated', async () => {
     setup();
     await openEditModal('Song A');
-    screen.getByRole('dialog');
+    getDialog('Song A');
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
       'Song A',
     );
@@ -196,8 +206,9 @@ describe('edit track modal', () => {
         '?track=%2Fmusic%2Fa.mp3&track=%2Fmusic%2Fb.mp3&edit=%2Fmusic%2Fa.mp3',
     });
 
-    await screen.findByText('Edit 2 Tracks');
-    expect(screen.getByText('2 selected tracks')).toBeTruthy();
+    const dialog = await screen.findByRole('dialog', { name: 'Album A' });
+    expect(within(dialog).getByText('Album Artist A')).toBeTruthy();
+    expect(screen.queryByText('2 selected tracks')).toBeNull();
     await waitFor(() => {
       expect(
         (screen.getByLabelText('Artist') as HTMLInputElement).disabled,
@@ -225,7 +236,7 @@ describe('edit track modal', () => {
     await act(async () => {
       resolveMusicIndex({
         body: JSON.stringify({
-          version: 4,
+          version: 6,
           scannedAt: '2024-01-01T00:00:00Z',
           tracks: TRACKS,
         }),
@@ -233,7 +244,7 @@ describe('edit track modal', () => {
       });
     });
 
-    await screen.findByText('Edit 2 Tracks');
+    await screen.findByRole('dialog', { name: 'Album A' });
     await waitFor(() => {
       expect((screen.getByLabelText('Album') as HTMLInputElement).value).toBe(
         'Album A',
@@ -290,7 +301,7 @@ describe('edit track modal', () => {
   it('closes when the close button is clicked', async () => {
     setup();
     await openEditModal('Song A');
-    screen.getByRole('dialog');
+    getDialog('Song A');
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     });
@@ -300,7 +311,7 @@ describe('edit track modal', () => {
   it('closes when Escape is pressed', async () => {
     setup();
     await openEditModal('Song A');
-    screen.getByRole('dialog');
+    getDialog('Song A');
     await act(async () => {
       fireEvent.keyDown(document, { key: 'Escape' });
     });
@@ -446,7 +457,7 @@ describe('edit track modal', () => {
     const { store } = setup();
     await openBulkEditModal(store);
 
-    screen.getByRole('dialog');
+    const dialog = getDialog('Album A');
     await waitFor(() => {
       expect(
         (screen.getByLabelText('Artist') as HTMLInputElement).disabled,
@@ -454,7 +465,7 @@ describe('edit track modal', () => {
     });
 
     expect(screen.queryByLabelText('Title')).toBeNull();
-    expect(screen.getByText('Edit 2 Tracks')).toBeTruthy();
+    expect(within(dialog).getByText('Album Artist A')).toBeTruthy();
 
     const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
     const albumInput = screen.getByLabelText('Album') as HTMLInputElement;
@@ -471,6 +482,28 @@ describe('edit track modal', () => {
     const trackInputs = trackLabel!.closest('label')!.querySelectorAll('input');
     expect(trackInputs[0].value).toBe('');
     expect(trackInputs[0].placeholder).toBe('–');
+  });
+
+  it('uses the bulk count header for mixed album edits', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/c.mp3']),
+      );
+    });
+    const track = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.contextMenu(track);
+    });
+    const editButton = await screen.findByRole('button', {
+      name: 'Edit Selection',
+    });
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+
+    const dialog = getDialog('Edit 2 Tracks');
+    expect(within(dialog).getByText('2 selected tracks')).toBeTruthy();
   });
 
   it('keeps ID3 disabled and saves shared bulk genre edits', async () => {
@@ -690,6 +723,12 @@ describe('edit track modal', () => {
     });
 
     await openBulkEditModal(store);
+    const headerArtwork = within(getDialog('Album A')).getByRole('img', {
+      name: 'Album A artwork',
+    });
+    expect(headerArtwork.getAttribute('src')).toBe(
+      'http://fake-music/music/cover-art?path=%2Fmusic%2FAlbum%20A%2FFolder.jpg',
+    );
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
     });
@@ -760,7 +799,7 @@ describe('edit track modal', () => {
       fireEvent.click(editButton);
     });
 
-    expect(screen.getByText('Edit 201 Tracks')).toBeTruthy();
+    getDialog('Album A');
     expect(
       screen.getByText('Using track details from the library scan.'),
     ).toBeTruthy();
