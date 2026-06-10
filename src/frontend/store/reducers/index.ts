@@ -1,53 +1,16 @@
 import * as T from 'frontend/@types';
 import { combineReducers } from 'redux';
-import {
-  getStringProp,
-  getNumberProp,
-  getDirName,
-  updatePathRoot,
-  sluggify,
-} from 'frontend/utils';
+import { getDirName, updatePathRoot } from 'frontend/utils';
 import { FilesIndex } from 'frontend/logic/files-index';
 import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 import { toFileStoreName } from 'frontend/logic/app-logic';
+import { localStorageEntries } from 'frontend/logic/local-storage';
 import { languageCoachReducer } from './language-coach';
 import { musicReducer } from './music';
 
-function getDropboxOauth(): T.DropboxOauth | null {
-  const oauthString = window.localStorage.getItem('dropboxOauth');
-  if (!oauthString) {
-    return null;
-  }
-
-  let oauthRaw: unknown;
-  try {
-    oauthRaw = JSON.parse(oauthString);
-  } catch (error) {
-    console.error(
-      'Could not parse the Dropbox oauth data from localStorage',
-      error,
-    );
-    return null;
-  }
-
-  const accessToken = getStringProp(oauthRaw, 'accessToken');
-  const refreshToken = getStringProp(oauthRaw, 'refreshToken');
-  const expires = getNumberProp(oauthRaw, 'expires');
-
-  if (accessToken !== null && refreshToken !== null && expires !== null) {
-    return { accessToken, refreshToken, expires };
-  }
-
-  console.error(
-    'Could not find all of the required Dropbox oauth data from localStorage',
-    { accessToken, refreshToken, expires },
-  );
-  return null;
-}
-
 function dropboxOauth(
-  state: T.DropboxOauth | null = getDropboxOauth(),
+  state: T.DropboxOauth | null = localStorageEntries.dropboxOauth.read(),
   action: T.Action,
 ): T.DropboxOauth | null {
   switch (action.type) {
@@ -60,45 +23,8 @@ function dropboxOauth(
   }
 }
 
-function getServers(): T.FileStoreServer[] {
-  const serversString = window.localStorage.getItem('fileStoreServers');
-  if (!serversString) {
-    return [];
-  }
-
-  let serversUnknown: unknown;
-  try {
-    serversUnknown = JSON.parse(serversString);
-  } catch (error) {
-    console.error(
-      'Could not parse the file store server data from localStorage',
-      error,
-    );
-    return [];
-  }
-
-  const servers: T.FileStoreServer[] = [];
-  if (Array.isArray(serversUnknown)) {
-    for (const serverUnknown of serversUnknown) {
-      const url = getStringProp(serverUnknown, 'url');
-      const name = getStringProp(serverUnknown, 'name');
-      let id = getStringProp(serverUnknown, 'id');
-      const rawStoreType = getStringProp(serverUnknown, 'storeType');
-      const storeType: T.FileStoreServer['storeType'] =
-        rawStoreType === 'music' ? 'music' : 'files';
-      if (url && name) {
-        if (!id) {
-          id = sluggify(name);
-        }
-        servers.push({ url, name, id, storeType });
-      }
-    }
-  }
-  return servers;
-}
-
 export function serverId(
-  state: string | null = window.localStorage.getItem('fileStoreServer') ?? null,
+  state: string | null = localStorageEntries.fileStoreServer.read(),
   action: T.Action,
 ): string | null {
   switch (action.type) {
@@ -106,14 +32,14 @@ export function serverId(
     case 'change-file-system': {
       const { fileStoreServer } = action;
       if (fileStoreServer) {
-        window.localStorage.setItem('fileStoreServer', fileStoreServer.id);
+        localStorageEntries.fileStoreServer.write(fileStoreServer.id);
       } else {
-        window.localStorage.removeItem('fileStoreServer');
+        localStorageEntries.fileStoreServer.remove();
       }
       return action.fileStoreServer?.id ?? null;
     }
     case 'view-music': {
-      window.localStorage.setItem('fileStoreServer', action.fileStoreServer.id);
+      localStorageEntries.fileStoreServer.write(action.fileStoreServer.id);
       return action.fileStoreServer.id;
     }
     default:
@@ -122,14 +48,14 @@ export function serverId(
 }
 
 function servers(
-  state: T.FileStoreServer[] = getServers(),
+  state: T.FileStoreServer[] = localStorageEntries.fileStoreServers.read(),
   action: T.Action,
 ): T.FileStoreServer[] {
   switch (action.type) {
     case 'add-server': {
       const { server } = action;
       const servers = [...state, server];
-      window.localStorage.setItem('fileStoreServers', JSON.stringify(servers));
+      localStorageEntries.fileStoreServers.write(servers);
       return servers;
     }
     case 'remove-server': {
@@ -138,7 +64,7 @@ function servers(
           server.url !== action.server.url &&
           server.name !== action.server.name,
       );
-      window.localStorage.setItem('fileStoreServers', JSON.stringify(servers));
+      localStorageEntries.fileStoreServers.write(servers);
       return servers;
     }
     case 'update-server': {
@@ -152,7 +78,7 @@ function servers(
           servers.push(server);
         }
       }
-      window.localStorage.setItem('fileStoreServers', JSON.stringify(servers));
+      localStorageEntries.fileStoreServers.write(servers);
       return servers;
     }
     default:
@@ -511,16 +437,16 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
 }
 
 function hideEditor(
-  state: boolean = localStorage.getItem('appHideEditor') !== 'false',
+  state: boolean = localStorageEntries.appHideEditor.read() ?? true,
   action: T.Action,
 ): boolean {
   switch (action.type) {
     case 'hide-editor':
-      localStorage.setItem('appHideEditor', action.flag.toString());
+      localStorageEntries.appHideEditor.write(action.flag);
       return action.flag;
     case 'set-editor-only':
       if (action.isEditorOnly) {
-        localStorage.setItem('appHideEditor', 'false');
+        localStorageEntries.appHideEditor.write(false);
         return false;
       }
       return state;
@@ -530,11 +456,11 @@ function hideEditor(
 }
 
 function getDefaultEditorOnly() {
-  const value = localStorage.getItem('appEditorOnly');
-  if (!value) {
+  const value = localStorageEntries.appEditorOnly.read();
+  if (value === null) {
     return window.innerWidth <= 500;
   }
-  return value === 'true';
+  return value;
 }
 
 function editorOnly(
@@ -546,7 +472,7 @@ function editorOnly(
       return action.isEditorOnly;
     case 'hide-editor':
       if (action.flag) {
-        localStorage.setItem('appEditorOnly', 'false');
+        localStorageEntries.appEditorOnly.write(false);
         return false;
       }
       return state;
@@ -596,9 +522,7 @@ function shouldHideHeader(state: boolean = false, action: T.Action): boolean {
  * Remember the previously viewed file system name.
  */
 function getSavedFSName() {
-  return (
-    toFileStoreName(window.localStorage.getItem('fileStoreName')) ?? 'browser'
-  );
+  return toFileStoreName(localStorageEntries.fileStoreName.read()) ?? 'browser';
 }
 
 function currentFileStoreName(
@@ -608,13 +532,13 @@ function currentFileStoreName(
   switch (action.type) {
     case 'change-file-system': {
       const { fileStoreName } = action;
-      window.localStorage.setItem('fileStoreName', fileStoreName);
+      localStorageEntries.fileStoreName.write(fileStoreName);
       return fileStoreName;
     }
     case 'view-list-files':
       return action.fileStoreName;
     case 'view-music':
-      window.localStorage.setItem('fileStoreName', 'server');
+      localStorageEntries.fileStoreName.write('server');
       return 'server';
     default:
       return state;
@@ -686,7 +610,7 @@ function workerClient(
 }
 
 function openAIApiKey(
-  state: string | null = localStorage.getItem('openAIAPIKey'),
+  state: string | null = localStorageEntries.openAIApiKey.read(),
   action: T.Action,
 ): string | null {
   switch (action.type) {
@@ -698,12 +622,12 @@ function openAIApiKey(
 }
 
 function hasOnboarded(
-  state: boolean = localStorage.getItem('hasOnboarded') === 'true',
+  state: boolean = localStorageEntries.hasOnboarded.read() ?? false,
   action: T.Action,
 ): boolean {
   switch (action.type) {
     case 'set-has-onboarded':
-      localStorage.setItem('hasOnboarded', JSON.stringify(action.value));
+      localStorageEntries.hasOnboarded.write(action.value);
       return action.value;
     default:
       return state;
@@ -714,32 +638,16 @@ function getEditorAutocompleteDefaults(): {
   markdown: boolean;
   chordpro: boolean;
 } {
-  const rawSettings = localStorage.getItem('editorAutocompleteSettings');
-  const defaults = { markdown: false, chordpro: true };
-  if (!rawSettings) {
-    return defaults;
-  }
-  try {
-    const parsed = JSON.parse(rawSettings) ?? {};
-    return {
-      markdown: Boolean(parsed.markdown ?? defaults.markdown),
-      chordpro: Boolean(parsed.chordpro ?? defaults.chordpro),
-    };
-  } catch {
-    return defaults;
-  }
+  return localStorageEntries.editorAutocompleteSettings.read();
 }
 
 function experimentalFeatures(
-  state: boolean = localStorage.getItem('experimentalFeatures') === 'true',
+  state: boolean = localStorageEntries.experimentalFeatures.read() ?? false,
   action: T.Action,
 ): boolean {
   switch (action.type) {
     case 'set-experimental-features':
-      localStorage.setItem(
-        'experimentalFeatures',
-        JSON.stringify(action.value),
-      );
+      localStorageEntries.experimentalFeatures.write(action.value);
       return action.value;
     default:
       return state;
@@ -752,10 +660,7 @@ function fileStoreCacheEnabled(
 ): boolean {
   switch (action.type) {
     case 'set-file-store-cache-enabled':
-      localStorage.setItem(
-        'fileStoreCacheEnabled',
-        JSON.stringify(action.value),
-      );
+      localStorageEntries.fileStoreCacheEnabled.write(action.value);
       return action.value;
     default:
       return state;
@@ -763,11 +668,7 @@ function fileStoreCacheEnabled(
 }
 
 function getFileStoreCacheEnabledDefault(): boolean {
-  const stored = localStorage.getItem('fileStoreCacheEnabled');
-  if (stored === null) {
-    return true;
-  }
-  return stored === 'true';
+  return localStorageEntries.fileStoreCacheEnabled.read() ?? true;
 }
 
 function editorAutocompleteSettings(
@@ -783,10 +684,7 @@ function editorAutocompleteSettings(
         ...state,
         [action.editor]: action.value,
       };
-      localStorage.setItem(
-        'editorAutocompleteSettings',
-        JSON.stringify(nextState),
-      );
+      localStorageEntries.editorAutocompleteSettings.write(nextState);
       return nextState;
     }
     default:

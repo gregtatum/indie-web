@@ -3,6 +3,7 @@
 import fetchMockJest = require('fetch-mock-jest');
 import { Headers, Request, Response } from 'node-fetch';
 import { resetTestGeneration } from './fixtures';
+import { localStorageEntries } from 'frontend/logic/local-storage';
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { Blob } from 'node:buffer';
@@ -32,7 +33,7 @@ function simpleDigest256(_scheme: string, buffer: Uint8Array): ArrayBuffer {
 }
 
 beforeEach(function () {
-  localStorage.removeItem('musicPlaybackResume');
+  localStorageEntries.musicPlaybackResume.remove();
   jest.resetModules();
   jest.spyOn(window, 'scrollBy').mockImplementation();
   jest.spyOn(console, 'warn').mockImplementation((...args) => {

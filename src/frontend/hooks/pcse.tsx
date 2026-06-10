@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { getEnv } from 'frontend/utils';
 import { $$ } from 'frontend';
+import { localStorageEntries } from 'frontend/logic/local-storage';
 
 /**
  * This file consolidates some of the PCSE process of generating and persisting the
@@ -96,7 +97,7 @@ function persistCodeVerifier(event: {
     );
     return;
   }
-  window.localStorage.setItem('dropboxCodeVerifier', _codes.codeVerifier);
+  localStorageEntries.dropboxCodeVerifier.write(_codes.codeVerifier);
 }
 
 export function getRedirectUri() {

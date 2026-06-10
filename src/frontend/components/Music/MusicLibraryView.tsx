@@ -4,6 +4,7 @@ import { UnhandledCaseError } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
+import { localStorageEntries } from 'frontend/logic/local-storage';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { PlaybackBar } from './PlaybackBar';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
@@ -137,23 +138,12 @@ function clampColumnWidths(prev: ColumnWidths, maxWidth: number): ColumnWidths {
 }
 
 function loadColumnWidths(): ColumnWidths {
-  try {
-    const parsed = JSON.parse(
-      localStorage.getItem('musicTrackColumnWidths') ?? 'null',
-    );
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      Number.isFinite(parsed.artist) &&
-      Number.isFinite(parsed.album)
-    ) {
-      return {
-        artist: Math.max(COL_MIN_WIDTH, parsed.artist),
-        album: Math.max(COL_MIN_WIDTH, parsed.album),
-      };
-    }
-  } catch {
-    // Ignore malformed localStorage data.
+  const columnWidths = localStorageEntries.musicTrackColumnWidths.read();
+  if (columnWidths) {
+    return {
+      artist: Math.max(COL_MIN_WIDTH, columnWidths.artist),
+      album: Math.max(COL_MIN_WIDTH, columnWidths.album),
+    };
   }
   return { artist: 160, album: 160 };
 }
@@ -164,10 +154,7 @@ function useColumnWidths() {
 
   React.useEffect(() => {
     // TODO - Let's debounce this to something like 500ms.
-    localStorage.setItem(
-      'musicTrackColumnWidths',
-      JSON.stringify(columnWidths),
-    );
+    localStorageEntries.musicTrackColumnWidths.write(columnWidths);
   }, [columnWidths]);
 
   return { columnWidths, setColumnWidths };

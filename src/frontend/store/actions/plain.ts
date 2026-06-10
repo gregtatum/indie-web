@@ -1,11 +1,15 @@
 import { T } from 'frontend';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
+import {
+  clearAllLocalStorageForUserDataRemoval,
+  localStorageEntries,
+} from 'frontend/logic/local-storage';
 import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 
 export function removeDropboxAccessToken() {
-  localStorage.clear();
+  clearAllLocalStorageForUserDataRemoval();
   indexedDB.deleteDatabase(IDB_CACHE_NAME);
   return { type: 'remove-dropbox-oauth' as const };
 }
@@ -23,7 +27,7 @@ export function setDropboxAccessToken(
     expires,
     refreshToken,
   };
-  window.localStorage.setItem('dropboxOauth', JSON.stringify(oauth));
+  localStorageEntries.dropboxOauth.write(oauth);
 
   return {
     type: 'set-dropbox-oauth' as const,
@@ -32,7 +36,7 @@ export function setDropboxAccessToken(
 }
 
 export function removeBrowserFiles() {
-  localStorage.clear();
+  clearAllLocalStorageForUserDataRemoval();
   indexedDB.deleteDatabase(BROWSER_FILES_DB_NAME);
   return { type: 'remove-browser-files' as const };
 }
@@ -175,7 +179,7 @@ export function hideEditor(flag: boolean) {
 }
 
 export function setEditorOnly(isEditorOnly: boolean) {
-  localStorage.setItem('appEditorOnly', isEditorOnly.toString());
+  localStorageEntries.appEditorOnly.write(isEditorOnly);
   return {
     type: 'set-editor-only' as const,
     isEditorOnly,
@@ -286,7 +290,7 @@ export function setAreStemsActive(isActive: boolean) {
 }
 
 export function setOpenAIApiKey(apiKey: string) {
-  localStorage.setItem('openAIAPIKey', apiKey);
+  localStorageEntries.openAIApiKey.write(apiKey);
   return {
     type: 'set-open-ai-api-key' as const,
     apiKey,

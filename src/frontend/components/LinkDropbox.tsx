@@ -11,6 +11,7 @@ import {
   dropboxErrorMessage,
   ensureNever,
 } from 'frontend/utils';
+import { localStorageEntries } from 'frontend/logic/local-storage';
 import { Privacy } from './Page';
 import { getRedirectUri, useCodeVerifier } from '../hooks/pcse';
 import { MainView } from './App';
@@ -132,7 +133,7 @@ export function LinkDropbox(props: { children: any }) {
   React.useEffect(() => {
     if (authState === 'no-auth') {
       // Ensure the old dropbox redirect URL isn't still sitting around.
-      window.localStorage.removeItem('dropboxRedirectURL');
+      localStorageEntries.dropboxRedirectURL.remove();
     }
   }, [authState]);
 
@@ -168,8 +169,7 @@ export function LinkDropbox(props: { children: any }) {
           code,
           grant_type: 'authorization_code',
           redirect_uri: getRedirectUri(),
-          code_verifier:
-            window.localStorage.getItem('dropboxCodeVerifier') ?? '',
+          code_verifier: localStorageEntries.dropboxCodeVerifier.read() ?? '',
           client_id: dropboxClientId,
         }).toString(),
       { method: 'POST' },
@@ -196,9 +196,8 @@ export function LinkDropbox(props: { children: any }) {
                 A.setDropboxAccessToken(accessToken, expiresIn, refreshToken),
               );
               setAuthState('no-auth');
-              const url =
-                window.localStorage.getItem('dropboxRedirectURL') || '/';
-              window.localStorage.removeItem('dropboxRedirectURL');
+              const url = localStorageEntries.dropboxRedirectURL.read() || '/';
+              localStorageEntries.dropboxRedirectURL.remove();
               navigate(url, { replace: true });
             } else {
               console.error(
@@ -494,7 +493,7 @@ export function DropboxLogin(props: { children: any }) {
   React.useEffect(() => {
     if (authState === 'no-auth') {
       // Ensure the old dropbox redirect URL isn't still sitting around.
-      window.localStorage.removeItem('dropboxRedirectURL');
+      localStorageEntries.dropboxRedirectURL.remove();
     }
   }, [authState]);
 
@@ -530,8 +529,7 @@ export function DropboxLogin(props: { children: any }) {
           code,
           grant_type: 'authorization_code',
           redirect_uri: getRedirectUri(),
-          code_verifier:
-            window.localStorage.getItem('dropboxCodeVerifier') ?? '',
+          code_verifier: localStorageEntries.dropboxCodeVerifier.read() ?? '',
           client_id: dropboxClientId,
         }).toString(),
       { method: 'POST' },
@@ -558,9 +556,8 @@ export function DropboxLogin(props: { children: any }) {
                 A.setDropboxAccessToken(accessToken, expiresIn, refreshToken),
               );
               setAuthState('no-auth');
-              const url =
-                window.localStorage.getItem('dropboxRedirectURL') || '/';
-              window.localStorage.removeItem('dropboxRedirectURL');
+              const url = localStorageEntries.dropboxRedirectURL.read() || '/';
+              localStorageEntries.dropboxRedirectURL.remove();
               navigate(url, { replace: true });
             } else {
               console.error(

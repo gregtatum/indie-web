@@ -1,17 +1,12 @@
 import * as React from 'react';
 import { A, $, Hooks } from 'frontend';
+import {
+  localStorageEntries,
+  MusicPlaybackResume,
+} from 'frontend/logic/local-storage';
 
-const MUSIC_PLAYBACK_RESUME_KEY = 'musicPlaybackResume';
 const MUSIC_PLAYBACK_RESUME_TIMEOUT_MS = 10_000;
 const MUSIC_PLAYBACK_RESUME_INTERVAL_MS = 5_000;
-
-type MusicPlaybackResume = {
-  serverId: string;
-  serverUrl: string;
-  trackPath: string;
-  currentTime: number;
-  updatedAt: number;
-};
 
 export interface AudioPlayerState {
   currentTime: number;
@@ -72,7 +67,7 @@ export function useAudioPlayer(): AudioPlayerState {
     }
     didAttemptResumeRef.current = true;
 
-    const resume = readPlaybackResume();
+    const resume = localStorageEntries.musicPlaybackResume.read();
     if (!resume) {
       return;
     }
@@ -82,7 +77,7 @@ export function useAudioPlayer(): AudioPlayerState {
       resume.serverId !== serverId ||
       resume.serverUrl !== serverUrl
     ) {
-      localStorage.removeItem(MUSIC_PLAYBACK_RESUME_KEY);
+      localStorageEntries.musicPlaybackResume.remove();
       return;
     }
 
@@ -177,7 +172,7 @@ export function useAudioPlayer(): AudioPlayerState {
   // Handle persisting of the audio playback on refresh.
   React.useEffect(() => {
     if ((status !== 'loading' && status !== 'playing') || !trackPath) {
-      localStorage.removeItem(MUSIC_PLAYBACK_RESUME_KEY);
+      localStorageEntries.musicPlaybackResume.remove();
       lastPersistedSnapshotRef.current = null;
       return;
     }
@@ -205,19 +200,20 @@ export function useAudioPlayer(): AudioPlayerState {
 
       const audio = audioRef.current;
       const time = audio ? audio.currentTime : currentTimeRef.current;
-      const snapshot = JSON.stringify({
+      const snapshotValue = {
         serverId,
         serverUrl,
         trackPath: currentTrackPath,
         currentTime: Math.max(0, Math.floor(time)),
         updatedAt: Date.now(),
-      } satisfies MusicPlaybackResume);
+      } satisfies MusicPlaybackResume;
+      const snapshot = JSON.stringify(snapshotValue);
 
       if (snapshot === lastPersistedSnapshotRef.current) {
         return;
       }
       lastPersistedSnapshotRef.current = snapshot;
-      localStorage.setItem(MUSIC_PLAYBACK_RESUME_KEY, snapshot);
+      localStorageEntries.musicPlaybackResume.write(snapshotValue);
     }
   }, [serverId, serverUrl, status, trackPath]);
 
@@ -274,36 +270,4 @@ export function useAudioPlayer(): AudioPlayerState {
       }
     },
   };
-}
-
-function readPlaybackResume(): MusicPlaybackResume | null {
-  const raw = localStorage.getItem(MUSIC_PLAYBACK_RESUME_KEY);
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    const value: unknown = JSON.parse(raw);
-    if (!isPlaybackResume(value)) {
-      return null;
-    }
-    return value;
-  } catch {
-    return null;
-  }
-}
-
-function isPlaybackResume(value: unknown): value is MusicPlaybackResume {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const resume = value as Partial<MusicPlaybackResume>;
-  return (
-    typeof resume.serverId === 'string' &&
-    typeof resume.serverUrl === 'string' &&
-    typeof resume.trackPath === 'string' &&
-    typeof resume.currentTime === 'number' &&
-    typeof resume.updatedAt === 'number'
-  );
 }

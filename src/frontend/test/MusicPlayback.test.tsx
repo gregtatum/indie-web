@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { A, T, $ } from 'frontend';
+import { localStorageEntries } from 'frontend/logic/local-storage';
 import {
   mockMusicMediaElement,
   removeMusicIndex,
@@ -57,7 +58,7 @@ const TRACKS: T.TrackMetadata[] = [
   },
 ];
 
-const MUSIC_PLAYBACK_RESUME_KEY = 'musicPlaybackResume';
+const MUSIC_PLAYBACK_RESUME_KEY = localStorageEntries.musicPlaybackResume.key;
 
 const jestDescribe = globalThis.describe;
 let describe: (name: string, fn: () => void) => void = jestDescribe;
@@ -85,14 +86,14 @@ const { getServer } = useMusicTestServer();
 
 // Provide offset values so that tests render somewhat realistically.
 beforeEach(() => {
-  localStorage.removeItem(MUSIC_PLAYBACK_RESUME_KEY);
+  localStorageEntries.musicPlaybackResume.remove();
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
   mockMusicMediaElement();
 });
 
 afterEach(async () => {
-  localStorage.removeItem(MUSIC_PLAYBACK_RESUME_KEY);
+  localStorageEntries.musicPlaybackResume.remove();
   await removeMusicIndex(getServer());
 });
 
@@ -414,16 +415,13 @@ describe('PlaybackBar', () => {
       return audio;
     });
     const server = getServer();
-    localStorage.setItem(
-      MUSIC_PLAYBACK_RESUME_KEY,
-      JSON.stringify({
-        serverId: 'test-music',
-        serverUrl: server.baseUrl,
-        trackPath: '/music/b.mp3',
-        currentTime: 42,
-        updatedAt: Date.now(),
-      }),
-    );
+    localStorageEntries.musicPlaybackResume.write({
+      serverId: 'test-music',
+      serverUrl: server.baseUrl,
+      trackPath: '/music/b.mp3',
+      currentTime: 42,
+      updatedAt: Date.now(),
+    });
 
     const { store } = setup();
 
@@ -457,21 +455,18 @@ describe('PlaybackBar', () => {
 
   it('does not resume expired playback from localStorage', async () => {
     const server = getServer();
-    localStorage.setItem(
-      MUSIC_PLAYBACK_RESUME_KEY,
-      JSON.stringify({
-        serverId: 'test-music',
-        serverUrl: server.baseUrl,
-        trackPath: '/music/b.mp3',
-        currentTime: 42,
-        updatedAt: Date.now() - 10_001,
-      }),
-    );
+    localStorageEntries.musicPlaybackResume.write({
+      serverId: 'test-music',
+      serverUrl: server.baseUrl,
+      trackPath: '/music/b.mp3',
+      currentTime: 42,
+      updatedAt: Date.now() - 10_001,
+    });
 
     const { store } = setup();
 
     await waitFor(() => {
-      expect(localStorage.getItem(MUSIC_PLAYBACK_RESUME_KEY)).toBeNull();
+      expect(localStorageEntries.musicPlaybackResume.read()).toBeNull();
     });
     expect($.getMusicPlaybackTrackPath(store.getState())).toBeNull();
     expect($.getMusicPlaybackStatus(store.getState())).toBe('idle');

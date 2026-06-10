@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { A, $$, Hooks } from 'frontend';
+import { localStorageEntries } from 'frontend/logic/local-storage';
 import './Splitter.css';
 
 interface SplitterProps {
@@ -73,12 +74,11 @@ export function Splitter(props: SplitterProps) {
 
   let initialOffset = 0;
   if (persistLocalStorage) {
-    const string = window.localStorage.getItem(persistLocalStorage);
-    if (string) {
-      const number = Number(string);
-      if (!Number.isNaN(number)) {
-        initialOffset = number;
-      }
+    const number = localStorageEntries
+      .splitterOffset(persistLocalStorage)
+      .read();
+    if (number !== null) {
+      initialOffset = number;
     }
   }
   const [offset, setOffset] = React.useState(initialOffset);
@@ -89,7 +89,7 @@ export function Splitter(props: SplitterProps) {
   const minSpace = 10;
 
   if (persistLocalStorage) {
-    window.localStorage.setItem(persistLocalStorage, String(offset));
+    localStorageEntries.splitterOffset(persistLocalStorage).write(offset);
   }
 
   if (className.includes(' ')) {
