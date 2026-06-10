@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 
-import fetchMockJest = require('fetch-mock-jest');
+const fetchMockJest =
+  require('fetch-mock-jest') as typeof import('fetch-mock-jest');
 import { Headers, Request, Response } from 'node-fetch';
 import { resetTestGeneration } from './fixtures';
 import { localStorageEntries } from 'frontend/logic/local-storage';

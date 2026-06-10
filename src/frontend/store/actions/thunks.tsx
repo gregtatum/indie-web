@@ -51,91 +51,84 @@ export type PlainActions =
 /**
  * These should only be used internally in thunks.
  */
-export namespace PlainInternal {
-  export function addMessage(message: React.ReactNode, generation: number) {
+export const PlainInternal = {
+  addMessage(message: React.ReactNode, generation: number) {
     return { type: 'add-message' as const, message, generation };
-  }
+  },
 
-  export function dismissAllMessages() {
+  dismissAllMessages() {
     return { type: 'dismiss-all-messages' as const };
-  }
+  },
 
-  export function listFilesRequested(path: string) {
+  listFilesRequested(path: string) {
     return { type: 'list-files-requested' as const, path };
-  }
+  },
 
-  export function listFilesReceived(
-    path: string,
-    files: T.FolderListing,
-    isCache: boolean,
-  ) {
+  listFilesReceived(path: string, files: T.FolderListing, isCache: boolean) {
     return { type: 'list-files-received' as const, path, files, isCache };
-  }
+  },
 
-  export function listFilesError(path: string, error: string) {
+  listFilesError(path: string, error: string) {
     return { type: 'list-files-error' as const, path, error };
-  }
+  },
 
-  export function moveFileRequested(path: string) {
+  moveFileRequested(path: string) {
     return { type: 'move-file-requested' as const, path };
-  }
+  },
 
-  export function moveFileDone(
-    oldPath: string,
-    metadata: T.FileMetadata | T.FolderMetadata,
-  ) {
+  moveFileDone(oldPath: string, metadata: T.FileMetadata | T.FolderMetadata) {
     return { type: 'move-file-done' as const, oldPath, metadata };
-  }
+  },
 
-  export function deleteFileDone(
+  deleteFileDone(
     metadata: T.FileMetadata | T.FolderMetadata,
     folder: string,
     fileFocus: string | null,
   ) {
     return { type: 'delete-file-done' as const, metadata, folder, fileFocus };
-  }
+  },
 
-  export function downloadFileRequested(path: string) {
+  downloadFileRequested(path: string) {
     return { type: 'download-file-requested' as const, path };
-  }
+  },
 
-  export function downloadFileReceived(path: string, file: T.TextFile) {
+  downloadFileReceived(path: string, file: T.TextFile) {
     return { type: 'download-file-received' as const, path, file };
-  }
+  },
 
-  export function downloadFileError(path: string, error: string) {
+  downloadFileError(path: string, error: string) {
     return { type: 'download-file-error' as const, path, error };
-  }
+  },
 
-  export function downloadBlobRequested(path: string) {
+  downloadBlobRequested(path: string) {
     return { type: 'download-blob-requested' as const, path };
-  }
+  },
 
-  export function downloadBlobReceived(path: string, blobFile: T.BlobFile) {
+  downloadBlobReceived(path: string, blobFile: T.BlobFile) {
     return { type: 'download-blob-received' as const, path, blobFile };
-  }
+  },
 
-  export function fileIndexReceived(filesIndex: FilesIndex) {
+  fileIndexReceived(filesIndex: FilesIndex) {
     return { type: 'files-index-received' as const, filesIndex };
-  }
+  },
 
-  export function undoLearnStem(stem: string) {
+  undoLearnStem(stem: string) {
     return { type: 'undo-learn-stem' as const, stem };
-  }
+  },
 
-  export function undoIgnoreStem(stem: string) {
+  undoIgnoreStem(stem: string) {
     return { type: 'undo-ignore-stem' as const, stem };
-  }
+  },
 
-  export function nextSentence(stem: T.Stem, direction: -1 | 1) {
+  nextSentence(stem: T.Stem, direction: -1 | 1) {
     return {
       type: 'next-sentence' as const,
       direction,
       stem,
     };
-  }
+  },
 
-  export function setMusicTracks(
+  setMusicTracks(
     tracks: T.TrackMetadata[],
     needsRescan: boolean,
     panelSelections: Partial<Record<T.MusicPanelType, string[]>>,
@@ -146,16 +139,16 @@ export namespace PlainInternal {
       needsRescan,
       panelSelections,
     };
-  }
+  },
 
-  export function loadMusicPlayback(path: string, selectedTrackPath?: string) {
+  loadMusicPlayback(path: string, selectedTrackPath?: string) {
     return {
       type: 'music-playback-load' as const,
       path,
       selectedTrackPath,
     };
-  }
-}
+  },
+};
 
 /**
  * Sets the current track metadata, either initially, or after editing an individual

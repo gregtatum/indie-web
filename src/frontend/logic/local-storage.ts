@@ -26,7 +26,11 @@ type Parser<T> = (value: unknown) => T | null;
  * own the raw string conversion for each persisted shape.
  */
 abstract class LocalStorageEntry<T> {
-  constructor(readonly key: string) {}
+  readonly key: string;
+
+  constructor(key: string) {
+    this.key = key;
+  }
 
   read(): T {
     return this.readRaw(window.localStorage.getItem(this.key));
@@ -104,12 +108,13 @@ class NumberEntry extends LocalStorageEntry<number | null> {
  * Malformed or structurally invalid values fall back without mutating storage.
  */
 class JsonEntry<T> extends LocalStorageEntry<T> {
-  constructor(
-    key: string,
-    private parse: Parser<T>,
-    private defaultValue: T,
-  ) {
+  private parse: Parser<T>;
+  private defaultValue: T;
+
+  constructor(key: string, parse: Parser<T>, defaultValue: T) {
     super(key);
+    this.parse = parse;
+    this.defaultValue = defaultValue;
   }
 
   protected readRaw(raw: string | null): T {

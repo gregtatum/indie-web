@@ -3,6 +3,7 @@
     "target": "esnext",
     "jsx": "react",
     "module": "commonjs",
+    "erasableSyntaxOnly": true,
     "strict": true,
     "baseUrl": "./",
     "noEmit": true,
