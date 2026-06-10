@@ -12,7 +12,7 @@ import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
-import { MUSIC_TRACK_URL_SERIALIZATION_CUTOFF } from 'frontend/components/Music/UrlSerialization';
+import { MUSIC_URL_SERIALIZATION_CUTOFF } from 'frontend/components/Music/UrlSerialization';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { mockServerListFiles } from './utils/fixtures';
 
@@ -62,6 +62,10 @@ function makeTracks(count: number): T.TrackMetadata[] {
     genre: 'Mass Genre',
     track: i + 1,
   }));
+}
+
+function makeValues(prefix: string, count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `${prefix} ${i}`);
 }
 
 beforeEach(() => {
@@ -176,7 +180,7 @@ describe('music URL serialization', () => {
   });
 
   it('stops serializing selected tracks above the URL cutoff', async () => {
-    const tracks = makeTracks(MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1);
+    const tracks = makeTracks(MUSIC_URL_SERIALIZATION_CUTOFF + 1);
     const { store, getLocation } = setup('', tracks);
     await screen.findByText('Song 0');
 
@@ -186,7 +190,7 @@ describe('music URL serialization', () => {
       );
     });
     expect($.getMusicSelectedTrackPaths(store.getState())).toHaveLength(
-      MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1,
+      MUSIC_URL_SERIALIZATION_CUTOFF + 1,
     );
     await waitFor(() => {
       expect(getParams(getLocation().search).getAll('track')).toEqual([]);
@@ -194,7 +198,7 @@ describe('music URL serialization', () => {
   });
 
   it('does not serialize an open bulk edit above the track URL cutoff', async () => {
-    const tracks = makeTracks(MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1);
+    const tracks = makeTracks(MUSIC_URL_SERIALIZATION_CUTOFF + 1);
     const { store, getLocation } = setup('', tracks);
     await screen.findByText('Song 0');
 
@@ -206,7 +210,7 @@ describe('music URL serialization', () => {
     });
 
     await screen.findByText(
-      `Edit ${MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1} Tracks`,
+      `Edit ${MUSIC_URL_SERIALIZATION_CUTOFF + 1} Tracks`,
     );
     await waitFor(() => {
       const params = getParams(getLocation().search);
@@ -217,7 +221,7 @@ describe('music URL serialization', () => {
   });
 
   it('ignores oversized track and edit params on load', async () => {
-    const tracks = makeTracks(MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1);
+    const tracks = makeTracks(MUSIC_URL_SERIALIZATION_CUTOFF + 1);
     const params = new URLSearchParams();
     for (const track of tracks) {
       params.append('track', track.path);
@@ -230,6 +234,37 @@ describe('music URL serialization', () => {
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
     expect($.getMusicEditTrackPath(store.getState())).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('stops serializing filters above the URL cutoff', async () => {
+    const values = makeValues('Genre', MUSIC_URL_SERIALIZATION_CUTOFF + 1);
+    const { store, getLocation } = setup();
+
+    act(() => {
+      store.dispatch(A.setMusicPanelSelection('genre', values));
+    });
+
+    expect($.getMusicPanelSelections(store.getState()).genre).toHaveLength(
+      MUSIC_URL_SERIALIZATION_CUTOFF + 1,
+    );
+    await waitFor(() => {
+      expect(getParams(getLocation().search).getAll('genre')).toEqual([]);
+    });
+  });
+
+  it('ignores oversized filter params on load', async () => {
+    const params = new URLSearchParams();
+    for (const artist of makeValues(
+      'Artist',
+      MUSIC_URL_SERIALIZATION_CUTOFF + 1,
+    )) {
+      params.append('artist', artist);
+    }
+
+    const { store } = setup(`?${params.toString()}`);
+    await screen.findByText('Sovay');
+
+    expect($.getMusicPanelSelections(store.getState()).artist).toBeUndefined();
   });
 
   it('cmd+clicking a second genre adds it to the URL', async () => {

@@ -4,14 +4,31 @@ import { $$, A, Hooks, T } from 'frontend';
 import { ensureNever } from 'frontend/utils';
 
 type SetSearchParams = ReturnType<typeof useSearchParams>[1];
-export const MUSIC_TRACK_URL_SERIALIZATION_CUTOFF = 50;
+export const MUSIC_URL_SERIALIZATION_CUTOFF = 50;
 
 function sameStrings(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, i) => value === b[i]);
 }
 
-function canSerializeTrackSelection(trackPaths: string[]): boolean {
-  return trackPaths.length <= MUSIC_TRACK_URL_SERIALIZATION_CUTOFF;
+function canSerializeUrlValues(values: string[]): boolean {
+  return values.length <= MUSIC_URL_SERIALIZATION_CUTOFF;
+}
+
+function appendUrlValues(
+  params: URLSearchParams,
+  key: string,
+  values: string[] | undefined,
+): boolean {
+  if (!values) {
+    return true;
+  }
+  if (!canSerializeUrlValues(values)) {
+    return false;
+  }
+  for (const value of values) {
+    params.append(key, value);
+  }
+  return true;
 }
 
 /**
@@ -76,19 +93,19 @@ function useFilterUrlSync(
       const artists = searchParams.getAll('artist');
       const albums = searchParams.getAll('album');
       const tracks = searchParams.getAll('track');
-      if (genres.length) {
+      if (genres.length && canSerializeUrlValues(genres)) {
         dispatch(A.setMusicPanelSelection('genre', genres));
       }
-      if (artists.length) {
+      if (artists.length && canSerializeUrlValues(artists)) {
         dispatch(A.setMusicPanelSelection('artist', artists));
       }
-      if (albums.length) {
+      if (albums.length && canSerializeUrlValues(albums)) {
         dispatch(A.setMusicPanelSelection('album', albums));
       }
       if (
         tracks.length &&
-        canSerializeTrackSelection(tracks) &&
-        canSerializeTrackSelection(selectedTrackPathsRef.current)
+        canSerializeUrlValues(tracks) &&
+        canSerializeUrlValues(selectedTrackPathsRef.current)
       ) {
         dispatch(A.setMusicSelectedTracks(tracks));
       }
@@ -108,29 +125,17 @@ function useFilterUrlSync(
       (prev) => {
         const params = new URLSearchParams(prev);
         const wasOversizedTrackUrl =
-          params.getAll('track').length > MUSIC_TRACK_URL_SERIALIZATION_CUTOFF;
+          params.getAll('track').length > MUSIC_URL_SERIALIZATION_CUTOFF;
         const currentPanelSelections = panelSelectionsRef.current;
         const currentSelectedTrackPaths = selectedTrackPathsRef.current;
         params.delete('genre');
         params.delete('artist');
         params.delete('album');
         params.delete('track');
-        if (currentPanelSelections.genre) {
-          for (const genre of currentPanelSelections.genre) {
-            params.append('genre', genre);
-          }
-        }
-        if (currentPanelSelections.artist) {
-          for (const artist of currentPanelSelections.artist) {
-            params.append('artist', artist);
-          }
-        }
-        if (currentPanelSelections.album) {
-          for (const album of currentPanelSelections.album) {
-            params.append('album', album);
-          }
-        }
-        const canSerializeSelectedTracks = canSerializeTrackSelection(
+        appendUrlValues(params, 'genre', currentPanelSelections.genre);
+        appendUrlValues(params, 'artist', currentPanelSelections.artist);
+        appendUrlValues(params, 'album', currentPanelSelections.album);
+        const canSerializeSelectedTracks = canSerializeUrlValues(
           currentSelectedTrackPaths,
         );
         if (canSerializeSelectedTracks) {
@@ -161,7 +166,7 @@ function useEditModalUrlSync(
   const editFromUrl = searchParams.get('edit');
   const tracksFromUrl = searchParams.getAll('track');
   const tracksFromUrlKey = tracksFromUrl.join('\0');
-  const editFromUrlForRedux = canSerializeTrackSelection(tracksFromUrl)
+  const editFromUrlForRedux = canSerializeUrlValues(tracksFromUrl)
     ? editFromUrl
     : null;
   const tabFromUrl = parseTabFromUrl(
@@ -169,8 +174,7 @@ function useEditModalUrlSync(
     editFromUrlForRedux,
   );
   const canSerializeCurrentEdit =
-    selectedTrackPaths.length <= 1 ||
-    canSerializeTrackSelection(selectedTrackPaths);
+    selectedTrackPaths.length <= 1 || canSerializeUrlValues(selectedTrackPaths);
 
   const isFirstEditRender = React.useRef(true);
   const isFirstTabRender = React.useRef(true);
@@ -206,7 +210,7 @@ function useEditModalUrlSync(
     if (
       editFromUrl &&
       tracksFromUrl.length > 1 &&
-      canSerializeTrackSelection(tracksFromUrl) &&
+      canSerializeUrlValues(tracksFromUrl) &&
       !sameStrings(tracksFromUrl, selectedTrackPathsRef.current)
     ) {
       dispatch(A.setMusicSelectedTracks(tracksFromUrl));
