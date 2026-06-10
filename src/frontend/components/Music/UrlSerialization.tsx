@@ -4,9 +4,14 @@ import { $$, A, Hooks, T } from 'frontend';
 import { ensureNever } from 'frontend/utils';
 
 type SetSearchParams = ReturnType<typeof useSearchParams>[1];
+export const MUSIC_TRACK_URL_SERIALIZATION_CUTOFF = 50;
 
 function sameStrings(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, i) => value === b[i]);
+}
+
+function canSerializeTrackSelection(trackPaths: string[]): boolean {
+  return trackPaths.length <= MUSIC_TRACK_URL_SERIALIZATION_CUTOFF;
 }
 
 /**
@@ -56,8 +61,13 @@ function useFilterUrlSync(
 ) {
   const panelSelections = $$.getMusicPanelSelections();
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
+  const selectedTrackPathsKey = selectedTrackPaths.join('\0');
   const { dispatch } = Hooks.useStore();
   const isFirstRender = React.useRef(true);
+  const panelSelectionsRef = React.useRef(panelSelections);
+  panelSelectionsRef.current = panelSelections;
+  const selectedTrackPathsRef = React.useRef(selectedTrackPaths);
+  selectedTrackPathsRef.current = selectedTrackPaths;
 
   // Initialize the Redux store from the URLs on the initial load.
   React.useEffect(
@@ -75,7 +85,11 @@ function useFilterUrlSync(
       if (albums.length) {
         dispatch(A.setMusicPanelSelection('album', albums));
       }
-      if (tracks.length) {
+      if (
+        tracks.length &&
+        canSerializeTrackSelection(tracks) &&
+        canSerializeTrackSelection(selectedTrackPathsRef.current)
+      ) {
         dispatch(A.setMusicSelectedTracks(tracks));
       }
     },
@@ -93,33 +107,46 @@ function useFilterUrlSync(
     setSearchParams(
       (prev) => {
         const params = new URLSearchParams(prev);
+        const wasOversizedTrackUrl =
+          params.getAll('track').length > MUSIC_TRACK_URL_SERIALIZATION_CUTOFF;
+        const currentPanelSelections = panelSelectionsRef.current;
+        const currentSelectedTrackPaths = selectedTrackPathsRef.current;
         params.delete('genre');
         params.delete('artist');
         params.delete('album');
         params.delete('track');
-        if (panelSelections.genre) {
-          for (const genre of panelSelections.genre) {
+        if (currentPanelSelections.genre) {
+          for (const genre of currentPanelSelections.genre) {
             params.append('genre', genre);
           }
         }
-        if (panelSelections.artist) {
-          for (const artist of panelSelections.artist) {
+        if (currentPanelSelections.artist) {
+          for (const artist of currentPanelSelections.artist) {
             params.append('artist', artist);
           }
         }
-        if (panelSelections.album) {
-          for (const album of panelSelections.album) {
+        if (currentPanelSelections.album) {
+          for (const album of currentPanelSelections.album) {
             params.append('album', album);
           }
         }
-        for (const track of selectedTrackPaths) {
-          params.append('track', track);
+        const canSerializeSelectedTracks = canSerializeTrackSelection(
+          currentSelectedTrackPaths,
+        );
+        if (canSerializeSelectedTracks) {
+          for (const track of currentSelectedTrackPaths) {
+            params.append('track', track);
+          }
+        }
+        if (!canSerializeSelectedTracks || wasOversizedTrackUrl) {
+          params.delete('edit');
+          params.delete('tab');
         }
         return params;
       },
       { replace: true },
     );
-  }, [panelSelections, selectedTrackPaths, setSearchParams]);
+  }, [panelSelections, selectedTrackPathsKey, setSearchParams]);
 }
 
 function useEditModalUrlSync(
@@ -134,7 +161,16 @@ function useEditModalUrlSync(
   const editFromUrl = searchParams.get('edit');
   const tracksFromUrl = searchParams.getAll('track');
   const tracksFromUrlKey = tracksFromUrl.join('\0');
-  const tabFromUrl = parseTabFromUrl(searchParams.get('tab'), editFromUrl);
+  const editFromUrlForRedux = canSerializeTrackSelection(tracksFromUrl)
+    ? editFromUrl
+    : null;
+  const tabFromUrl = parseTabFromUrl(
+    searchParams.get('tab'),
+    editFromUrlForRedux,
+  );
+  const canSerializeCurrentEdit =
+    selectedTrackPaths.length <= 1 ||
+    canSerializeTrackSelection(selectedTrackPaths);
 
   const isFirstEditRender = React.useRef(true);
   const isFirstTabRender = React.useRef(true);
@@ -158,10 +194,10 @@ function useEditModalUrlSync(
   // The guards skip redundant dispatches when the URL changed because Redux
   // just updated it.
   React.useEffect(() => {
-    if (editFromUrl !== editTrackPathRef.current) {
-      dispatch(A.setMusicEditTrackPath(editFromUrl));
+    if (editFromUrlForRedux !== editTrackPathRef.current) {
+      dispatch(A.setMusicEditTrackPath(editFromUrlForRedux));
     }
-  }, [editFromUrl]);
+  }, [editFromUrlForRedux]);
 
   // Bulk edit URLs store the open modal in `edit` and the selected files in
   // repeated `track` params. Restore that selection when loading or navigating
@@ -170,6 +206,7 @@ function useEditModalUrlSync(
     if (
       editFromUrl &&
       tracksFromUrl.length > 1 &&
+      canSerializeTrackSelection(tracksFromUrl) &&
       !sameStrings(tracksFromUrl, selectedTrackPathsRef.current)
     ) {
       dispatch(A.setMusicSelectedTracks(tracksFromUrl));
@@ -190,12 +227,15 @@ function useEditModalUrlSync(
       isFirstEditRender.current = false;
       return;
     }
-    if (editTrackPath === editFromUrl) {
+    if (
+      (canSerializeCurrentEdit && editTrackPath === editFromUrl) ||
+      (!canSerializeCurrentEdit && editFromUrl === null)
+    ) {
       return;
     }
     setSearchParamsRef.current((prev) => {
       const params = new URLSearchParams(prev);
-      if (editTrackPath) {
+      if (editTrackPath && canSerializeCurrentEdit) {
         params.set('edit', editTrackPath);
       } else {
         params.delete('edit');
@@ -203,20 +243,23 @@ function useEditModalUrlSync(
       }
       return params;
     });
-  }, [editTrackPath]);
+  }, [editTrackPath, canSerializeCurrentEdit]);
 
   React.useEffect(() => {
     if (isFirstTabRender.current) {
       isFirstTabRender.current = false;
       return;
     }
-    if (editTab === tabFromUrl || (!tabFromUrl && editTab === 'details')) {
+    if (
+      canSerializeCurrentEdit &&
+      (editTab === tabFromUrl || (!tabFromUrl && editTab === 'details'))
+    ) {
       return;
     }
     setSearchParamsRef.current(
       (prev) => {
         const params = new URLSearchParams(prev);
-        if (editTrackPath) {
+        if (editTrackPath && canSerializeCurrentEdit) {
           params.set('tab', editTab);
         } else {
           params.delete('tab');
@@ -225,5 +268,5 @@ function useEditModalUrlSync(
       },
       { replace: true },
     );
-  }, [editTab]);
+  }, [editTab, canSerializeCurrentEdit]);
 }

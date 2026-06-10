@@ -12,6 +12,7 @@ import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
+import { MUSIC_TRACK_URL_SERIALIZATION_CUTOFF } from 'frontend/components/Music/UrlSerialization';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { mockServerListFiles } from './utils/fixtures';
 
@@ -50,6 +51,18 @@ const TRACKS: T.TrackMetadata[] = [
     hasEmbeddedArt: false,
   },
 ];
+
+function makeTracks(count: number): T.TrackMetadata[] {
+  return Array.from({ length: count }, (_, i) => ({
+    ...TRACKS[0],
+    path: `/Mass Edit/Song ${i}.mp3`,
+    title: `Song ${i}`,
+    artist: 'Mass Artist',
+    album: 'Mass Album',
+    genre: 'Mass Genre',
+    track: i + 1,
+  }));
+}
 
 beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
@@ -160,6 +173,63 @@ describe('music URL serialization', () => {
         '/Indie/Andrew Bird/The Mysterious Production of Eggs/Sovay.mp3',
       ]);
     });
+  });
+
+  it('stops serializing selected tracks above the URL cutoff', async () => {
+    const tracks = makeTracks(MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1);
+    const { store, getLocation } = setup('', tracks);
+    await screen.findByText('Song 0');
+
+    act(() => {
+      store.dispatch(
+        A.setMusicSelectedTracks(tracks.map((track) => track.path)),
+      );
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toHaveLength(
+      MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1,
+    );
+    await waitFor(() => {
+      expect(getParams(getLocation().search).getAll('track')).toEqual([]);
+    });
+  });
+
+  it('does not serialize an open bulk edit above the track URL cutoff', async () => {
+    const tracks = makeTracks(MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1);
+    const { store, getLocation } = setup('', tracks);
+    await screen.findByText('Song 0');
+
+    act(() => {
+      store.dispatch(
+        A.setMusicSelectedTracks(tracks.map((track) => track.path)),
+      );
+      store.dispatch(A.setMusicEditTrackPath(tracks[0].path));
+    });
+
+    await screen.findByText(
+      `Edit ${MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1} Tracks`,
+    );
+    await waitFor(() => {
+      const params = getParams(getLocation().search);
+      expect(params.getAll('track')).toEqual([]);
+      expect(params.get('edit')).toBeNull();
+      expect(params.get('tab')).toBeNull();
+    });
+  });
+
+  it('ignores oversized track and edit params on load', async () => {
+    const tracks = makeTracks(MUSIC_TRACK_URL_SERIALIZATION_CUTOFF + 1);
+    const params = new URLSearchParams();
+    for (const track of tracks) {
+      params.append('track', track.path);
+    }
+    params.set('edit', tracks[0].path);
+
+    const { store } = setup(`?${params.toString()}`, tracks);
+    await screen.findByText('Song 0');
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
+    expect($.getMusicEditTrackPath(store.getState())).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('cmd+clicking a second genre adds it to the URL', async () => {
