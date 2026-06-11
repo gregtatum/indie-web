@@ -2,6 +2,7 @@ import * as React from 'react';
 import { A, $$, Hooks } from 'frontend';
 import { useAudioPlayer } from 'frontend/hooks/useAudioPlayer';
 import { useMediaSession } from 'frontend/hooks/useMediaSession';
+import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 
 function formatTime(secs: number): string {
   const m = Math.floor(secs / 60);
@@ -15,6 +16,8 @@ export function PlaybackBar() {
   const trackPath = $$.getMusicPlaybackTrackPath();
   const allTracks = $$.getMusicTracks();
   const playbackQueue = $$.getMusicPlaybackQueue();
+  const playbackQueuePanelSelections =
+    $$.getMusicPlaybackQueuePanelSelections();
   const server = $$.getCurrentServer();
   const { currentTime, duration, volume, play, pause, seek, setVolume } =
     useAudioPlayer();
@@ -45,6 +48,54 @@ export function PlaybackBar() {
     pause,
   });
 
+  function restorePanelSelections(
+    panelSelections: Partial<Record<'genre' | 'artist' | 'album', string[]>>,
+  ) {
+    dispatch(A.setMusicPanelSelection('genre', panelSelections.genre));
+    dispatch(A.setMusicPanelSelection('artist', panelSelections.artist));
+    dispatch(A.setMusicPanelSelection('album', panelSelections.album));
+  }
+
+  function selectCurrentTrack() {
+    if (trackMetadata) {
+      dispatch(A.setMusicSelectedTracks([trackMetadata.path]));
+    }
+  }
+
+  function handleTitleClick() {
+    if (!trackMetadata) {
+      return;
+    }
+    restorePanelSelections(playbackQueuePanelSelections);
+    selectCurrentTrack();
+  }
+
+  function handleArtistClick() {
+    if (!trackMetadata) {
+      return;
+    }
+    const artist = getTrackFilterArtist(trackMetadata);
+    dispatch(A.setMusicPanelSelection('genre'));
+    dispatch(A.setMusicPanelSelection('artist', artist ? [artist] : undefined));
+    dispatch(A.setMusicPanelSelection('album'));
+    selectCurrentTrack();
+  }
+
+  function handleAlbumClick() {
+    if (!trackMetadata) {
+      return;
+    }
+    dispatch(A.setMusicPanelSelection('genre'));
+    dispatch(A.setMusicPanelSelection('artist'));
+    dispatch(
+      A.setMusicPanelSelection(
+        'album',
+        trackMetadata.album ? [trackMetadata.album] : undefined,
+      ),
+    );
+    selectCurrentTrack();
+  }
+
   if (musicPlaybackStatus === 'idle') {
     return null;
   }
@@ -55,15 +106,39 @@ export function PlaybackBar() {
       role="region"
       aria-label="Playback controls"
     >
-      <div className="musicPlaybackAlbumArt" aria-hidden="true">
+      <button
+        type="button"
+        className="musicPlaybackAlbumArt musicPlaybackAlbumArtButton"
+        aria-label="Show album"
+        onClick={handleAlbumClick}
+        disabled={!trackMetadata}
+      >
         {artUrl ? <img src={artUrl} alt="" /> : null}
-      </div>
+      </button>
 
       <div className="musicPlaybackTrackInfo">
-        <span className="musicPlaybackTitle">
-          {trackMetadata?.title ?? trackPath}
-        </span>
-        <span className="musicPlaybackArtist">{trackMetadata?.artist}</span>
+        {trackMetadata ? (
+          <>
+            <button
+              type="button"
+              className="musicPlaybackTitle musicPlaybackTrackButton"
+              aria-label="Show playing track"
+              onClick={handleTitleClick}
+            >
+              {trackMetadata.title ?? trackMetadata.path}
+            </button>
+            <button
+              type="button"
+              className="musicPlaybackArtist musicPlaybackTrackButton"
+              aria-label={`Show ${trackMetadata.artist || 'artist'}`}
+              onClick={handleArtistClick}
+            >
+              {trackMetadata.artist}
+            </button>
+          </>
+        ) : (
+          <span className="musicPlaybackTitle">{trackPath}</span>
+        )}
       </div>
 
       <div className="musicPlaybackControls">

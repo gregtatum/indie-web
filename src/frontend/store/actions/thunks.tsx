@@ -147,6 +147,17 @@ const PlainInternal = {
       selectedTrackPath,
     };
   },
+
+  setMusicPlaybackQueue(
+    tracks: T.TrackMetadata[],
+    panelSelections: Partial<Record<T.MusicPanelType, string[]>>,
+  ) {
+    return {
+      type: 'set-music-playback-queue' as const,
+      tracks,
+      panelSelections,
+    };
+  },
 };
 
 /**
@@ -184,6 +195,17 @@ export function musicPlaybackLoad(path: string): Thunk {
       selectedTrackPath = path;
     }
     dispatch(PlainInternal.loadMusicPlayback(path, selectedTrackPath));
+  };
+}
+
+export function setMusicPlaybackQueue(tracks: T.TrackMetadata[]): Thunk {
+  return (dispatch, getState) => {
+    dispatch(
+      PlainInternal.setMusicPlaybackQueue(
+        tracks,
+        $.getMusicPanelSelections(getState()),
+      ),
+    );
   };
 }
 

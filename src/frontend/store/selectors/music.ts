@@ -148,7 +148,13 @@ export function getMusicPlaybackTrackPath(state: State): string | null {
 }
 
 export function getMusicPlaybackQueue(state: State): T.TrackMetadata[] {
-  return getMusic(state).playbackQueue;
+  return getMusic(state).playbackQueue.tracks;
+}
+
+export function getMusicPlaybackQueuePanelSelections(
+  state: State,
+): Partial<Record<T.MusicPanelType, string[]>> {
+  return getMusic(state).playbackQueue.panelSelections;
 }
 
 export function getMusicFolderArtSaveStatus(state: State): FolderArtSaveStatus {

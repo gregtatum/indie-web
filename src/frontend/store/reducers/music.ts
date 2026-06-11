@@ -10,6 +10,11 @@ export type MusicPlaybackStatus =
 
 export type FolderArtSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+export interface MusicPlaybackQueue {
+  tracks: T.TrackMetadata[];
+  panelSelections: Partial<Record<T.MusicPanelType, string[]>>;
+}
+
 /**
  * The panel ordering is not yet wired into the UI to be configurable.
  */
@@ -180,15 +185,23 @@ function needsRescan(state = false, action: T.Action): boolean {
   }
 }
 
+const emptyPlaybackQueue: MusicPlaybackQueue = {
+  tracks: [],
+  panelSelections: {},
+};
+
 function playbackQueue(
-  state: T.TrackMetadata[] = [],
+  state: MusicPlaybackQueue = emptyPlaybackQueue,
   action: T.Action,
-): T.TrackMetadata[] {
+): MusicPlaybackQueue {
   switch (action.type) {
     case 'set-music-playback-queue':
-      return action.tracks;
+      return {
+        tracks: action.tracks,
+        panelSelections: action.panelSelections,
+      };
     case 'view-music':
-      return [];
+      return emptyPlaybackQueue;
     default:
       return state;
   }

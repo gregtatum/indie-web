@@ -347,9 +347,147 @@ describe('PlaybackBar', () => {
     expect(within(bar).getByText('Artist A')).toBeTruthy();
   });
 
+  it('captures panel filters when queueing playback', async () => {
+    const { store } = setup();
+    act(() => {
+      store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
+      store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
+      store.dispatch(A.setMusicPanelSelection('album', ['Album A']));
+      store.dispatch(
+        A.setMusicPlaybackQueue($.getFilteredMusicTracks(store.getState())),
+      );
+    });
+
+    expect($.getMusicPlaybackQueuePanelSelections(store.getState())).toEqual({
+      genre: ['Rock'],
+      artist: ['Artist A'],
+      album: ['Album A'],
+    });
+  });
+
+  it('clicking the playback title restores queued filters and selects the track', async () => {
+    const { store } = setup();
+    act(() => {
+      store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
+      store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
+      store.dispatch(A.setMusicPanelSelection('album', ['Album A']));
+      store.dispatch(
+        A.setMusicPlaybackQueue($.getFilteredMusicTracks(store.getState())),
+      );
+      store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
+      store.dispatch(A.musicPlaybackReady());
+      store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
+      store.dispatch(A.setMusicPanelSelection('album', ['Album B']));
+    });
+
+    const trackList = screen.getByRole('listbox', { name: 'Tracks' });
+    expect(within(trackList).queryByText('Song A')).toBeNull();
+
+    const bar = screen.getByRole('region', { name: 'Playback controls' });
+    await act(async () => {
+      await userEvent.click(
+        within(bar).getByRole('button', { name: 'Show playing track' }),
+      );
+    });
+
+    expect($.getMusicPanelSelections(store.getState())).toEqual({
+      genre: ['Rock'],
+      artist: ['Artist A'],
+      album: ['Album A'],
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+    ]);
+    expect(within(trackList).getByText('Song A')).toBeTruthy();
+  });
+
+  it('clicking the album art filters to the album only and selects the track', async () => {
+    const { store } = setup();
+    act(() => {
+      store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
+      store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
+      store.dispatch(A.setMusicPanelSelection('album', ['Album A']));
+      store.dispatch(
+        A.setMusicPlaybackQueue($.getFilteredMusicTracks(store.getState())),
+      );
+      store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
+      store.dispatch(A.musicPlaybackReady());
+      store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
+      store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
+      store.dispatch(A.setMusicPanelSelection('album', ['Album B']));
+    });
+
+    const bar = screen.getByRole('region', { name: 'Playback controls' });
+    await act(async () => {
+      await userEvent.click(
+        within(bar).getByRole('button', { name: 'Show album' }),
+      );
+    });
+
+    expect($.getMusicPanelSelections(store.getState())).toEqual({
+      album: ['Album A'],
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+    ]);
+    const trackList = screen.getByRole('listbox', { name: 'Tracks' });
+    expect(within(trackList).getByText('Song A')).toBeTruthy();
+    expect(within(trackList).getByText('Song B')).toBeTruthy();
+    expect(within(trackList).queryByText('Song C')).toBeNull();
+  });
+
+  it('clicking the playback artist filters to the artist only and selects the track', async () => {
+    const { store } = setup();
+    act(() => {
+      store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
+      store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
+      store.dispatch(A.setMusicPanelSelection('album', ['Album A']));
+      store.dispatch(
+        A.setMusicPlaybackQueue($.getFilteredMusicTracks(store.getState())),
+      );
+      store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
+      store.dispatch(A.musicPlaybackReady());
+      store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
+      store.dispatch(A.setMusicPanelSelection('album', ['Album B']));
+    });
+
+    const bar = screen.getByRole('region', { name: 'Playback controls' });
+    await act(async () => {
+      await userEvent.click(
+        within(bar).getByRole('button', { name: 'Show Artist A' }),
+      );
+    });
+
+    expect($.getMusicPanelSelections(store.getState())).toEqual({
+      artist: ['Artist A'],
+    });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+    ]);
+    const trackList = screen.getByRole('listbox', { name: 'Tracks' });
+    expect(within(trackList).getByText('Song A')).toBeTruthy();
+    expect(within(trackList).getByText('Song C')).toBeTruthy();
+    expect(within(trackList).queryByText('Song B')).toBeNull();
+  });
+
   it('shows Pause button when playing', async () => {
     await setupPlaying();
     screen.getByRole('button', { name: 'Pause' });
+  });
+
+  it('clicking Next track advances through the queued tracks', async () => {
+    const { store } = setup();
+    act(() => {
+      store.dispatch(A.setMusicPlaybackQueue(TRACKS));
+      store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
+      store.dispatch(A.musicPlaybackReady());
+    });
+
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Next track' }));
+    });
+
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/b.mp3');
   });
 
   it('shows Play button when paused', async () => {

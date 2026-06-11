@@ -355,10 +355,6 @@ export function setMusicSelectedTracks(paths: string[]) {
   };
 }
 
-export function setMusicPlaybackQueue(tracks: T.TrackMetadata[]) {
-  return { type: 'set-music-playback-queue' as const, tracks };
-}
-
 export function musicPlaybackReady() {
   return { type: 'music-playback-ready' as const };
 }
