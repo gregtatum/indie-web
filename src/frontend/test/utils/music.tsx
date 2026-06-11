@@ -26,6 +26,7 @@ export function buildMp3WithTags(
     title: string;
     artist: string;
     albumArtist: string;
+    composer: string;
     album: string;
     genre: string;
   }>,
@@ -52,6 +53,9 @@ export function buildMp3WithTags(
   }
   if (tags.albumArtist) {
     frames.push(textFrame('TPE2', tags.albumArtist));
+  }
+  if (tags.composer) {
+    frames.push(textFrame('TCOM', tags.composer));
   }
   if (tags.album) {
     frames.push(textFrame('TALB', tags.album));

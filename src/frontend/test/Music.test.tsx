@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -363,6 +369,76 @@ describe('<Music> with real server', () => {
     expect(
       screen.queryByRole('button', {
         name: 'Scan Library (updates detected)',
+      }),
+    ).toBeNull();
+  }, 30_000);
+
+  it('regroups an Electronic track by composer after renaming its genre to Classical', async () => {
+    await writeFile(
+      join(getServer().mountDir, 'Composer Heuristic.mp3'),
+      buildMp3WithTags({
+        title: 'Composer Heuristic',
+        artist: 'Soloist Performer',
+        albumArtist: 'Electronic Ensemble',
+        composer: 'Test Composer',
+        album: 'Grouping Album',
+        genre: 'Electronic',
+      }),
+    );
+
+    setup();
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await screen.findByText(/Found \d+ tracks\./);
+
+    const artistList = screen.getByRole('listbox', { name: 'artist' });
+    expect(
+      within(artistList).getByRole('option', { name: 'Electronic Ensemble' }),
+    ).toBeTruthy();
+    expect(
+      within(artistList).queryByRole('option', { name: 'Test Composer' }),
+    ).toBeNull();
+
+    await act(async () => {
+      fireEvent.contextMenu(await screen.findByText('Composer Heuristic'));
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    });
+
+    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
+    await waitFor(() => {
+      expect(genreInput.disabled).toBe(false);
+      expect(genreInput.value).toBe('Electronic');
+    });
+    await act(async () => {
+      await userEvent.clear(genreInput);
+      await userEvent.type(genreInput, 'Classical');
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+
+    expect(
+      within(artistList).getByRole('option', { name: 'Test Composer' }),
+    ).toBeTruthy();
+    expect(
+      within(artistList).queryByRole('option', {
+        name: 'Electronic Ensemble',
       }),
     ).toBeNull();
   }, 30_000);

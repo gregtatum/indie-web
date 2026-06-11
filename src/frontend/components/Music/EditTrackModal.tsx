@@ -975,7 +975,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       const radioValue = formState.preferComposerGrouping;
       detailRows.push(
         <div key="preferComposerGrouping" className="editTrackModalRow">
-          <span className="editTrackModalLabel">Composer Grouping</span>
+          <span className="editTrackModalLabel">Grouping Artist By</span>
           <div
             className="editTrackModalRadioGroup"
             role="radiogroup"
