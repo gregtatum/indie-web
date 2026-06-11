@@ -4,7 +4,6 @@ import {
   MountPath,
   NotFoundError,
   RequestConflict,
-  throttle,
 } from './utils.ts';
 import NodeID3 from 'node-id3';
 import type { T } from './index.ts';
@@ -12,6 +11,7 @@ import { createReadStream, Dirent, promises as fs } from 'node:fs';
 import { extname, dirname } from 'node:path';
 import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
+import { throttle } from '../shared/utils.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
 export const MUSIC_INDEX_VERSION = 6 as const;

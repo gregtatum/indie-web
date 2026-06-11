@@ -2,7 +2,7 @@ import * as React from 'react';
 import { $$, A, Hooks, T } from 'frontend';
 import { Modal } from 'frontend/components/Modal';
 import { Tabs } from 'frontend/components/Tabs';
-import { throttle } from 'frontend/utils';
+import { throttle } from 'shared/utils';
 import { ArtworkTab } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
 import {

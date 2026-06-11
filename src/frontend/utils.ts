@@ -114,41 +114,9 @@ export function throttle1<Arg1>(
 }
 
 /**
- * Fires the callback immediately on the first call, then at most once every
- * `wait` ms for as long as calls keep arriving. The most recent args are used
- * for each trailing fire.
- *
- * Duplicated from src/server/utils.ts. Keep the implementations in sync.
+ * Shared browser/server utilities re-exported here for older frontend imports.
  */
-export function throttle<F extends (...args: any) => void>(
-  callback: F,
-  wait: number,
-): F {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  let pendingArgs: any[] | null = null;
-
-  function fire(...args: any[]) {
-    callback(...args);
-    timeout = setTimeout(() => {
-      timeout = null;
-      if (pendingArgs) {
-        const args = pendingArgs;
-        pendingArgs = null;
-        fire(...args);
-      }
-    }, wait);
-  }
-
-  const result: any = (...args: any[]): void => {
-    if (!timeout) {
-      fire(...args);
-    } else {
-      pendingArgs = args;
-    }
-  };
-
-  return result;
-}
+export { throttle } from 'shared/utils';
 
 /**
  * Access unknown object properties in a type safe way.
