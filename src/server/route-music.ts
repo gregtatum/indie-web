@@ -14,7 +14,9 @@ import { parseFile } from 'music-metadata';
 import { throttle } from '../shared/utils.ts';
 import {
   MUSIC_INDEX_VERSION,
+  PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
   nativePrivateTextTagValue,
+  parseBooleanTagValue,
   parsePreferComposerGroupingTag,
 } from '../shared/music.ts';
 
@@ -578,7 +580,7 @@ function buildNodeId3Tags(
     if (typeof change !== 'object' || change === null) {
       throw new ClientError('Invalid tag change.');
     }
-    const { frameId, value } = change;
+    const { frameId, value, description } = change;
     if (typeof frameId !== 'string' || !frameId) {
       throw new ClientError('Invalid frame ID.');
     }
@@ -587,6 +589,11 @@ function buildNodeId3Tags(
     }
     if (frameId === 'COMM') {
       tags.comment = { language: 'eng', shortText: '', text: value };
+    } else if (frameId === 'TXXX') {
+      if (description !== PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION) {
+        throw new ClientError(`Unsupported TXXX description: ${description}`);
+      }
+      tags.userDefinedText = [{ description, value }];
     } else {
       const prop = FRAME_ID_TO_NODE_ID3[frameId];
       if (!prop) {
@@ -724,7 +731,7 @@ async function updateIndexAfterTrackTagWrites(
       updatedTrack.size = stats.size;
       updatedTrack.mtime = stats.mtime.toISOString();
 
-      for (const { frameId, value } of changes) {
+      for (const { frameId, value, description } of changes) {
         switch (frameId) {
           case 'TIT2':
             updatedTrack.title = value || null;
@@ -743,6 +750,11 @@ async function updateIndexAfterTrackTagWrites(
             break;
           case 'TCOM':
             updatedTrack.composer = value || null;
+            break;
+          case 'TXXX':
+            if (description === PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION) {
+              updatedTrack.preferComposerGrouping = parseBooleanTagValue(value);
+            }
             break;
           case 'TRCK': {
             const num = parseInt(value.split('/')[0], 10);

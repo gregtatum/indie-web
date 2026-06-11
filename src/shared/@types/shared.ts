@@ -129,6 +129,7 @@ export interface TrackTagsResponse {
 export interface TrackTagUpdate {
   frameId: string;
   value: string;
+  description?: string;
 }
 
 export interface WriteTrackTagsRequest {

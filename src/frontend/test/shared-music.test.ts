@@ -67,12 +67,12 @@ describe('shared music helpers', () => {
   it('parses and serializes the prefer composer grouping tag', () => {
     expect(
       parsePreferComposerGroupingTag([
-        serializePreferComposerGroupingTag(true),
+        serializePreferComposerGroupingTag('true'),
       ]),
     ).toBe(true);
     expect(
       parsePreferComposerGroupingTag([
-        serializePreferComposerGroupingTag(false),
+        serializePreferComposerGroupingTag('false'),
       ]),
     ).toBe(false);
   });

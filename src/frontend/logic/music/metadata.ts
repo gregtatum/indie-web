@@ -1,4 +1,9 @@
 import type { TrackMetadata, TrackTagsResponse } from 'shared/@types/shared';
+import {
+  PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
+  parseBooleanTagValue,
+  preferComposerGroupingFormValue,
+} from 'shared/music';
 export { getTrackFilterArtist } from 'shared/music';
 
 const PRIORITY_IDS = [
@@ -293,7 +298,8 @@ export type DetailFieldTotalKey = Extract<
   { type: 'split' }
 >['totalKey'];
 export type DetailFieldValueKey = DetailFieldPrimaryKey | DetailFieldTotalKey;
-export type DetailFieldValues = Record<DetailFieldValueKey, string>;
+export type DetailFormValueKey = DetailFieldValueKey | 'preferComposerGrouping';
+export type DetailFieldValues = Record<DetailFormValueKey, string>;
 
 export type TrackTagsLoadState =
   | { status: 'loading' }
@@ -311,6 +317,7 @@ export function emptyDetailFieldValues(): DetailFieldValues {
       values[field.totalKey] = '';
     }
   }
+  values.preferComposerGrouping = 'auto';
   return values;
 }
 
@@ -328,6 +335,14 @@ export function detailFieldValues(
           frameMap.set(tag.id, tag.value);
         }
       }
+    }
+    const preferComposerValue = frameMap.get(
+      `TXXX:${PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION}`,
+    );
+    if (preferComposerValue !== undefined) {
+      state.preferComposerGrouping = preferComposerGroupingFormValue(
+        parseBooleanTagValue(preferComposerValue),
+      );
     }
 
     for (const field of DETAIL_FIELDS) {
@@ -368,6 +383,11 @@ export function detailFieldValues(
     }
     if (!state.trackNum && track.track !== null) {
       state.trackNum = String(track.track);
+    }
+    if (state.preferComposerGrouping === 'auto') {
+      state.preferComposerGrouping = preferComposerGroupingFormValue(
+        track.preferComposerGrouping,
+      );
     }
   }
 

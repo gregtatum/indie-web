@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import type { IAudioMetadata, ITag } from 'music-metadata';
 import { musicRoute } from '../route-music.ts';
+import type { T } from '../index.ts';
 import {
   createTestServer,
   buildMp3WithTags,
@@ -44,7 +45,7 @@ function getBytesAfterId3(buffer: Buffer): Buffer {
 async function writeTrackTags(
   server: TestServer,
   clientPath: string | string[],
-  changes: Array<{ frameId: string; value: string }>,
+  changes: T.TrackTagUpdate[],
 ) {
   const paths = Array.isArray(clientPath) ? clientPath : [clientPath];
   return fetch(`${server.baseUrl}/music/write-track-tags`, {
@@ -147,6 +148,29 @@ describe('POST /music/write-track-tags — frame-ID mapping', () => {
       assert.ok(comm, 'COMM frame should exist');
       assert.equal(comm.text, 'Some comment text');
       assert.equal(comm.language, 'eng');
+    }),
+  );
+
+  it(
+    'writes the prefer composer grouping TXXX private tag',
+    withLogs([], async () => {
+      const filePath = join(server.mountDir, 'prefer-composer-txxx.mp3');
+      await writeFile(filePath, buildMp3WithTags({}));
+
+      const res = await writeTrackTags(server, '/prefer-composer-txxx.mp3', [
+        {
+          frameId: 'TXXX',
+          description: 'indie-web:prefer-composer-grouping',
+          value: 'true',
+        },
+      ]);
+      assert.equal(res.status, 200);
+
+      const meta = await parseFile(filePath);
+      assert.equal(
+        findFrameValue(meta, 'TXXX:indie-web:prefer-composer-grouping'),
+        'true',
+      );
     }),
   );
 });

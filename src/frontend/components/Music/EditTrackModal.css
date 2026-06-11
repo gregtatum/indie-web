@@ -186,6 +186,23 @@
   box-shadow: var(--box-shadow-focus);
 }
 
+.editTrackModalRadioGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  min-height: 30px;
+}
+
+.editTrackModalRadioOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-small);
+  color: var(--text-body);
+  white-space: nowrap;
+}
+
 .editTrackModalInput-readonly {
   background: var(--surface-raised);
 }

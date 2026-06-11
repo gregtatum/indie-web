@@ -305,6 +305,36 @@ describe('edit track modal', () => {
     });
   });
 
+  it('saves the prefer composer grouping private tag from the Details form', async () => {
+    const user = userEvent.setup();
+
+    setup();
+    const writeRequests = mockWriteTrackTags();
+
+    await openEditModal('Song A');
+    const preferComposerRadio = await screen.findByLabelText('Prefer composer');
+    await waitFor(() => {
+      expect((preferComposerRadio as HTMLInputElement).disabled).toBe(false);
+    });
+
+    await user.click(preferComposerRadio);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(writeRequests).toHaveLength(1);
+    });
+    expect(writeRequests[0]).toEqual({
+      paths: ['/music/a.mp3'],
+      changes: [
+        {
+          frameId: 'TXXX',
+          description: 'indie-web:prefer-composer-grouping',
+          value: 'true',
+        },
+      ],
+    });
+  });
+
   it('closes when the close button is clicked', async () => {
     setup();
     await openEditModal('Song A');

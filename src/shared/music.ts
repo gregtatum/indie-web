@@ -1,9 +1,14 @@
+/**
+ * Shared utils and constants for the music component.
+ */
 import type { TrackMetadata } from './@types/shared.ts';
 
 export const MUSIC_INDEX_VERSION = 7 as const;
 
 export const PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION =
   'indie-web:prefer-composer-grouping';
+
+export type PreferComposerGroupingValue = 'auto' | 'true' | 'false';
 
 export interface PrivateTextTag {
   description: string;
@@ -31,12 +36,24 @@ export function parsePreferComposerGroupingTag(
 }
 
 export function serializePreferComposerGroupingTag(
-  value: boolean,
+  value: PreferComposerGroupingValue,
 ): PrivateTextTag {
   return {
     description: PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
-    value: value ? 'true' : 'false',
+    value: value === 'auto' ? '' : value,
   };
+}
+
+export function preferComposerGroupingFormValue(
+  value: boolean | null,
+): PreferComposerGroupingValue {
+  if (value === true) {
+    return 'true';
+  }
+  if (value === false) {
+    return 'false';
+  }
+  return 'auto';
 }
 
 export function nativePrivateTextTagValue(
