@@ -4,7 +4,7 @@ import { statSync } from 'fs';
 import { readdir } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 
-export { throttle } from '../shared/utils.ts';
+export * from '../shared/utils.ts';
 
 export const colors = {
   Reset: '\x1b[0m',
