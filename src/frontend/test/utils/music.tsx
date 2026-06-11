@@ -13,6 +13,7 @@ import { A, T } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import * as Types from 'frontend/@types';
+import { MUSIC_INDEX_VERSION } from 'shared/music';
 
 export interface MusicTestServer {
   baseUrl: string;
@@ -90,7 +91,7 @@ export function writeMusicIndex(
   tracks: Types.TrackMetadata[],
 ): void {
   const index: Types.MusicIndex = {
-    version: 6,
+    version: MUSIC_INDEX_VERSION,
     scannedAt: '2024-01-01T00:00:00Z',
     tracks,
   };

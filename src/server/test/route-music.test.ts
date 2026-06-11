@@ -2,7 +2,8 @@ import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { MUSIC_INDEX_VERSION, musicRoute } from '../route-music.ts';
+import { MUSIC_INDEX_VERSION } from '../../shared/music.ts';
+import { musicRoute } from '../route-music.ts';
 import {
   createTestServer,
   buildMp3WithTags,
@@ -86,6 +87,7 @@ describe('POST /music/music-index/scan', () => {
           title: 'My Song',
           artist: 'My Artist',
           albumArtist: 'My Album Artist',
+          composer: 'My Composer',
           album: 'My Album',
         }),
       );
@@ -101,7 +103,54 @@ describe('POST /music/music-index/scan', () => {
       assert.equal(track.title, 'My Song');
       assert.equal(track.artist, 'My Artist');
       assert.equal(track.albumArtist, 'My Album Artist');
+      assert.equal(track.composer, 'My Composer');
       assert.equal(track.album, 'My Album');
+    }),
+  );
+
+  it(
+    'extracts the prefer composer grouping private tag',
+    withLogs([], async () => {
+      await writeFile(
+        join(server.mountDir, 'prefer-composer.mp3'),
+        buildMp3WithTags({
+          title: 'Prefer Composer',
+          preferComposerGrouping: 'true',
+        }),
+      );
+
+      const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+      const index = await res.json();
+      const track = index.tracks.find(
+        (t: { path: string }) => t.path === '/prefer-composer.mp3',
+      );
+      assert.ok(track, 'prefer-composer.mp3 should appear in the index');
+      assert.equal(track.preferComposerGrouping, true);
+    }),
+  );
+
+  it(
+    'extracts an explicit false prefer composer grouping private tag',
+    withLogs([], async () => {
+      await writeFile(
+        join(server.mountDir, 'do-not-prefer-composer.mp3'),
+        buildMp3WithTags({
+          title: 'Do Not Prefer Composer',
+          preferComposerGrouping: 'false',
+        }),
+      );
+
+      const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+      const index = await res.json();
+      const track = index.tracks.find(
+        (t: { path: string }) => t.path === '/do-not-prefer-composer.mp3',
+      );
+      assert.ok(track, 'do-not-prefer-composer.mp3 should appear in the index');
+      assert.equal(track.preferComposerGrouping, false);
     }),
   );
 

@@ -8,6 +8,7 @@ import { A, T, $ } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { mockMusicMediaElement } from './utils/music';
+import { MUSIC_INDEX_VERSION } from 'shared/music';
 
 const FAKE_SERVER: T.FileStoreServer = {
   id: 'test-music',
@@ -22,8 +23,10 @@ const TRACKS: T.TrackMetadata[] = [
     title: 'Song A',
     artist: 'Artist A',
     albumArtist: null,
+    composer: null,
     album: 'Album A',
     genre: 'Rock',
+    preferComposerGrouping: null,
     track: 1,
     duration: 180,
     size: 1024,
@@ -36,8 +39,10 @@ const TRACKS: T.TrackMetadata[] = [
     title: 'Song B',
     artist: 'Artist B',
     albumArtist: null,
+    composer: null,
     album: 'Album A',
     genre: 'Rock',
+    preferComposerGrouping: null,
     track: 2,
     duration: 200,
     size: 2048,
@@ -50,8 +55,10 @@ const TRACKS: T.TrackMetadata[] = [
     title: 'Song C',
     artist: 'Artist A',
     albumArtist: null,
+    composer: null,
     album: 'Album B',
     genre: 'Jazz',
+    preferComposerGrouping: null,
     track: 1,
     duration: 240,
     size: 3072,
@@ -79,7 +86,7 @@ function setup(tracks = TRACKS) {
     `${FAKE_SERVER.url}/music/music-index`,
     {
       body: JSON.stringify({
-        version: 6,
+        version: MUSIC_INDEX_VERSION,
         scannedAt: '2024-01-01T00:00:00Z',
         tracks,
       }),

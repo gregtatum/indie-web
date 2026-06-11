@@ -12,9 +12,13 @@ import { extname, dirname } from 'node:path';
 import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 import { throttle } from '../shared/utils.ts';
+import {
+  MUSIC_INDEX_VERSION,
+  nativePrivateTextTagValue,
+  parsePreferComposerGroupingTag,
+} from '../shared/music.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
-export const MUSIC_INDEX_VERSION = 6 as const;
 
 const COVER_ART_FILENAMES = [
   'cover.jpg',
@@ -464,8 +468,10 @@ async function performScan(
       let title: string | null = null;
       let artist: string | null = null;
       let albumArtist: string | null = null;
+      let composer: string | null = null;
       let album: string | null = null;
       let genre: string | null = null;
+      let preferComposerGrouping: boolean | null = null;
       let track: number | null = null;
       let duration: number | null = null;
       let hasEmbeddedArt = false;
@@ -474,8 +480,12 @@ async function performScan(
         title = meta.common.title ?? null;
         artist = meta.common.artist ?? null;
         albumArtist = meta.common.albumartist ?? null;
+        composer = meta.common.composer?.[0] ?? null;
         album = meta.common.album ?? null;
         genre = meta.common.genre?.[0] ?? null;
+        preferComposerGrouping = parsePreferComposerGroupingTag(
+          getNativePrivateTextTags(meta.native),
+        );
         track = meta.common.track.no ?? null;
         duration = meta.format.duration ?? null;
         hasEmbeddedArt = (meta.common.picture?.length ?? 0) > 0;
@@ -502,8 +512,10 @@ async function performScan(
         title,
         artist,
         albumArtist,
+        composer,
         album,
         genre,
+        preferComposerGrouping,
         track,
         duration,
         size,
@@ -527,6 +539,28 @@ async function performScan(
   await fs.rename(tmpPath, indexPath);
 
   return index;
+}
+
+function getNativePrivateTextTags(
+  native: Record<string, Array<{ id: string; value: unknown }>>,
+) {
+  return Object.values(native).flatMap((frames) =>
+    frames.flatMap((frame) => {
+      if (frame.id.startsWith('TXXX:') && typeof frame.value === 'string') {
+        return [
+          {
+            description: frame.id.slice('TXXX:'.length),
+            value: frame.value,
+          },
+        ];
+      }
+      if (frame.id !== 'TXXX') {
+        return [];
+      }
+      const tag = nativePrivateTextTagValue(frame.value);
+      return tag ? [tag] : [];
+    }),
+  );
 }
 
 interface TrackTagWriteResult {
@@ -706,6 +740,9 @@ async function updateIndexAfterTrackTagWrites(
             break;
           case 'TCON':
             updatedTrack.genre = value || null;
+            break;
+          case 'TCOM':
+            updatedTrack.composer = value || null;
             break;
           case 'TRCK': {
             const num = parseInt(value.split('/')[0], 10);

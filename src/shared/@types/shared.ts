@@ -1,3 +1,5 @@
+import type { MUSIC_INDEX_VERSION } from '../music.ts';
+
 export type DownloadedTextFile = {
   metadata: FileMetadata;
   text: string;
@@ -58,8 +60,11 @@ export interface TrackMetadata {
   artist: string | null;
   /** Album-level artist used for library grouping; falls back to artist when missing. */
   albumArtist: string | null;
+  composer: string | null;
   album: string | null;
   genre: string | null;
+  /** Explicit private-tag override for composer grouping; null means use defaults. */
+  preferComposerGrouping: boolean | null;
   /** Track number within its album. */
   track: number | null;
   /** Duration in seconds. */
@@ -96,7 +101,7 @@ export interface TrackMetadata {
  * backfilled fields (e.g. genre: null) are incomplete vs. a fresh scan.
  */
 export interface MusicIndex {
-  version: 6;
+  version: typeof MUSIC_INDEX_VERSION;
   scannedAt: string;
   tracks: TrackMetadata[];
 }

@@ -152,8 +152,10 @@ interface Mp3Tags {
   title: string;
   artist: string;
   albumArtist: string;
+  composer: string;
   album: string;
   genre: string;
+  preferComposerGrouping: string;
   apic: Buffer;
 }
 
@@ -179,6 +181,18 @@ export function buildMp3WithTags(tags: Partial<Mp3Tags> = {}): Buffer {
     );
   }
 
+  function userDefinedTextFrame(description: string, text: string): Buffer {
+    return frame(
+      'TXXX',
+      Buffer.concat([
+        Buffer.from([0x00]),
+        Buffer.from(description, 'latin1'),
+        Buffer.from([0x00]),
+        Buffer.from(text, 'latin1'),
+      ]),
+    );
+  }
+
   if (tags.title) {
     frames.push(textFrame('TIT2', tags.title));
   }
@@ -188,11 +202,22 @@ export function buildMp3WithTags(tags: Partial<Mp3Tags> = {}): Buffer {
   if (tags.albumArtist) {
     frames.push(textFrame('TPE2', tags.albumArtist));
   }
+  if (tags.composer) {
+    frames.push(textFrame('TCOM', tags.composer));
+  }
   if (tags.album) {
     frames.push(textFrame('TALB', tags.album));
   }
   if (tags.genre) {
     frames.push(textFrame('TCON', tags.genre));
+  }
+  if (tags.preferComposerGrouping) {
+    frames.push(
+      userDefinedTextFrame(
+        'indie-web:prefer-composer-grouping',
+        tags.preferComposerGrouping,
+      ),
+    );
   }
   if (tags.apic) {
     // APIC content: encoding(1) + mime\0 + picType(1) + description\0 + data

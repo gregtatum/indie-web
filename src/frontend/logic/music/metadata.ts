@@ -1,4 +1,5 @@
 import type { TrackMetadata, TrackTagsResponse } from 'shared/@types/shared';
+export { getTrackFilterArtist } from 'shared/music';
 
 const PRIORITY_IDS = [
   'TIT2', // Title
@@ -298,10 +299,6 @@ export type TrackTagsLoadState =
   | { status: 'loading' }
   | { status: 'loaded'; data: TrackTagsResponse }
   | { status: 'error'; message: string };
-
-export function getTrackFilterArtist(track: TrackMetadata): string | null {
-  return track.albumArtist || track.artist;
-}
 
 /**
  * e.g. { title: "", artist: "", albumArtist: "", … }

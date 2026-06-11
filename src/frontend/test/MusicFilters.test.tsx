@@ -15,6 +15,7 @@ import { AppRoutes } from 'frontend/components/App';
 import { MUSIC_URL_SERIALIZATION_CUTOFF } from 'frontend/components/Music/UrlSerialization';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { mockServerListFiles } from './utils/fixtures';
+import { MUSIC_INDEX_VERSION } from 'shared/music';
 
 const FAKE_SERVER: T.FileStoreServer = {
   id: 'test-music',
@@ -29,8 +30,10 @@ const TRACKS: T.TrackMetadata[] = [
     title: 'Sovay',
     artist: 'Andrew Bird',
     albumArtist: null,
+    composer: null,
     album: 'The Mysterious Production of Eggs',
     genre: 'Indie',
+    preferComposerGrouping: null,
     track: 1,
     duration: 180,
     size: 1024,
@@ -43,8 +46,10 @@ const TRACKS: T.TrackMetadata[] = [
     title: 'All Blues',
     artist: 'Miles Davis',
     albumArtist: null,
+    composer: null,
     album: 'Kind of Blue',
     genre: 'Jazz',
+    preferComposerGrouping: null,
     track: 2,
     duration: 200,
     size: 2048,
@@ -84,7 +89,7 @@ function setup(search = '', tracks = TRACKS) {
     `${FAKE_SERVER.url}/music/music-index`,
     {
       body: JSON.stringify({
-        version: 6,
+        version: MUSIC_INDEX_VERSION,
         scannedAt: '2024-01-01T00:00:00Z',
         tracks,
       }),
