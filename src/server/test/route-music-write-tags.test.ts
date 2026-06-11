@@ -173,6 +173,45 @@ describe('POST /music/write-track-tags — frame-ID mapping', () => {
       );
     }),
   );
+
+  it(
+    'rewrites the prefer composer grouping TXXX private tag to false',
+    withLogs([], async () => {
+      const filePath = join(
+        server.mountDir,
+        'rewrite-prefer-composer-txxx.mp3',
+      );
+      await writeFile(
+        filePath,
+        buildMp3WithTags({
+          title: 'Original Title',
+          artist: 'Original Artist',
+          preferComposerGrouping: 'true',
+        }),
+      );
+
+      const res = await writeTrackTags(
+        server,
+        '/rewrite-prefer-composer-txxx.mp3',
+        [
+          {
+            frameId: 'TXXX',
+            description: 'indie-web:prefer-composer-grouping',
+            value: 'false',
+          },
+        ],
+      );
+      assert.equal(res.status, 200);
+
+      const meta = await parseFile(filePath);
+      assert.equal(
+        findFrameValue(meta, 'TXXX:indie-web:prefer-composer-grouping'),
+        'false',
+      );
+      assert.equal(meta.common.title, 'Original Title');
+      assert.equal(meta.common.artist, 'Original Artist');
+    }),
+  );
 });
 
 describe('POST /music/write-track-tags — diff semantics', () => {

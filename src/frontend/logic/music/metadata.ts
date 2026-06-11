@@ -317,7 +317,7 @@ export function emptyDetailFieldValues(): DetailFieldValues {
       values[field.totalKey] = '';
     }
   }
-  values.preferComposerGrouping = 'auto';
+  values.preferComposerGrouping = 'false';
   return values;
 }
 
@@ -326,6 +326,8 @@ export function detailFieldValues(
   tagsResponse: TrackTagsResponse | null,
 ): DetailFieldValues {
   const state = emptyDetailFieldValues();
+  let nativePreferComposerGrouping: boolean | null = null;
+  let hasNativePreferComposerGrouping = false;
 
   if (tagsResponse) {
     const frameMap = new Map<string, string>();
@@ -340,9 +342,8 @@ export function detailFieldValues(
       `TXXX:${PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION}`,
     );
     if (preferComposerValue !== undefined) {
-      state.preferComposerGrouping = preferComposerGroupingFormValue(
-        parseBooleanTagValue(preferComposerValue),
-      );
+      hasNativePreferComposerGrouping = true;
+      nativePreferComposerGrouping = parseBooleanTagValue(preferComposerValue);
     }
 
     for (const field of DETAIL_FIELDS) {
@@ -384,12 +385,14 @@ export function detailFieldValues(
     if (!state.trackNum && track.track !== null) {
       state.trackNum = String(track.track);
     }
-    if (state.preferComposerGrouping === 'auto') {
-      state.preferComposerGrouping = preferComposerGroupingFormValue(
-        track.preferComposerGrouping,
-      );
-    }
   }
+
+  state.preferComposerGrouping = preferComposerGroupingFormValue(
+    hasNativePreferComposerGrouping
+      ? nativePreferComposerGrouping
+      : (track?.preferComposerGrouping ?? null),
+    state.genre,
+  );
 
   return state;
 }

@@ -1,5 +1,6 @@
 import type { TrackMetadata } from 'shared/@types/shared';
 import {
+  defaultPreferComposerGroupingForGenre,
   getTrackFilterArtist,
   nativePrivateTextTagValue,
   parsePreferComposerGroupingTag,
@@ -51,6 +52,11 @@ describe('shared music helpers', () => {
         preferComposerGrouping: null,
       }),
     ).toBe('Composer');
+  });
+
+  it('uses Classical as the genre default for composer grouping', () => {
+    expect(defaultPreferComposerGroupingForGenre('Classical')).toBe(true);
+    expect(defaultPreferComposerGroupingForGenre('Electronic')).toBe(false);
   });
 
   it('falls back through album artist and artist', () => {

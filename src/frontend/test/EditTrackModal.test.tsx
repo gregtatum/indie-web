@@ -312,12 +312,52 @@ describe('edit track modal', () => {
     const writeRequests = mockWriteTrackTags();
 
     await openEditModal('Song A');
-    const preferComposerRadio = await screen.findByLabelText('Prefer composer');
+    const preferComposerRadio = await within(
+      screen.getByRole('radiogroup', { name: 'Group Artist By' }),
+    ).findByLabelText('Composer');
     await waitFor(() => {
       expect((preferComposerRadio as HTMLInputElement).disabled).toBe(false);
     });
 
     await user.click(preferComposerRadio);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(writeRequests).toHaveLength(1);
+    });
+    expect(writeRequests[0]).toEqual({
+      paths: ['/music/a.mp3'],
+      changes: [
+        {
+          frameId: 'TXXX',
+          description: 'indie-web:prefer-composer-grouping',
+          value: 'true',
+        },
+      ],
+    });
+  });
+
+  it('writes the prefer composer grouping default when the default is selected', async () => {
+    const user = userEvent.setup();
+
+    setup([
+      {
+        ...TRACKS[0],
+        genre: 'Classical',
+        preferComposerGrouping: false,
+      },
+    ]);
+    const writeRequests = mockWriteTrackTags();
+
+    await openEditModal('Song A');
+    const defaultComposerRadio = await within(
+      screen.getByRole('radiogroup', { name: 'Group Artist By' }),
+    ).findByLabelText('Default (Composer)');
+    await waitFor(() => {
+      expect((defaultComposerRadio as HTMLInputElement).disabled).toBe(false);
+    });
+
+    await user.click(defaultComposerRadio);
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
@@ -845,7 +885,8 @@ describe('edit track modal', () => {
       (screen.getByLabelText('Artist') as HTMLInputElement).placeholder,
     ).toBe('Mixed');
     expect(
-      (screen.getByLabelText('Composer') as HTMLInputElement).placeholder,
+      (screen.getByRole('textbox', { name: 'Composer' }) as HTMLInputElement)
+        .placeholder,
     ).toBe('Not loaded');
 
     await act(async () => {
@@ -859,7 +900,8 @@ describe('edit track modal', () => {
     });
     expect(screen.queryByText(/Using track details/)).toBeNull();
     expect(
-      (screen.getByLabelText('Composer') as HTMLInputElement).placeholder,
+      (screen.getByRole('textbox', { name: 'Composer' }) as HTMLInputElement)
+        .placeholder,
     ).toBe('');
   });
 
@@ -1102,7 +1144,8 @@ describe('edit track modal', () => {
     });
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
     expect(
-      (screen.getByLabelText('Composer') as HTMLInputElement).placeholder,
+      (screen.getByRole('textbox', { name: 'Composer' }) as HTMLInputElement)
+        .placeholder,
     ).toBe('Not loaded');
   });
 });

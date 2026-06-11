@@ -18,11 +18,7 @@ export const MUSIC_INDEX_VERSION = 7 as const;
 export const PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION =
   'indie-web:prefer-composer-grouping';
 
-/**
- * The modal uses a three-state control. The persisted index stores only the
- * explicit override as boolean|null; null means "Auto".
- */
-export type PreferComposerGroupingValue = 'auto' | 'true' | 'false';
+export type PreferComposerGroupingValue = 'true' | 'false';
 
 /**
  * The dependency-specific native tag values are normalized into this small
@@ -59,25 +55,27 @@ export function parsePreferComposerGroupingTag(
 }
 
 /**
- * Converts the modal value into the TXXX payload. "Auto" writes an empty value
- * instead of deleting the frame because node-id3's update path preserves
- * unmentioned array entries. Empty parses back to null and has the same grouping
- * semantics as an absent tag.
+ * Converts the modal choice into the TXXX payload. The UI may label one choice
+ * as the current default, but saves still write an explicit boolean so later
+ * genre edits do not silently change a user-confirmed grouping preference.
  */
 export function serializePreferComposerGroupingTag(
   value: PreferComposerGroupingValue,
 ): PrivateTextTag {
   return {
     description: PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
-    value: value === 'auto' ? '' : value,
+    value,
   };
 }
 
 /**
- * Converts the indexed tri-state value into the modal's string value.
+ * Converts the indexed nullable override into the modal's binary radio value.
+ * A missing private tag resolves to the genre default for display, but the next
+ * edit persists the selected value explicitly as "true" or "false".
  */
 export function preferComposerGroupingFormValue(
   value: boolean | null,
+  genre: string,
 ): PreferComposerGroupingValue {
   if (value === true) {
     return 'true';
@@ -85,7 +83,16 @@ export function preferComposerGroupingFormValue(
   if (value === false) {
     return 'false';
   }
-  return 'auto';
+  return defaultPreferComposerGroupingForGenre(genre) ? 'true' : 'false';
+}
+
+/**
+ * The app-level default for artist grouping. Classical music commonly belongs
+ * under composer for library browsing, while other genres stay grouped by album
+ * artist. An explicit private tag can still lock either behavior.
+ */
+export function defaultPreferComposerGroupingForGenre(genre: string): boolean {
+  return genre === 'Classical';
 }
 
 /**
@@ -121,21 +128,25 @@ export function nativePrivateTextTagValue(
 }
 
 /**
- * Composer grouping defaults on for Classical music, but the private tag wins
- * when it is explicitly true or false.
+ * Resolves the private-tag override and genre default into a concrete grouping
+ * strategy. Callers that sort or filter by "artist" should use this result
+ * instead of checking the genre directly, so explicit user choices always win.
  */
 export function shouldPreferComposerGrouping(track: TrackMetadata): boolean {
   if (track.preferComposerGrouping !== null) {
     return track.preferComposerGrouping;
   }
-  return track.genre === 'Classical';
+  return defaultPreferComposerGroupingForGenre(track.genre ?? '');
 }
 
 /**
- * Artist filter and display sorting should use this effective grouping artist,
- * not the raw artist field. Classical tracks usually sort under composer, while
- * pop/jazz/etc. keep the album-artist-first strategy. Missing values fall back
- * through the rest of the chain so tracks remain discoverable.
+ * Returns the effective artist key for filtering and display sorting:
+ *
+ * - Prefer composer: Composer -> Album Artist -> Artist
+ * - Do not prefer composer: Album Artist -> Artist
+ *
+ * Keeping this fallback chain in one shared helper avoids split behavior
+ * between frontend filters, sort keys, and any future server-side indexing.
  */
 export function getTrackFilterArtist(track: TrackMetadata): string | null {
   if (shouldPreferComposerGrouping(track)) {

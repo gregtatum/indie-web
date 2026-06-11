@@ -11,14 +11,15 @@ import {
   detailFieldValues,
   isSplitField,
   type DetailFormValueKey,
+  type DetailFieldGroup,
   type TrackTagsLoadState,
   type DetailFieldValues,
 } from 'frontend/logic/music/metadata';
 import {
+  defaultPreferComposerGroupingForGenre,
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
   parseBooleanTagValue,
   serializePreferComposerGroupingTag,
-  type PreferComposerGroupingValue,
 } from 'shared/music';
 import type {
   TrackTagsResponse,
@@ -33,6 +34,12 @@ const GROUP_LABELS: Record<string, string> = {
   classification: 'Classification',
   notes: 'Notes',
 };
+const DETAIL_GROUP_ORDER: DetailFieldGroup[] = [
+  'core',
+  'position',
+  'classification',
+  'notes',
+];
 
 const BULK_LIVE_TAGS_CUTOFF = 200;
 const BULK_TAG_FETCH_CONCURRENCY = 6;
@@ -204,12 +211,12 @@ function buildDetailChanges(
       }
     }
   }
-  const currentPreferComposer = (formState.preferComposerGrouping ??
-    'auto') as PreferComposerGroupingValue;
-  const baselinePreferComposer =
-    baselineFormState.preferComposerGrouping ?? 'auto';
+  const currentPreferComposer = formState.preferComposerGrouping;
+  const baselinePreferComposer = baselineFormState.preferComposerGrouping;
   if (currentPreferComposer !== baselinePreferComposer) {
-    const tag = serializePreferComposerGroupingTag(currentPreferComposer);
+    const tag = serializePreferComposerGroupingTag(
+      currentPreferComposer === 'true' ? 'true' : 'false',
+    );
     changes.push({
       frameId: 'TXXX',
       description: tag.description,
@@ -911,22 +918,62 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     );
   }
 
-  // Build the Details panel by iterating detailFields
-  let lastGroup: string | null = null;
   const detailRows: React.ReactNode[] = [];
-  for (const field of DETAIL_FIELDS) {
-    if (isBulkEdit && field.key === 'title') {
-      continue;
-    }
-    if (field.group !== lastGroup) {
-      detailRows.push(
-        <div key={`group-${field.group}`} className="editTrackModalGroupHeader">
-          {GROUP_LABELS[field.group]}
-        </div>,
-      );
-      lastGroup = field.group;
-    }
 
+  const radioName = 'preferComposerGrouping';
+  const defaultPreferComposerGrouping = defaultPreferComposerGroupingForGenre(
+    formState.genre ?? '',
+  );
+  const radioValue = formState.preferComposerGrouping;
+  const groupArtistOptions = defaultPreferComposerGrouping
+    ? ([
+        { value: 'false', label: 'Album Artist' },
+        { value: 'true', label: 'Default (Composer)' },
+      ] as const)
+    : ([
+        { value: 'false', label: 'Default (Album Artist)' },
+        { value: 'true', label: 'Composer' },
+      ] as const);
+  function setGroupArtistBy(value: 'true' | 'false') {
+    setField('preferComposerGrouping', value);
+  }
+  const extraRowsByGroup: Partial<Record<DetailFieldGroup, React.ReactNode[]>> =
+    {
+      classification: [
+        <div key="preferComposerGrouping" className="editTrackModalRow">
+          <span
+            className="editTrackModalLabel"
+            title="Controls whether this track is grouped under Album Artist or Composer in the music library."
+          >
+            Group Artist By
+          </span>
+          <div
+            className="editTrackModalRadioGroup"
+            role="radiogroup"
+            aria-label="Group Artist By"
+            title="Controls whether this track is grouped under Album Artist or Composer in the music library."
+          >
+            {groupArtistOptions.map((option) => (
+              <label className="editTrackModalRadioOption" key={option.value}>
+                <input
+                  type="radio"
+                  name={radioName}
+                  value={option.value}
+                  checked={radioValue === option.value}
+                  disabled={detailsEditingDisabled}
+                  onChange={(e) =>
+                    setGroupArtistBy(e.target.value as 'true' | 'false')
+                  }
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </div>,
+      ],
+    };
+
+  function addDetailFieldRow(field: (typeof DETAIL_FIELDS)[number]) {
     if (isSplitField(field)) {
       detailRows.push(
         <label key={field.key} className="editTrackModalRow">
@@ -970,60 +1017,21 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         </label>,
       );
     }
-    if (field.key === 'genre') {
-      const radioName = 'preferComposerGrouping';
-      const radioValue = formState.preferComposerGrouping;
-      detailRows.push(
-        <div key="preferComposerGrouping" className="editTrackModalRow">
-          <span className="editTrackModalLabel">Grouping Artist By</span>
-          <div
-            className="editTrackModalRadioGroup"
-            role="radiogroup"
-            aria-label="Composer Grouping"
-          >
-            <label className="editTrackModalRadioOption">
-              <input
-                type="radio"
-                name={radioName}
-                value="auto"
-                checked={radioValue === 'auto'}
-                disabled={detailsEditingDisabled}
-                onChange={(e) =>
-                  setField('preferComposerGrouping', e.target.value)
-                }
-              />
-              Auto
-            </label>
-            <label className="editTrackModalRadioOption">
-              <input
-                type="radio"
-                name={radioName}
-                value="true"
-                checked={radioValue === 'true'}
-                disabled={detailsEditingDisabled}
-                onChange={(e) =>
-                  setField('preferComposerGrouping', e.target.value)
-                }
-              />
-              Prefer composer
-            </label>
-            <label className="editTrackModalRadioOption">
-              <input
-                type="radio"
-                name={radioName}
-                value="false"
-                checked={radioValue === 'false'}
-                disabled={detailsEditingDisabled}
-                onChange={(e) =>
-                  setField('preferComposerGrouping', e.target.value)
-                }
-              />
-              Prefer album artist
-            </label>
-          </div>
-        </div>,
-      );
+  }
+
+  for (const group of DETAIL_GROUP_ORDER) {
+    detailRows.push(
+      <div key={`group-${group}`} className="editTrackModalGroupHeader">
+        {GROUP_LABELS[group]}
+      </div>,
+    );
+    for (const field of DETAIL_FIELDS) {
+      if (field.group !== group || (isBulkEdit && field.key === 'title')) {
+        continue;
+      }
+      addDetailFieldRow(field);
     }
+    detailRows.push(...(extraRowsByGroup[group] ?? []));
   }
 
   const tabs = [
