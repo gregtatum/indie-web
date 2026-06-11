@@ -120,7 +120,7 @@ tasks:
   test-server:
     desc: Run server integration tests (requires Node 22+)
     cmds:
-      - node --disable-warning=ExperimentalWarning --test src/server/test/*.test.ts
+      - node --disable-warning=ExperimentalWarning --test src/server/test/*.test.ts src/server/docker/*.test.mjs
 
   check:
     desc: Run all checks in a blazing fast configuration with only failures reported.
@@ -137,6 +137,6 @@ tasks:
       - docker compose up
 
   docker-publish:
-    desc: Publish the docker image for the server.
+    desc: "Publish the server Docker image. See src/server/README.md or run: `task docker-publish -- --help`"
     cmds:
-      - ./src/server/docker/publish.sh
+      - ./src/server/docker/publish.sh {{.CLI_ARGS}}

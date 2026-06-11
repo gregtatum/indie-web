@@ -2,18 +2,17 @@ FROM node:24
 
 WORKDIR /app
 
-ARG REPO=https://github.com/gregtatum/indie-web.git
-ARG TAG=main
+# The build.context is assumed to be the repo's root directory.
+COPY src/server/package.json ./src/server/package.json
+COPY src/server/package-lock.json ./src/server/package-lock.json
 
-# Install the repo via a git clone./
-RUN apt-get update && \
-    apt-get install -y git && \
-    git clone --branch ${TAG} --depth 1 ${REPO} . && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install the app and start it.
 WORKDIR /app/src/server
-# RUN pwd && echo "-----" && ls -ahL && exit 1
 RUN npm ci
+
+WORKDIR /app
+COPY src/server ./src/server
+COPY src/shared ./src/shared
+
+WORKDIR /app/src/server
 ENV NODE_ENV=production
 CMD npm run start
