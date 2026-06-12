@@ -147,6 +147,10 @@ export function getMusicPlaybackTrackPath(state: State): string | null {
   return getMusic(state).playingTrackPath;
 }
 
+export function getMusicPlaybackLoadId(state: State): number {
+  return getMusic(state).playbackLoadId;
+}
+
 export function getMusicPlaybackQueue(state: State): T.TrackMetadata[] {
   return getMusic(state).playbackQueue.tracks;
 }

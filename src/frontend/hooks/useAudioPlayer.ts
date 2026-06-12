@@ -57,6 +57,7 @@ export function useAudioPlayer(): AudioPlayerState {
   }
 
   const trackPath = $.getMusicPlaybackTrackPath(getState());
+  const playbackLoadId = $.getMusicPlaybackLoadId(getState());
   const server = $.getCurrentServerOrNull(getState());
   const serverId = $.getServerId(getState());
   const serverUrl = server?.url ?? '';
@@ -165,7 +166,7 @@ export function useAudioPlayer(): AudioPlayerState {
       audio.pause();
       audio.src = '';
     };
-  }, [trackPath, serverUrl]);
+  }, [trackPath, serverUrl, playbackLoadId]);
 
   const status = $.getMusicPlaybackStatus(getState());
 

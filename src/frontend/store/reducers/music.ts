@@ -70,6 +70,22 @@ function playingTrackPath(
   }
 }
 
+/**
+ * Monotonically increases on every load action so the audio hook can re-run
+ * its src-loading effect even when the same track path is requested again
+ * (double-clicking the currently playing track to restart it).
+ */
+function playbackLoadId(state = 0, action: T.Action): number {
+  switch (action.type) {
+    case 'music-playback-load':
+      return state + 1;
+    case 'view-music':
+      return 0;
+    default:
+      return state;
+  }
+}
+
 function playbackStatus(
   state: MusicPlaybackStatus = 'idle',
   action: T.Action,
@@ -216,6 +232,7 @@ const combinedMusicReducer = combineReducers({
   selectedTrackPaths,
   needsRescan,
   playingTrackPath,
+  playbackLoadId,
   playbackStatus,
   playbackQueue,
   folderArtSaveStatus,
