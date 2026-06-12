@@ -94,6 +94,27 @@ export function dockerTags(version) {
   ];
 }
 
+/**
+ * @param {string} failedTag
+ * @param {string[]} tags
+ * @returns {string}
+ */
+export function dockerPushFailureMessage(failedTag, tags) {
+  return [
+    `Docker push failed for ${failedTag}.`,
+    '',
+    'Recovery:',
+    '  1. Authenticate Docker Hub:',
+    '     docker login',
+    '  2. Confirm your Docker account can push this repository:',
+    `     ${image}`,
+    '  3. Push the release tags that were already built locally:',
+    ...tags.map((tag) => `     docker push ${tag}`),
+    '',
+    'The git release commit and tag may already be on origin. Finish these Docker pushes before creating another release.',
+  ].join('\n');
+}
+
 function usage() {
   return [
     'Usage: task docker-publish -- major|minor|patch [--dry-run]',
@@ -161,6 +182,23 @@ function readServerVersion() {
   return pkg.version;
 }
 
+/**
+ * @param {string} ref
+ * @returns {string | null}
+ */
+function readServerVersionFromGitRef(ref) {
+  try {
+    const packageJson = run('git', ['show', `${ref}:src/server/package.json`], {
+      capture: true,
+    });
+    const pkg = JSON.parse(packageJson);
+
+    return typeof pkg.version === 'string' ? pkg.version : null;
+  } catch {
+    return null;
+  }
+}
+
 function requireMainBranch() {
   const branch = run('git', ['branch', '--show-current'], { capture: true });
 
@@ -179,6 +217,34 @@ function requireCleanTree() {
   }
 }
 
+/**
+ * @param {string} head
+ * @param {string} originMain
+ * @returns {string}
+ */
+function syncedMainFailureMessage(head, originMain) {
+  const originVersion = readServerVersionFromGitRef('origin/main');
+  const originTags = originVersion ? dockerTags(originVersion) : [];
+
+  return [
+    'Publishing requires local main to match origin/main.',
+    '',
+    `Local HEAD:  ${head.slice(0, 12)}`,
+    `origin/main: ${originMain.slice(0, 12)}`,
+    '',
+    'Recovery:',
+    '  1. Update local main without creating a merge commit:',
+    '     git pull --ff-only origin main',
+    '  2. Inspect the server version now on main:',
+    '     node -p "require(\'./src/server/package.json\').version"',
+    '  3. If you are recovering from a Docker push failure, authenticate and push the already-created release tags instead of starting another version bump:',
+    '     docker login',
+    ...originTags.map((tag) => `     docker push ${tag}`),
+    '',
+    'Only rerun task docker-publish after local main is synced and you intentionally want a new release.',
+  ].join('\n');
+}
+
 function requireSyncedMain() {
   const head = run('git', ['rev-parse', 'HEAD'], { capture: true });
   const originMain = run('git', ['rev-parse', 'origin/main'], {
@@ -186,7 +252,7 @@ function requireSyncedMain() {
   });
 
   if (head !== originMain) {
-    throw new Error('Publishing requires local main to match origin/main.');
+    throw new Error(syncedMainFailureMessage(head, originMain));
   }
 }
 
@@ -311,7 +377,11 @@ function publish({ nextVersion, tag }) {
   run('git', ['push', 'origin', tag]);
 
   for (const dockerTag of tags) {
-    run('docker', ['push', dockerTag]);
+    try {
+      run('docker', ['push', dockerTag]);
+    } catch {
+      throw new Error(dockerPushFailureMessage(dockerTag, tags));
+    }
   }
 
   console.log('Published:');
