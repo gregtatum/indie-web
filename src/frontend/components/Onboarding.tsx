@@ -2,6 +2,10 @@ import * as React from 'react';
 import './Onboarding.css';
 import { A, $$, Hooks } from 'frontend';
 import * as Router from 'react-router-dom';
+import {
+  BROWSER_FILES_DB_NAME,
+  openIDBFS,
+} from 'frontend/logic/file-store/indexeddb-fs';
 
 /**
  * Show the onboarding process for new users, controlled by a key in localStorage.
@@ -9,8 +13,18 @@ import * as Router from 'react-router-dom';
  */
 export function Onboarding(props: { children: any }) {
   const hasOnboarded = $$.getHasOnboarded();
+  const idbfs = $$.getIDBFSOrNull();
+  const workerClient = $$.getWorkerClient();
   const dispatch = Hooks.useDispatch();
   const navigate = Router.useNavigate();
+
+  async function completeOnboarding() {
+    if (!idbfs) {
+      const browserFiles = await openIDBFS(BROWSER_FILES_DB_NAME, workerClient);
+      dispatch(A.connectIDBFS(browserFiles));
+    }
+    dispatch(A.setHasOnboarded(true));
+  }
 
   if (hasOnboarded) {
     return props.children;
@@ -140,7 +154,7 @@ export function Onboarding(props: { children: any }) {
             className="button button-primary"
             onClick={() => {
               // TODO, This should be better.
-              dispatch(A.setHasOnboarded(true));
+              void completeOnboarding();
             }}
           >
             Try a Demo Project
@@ -148,7 +162,7 @@ export function Onboarding(props: { children: any }) {
           <button
             className="button onboardingSecondary"
             onClick={() => {
-              dispatch(A.setHasOnboarded(true));
+              void completeOnboarding();
             }}
           >
             Start a Blank Workspace

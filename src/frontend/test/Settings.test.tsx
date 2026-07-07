@@ -10,6 +10,7 @@ import { A } from 'frontend';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import type { FileStoreCache } from 'frontend/logic/file-store';
+import type { FetchMockSandbox } from 'fetch-mock';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -53,6 +54,19 @@ describe('Settings', () => {
     expect(window.localStorage.length).toBe(0);
     expect(await screen.findByText(/On your storage/)).toBeTruthy();
     expect(screen.queryByText('Enable experimental features')).toBeNull();
+
+    (window.fetch as FetchMockSandbox).get(
+      '/guide/Getting Started.chopro',
+      'Getting started',
+    );
+
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Start a Blank Workspace' }),
+      );
+    });
+
+    expect(await screen.findByText('Add File or Folder')).toBeTruthy();
   });
 
   it('only deletes browser files when another storage is still configured', async () => {
