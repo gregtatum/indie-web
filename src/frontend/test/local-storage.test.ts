@@ -109,11 +109,11 @@ describe('localStorageEntries', () => {
 
   it('clears all localStorage for user data removal flows', () => {
     persistedState.fileStoreServer.write('server-id');
+    persistedState.hasOnboarded.write(true);
     window.localStorage.setItem('unregisteredKey', 'value');
 
     clearAllLocalStorageForUserDataRemoval();
 
-    expect(persistedState.fileStoreServer.read()).toBeNull();
-    expect(window.localStorage.getItem('unregisteredKey')).toBeNull();
+    expect(window.localStorage.length).toBe(0);
   });
 });

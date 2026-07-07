@@ -109,6 +109,7 @@ function listFileErrors(
     case 'change-file-system':
     case 'remove-dropbox-oauth':
     case 'remove-browser-files':
+    case 'remove-all-storage':
       return new Map();
     default:
       return state;
@@ -202,6 +203,7 @@ function listFilesCache(
     case 'clear-api-cache':
     case 'remove-dropbox-oauth':
     case 'remove-browser-files':
+    case 'remove-all-storage':
       return new Map();
     case 'invalidate-path':
       if (state.has(action.path)) {
@@ -239,6 +241,7 @@ function downloadFileErrors(
     case 'change-file-system':
     case 'remove-dropbox-oauth':
     case 'remove-browser-files':
+    case 'remove-all-storage':
       return new Map();
     default:
       return state;
@@ -309,6 +312,7 @@ function downloadFileCache(
     case 'clear-api-cache':
     case 'remove-dropbox-oauth':
     case 'remove-browser-files':
+    case 'remove-all-storage':
       return new Map();
     case 'invalidate-path':
       if (state.has(action.path)) {
@@ -349,6 +353,7 @@ function downloadBlobCache(
     case 'clear-api-cache':
     case 'remove-dropbox-oauth':
     case 'remove-browser-files':
+    case 'remove-all-storage':
       return new Map();
     default:
       return state;
@@ -591,6 +596,7 @@ function idbfs(
     case 'connect-idbfs':
       return action.idbfs;
     case 'remove-browser-files':
+    case 'remove-all-storage':
       return null;
     default:
       return state;
@@ -629,6 +635,8 @@ function hasOnboarded(
     case 'set-has-onboarded':
       persistedState.hasOnboarded.write(action.value);
       return action.value;
+    case 'remove-all-storage':
+      return false;
     default:
       return state;
   }
@@ -730,6 +738,7 @@ function fileFocusByPath(
     case 'clear-api-cache':
     case 'remove-dropbox-oauth':
     case 'remove-browser-files':
+    case 'remove-all-storage':
       return {};
     default:
       return state;

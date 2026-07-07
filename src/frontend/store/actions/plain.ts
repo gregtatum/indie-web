@@ -36,9 +36,15 @@ export function setDropboxAccessToken(
 }
 
 export function removeBrowserFiles() {
-  clearAllLocalStorageForUserDataRemoval();
   indexedDB.deleteDatabase(BROWSER_FILES_DB_NAME);
   return { type: 'remove-browser-files' as const };
+}
+
+export function removeAllStorage() {
+  clearAllLocalStorageForUserDataRemoval();
+  indexedDB.deleteDatabase(BROWSER_FILES_DB_NAME);
+  indexedDB.deleteDatabase(IDB_CACHE_NAME);
+  return { type: 'remove-all-storage' as const };
 }
 
 export function addFileStoreServer(server: T.FileStoreServer) {

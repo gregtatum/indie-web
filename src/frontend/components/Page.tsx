@@ -260,8 +260,12 @@ export function Settings() {
 
 function DeleteBrowserFiles() {
   const dispatch = Hooks.useDispatch();
+  const navigate = Router.useNavigate();
   const idbfs = $$.getIDBFSOrNull();
+  const dropboxOauth = $$.getDropboxOauth();
+  const servers = $$.getServers();
   const [fileCount, setFileCount] = React.useState(0);
+  const hasOtherStorage = Boolean(dropboxOauth) || servers.length > 0;
 
   React.useEffect(() => {
     idbfs?.getFileCount().then(
@@ -282,11 +286,20 @@ function DeleteBrowserFiles() {
           </p>
           <button
             onClick={() => {
-              confirm(
-                'Are you sure you want to delete your browser files? This operation cannot ' +
-                  'be undone.',
-              );
-              dispatch(A.removeBrowserFiles());
+              if (
+                !confirm(
+                  'Are you sure you want to delete your browser files? This operation cannot ' +
+                    'be undone.',
+                )
+              ) {
+                return;
+              }
+              if (hasOtherStorage) {
+                dispatch(A.removeBrowserFiles());
+              } else {
+                dispatch(A.removeAllStorage());
+                navigate('/');
+              }
             }}
           >
             Delete files
