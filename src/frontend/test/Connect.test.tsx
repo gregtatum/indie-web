@@ -1,14 +1,15 @@
 import * as React from 'react';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import userEvent from '@testing-library/user-event';
 import { AppRoutes } from 'frontend/components/App';
 import { Connect } from 'frontend/components/Page';
 import { persistedState } from 'frontend/logic/persisted-state';
 import { createStore } from 'frontend/store/create-store';
-import { mockServerListFiles } from './utils/fixtures';
+import type { FetchMockSandbox } from 'fetch-mock';
+import { createFileMetadata, mockServerListFiles } from './utils/fixtures';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -58,6 +59,16 @@ describe('Connect', () => {
   });
 
   it('shows the storage files after adding a storage provider', async () => {
+    mockServerListFiles(
+      {
+        id: 'nas-storage',
+        name: 'NAS Storage',
+        url: 'http://localhost:6543',
+        storeType: 'files',
+      },
+      [createFileMetadata('/attached-provider-file.md')],
+    );
+
     render(
       <MemoryRouter initialEntries={['/add-storage-provider']}>
         <Provider store={createStore() as any}>
@@ -65,13 +76,6 @@ describe('Connect', () => {
         </Provider>
       </MemoryRouter>,
     );
-
-    mockServerListFiles({
-      id: 'nas-storage',
-      name: 'NAS Storage',
-      url: 'http://localhost:6543',
-      storeType: 'files',
-    });
 
     await userEvent.type(
       screen.getByLabelText('Storage Provider Name'),
@@ -89,11 +93,31 @@ describe('Connect', () => {
       );
     });
 
-    expect(await screen.findByTestId('list-files')).toBeTruthy();
+    expect(
+      await screen.findByRole('link', {
+        name: /attached-provider-file\s*\.\s*md/,
+      }),
+    ).toBeTruthy();
     expect(
       screen.queryByRole('heading', { name: 'Add Self-Hosted Storage' }),
     ).toBeNull();
+    expect(persistedState.fileStoreServers.read()).toEqual([
+      {
+        id: 'nas-storage',
+        name: 'NAS Storage',
+        url: 'http://localhost:6543',
+        storeType: 'files',
+      },
+    ]);
     expect(persistedState.fileStoreName.read()).toBe('server');
     expect(persistedState.fileStoreServer.read()).toBe('nas-storage');
+
+    await waitFor(() => {
+      expect(
+        (window.fetch as FetchMockSandbox).called(
+          'http://localhost:6543/file-store/list-files',
+        ),
+      ).toBe(true);
+    });
   });
 });
