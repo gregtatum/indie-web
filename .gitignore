@@ -3,3 +3,4 @@ dist
 stats.json
 coverage
 mount
+artifacts

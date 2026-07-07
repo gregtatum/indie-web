@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Router from 'react-router-dom';
 
 import './StorageProvider.css';
 import dedent from 'dedent';
@@ -8,6 +9,7 @@ import { sluggify } from 'frontend/utils';
 export function AddStorageProvider() {
   const experimentalFeatures = $$.getExperimentalFeatures();
   const { dispatch, getState } = Hooks.useStore();
+  const navigate = Router.useNavigate();
   const nameRef = React.useRef<null | HTMLInputElement>(null);
   const urlRef = React.useRef<null | HTMLInputElement>(null);
   const { error, setError } = Hooks.useError();
@@ -31,6 +33,7 @@ export function AddStorageProvider() {
       dispatch(A.setHasOnboarded(true));
       dispatch(A.addFileStoreServer(server));
       dispatch(A.changeFileStore('server', server));
+      navigate('/');
     }
   }
 
