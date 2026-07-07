@@ -18,12 +18,7 @@ export type Note =
   | 'G' | 'Gb' | 'G#';
 
 export type ChordType =
-  | 'major'
-  | 'minor'
-  | 'power'
-  | 'augmented'
-  | 'sus2'
-  | 'sus4';
+  'major' | 'minor' | 'power' | 'augmented' | 'sus2' | 'sus4';
 
 export interface Chord {
   text: string;
@@ -41,8 +36,7 @@ export interface Chord {
 export type LineContent = 'mixed' | 'chords' | 'text';
 
 export type TextOrChord =
-  | { type: 'text'; text: string }
-  | { type: 'chord'; chord: Chord };
+  { type: 'text'; text: string } | { type: 'chord'; chord: Chord };
 
 export type LineType =
   | { type: 'section'; lineIndex: number; text: string }
@@ -260,10 +254,7 @@ export type Language = {
 };
 
 export type LanguageCoachSection =
-  | 'home'
-  | 'study-list'
-  | 'learned'
-  | 'reading';
+  'home' | 'study-list' | 'learned' | 'reading';
 
 export type MusicPanelType = 'genre' | 'artist' | 'album';
 export type MusicEditTab = 'details' | 'artwork' | 'id3';

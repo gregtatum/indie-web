@@ -2,11 +2,7 @@ import * as T from 'frontend/@types';
 import { combineReducers } from 'redux';
 
 export type MusicPlaybackStatus =
-  | 'idle'
-  | 'loading'
-  | 'playing'
-  | 'paused'
-  | 'error';
+  'idle' | 'loading' | 'playing' | 'paused' | 'error';
 
 export type FolderArtSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 

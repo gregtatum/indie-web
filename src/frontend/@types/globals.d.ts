@@ -27,8 +27,7 @@ declare global {
     readonly navigator: WorkerNavigator;
     readonly performance: Performance;
     onconnect:
-      | ((this: SharedWorkerGlobalScope, ev: MessageEvent) => unknown)
-      | null;
+      ((this: SharedWorkerGlobalScope, ev: MessageEvent) => unknown) | null;
     close(): void;
     addEventListener(
       type: 'connect',
