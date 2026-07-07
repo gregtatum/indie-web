@@ -8,6 +8,7 @@ import { AppRoutes } from 'frontend/components/App';
 import { Connect } from 'frontend/components/Page';
 import { persistedState } from 'frontend/logic/persisted-state';
 import { createStore } from 'frontend/store/create-store';
+import { A } from 'frontend';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { createFileMetadata, mockServerListFiles } from './utils/fixtures';
 
@@ -120,4 +121,103 @@ describe('Connect', () => {
       ).toBe(true);
     });
   });
+
+  it.each([
+    {
+      name: 'missing name',
+      existingServers: [],
+      providerName: '',
+      providerAddress: 'http://localhost:6543',
+      error: /name of the server must be set/,
+    },
+    {
+      name: 'missing address',
+      existingServers: [],
+      providerName: 'NAS Storage',
+      providerAddress: '',
+      error: /address of the server must be set/,
+    },
+    {
+      name: 'invalid address',
+      existingServers: [],
+      providerName: 'NAS Storage',
+      providerAddress: 'not a valid url',
+      error: /not a valid URL/,
+    },
+    {
+      name: 'duplicate provider name / slug',
+      existingServers: [
+        {
+          id: 'nas-storage',
+          name: 'NAS Storage',
+          url: 'http://localhost:6543',
+          storeType: 'files' as const,
+        },
+      ],
+      providerName: 'NAS Storage',
+      providerAddress: 'http://localhost:7654',
+      error: /already has that name/,
+    },
+    {
+      name: 'duplicate provider URL',
+      existingServers: [
+        {
+          id: 'nas-storage',
+          name: 'NAS Storage',
+          url: 'http://localhost:6543',
+          storeType: 'files' as const,
+        },
+      ],
+      providerName: 'Other Storage',
+      providerAddress: 'http://localhost:6543',
+      error: /already uses that URL/,
+    },
+  ])(
+    'blocks state changes for $name',
+    async ({ existingServers, providerName, providerAddress, error }) => {
+      const store = createStore();
+      persistedState.fileStoreName.write('browser');
+
+      for (const server of existingServers) {
+        store.dispatch(A.addFileStoreServer(server));
+      }
+
+      render(
+        <MemoryRouter initialEntries={['/add-storage-provider']}>
+          <Provider store={store as any}>
+            <AppRoutes />
+          </Provider>
+        </MemoryRouter>,
+      );
+
+      if (providerName) {
+        await userEvent.type(
+          screen.getByLabelText('Storage Provider Name'),
+          providerName,
+        );
+      }
+      await userEvent.clear(screen.getByLabelText('Storage Provider Address'));
+      if (providerAddress) {
+        await userEvent.type(
+          screen.getByLabelText('Storage Provider Address'),
+          providerAddress,
+        );
+      }
+
+      await act(async () => {
+        await userEvent.click(
+          screen.getByRole('button', { name: 'Add Storage Provider' }),
+        );
+      });
+
+      expect(await screen.findByText(error)).toBeTruthy();
+      expect(
+        screen.getByRole('heading', { name: /Add Self-Hosted Storage/ }),
+      ).toBeTruthy();
+      expect(persistedState.fileStoreServers.read()).toEqual(existingServers);
+      expect(persistedState.fileStoreName.read()).toBe('browser');
+      expect(persistedState.fileStoreServer.read()).toBeNull();
+      expect((window.fetch as FetchMockSandbox).calls()).toHaveLength(0);
+    },
+  );
 });
