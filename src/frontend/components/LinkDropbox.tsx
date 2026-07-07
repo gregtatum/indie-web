@@ -195,6 +195,7 @@ export function LinkDropbox(props: { children: any }) {
               dispatch(
                 A.setDropboxAccessToken(accessToken, expiresIn, refreshToken),
               );
+              dispatch(A.changeFileStore('dropbox'));
               setAuthState('no-auth');
               const url = persistedState.dropboxRedirectURL.read() || '/';
               persistedState.dropboxRedirectURL.remove();
@@ -555,6 +556,7 @@ export function DropboxLogin(props: { children: any }) {
               dispatch(
                 A.setDropboxAccessToken(accessToken, expiresIn, refreshToken),
               );
+              dispatch(A.changeFileStore('dropbox'));
               setAuthState('no-auth');
               const url = persistedState.dropboxRedirectURL.read() || '/';
               persistedState.dropboxRedirectURL.remove();

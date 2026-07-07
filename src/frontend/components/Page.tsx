@@ -417,6 +417,7 @@ export function Connect() {
             className="button button-primary"
             onClick={() => {
               dispatch(A.setHasOnboarded(true));
+              dispatch(A.changeFileStore('browser'));
               navigate('/');
             }}
           >
@@ -427,8 +428,7 @@ export function Connect() {
             className="button button-primary"
             onClick={() => {
               dispatch(A.setHasOnboarded(true));
-              dispatch(A.changeFileStore('dropbox'));
-              navigate('/');
+              navigate('/dropbox/folder');
             }}
           >
             Connect Dropbox
