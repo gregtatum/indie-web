@@ -433,8 +433,8 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'settings';
     case 'view-connect':
       return 'connect';
-    case 'view-file-storage':
-      return 'file-storage';
+    case 'view-add-storage-provider':
+      return 'add-storage-provider';
     case 'view-privacy':
       return 'privacy';
     default:

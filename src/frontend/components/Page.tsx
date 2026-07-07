@@ -1,14 +1,11 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, $$, Hooks } from 'frontend';
-import {
-  getBrowserName,
-  getFileStoreDisplayName,
-} from 'frontend/logic/app-logic';
+import { getBrowserName } from 'frontend/logic/app-logic';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { formatBytes, getEnv } from 'frontend/utils';
-import { UnlinkDropbox } from './LinkDropbox';
+import { ServerStorageProviderSettings } from './StorageProvider';
 import './Page.css';
 
 type CacheEstimate = {
@@ -114,27 +111,40 @@ export function Settings() {
   return (
     <div className="page">
       <div className="pageInner">
-        <h2>Enable experimental features</h2>
-        <p>
-          Enable experimental features which many not be as fully fleshed out,
-          not documented, and may have bugs.
-        </p>
-        <p>
-          <input
-            type="checkbox"
-            id="experimental-features"
-            defaultChecked={experimentalFeatures}
-            onChange={(event) => {
-              dispatch(
-                A.setExperimentalFeatures(Boolean(event.target.checked)),
-              );
-            }}
-          />
-          <label htmlFor="experimental-features">
-            Enable experimental features
-          </label>
-        </p>
-        <h2>Offline files</h2>
+        <h1>Settings</h1>
+        <h2>Storage Providers</h2>
+        <p>Where your files live.</p>
+        <div className="settingsProviderList">
+          <BrowserStorageProvider />
+          <DropboxStorageProvider />
+          {servers.length > 0 ? (
+            <section className="settingsProvider">
+              <div className="settingsProviderSummary">
+                <div>
+                  <h3>Self-Hosted Storage</h3>
+                  <p>{servers.length} configured</p>
+                </div>
+                <Router.Link className="button" to="/add-storage-provider">
+                  Add Storage Provider
+                </Router.Link>
+              </div>
+              <ServerStorageProviderSettings fileStoreServers={servers} />
+            </section>
+          ) : (
+            <section className="settingsProvider">
+              <div className="settingsProviderSummary">
+                <div>
+                  <h3>Self-Hosted Storage</h3>
+                  <p>Connect a local server, NAS, or music library.</p>
+                </div>
+                <Router.Link className="button" to="/add-storage-provider">
+                  Add Storage Provider
+                </Router.Link>
+              </div>
+            </section>
+          )}
+        </div>
+        <h2>Offline & Cache</h2>
         <p>
           While you passively view your files, {getEnv('SITE_DISPLAY_NAME')} can
           cache the files to your browser allowing for faster retrieval and
@@ -154,7 +164,7 @@ export function Settings() {
           <label htmlFor="file-store-cache">Enable offline file caching</label>
         </p>
         {fileStoreCacheEnabled && cacheTargets.length === 0 && (
-          <p>No offline caches available yet.</p>
+          <p>Files you view will appear here for offline use.</p>
         )}
         {fileStoreCacheEnabled && cacheTargets.length > 0 && (
           <div>
@@ -210,7 +220,7 @@ export function Settings() {
             })}
           </div>
         )}
-        <h2>Editor Settings</h2>
+        <h2>Editor</h2>
         <p>
           <input
             type="checkbox"
@@ -247,8 +257,26 @@ export function Settings() {
             Enable ChordPro autocompletion
           </label>
         </p>
-        <UnlinkDropbox />
-        <DeleteBrowserFiles />
+        <h2>Developer</h2>
+        <p>
+          Enable experimental features which may not be as fully fleshed out,
+          not documented, and may have bugs.
+        </p>
+        <p>
+          <input
+            type="checkbox"
+            id="experimental-features"
+            defaultChecked={experimentalFeatures}
+            onChange={(event) => {
+              dispatch(
+                A.setExperimentalFeatures(Boolean(event.target.checked)),
+              );
+            }}
+          />
+          <label htmlFor="experimental-features">
+            Enable experimental features
+          </label>
+        </p>
         <h2>About</h2>
         <p>
           <Router.Link to="/privacy">Privacy Policy and Usage.</Router.Link>
@@ -258,42 +286,65 @@ export function Settings() {
   );
 }
 
-function DeleteBrowserFiles() {
+function BrowserStorageProvider() {
   const dispatch = Hooks.useDispatch();
   const navigate = Router.useNavigate();
   const idbfs = $$.getIDBFSOrNull();
   const dropboxOauth = $$.getDropboxOauth();
   const servers = $$.getServers();
-  const [fileCount, setFileCount] = React.useState(0);
+  const [fileCount, setFileCount] = React.useState<null | number>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
   const hasOtherStorage = Boolean(dropboxOauth) || servers.length > 0;
 
   React.useEffect(() => {
-    idbfs?.getFileCount().then(
+    if (!idbfs) {
+      setFileCount(null);
+      setIsDeleteOpen(false);
+      return;
+    }
+    idbfs.getFileCount().then(
       (count) => setFileCount(count),
       (error) => console.error(error),
     );
   }, [idbfs]);
 
   return (
-    <>
-      <h2>Delete {getFileStoreDisplayName('browser', null)}</h2>
-      {idbfs ? (
-        <>
+    <section className="settingsProvider">
+      <div className="settingsProviderSummary">
+        <div>
+          <h3>{getBrowserName()}</h3>
           <p>
-            There are {fileCount} files stored in the browser. They can be
-            deleted here. This operation cannot be undone. Note that if you
-            revisit the main file listing, demo files will be recreated.
+            {idbfs
+              ? `${fileCount ?? 'Counting'} file${
+                  fileCount === 1 ? '' : 's'
+                } stored locally`
+              : 'No local files stored'}
           </p>
+        </div>
+        {idbfs ? (
           <button
+            className="button"
+            type="button"
             onClick={() => {
-              if (
-                !confirm(
-                  'Are you sure you want to delete your browser files? This operation cannot ' +
-                    'be undone.',
-                )
-              ) {
-                return;
-              }
+              setIsDeleteOpen((value) => !value);
+            }}
+          >
+            Delete Files
+          </button>
+        ) : (
+          <span className="settingsProviderStatus">Not Active</span>
+        )}
+      </div>
+      {isDeleteOpen ? (
+        <div className="settingsProviderWarning">
+          <div>
+            This removes the files stored in this browser. This cannot be
+            undone.
+          </div>
+          <button
+            className="button"
+            type="button"
+            onClick={() => {
               if (hasOtherStorage) {
                 dispatch(A.removeBrowserFiles());
               } else {
@@ -302,13 +353,63 @@ function DeleteBrowserFiles() {
               }
             }}
           >
-            Delete files
+            Delete Local Files
           </button>
-        </>
-      ) : (
-        <p>All files have been deleted.</p>
-      )}
-    </>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function DropboxStorageProvider() {
+  const dispatch = Hooks.useDispatch();
+  const navigate = Router.useNavigate();
+  const dropbox = $$.getDropboxOrNull();
+  const idbfs = $$.getIDBFSOrNull();
+  const servers = $$.getServers();
+  const hasOtherStorage = Boolean(idbfs) || servers.length > 0;
+
+  return (
+    <section className="settingsProvider">
+      <div className="settingsProviderSummary">
+        <div>
+          <h3>Dropbox</h3>
+          <p>
+            {dropbox
+              ? 'Connected to the Dropbox Apps folder.'
+              : 'Connect Dropbox to browse and edit files directly.'}
+          </p>
+        </div>
+        {dropbox ? (
+          <button
+            className="button"
+            type="button"
+            onClick={() => {
+              if (
+                !confirm(
+                  'Are you sure you want to log out of Dropbox? Your Dropbox folder will ' +
+                    'still be available on Dropbox or if you sign back in.',
+                )
+              ) {
+                return;
+              }
+              if (hasOtherStorage) {
+                dispatch(A.removeDropboxAccessToken());
+              } else {
+                dispatch(A.removeAllStorage());
+                navigate('/');
+              }
+            }}
+          >
+            Sign Out
+          </button>
+        ) : (
+          <Router.Link className="button" to="/dropbox/folder">
+            Connect Dropbox
+          </Router.Link>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -450,10 +551,10 @@ export function Connect() {
             type="button"
             className="button button-primary"
             onClick={() => {
-              navigate('/add-file-storage');
+              navigate('/add-storage-provider');
             }}
           >
-            Host Your Own <span className="pageButtonBeta">Beta</span>
+            Add Storage Provider <span className="pageButtonBeta">Beta</span>
           </button>
         </div>
       </div>

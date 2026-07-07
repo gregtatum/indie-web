@@ -89,13 +89,13 @@ export function Header() {
         <Path path="/" key={key} title="⚙️ Settings" hideSiteName={true} />
       );
       break;
-    case 'file-storage':
+    case 'add-storage-provider':
       isOpen = true;
       title = (
         <Path
           path="/"
           key={key}
-          title="Host Your Own Storage"
+          title="Add Storage Provider"
           hideSiteName={true}
           showFileStoreSelection={false}
         />
@@ -302,9 +302,9 @@ function FileStoreSelection() {
       {
         key: 'add-fs-server',
         onClick: () => {
-          navigate('/add-file-storage');
+          navigate('/add-storage-provider');
         },
-        children: 'Add File Storage',
+        children: 'Add Storage Provider',
       },
     ],
     [],

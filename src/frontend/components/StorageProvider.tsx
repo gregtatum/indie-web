@@ -1,12 +1,11 @@
 import * as React from 'react';
 
-import './FileStorage.css';
+import './StorageProvider.css';
 import dedent from 'dedent';
 import { $, $$, A, T, Hooks } from 'frontend';
 import { sluggify } from 'frontend/utils';
 
-export function FileStorage() {
-  const fileStoreServers = $$.getServers();
+export function AddStorageProvider() {
   const experimentalFeatures = $$.getExperimentalFeatures();
   const { dispatch, getState } = Hooks.useStore();
   const nameRef = React.useRef<null | HTMLInputElement>(null);
@@ -39,20 +38,19 @@ export function FileStorage() {
     <div className="page">
       <div className="pageInner">
         <h1>
-          Host Your Own Storage File Storage
+          Add Self-Hosted Storage
           <span className="pageBeta">Beta</span>
         </h1>
-        <FileStorageList fileStoreServers={fileStoreServers} />
-        <h2>Add a File Storage Server</h2>
+        <h2>Add a Storage Provider</h2>
         <p>
           Whether you are accessing files stored locally on your machine, or you
           want to access files on your NAS (Network Attached Storage), you can
-          run the file storage server, and mount a folder on a machine you have
-          access to.
+          run the storage provider server, and mount a folder on a machine you
+          have access to.
         </p>
 
         <h3>1: Start the server</h3>
-        <pre className="file-storage-pre">
+        <pre className="storageProviderPre">
           {dedent`
               git clone git@github.com:gregtatum/indie-web.git
               cd indie-web/src/server
@@ -64,29 +62,31 @@ export function FileStorage() {
 
         <h3>2: Add the Server</h3>
         <form onSubmit={(event) => addFileServer(event.nativeEvent)}>
-          <div className="file-storage-input">
-            <label htmlFor="file-storage-name">File Storage Name</label>
+          <div className="storageProviderInput">
+            <label htmlFor="storage-provider-name">Storage Provider Name</label>
             <input
               type="text"
-              id="file-storage-name"
+              id="storage-provider-name"
               placeholder="NAS Storage"
               ref={nameRef}
               maxLength={200}
             ></input>
           </div>
-          <div className="file-storage-input">
-            <label htmlFor="file-storage-name">File Storage Address</label>
+          <div className="storageProviderInput">
+            <label htmlFor="storage-provider-address">
+              Storage Provider Address
+            </label>
             <input
               type="text"
-              id="file-storage-name"
+              id="storage-provider-address"
               ref={urlRef}
               defaultValue="http://localhost:6543"
             ></input>
           </div>
           {experimentalFeatures ? (
-            <div className="file-storage-input">
+            <div className="storageProviderInput">
               <label>Storage Type</label>
-              <div className="file-storage-radio-group">
+              <div className="storageProviderRadioGroup">
                 <label>
                   <input
                     type="radio"
@@ -112,7 +112,7 @@ export function FileStorage() {
                 </label>
               </div>
               {storeType === 'music' ? (
-                <p className="file-storage-note">
+                <p className="storageProviderNote">
                   Point the server&apos;s mount at your music folder. To use
                   multiple music folders, run a separate server instance for
                   each one.
@@ -121,18 +121,20 @@ export function FileStorage() {
             </div>
           ) : null}
           {error}
-          <button type="submit">Add File Server</button>
+          <button type="submit">Add Storage Provider</button>
         </form>
       </div>
     </div>
   );
 }
 
-interface FileStorageListProps {
+interface ServerStorageProviderSettingsProps {
   fileStoreServers: T.FileStoreServer[];
 }
 
-function FileStorageList({ fileStoreServers }: FileStorageListProps) {
+export function ServerStorageProviderSettings({
+  fileStoreServers,
+}: ServerStorageProviderSettingsProps) {
   const { dispatch, getState } = Hooks.useStore();
   const { error, setError } = Hooks.useError();
 
@@ -172,7 +174,7 @@ function FileStorageList({ fileStoreServers }: FileStorageListProps) {
       dispatch(A.updateFileStoreServer(oldServer, server));
       dispatch(
         A.addMessage({
-          message: <>File store server updated</>,
+          message: <>Storage provider updated</>,
           timeout: true,
         }),
       );
@@ -182,7 +184,7 @@ function FileStorageList({ fileStoreServers }: FileStorageListProps) {
   return (
     <>
       {error}
-      <div className="file-storage-list">
+      <div className="storageProviderList">
         {fileStoreServers.map((server) => (
           <form
             key={server.id}
@@ -204,7 +206,7 @@ function FileStorageList({ fileStoreServers }: FileStorageListProps) {
               onClick={() => {
                 if (
                   confirm(
-                    'Are you sure you want to remove this file store server?',
+                    'Are you sure you want to remove this storage provider?',
                   )
                 ) {
                   dispatch(A.removeFileStoreServer(server));

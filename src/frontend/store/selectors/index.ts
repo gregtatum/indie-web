@@ -598,7 +598,7 @@ export function canGoFullScreen(state: State) {
     case 'music':
     case 'settings':
     case 'connect':
-    case 'file-storage':
+    case 'add-storage-provider':
     case 'privacy':
     case 'language-coach':
       return false;

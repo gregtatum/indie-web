@@ -39,6 +39,55 @@
   }
 }
 
+.settingsProviderList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settingsProvider {
+  border: 1px solid var(--light-border);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  h3 {
+    margin-bottom: 4px;
+  }
+}
+
+.settingsProviderSummary {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.settingsProviderWarning {
+  padding: 1em;
+  margin: 1em;
+  background: #fe3131;
+  color: #fff;
+  border: 1px solid #b00000;
+  border-radius: 3px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settingsProviderStatus {
+  color: #555;
+  font-size: var(--font-size-small);
+}
+
 .pageBeta {
   text-transform: uppercase;
   margin: 0 0.5em;

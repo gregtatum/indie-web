@@ -1,11 +1,11 @@
-.file-storage-pre {
+.storageProviderPre {
   background-color: #eee;
   border-radius: 4px;
   border: 2px solid #ddd;
   padding: 1rem;
 }
 
-.file-storage-input {
+.storageProviderInput {
   display: flex;
   flex-direction: column;
   margin: 1rem 0;
@@ -16,7 +16,7 @@
   }
 }
 
-.file-storage-radio-group {
+.storageProviderRadioGroup {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -29,13 +29,13 @@
   }
 }
 
-.file-storage-note {
+.storageProviderNote {
   margin: 0.5rem 0 0;
   color: #555;
   font-size: 0.9em;
 }
 
-.file-storage-list {
+.storageProviderList {
   border: 1px solid #ddd;
   background-color: #eee;
   border-radius: 4px;

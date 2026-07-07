@@ -18,7 +18,7 @@ import { useFilesIndex } from 'frontend/logic/files-index';
 
 import { toFileStoreName } from 'frontend/logic/app-logic';
 import { LanguageCoach } from './LanguageCoach';
-import { FileStorage } from './FileStorage';
+import { AddStorageProvider } from './StorageProvider';
 import { Music } from './Music';
 
 import './App.css';
@@ -176,10 +176,10 @@ function ConnectRouter() {
   return null;
 }
 
-function FileStorageRouter() {
+function AddStorageProviderRouter() {
   const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
-    dispatch(A.viewFileStorage());
+    dispatch(A.viewAddStorageProvider());
   });
   return null;
 }
@@ -209,7 +209,10 @@ export function AppRoutes() {
         <Router.Route path="settings" element={<SettingsRouter />} />
         <Router.Route path="connect" element={<ConnectRouter />} />
         <Router.Route path="dropbox" element={<ConnectRouter />} />
-        <Router.Route path="add-file-storage" element={<FileStorageRouter />} />
+        <Router.Route
+          path="add-storage-provider"
+          element={<AddStorageProviderRouter />}
+        />
         <Router.Route path="privacy" element={<PrivacyRouter />} />
         <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
@@ -283,8 +286,8 @@ function Views() {
       return <Connect key={key} />;
     case 'settings':
       return <Settings key={key} />;
-    case 'file-storage':
-      return <FileStorage key={key} />;
+    case 'add-storage-provider':
+      return <AddStorageProvider key={key} />;
     case 'privacy':
       return <Privacy key={key} />;
     case 'language-coach':

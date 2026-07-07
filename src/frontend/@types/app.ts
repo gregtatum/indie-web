@@ -64,7 +64,7 @@ export type View =
   | 'view-image'
   | 'view-markdown'
   | 'list-files'
-  | 'file-storage'
+  | 'add-storage-provider'
   | 'settings'
   | 'connect'
   | 'privacy'
