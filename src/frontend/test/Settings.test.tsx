@@ -59,6 +59,7 @@ describe('Settings', () => {
     const store = createStore();
     store.dispatch(A.setHasOnboarded(true));
     store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
+    store.dispatch(A.setFileStoreCacheEnabled(false));
     connectBrowserFiles(store);
     const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
     const deleteDatabase = jest.spyOn(indexedDB, 'deleteDatabase');
@@ -90,5 +91,71 @@ describe('Settings', () => {
       screen.getByRole('heading', { name: 'Enable experimental features' }),
     ).toBeTruthy();
     expect(screen.queryByText(/On your storage/)).toBeNull();
+  });
+
+  it('only removes Dropbox data when another storage is still configured', async () => {
+    const store = createStore();
+    store.dispatch(A.setHasOnboarded(true));
+    store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
+    store.dispatch(A.setFileStoreCacheEnabled(false));
+    connectBrowserFiles(store);
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    const deleteDatabase = jest.spyOn(indexedDB, 'deleteDatabase');
+
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Sign Out' }),
+      );
+    });
+
+    expect(confirm).toHaveBeenCalled();
+    expect(deleteDatabase).toHaveBeenCalledWith(IDB_CACHE_NAME);
+    expect(deleteDatabase).not.toHaveBeenCalledWith(BROWSER_FILES_DB_NAME);
+    expect(window.localStorage.length).toBeGreaterThan(0);
+    expect(
+      await screen.findByText('No Dropbox account is linked.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: 'Enable experimental features' }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/On your storage/)).toBeNull();
+  });
+
+  it('returns to onboarding after removing Dropbox as the last storage', async () => {
+    const store = createStore();
+    store.dispatch(A.setHasOnboarded(true));
+    store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
+    store.dispatch(A.setFileStoreCacheEnabled(false));
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    const deleteDatabase = jest.spyOn(indexedDB, 'deleteDatabase');
+
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Sign Out' }),
+      );
+    });
+
+    expect(confirm).toHaveBeenCalled();
+    expect(deleteDatabase).toHaveBeenCalledWith(BROWSER_FILES_DB_NAME);
+    expect(deleteDatabase).toHaveBeenCalledWith(IDB_CACHE_NAME);
+    expect(window.localStorage.length).toBe(0);
+    expect(await screen.findByText(/On your storage/)).toBeTruthy();
+    expect(screen.queryByText('Enable experimental features')).toBeNull();
   });
 });

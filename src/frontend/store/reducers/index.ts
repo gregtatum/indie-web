@@ -17,6 +17,7 @@ function dropboxOauth(
     case 'set-dropbox-oauth':
       return action.oauth;
     case 'remove-dropbox-oauth':
+    case 'remove-all-storage':
       return null;
     default:
       return state;
@@ -545,6 +546,14 @@ function currentFileStoreName(
     case 'view-music':
       persistedState.fileStoreName.write('server');
       return 'server';
+    case 'remove-dropbox-oauth':
+      if (state === 'dropbox') {
+        persistedState.fileStoreName.write('browser');
+        return 'browser';
+      }
+      return state;
+    case 'remove-all-storage':
+      return 'browser';
     default:
       return state;
   }

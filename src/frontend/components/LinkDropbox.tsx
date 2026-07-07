@@ -346,7 +346,11 @@ export function LinkDropbox(props: { children: any }) {
 
 export function UnlinkDropbox() {
   const dispatch = Hooks.useDispatch();
+  const navigate = Router.useNavigate();
   const dropbox = $$.getDropboxOrNull();
+  const idbfs = $$.getIDBFSOrNull();
+  const servers = $$.getServers();
+  const hasOtherStorage = Boolean(idbfs) || servers.length > 0;
   return (
     <>
       <h1>Settings</h1>
@@ -355,20 +359,27 @@ export function UnlinkDropbox() {
         <>
           <p>
             Your files are stored in Dropbox in the folder Apps/Chords until you
-            delete them. You can log out of Dropbox and all of your data stored
-            in the browser will be removed. You can always log back in to access
-            your files.
+            delete them. You can log out of Dropbox and log back in later to
+            access those files.
           </p>
           <button
             className="button linkDropboxUnlink"
             type="button"
             onClick={() => {
-              confirm(
-                'Are you sure you want to log out of the site? All of your data in the ' +
-                  'browser will be removed, but your Dropbox folder will still be available ' +
-                  'on Dropbox or if you sign back in.',
-              );
-              dispatch(A.removeDropboxAccessToken());
+              if (
+                !confirm(
+                  'Are you sure you want to log out of Dropbox? Your Dropbox folder will ' +
+                    'still be available on Dropbox or if you sign back in.',
+                )
+              ) {
+                return;
+              }
+              if (hasOtherStorage) {
+                dispatch(A.removeDropboxAccessToken());
+              } else {
+                dispatch(A.removeAllStorage());
+                navigate('/');
+              }
             }}
           >
             Sign Out

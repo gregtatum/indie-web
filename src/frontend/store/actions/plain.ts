@@ -9,7 +9,7 @@ import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 
 export function removeDropboxAccessToken() {
-  clearAllLocalStorageForUserDataRemoval();
+  persistedState.dropboxOauth.remove();
   indexedDB.deleteDatabase(IDB_CACHE_NAME);
   return { type: 'remove-dropbox-oauth' as const };
 }
