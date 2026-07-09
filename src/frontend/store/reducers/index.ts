@@ -43,6 +43,8 @@ export function serverId(
       persistedState.fileStoreServer.write(action.fileStoreServer.id);
       return action.fileStoreServer.id;
     }
+    case 'remove-all-storage':
+      return null;
     default:
       return state;
   }
@@ -82,6 +84,8 @@ function servers(
       persistedState.fileStoreServers.write(servers);
       return servers;
     }
+    case 'remove-all-storage':
+      return [];
     default:
       return state;
   }

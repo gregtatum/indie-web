@@ -7,38 +7,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import { A } from 'frontend';
-import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { ensureExists } from 'frontend/utils';
-import { buildTestFiles, getFileTree } from './utils/fixtures';
-
-/**
- * Handles the life cycle of creating and deleted a test-only IDBFS.
- */
-function useTestIDBFS() {
-  const dbName = 'test-only-db';
-  let idbfs: IDBFS | null = null;
-
-  beforeEach(async () => {
-    idbfs = await openIDBFS(dbName);
-  });
-
-  afterEach(async () => {
-    idbfs?.close();
-    idbfs = null;
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.deleteDatabase(dbName);
-      request.onsuccess = () => resolve();
-      request.onblocked = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  });
-
-  return {
-    getIDBFS() {
-      return ensureExists(idbfs);
-    },
-  };
-}
+import { getFileTree } from './utils/fixtures';
+import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 
 describe('ListFiles', () => {
   const { getIDBFS } = useTestIDBFS();
@@ -51,9 +22,7 @@ describe('ListFiles', () => {
     const store = createStore();
     store.dispatch(A.changeFileStore('browser'));
     store.dispatch(A.setHasOnboarded(true));
-    store.dispatch(A.connectIDBFS(idbfs));
-
-    await buildTestFiles(idbfs, paths);
+    await connectBrowserFiles(store, idbfs, paths);
 
     render(
       <MemoryRouter initialEntries={['/']}>

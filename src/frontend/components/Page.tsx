@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
-import { A, $$, Hooks } from 'frontend';
+import { A, $$, Hooks, T } from 'frontend';
 import { getBrowserName } from 'frontend/logic/app-logic';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
@@ -19,7 +19,14 @@ export function Settings() {
   const editorAutocomplete = $$.getEditorAutocompleteSettings();
   const fileStoreCacheEnabled = $$.getFileStoreCacheEnabled();
   const dropboxOauth = $$.getDropboxOauth();
+  const idbfs = $$.getIDBFSOrNull();
   const servers = $$.getServers();
+  let nonServerFallbackStorage: T.FileStoreName | null = null;
+  if (idbfs) {
+    nonServerFallbackStorage = 'browser';
+  } else if (dropboxOauth) {
+    nonServerFallbackStorage = 'dropbox';
+  }
   const workerClient = $$.getWorkerClient();
   const dispatch = Hooks.useDispatch();
   const [cacheEstimates, setCacheEstimates] = React.useState<
@@ -128,7 +135,10 @@ export function Settings() {
                   Add Storage Provider
                 </Router.Link>
               </div>
-              <ServerStorageProviderSettings fileStoreServers={servers} />
+              <ServerStorageProviderSettings
+                fileStoreServers={servers}
+                nonServerFallbackStorage={nonServerFallbackStorage}
+              />
             </section>
           ) : (
             <section className="settingsProvider">

@@ -133,12 +133,15 @@ export function AddStorageProvider() {
 
 interface ServerStorageProviderSettingsProps {
   fileStoreServers: T.FileStoreServer[];
+  nonServerFallbackStorage?: T.FileStoreName | null;
 }
 
 export function ServerStorageProviderSettings({
   fileStoreServers,
+  nonServerFallbackStorage = null,
 }: ServerStorageProviderSettingsProps) {
   const { dispatch, getState } = Hooks.useStore();
+  const navigate = Router.useNavigate();
   const { error, setError } = Hooks.useError();
 
   if (fileStoreServers.length === 0) {
@@ -212,7 +215,27 @@ export function ServerStorageProviderSettings({
                     'Are you sure you want to remove this storage provider?',
                   )
                 ) {
+                  const nextServer =
+                    fileStoreServers.find(
+                      (candidate) => candidate.id !== server.id,
+                    ) ?? null;
+                  const isRemovingCurrentServer =
+                    $.getServerId(getState()) === server.id;
+
+                  if (!nonServerFallbackStorage && !nextServer) {
+                    dispatch(A.removeAllStorage());
+                    navigate('/');
+                    return;
+                  }
+
                   dispatch(A.removeFileStoreServer(server));
+                  if (isRemovingCurrentServer) {
+                    if (nonServerFallbackStorage) {
+                      dispatch(A.changeFileStore(nonServerFallbackStorage));
+                    } else if (nextServer) {
+                      dispatch(A.changeFileStore('server', nextServer));
+                    }
+                  }
                 }
               }}
             >
