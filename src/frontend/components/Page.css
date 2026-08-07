@@ -45,6 +45,7 @@
   border: 1px solid var(--light-border);
   border-radius: 10px; 
   box-shadow: 0px 3px 4px #0001, 0px 2px 2px #0001;
+  margin-top: 15px;
   
   & .button {
     padding: var(--button-big-padding); 
@@ -134,15 +135,31 @@
 
 
 .settingsSectionHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settingsSectionTitleRow {
   align-items: center;
   display: flex;
-  gap: 10px;
+  gap: 12px;
+}
+
+.settingsSectionHeading h2,
+.settingsSectionHeading p {
+  margin: 0;
+}
+
+.settingsSectionHeading p {
+  margin-left: 52px;
+  opacity: 0.7;
 }
 
 .settingsSectionIcon {
   flex-shrink: 0;
-  height: 1em;
-  width: 1em;
+  height: 40px;
+  width: 40px;
 }
 
 .settingsProviderWarning {

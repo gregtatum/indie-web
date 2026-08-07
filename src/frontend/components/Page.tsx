@@ -124,11 +124,13 @@ export function Settings() {
     <div className="page">
       <div className="pageInner">
         <h1>Settings</h1>
-        <h2 className="settingsSectionHeading">
-          <img className="settingsSectionIcon" src="/svg/database.svg" alt="" />
-          Storage Providers
-        </h2>
-        <p>Where your files live.</p>
+        <div className="settingsSectionHeading">
+          <div className="settingsSectionTitleRow">
+            <img className="settingsSectionIcon" src="/svg/database.svg" alt="" />
+            <h2>Storage Providers</h2>
+          </div>
+          <p>Where your files live.</p>
+        </div>
         <div className="settingsProviderList">
           <BrowserStorageProvider />
           <DropboxStorageProvider />
