@@ -42,16 +42,27 @@
 .settingsProviderList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  border: 1px solid var(--light-border);
+  border-radius: 10px; 
+  box-shadow: 0px 3px 4px #0001, 0px 2px 2px #0001;
+  
+  & .button {
+    padding: var(--button-big-padding); 
+    font-size: var(--font-size-small);
+    white-space: nowrap;
+  }
 }
 
 .settingsProvider {
-  border: 1px solid var(--light-border);
-  border-radius: 4px;
+  border-top: 1px solid var(--light-border);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px;
+  padding: 20px;
+  
+  &:first-child {
+    border: none;
+  }
 
   h3,
   p {
@@ -69,6 +80,69 @@
   gap: 12px;
   justify-content: space-between;
   width: 100%;
+  
+  @media (max-width: 500px) {
+    & {
+      flex-direction: column;
+      align-items: start;
+      gap: 15px;
+    }
+  }
+}
+
+.settingsProviderTitle {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.settingsProviderIconTile {
+  align-items: center;
+  background: #f0f0f0;
+  border-radius: 8px;
+  display: flex;
+  flex-shrink: 0;
+  height: 60px;
+  width: 60px;
+  justify-content: center;
+}
+
+.settingsProviderIconTileAccent {
+  background: #5a2cd2;
+}
+
+.settingsProviderIcon {
+  flex-shrink: 0;
+  height: 40px;
+  width: 40px;
+}
+
+.settingsProviderIconMask {
+  background-color: #fff;
+  display: block;
+  flex-shrink: 0;
+  height: 30px;
+  width: 30px;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.settingsProviderIconMaskServer {
+  mask-image: url('/data/common/svg/server.svg');
+}
+
+
+.settingsSectionHeading {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.settingsSectionIcon {
+  flex-shrink: 0;
+  height: 1em;
+  width: 1em;
 }
 
 .settingsProviderWarning {

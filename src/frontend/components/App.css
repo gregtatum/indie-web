@@ -16,6 +16,8 @@
   --button-color: #000;
   --button-border-radius: 4px;
   --button-opacity: 0.9;
+  --button-big-padding: 9px 15px;
+
 
   --modal-border-color: #ddd;
   --modal-background: #eee;

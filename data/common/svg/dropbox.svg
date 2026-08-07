@@ -1,0 +1,48 @@
+<svg width="24" height="24" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<title>Dropbox</title>
+<defs>
+<linearGradient id="dropbox-a" x1="509.95471" y1="631.03595" x2="758.1145" y2="631.03595" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1,0.02197802,0,1,0,-106.65387)">
+<stop offset="0" stop-color="#e1e1ff"/>
+<stop offset="1" stop-color="#fff"/>
+</linearGradient>
+<linearGradient id="dropbox-b" x1="509.95471" y1="631.03595" x2="758.1145" y2="631.03595" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1,0.02197802,0,1,1019.9094,-106.65387)">
+<stop offset="0" stop-color="#fff"/>
+<stop offset="1" stop-color="#e1e1ff"/>
+</linearGradient>
+<linearGradient id="dropbox-c" x1="509.95471" y1="631.03595" x2="758.1145" y2="631.03595" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1,0,0,-1,1019.9094,1320.703)">
+<stop offset="0" stop-color="#80b4ff"/>
+<stop offset="1" stop-color="#b4c8ff"/>
+</linearGradient>
+<linearGradient id="dropbox-d" x1="509.95471" y1="631.03595" x2="758.1145" y2="631.03595" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1,0,0,-1,4.6950732e-5,1322.0665)">
+<stop offset="0" stop-color="#b4c8ff"/>
+<stop offset="1" stop-color="#80b4ff"/>
+</linearGradient>
+<linearGradient id="dropbox-e" x1="509.45474" y1="586.31158" x2="919.50934" y2="586.31158" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1,0,-0.00934579,1,5.4795477,28.362183)">
+<stop offset="0" stop-color="#00b4ff" stop-opacity="0.78431374"/>
+<stop offset="1" stop-color="#00b4ff" stop-opacity="0.58823532"/>
+</linearGradient>
+<linearGradient id="dropbox-f" x1="509.45474" y1="586.31158" x2="919.50934" y2="586.31158" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1,0,-0.00934579,1,1022.662,28.362183)">
+<stop offset="0" stop-color="#00b4ff" stop-opacity="0.58823532"/>
+<stop offset="1" stop-color="#00b4ff" stop-opacity="0.78431374"/>
+</linearGradient>
+<linearGradient id="dropbox-g" x1="101.76365" y1="293.15579" x2="507.72769" y2="293.15579" gradientUnits="userSpaceOnUse" xlink:href="#dropbox-f"/>
+<linearGradient id="dropbox-h" x1="101.76365" y1="293.15579" x2="507.72769" y2="293.15579" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1,0,0,1,1019.9095,28.362183)" xlink:href="#dropbox-f"/>
+<linearGradient id="dropbox-i" x1="509.45474" y1="586.31158" x2="919.50934" y2="586.31158" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1,0,-0.00934579,1,1022.662,0)" xlink:href="#dropbox-f"/>
+<linearGradient id="dropbox-j" x1="509.45474" y1="586.31158" x2="919.50934" y2="586.31158" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1,0,-0.00934579,1,5.4795477,0)" xlink:href="#dropbox-e"/>
+<linearGradient id="dropbox-k" x1="101.76365" y1="293.15579" x2="507.72769" y2="293.15579" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1,0,0,1,1019.9095,0)" xlink:href="#dropbox-e"/>
+<linearGradient id="dropbox-l" x1="101.76365" y1="293.15579" x2="507.72769" y2="293.15579" gradientUnits="userSpaceOnUse" xlink:href="#dropbox-f"/>
+<linearGradient id="dropbox-m" x1="509.95471" y1="631.03595" x2="758.1145" y2="631.03595" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1,0,0,-1,4.6950732e-5,1293.7043)" xlink:href="#dropbox-d"/>
+<linearGradient id="dropbox-n" x1="509.95471" y1="631.03595" x2="758.1145" y2="631.03595" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1,0,0,-1,1019.9094,1292.3408)" xlink:href="#dropbox-c"/>
+<linearGradient id="dropbox-o" x1="509.95471" y1="631.03595" x2="758.1145" y2="631.03595" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1,0.02197802,0,1,0,-135.01605)" xlink:href="#dropbox-a"/>
+<linearGradient id="dropbox-p" x1="509.95471" y1="631.03595" x2="758.1145" y2="631.03595" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1,0.02197802,0,1,1019.9094,-135.01605)" xlink:href="#dropbox-b"/>
+</defs>
+<path d="m 509.95473,282.24765 -248.1598,160.89481 0,294.51931 248.1598,-160.89481 z" fill="url(#dropbox-p)"/>
+<path d="m 509.95471,282.24765 248.1598,160.89481 0,294.51931 -248.1598,-160.89481 z" fill="url(#dropbox-o)"/>
+<path d="m 509.95473,886.28494 -248.1598,-155.44075 0,-294.51931 248.1598,155.44075 z" fill="url(#dropbox-n)"/>
+<path d="m 509.95472,887.64846 248.1598,-155.44075 0,-294.51931 -248.1598,155.44075 z" fill="url(#dropbox-m)"/>
+<path d="M 265.88549,440.41545 507.2277,283.61119 338.1518,145.89613 102.26365,301.33689 z" fill="url(#dropbox-l)"/>
+<path d="M 754.02397,440.41545 512.68176,283.61119 681.75766,145.89613 917.64581,301.33689 z" fill="url(#dropbox-k)"/>
+<path d="M 509.9165,590.40213 756.751,440.41545 919.12401,574.03995 679.03062,732.20772 z" fill="url(#dropbox-j)"/>
+<path d="M 507.18947,590.40213 265.8855,440.41545 98.287793,574.03995 335.42477,732.20772 z" fill="url(#dropbox-i)"/>
+<path d="M 100.90013,301.33688 339.51531,144.53262 508.59121,284.9747 679.03063,143.16911 921.73635,301.33688 755.38748,436.3249 920.37283,572.67643 756.751,683.12117 l 0,44.99601 -248.15979,158.16777 -245.43275,-156.80426 0,-47.72303 L 98.173103,569.9494 264.52197,439.05193 z" fill="none" stroke="#0080ff" stroke-width="11" stroke-linejoin="round"/>
+</svg>

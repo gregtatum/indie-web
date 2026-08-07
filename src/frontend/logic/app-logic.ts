@@ -20,6 +20,32 @@ export function getBrowserName() {
   return browserName;
 }
 
+export function getBrowserIcon() {
+  switch (getBrowserName()) {
+    case 'Firefox Storage':
+      return '/svg/firefox.svg';
+    case 'Safari Storage':
+      return '/svg/safari.svg';
+    case 'Chrome Storage':
+      return '/svg/chrome.svg';
+    default:
+      return '/svg/browser.svg';
+  }
+}
+
+export function getBrowserAccentColor() {
+  switch (getBrowserName()) {
+    case 'Firefox Storage':
+      return '#ff7139';
+    case 'Safari Storage':
+      return '#0fa7e0';
+    case 'Chrome Storage':
+      return '#4285f4';
+    default:
+      return '#ff7139';
+  }
+}
+
 export function getFileStoreDisplayName(
   fileStore: T.FileStoreName,
   server: T.FileStoreServer | null,

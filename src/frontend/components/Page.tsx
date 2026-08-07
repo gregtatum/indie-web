@@ -1,7 +1,11 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, $$, Hooks, T } from 'frontend';
-import { getBrowserName } from 'frontend/logic/app-logic';
+import {
+  getBrowserAccentColor,
+  getBrowserIcon,
+  getBrowserName,
+} from 'frontend/logic/app-logic';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { formatBytes, getEnv } from 'frontend/utils';
@@ -119,7 +123,10 @@ export function Settings() {
     <div className="page">
       <div className="pageInner">
         <h1>Settings</h1>
-        <h2>Storage Providers</h2>
+        <h2 className="settingsSectionHeading">
+          <img className="settingsSectionIcon" src="/svg/database.svg" alt="" />
+          Storage Providers
+        </h2>
         <p>Where your files live.</p>
         <div className="settingsProviderList">
           <BrowserStorageProvider />
@@ -127,9 +134,14 @@ export function Settings() {
           {servers.length > 0 ? (
             <section className="settingsProvider">
               <div className="settingsProviderSummary">
-                <div>
-                  <h3>Self-Hosted Storage</h3>
-                  <p>{servers.length} configured</p>
+                <div className="settingsProviderTitle">
+                  <div className="settingsProviderIconTile settingsProviderIconTileAccent">
+                    <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
+                  </div>
+                  <div>
+                    <h3>Self-Hosted Storage</h3>
+                    <p>{servers.length} configured</p>
+                  </div>
                 </div>
                 <Router.Link className="button" to="/add-storage-provider">
                   Add Storage Provider
@@ -143,9 +155,14 @@ export function Settings() {
           ) : (
             <section className="settingsProvider">
               <div className="settingsProviderSummary">
-                <div>
-                  <h3>Self-Hosted Storage</h3>
-                  <p>Connect a local server, NAS, or music library.</p>
+                <div className="settingsProviderTitle">
+                  <div className="settingsProviderIconTile settingsProviderIconTileAccent">
+                    <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
+                  </div>
+                  <div>
+                    <h3>Self-Hosted Storage</h3>
+                    <p>Connect a local server, NAS, or music library.</p>
+                  </div>
                 </div>
                 <Router.Link className="button" to="/add-storage-provider">
                   Add Storage Provider
@@ -317,19 +334,40 @@ function BrowserStorageProvider() {
       (error) => console.error(error),
     );
   }, [idbfs]);
+  
+  let browserFileCountLabel;
+  if (!idbfs) {
+    browserFileCountLabel = 'No browser storage activated'
+  } else if (fileCount === null) {
+    browserFileCountLabel = 'Counting files stored…'
+  } else if (fileCount === 0) {
+    browserFileCountLabel = 'No files stored yet'
+  } else{
+    browserFileCountLabel = `${fileCount} file${fileCount === 1 ? '' : 's'} stored in the browser`;
+  }
 
   return (
     <section className="settingsProvider">
       <div className="settingsProviderSummary">
-        <div>
-          <h3>{getBrowserName()}</h3>
-          <p>
-            {idbfs
-              ? `${fileCount ?? 'Counting'} file${
-                  fileCount === 1 ? '' : 's'
-                } stored locally`
-              : 'No local files stored'}
-          </p>
+        <div className="settingsProviderTitle">
+          <div
+            className="settingsProviderIconTile"
+            style={{ backgroundColor: getBrowserAccentColor() }}
+          >
+            <span
+              className="settingsProviderIconMask"
+              style={{
+                WebkitMaskImage: `url(${getBrowserIcon()})`,
+                maskImage: `url(${getBrowserIcon()})`,
+              }}
+            />
+          </div>
+          <div>
+            <h3>{getBrowserName()}</h3>
+            <p>
+              {browserFileCountLabel}
+            </p>
+          </div>
         </div>
         {idbfs ? (
           <button
@@ -382,13 +420,18 @@ function DropboxStorageProvider() {
   return (
     <section className="settingsProvider">
       <div className="settingsProviderSummary">
-        <div>
-          <h3>Dropbox</h3>
-          <p>
-            {dropbox
-              ? 'Connected to the Dropbox Apps folder.'
-              : 'Connect Dropbox to browse and edit files directly.'}
-          </p>
+        <div className="settingsProviderTitle">
+          <div className="settingsProviderIconTile">
+            <img className="settingsProviderIcon" src="/svg/dropbox.svg" alt="" />
+          </div>
+          <div>
+            <h3>Dropbox</h3>
+            <p>
+              {dropbox
+                ? 'Connected to the Dropbox Apps folder.'
+                : 'Connect Dropbox to browse and edit files directly.'}
+            </p>
+          </div>
         </div>
         {dropbox ? (
           <button
