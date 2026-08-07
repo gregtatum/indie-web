@@ -151,7 +151,12 @@ export function Settings() {
                     <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
                   </div>
                   <div>
-                    <h3>Self-Hosted Storage</h3>
+                    <div className="settingsProviderNameRow">
+                      <h3>Self-Hosted Storage</h3>
+                      <span className="settingsStatusPill settingsStatusPillConnected">
+                        Connected
+                      </span>
+                    </div>
                     <p>{servers.length} configured</p>
                   </div>
                 </div>
@@ -172,7 +177,12 @@ export function Settings() {
                     <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
                   </div>
                   <div>
-                    <h3>Self-Hosted Storage</h3>
+                    <div className="settingsProviderNameRow">
+                      <h3>Self-Hosted Storage</h3>
+                      <span className="settingsStatusPill settingsStatusPillDisconnected">
+                        Not Connected
+                      </span>
+                    </div>
                     <p>Connect a local server, NAS, or music library.</p>
                   </div>
                 </div>
@@ -411,7 +421,18 @@ function BrowserStorageProvider() {
             />
           </div>
           <div>
-            <h3>{getBrowserName()}</h3>
+            <div className="settingsProviderNameRow">
+              <h3>{getBrowserName()}</h3>
+              <span
+                className={`settingsStatusPill ${
+                  idbfs
+                    ? 'settingsStatusPillConnected'
+                    : 'settingsStatusPillDisconnected'
+                }`}
+              >
+                {idbfs ? 'Connected' : 'Not Connected'}
+              </span>
+            </div>
             <p>{browserFileCountLabel}</p>
           </div>
         </div>
@@ -425,9 +446,7 @@ function BrowserStorageProvider() {
           >
             Delete Files
           </button>
-        ) : (
-          <span className="settingsProviderStatus">Not Active</span>
-        )}
+        ) : null}
       </div>
       {isDeleteOpen ? (
         <div className="settingsProviderWarning">
@@ -476,7 +495,18 @@ function DropboxStorageProvider() {
             />
           </div>
           <div>
-            <h3>Dropbox</h3>
+            <div className="settingsProviderNameRow">
+              <h3>Dropbox</h3>
+              <span
+                className={`settingsStatusPill ${
+                  dropbox
+                    ? 'settingsStatusPillConnected'
+                    : 'settingsStatusPillDisconnected'
+                }`}
+              >
+                {dropbox ? 'Connected' : 'Not Connected'}
+              </span>
+            </div>
             <p>
               {dropbox
                 ? 'Connected to the Dropbox Apps folder.'

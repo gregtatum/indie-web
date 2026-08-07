@@ -114,10 +114,36 @@
   p {
     margin: 0;
   }
+}
 
-  h3 {
-    margin-bottom: 4px;
-  }
+.settingsProviderNameRow {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.settingsStatusPill {
+  align-items: center;
+  border: 1px solid;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 10px;
+}
+
+.settingsStatusPillConnected {
+  background: var(--success-color-light);
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+.settingsStatusPillDisconnected {
+  background: #8888881a;
+  border-color: var(--button-border);
+  color: var(--button-border);
 }
 
 .settingsProviderSummary {
@@ -217,11 +243,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.settingsProviderStatus {
-  color: #555;
-  font-size: var(--font-size-small);
 }
 
 .pageBeta {

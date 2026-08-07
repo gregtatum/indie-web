@@ -25,6 +25,14 @@
   white-space: nowrap;
   display: flex;
   gap: var(--header-gap);
+  
+  & a {
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .headerPathBreadcrumbs {
@@ -33,10 +41,13 @@
 
 .headerSiteNameTitle {
   padding-inline-start: 5px;
+  font-weight: bold;
 }
 
 .headerSiteNameSuffix {
   opacity: 0.5;
+  font-weight: normal;
+
 }
 
 .headerSlideIn {
@@ -49,7 +60,7 @@
 }
 
 .headerSlideInContents {
-  padding: 8px var(--header-gap);
+  padding: 8px 8px 8px 20px;
   display: inline-flex;
   overflow: hidden;
 }
@@ -120,7 +131,7 @@
   font: inherit;
   cursor: pointer;
   color: #004195;
-  text-decoration: underline;
+  text-decoration: none;
   padding: 0px 11px 0px 4px;
   margin: 2px;
   border-radius: 3px;

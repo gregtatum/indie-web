@@ -18,7 +18,6 @@
   --button-opacity: 0.9;
   --button-big-padding: 9px 15px;
 
-
   --modal-border-color: #ddd;
   --modal-background: #eee;
   --modal-shadow: 7px 6px 6px #0001;
@@ -47,19 +46,32 @@
 
   --text-border: #555;
   --light-border: #ddd;
+
+  --success-color: #1e8e3e;
+  --success-color-light: #1e8e3e1a;
 }
 
 /* animation: fadein 500ms; */
 @keyframes fadein {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* animation: fadeindelay 500ms; */
 @keyframes fadeindelay {
-  0% { opacity: 0; }
-  30% { opacity: 0; }
-  100%   { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /*
@@ -67,10 +79,15 @@
   animation: slidedown 500ms;
 */
 @keyframes slidedown {
-  from { opacity: 0; transform: translateY(var(--slidedown-px)) }
-  to   { opacity: 1; transform: translateY(0) }
+  from {
+    opacity: 0;
+    transform: translateY(var(--slidedown-px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-
 
 html,
 body,
@@ -140,7 +157,7 @@ button.icon-mask {
 }
 
 .ͼ1 span.cm-placeholder {
-  color: #666 ;
+  color: #666;
 }
 
 .button-primary {
@@ -241,60 +258,60 @@ code {
   color: inherit;
 }
 
-[data-icon="pencil-fill"] {
+[data-icon='pencil-fill'] {
   /* webpackIgnore: true */
-  background-image: url("/svg/pencil-fill.svg");
+  background-image: url('/svg/pencil-fill.svg');
 }
 
-[data-icon="box-arrow-in-right"] {
+[data-icon='box-arrow-in-right'] {
   /* webpackIgnore: true */
-  background-image: url("/svg/box-arrow-in-right.svg");
+  background-image: url('/svg/box-arrow-in-right.svg');
 }
 
-[data-icon="trash-fill"] {
+[data-icon='trash-fill'] {
   /* webpackIgnore: true */
-  background-image: url("/svg/trash-fill.svg");
+  background-image: url('/svg/trash-fill.svg');
 }
 
-[data-icon="download"] {
+[data-icon='download'] {
   /* webpackIgnore: true */
-  background-image: url("/svg/download.svg");
+  background-image: url('/svg/download.svg');
 }
 
-[data-icon-mask="play"] {
+[data-icon-mask='play'] {
   /* webpackIgnore: true */
-  mask-image: url("/svg/play.svg");
+  mask-image: url('/svg/play.svg');
 }
 
-[data-icon-mask="pause"] {
+[data-icon-mask='pause'] {
   /* webpackIgnore: true */
-  mask-image: url("/svg/pause.svg");
+  mask-image: url('/svg/pause.svg');
 }
 
-[data-icon="trash-fill"] {
+[data-icon='trash-fill'] {
   /* webpackIgnore: true */
-  background-image: url("/svg/trash-fill.svg");
+  background-image: url('/svg/trash-fill.svg');
 }
 
-[data-icon="music"] {
+[data-icon='music'] {
   /* webpackIgnore: true */
-  background-image: url("/svg/music.svg")
+  background-image: url('/svg/music.svg');
 }
-[data-icon="folder"] {
+[data-icon='folder'] {
   /* webpackIgnore: true */
-    background-image: url("/svg/folder.svg")
+  background-image: url('/svg/folder.svg');
 }
-[data-icon="translate"] {
+[data-icon='translate'] {
   /* webpackIgnore: true */
-    background-image: url("/svg/translate.svg")
+  background-image: url('/svg/translate.svg');
 }
-[data-icon="file-alt"] {
+[data-icon='file-alt'] {
   /* webpackIgnore: true */
-    background-image: url("/svg/file-alt.svg")
+  background-image: url('/svg/file-alt.svg');
 }
-[data-icon="upload"] {
+[data-icon='upload'] {
   /* webpackIgnore: true */
-    background-image: url("/svg/upload.svg")
+  background-image: url('/svg/upload.svg');
 }
 
 .renderedSong.dragging,
@@ -303,7 +320,7 @@ code {
 }
 .renderedSong.dragging::after,
 .viewMarkdown.dragging::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 10px;
   border: 5px dashed #0070ff;
