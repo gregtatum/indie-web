@@ -9,6 +9,7 @@ import {
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { formatBytes, getEnv } from 'frontend/utils';
+import { useCodeVerifier } from 'frontend/hooks/pcse';
 import { ServerStorageProviderSettings } from './StorageProvider';
 import './Page.css';
 
@@ -416,6 +417,7 @@ function DropboxStorageProvider() {
   const idbfs = $$.getIDBFSOrNull();
   const servers = $$.getServers();
   const hasOtherStorage = Boolean(idbfs) || servers.length > 0;
+  const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
 
   return (
     <section className="settingsProvider">
@@ -457,9 +459,13 @@ function DropboxStorageProvider() {
             Sign Out
           </button>
         ) : (
-          <Router.Link className="button" to="/dropbox/folder">
+          <a
+            className="button"
+            href={authorizationUrl}
+            onClick={persistCodeVerifier}
+          >
             Connect Dropbox
-          </Router.Link>
+          </a>
         )}
       </div>
     </section>
