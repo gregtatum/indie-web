@@ -28,13 +28,25 @@
 
 .settingsSubtitle {
   color: var(--text-border);
-  margin: 0 0 24px;
+  margin: 0 0 35px;
 }
 
 @media (min-width: 900px) {
   .pageInner {
     max-width: var(--page-max-width);
   }
+}
+
+.settingsFooterRule {
+  border: none;
+  border-top: 1px solid var(--light-border);
+  margin: 40px 0 16px;
+}
+
+.settingsFooter {
+  color: var(--text-border);
+  font-size: var(--font-size-small);
+  text-align: center;
 }
 
 .pageButtonList {
@@ -169,6 +181,7 @@
 .settingsSectionHeading {
   display: flex;
   flex-direction: column;
+  margin-bottom: 24px;
   gap: 4px;
 }
 

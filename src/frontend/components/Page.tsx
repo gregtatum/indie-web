@@ -352,8 +352,8 @@ export function Settings() {
             </p>
           </div>
         </div>
-        <h2>About</h2>
-        <p>
+        <hr className="settingsFooterRule" />
+        <p className="settingsFooter">
           <Router.Link to="/privacy">Privacy Policy and Usage.</Router.Link>
         </p>
       </div>
