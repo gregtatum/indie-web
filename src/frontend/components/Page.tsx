@@ -377,6 +377,7 @@ function BrowserStorageProvider() {
   const idbfs = $$.getIDBFSOrNull();
   const dropboxOauth = $$.getDropboxOauth();
   const servers = $$.getServers();
+  const currentFileStoreName = $$.getCurrentFileStoreName();
   const [fileCount, setFileCount] = React.useState<null | number>(null);
   const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
   const hasOtherStorage = Boolean(dropboxOauth) || servers.length > 0;
@@ -459,6 +460,13 @@ function BrowserStorageProvider() {
             type="button"
             onClick={() => {
               if (hasOtherStorage) {
+                if (currentFileStoreName === 'browser') {
+                  if (dropboxOauth) {
+                    dispatch(A.changeFileStore('dropbox'));
+                  } else if (servers[0]) {
+                    dispatch(A.changeFileStore('server', servers[0]));
+                  }
+                }
                 dispatch(A.removeBrowserFiles());
               } else {
                 dispatch(A.removeAllStorage());
