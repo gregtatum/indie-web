@@ -174,12 +174,17 @@ export function Settings() {
             </section>
           )}
         </div>
-        <h2>Offline & Cache</h2>
-        <p>
-          While you passively view your files, {getEnv('SITE_DISPLAY_NAME')} can
-          cache the files to your browser allowing for faster retrieval and
-          offline support for your files.
-        </p>
+        <div className="settingsSectionHeading">
+          <div className="settingsSectionTitleRow">
+            <img className="settingsSectionIcon" src="/svg/offline.svg" alt="" />
+            <h2>Offline & Cache</h2>
+          </div>
+          <p>
+            While you passively view your files, {getEnv('SITE_DISPLAY_NAME')} can
+            cache the files to your browser allowing for faster retrieval and
+            offline support for your files.
+          </p>
+        </div>
         <p>
           <input
             type="checkbox"
@@ -250,7 +255,16 @@ export function Settings() {
             })}
           </div>
         )}
-        <h2>Editor</h2>
+        <div className="settingsSectionHeading">
+          <div className="settingsSectionTitleRow">
+            <img
+              className="settingsSectionIcon"
+              src="/svg/pencil-fill.svg"
+              alt=""
+            />
+            <h2>Editor</h2>
+          </div>
+        </div>
         <p>
           <input
             type="checkbox"
@@ -287,11 +301,16 @@ export function Settings() {
             Enable ChordPro autocompletion
           </label>
         </p>
-        <h2>Developer</h2>
-        <p>
-          Enable experimental features which may not be as fully fleshed out,
-          not documented, and may have bugs.
-        </p>
+        <div className="settingsSectionHeading">
+          <div className="settingsSectionTitleRow">
+            <img className="settingsSectionIcon" src="/svg/lab.svg" alt="" />
+            <h2>Developer</h2>
+          </div>
+          <p>
+            Enable experimental features which may not be as fully fleshed out,
+            not documented, and may have bugs.
+          </p>
+        </div>
         <p>
           <input
             type="checkbox"
