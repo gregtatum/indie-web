@@ -124,208 +124,231 @@ export function Settings() {
     <div className="page">
       <div className="pageInner">
         <h1>Settings</h1>
-        <div className="settingsSectionHeading">
-          <div className="settingsSectionTitleRow">
-            <img className="settingsSectionIcon" src="/svg/database.svg" alt="" />
-            <h2>Storage Providers</h2>
-          </div>
-          <p>Where your files live.</p>
-        </div>
-        <div className="settingsProviderList">
-          <BrowserStorageProvider />
-          <DropboxStorageProvider />
-          {servers.length > 0 ? (
-            <section className="settingsProvider">
-              <div className="settingsProviderSummary">
-                <div className="settingsProviderTitle">
-                  <div className="settingsProviderIconTile settingsProviderIconTileAccent">
-                    <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
-                  </div>
-                  <div>
-                    <h3>Self-Hosted Storage</h3>
-                    <p>{servers.length} configured</p>
-                  </div>
-                </div>
-                <Router.Link className="button" to="/add-storage-provider">
-                  Add Storage Provider
-                </Router.Link>
-              </div>
-              <ServerStorageProviderSettings
-                fileStoreServers={servers}
-                nonServerFallbackStorage={nonServerFallbackStorage}
+        <div className="settingsCard settingsSectionCard">
+          <div className="settingsSectionHeading">
+            <div className="settingsSectionTitleRow">
+              <img
+                className="settingsSectionIcon"
+                src="/svg/database.svg"
+                alt=""
               />
-            </section>
-          ) : (
-            <section className="settingsProvider">
-              <div className="settingsProviderSummary">
-                <div className="settingsProviderTitle">
-                  <div className="settingsProviderIconTile settingsProviderIconTileAccent">
-                    <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
+              <h2>Storage Providers</h2>
+            </div>
+            <p>Where your files live.</p>
+          </div>
+          <div className="settingsProviderList">
+            <BrowserStorageProvider />
+            <DropboxStorageProvider />
+            {servers.length > 0 ? (
+              <section className="settingsProvider">
+                <div className="settingsProviderSummary">
+                  <div className="settingsProviderTitle">
+                    <div className="settingsProviderIconTile settingsProviderIconTileAccent">
+                      <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
+                    </div>
+                    <div>
+                      <h3>Self-Hosted Storage</h3>
+                      <p>{servers.length} configured</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3>Self-Hosted Storage</h3>
-                    <p>Connect a local server, NAS, or music library.</p>
-                  </div>
+                  <Router.Link className="button" to="/add-storage-provider">
+                    Add Storage Provider
+                  </Router.Link>
                 </div>
-                <Router.Link className="button" to="/add-storage-provider">
-                  Add Storage Provider
-                </Router.Link>
+                <ServerStorageProviderSettings
+                  fileStoreServers={servers}
+                  nonServerFallbackStorage={nonServerFallbackStorage}
+                />
+              </section>
+            ) : (
+              <section className="settingsProvider">
+                <div className="settingsProviderSummary">
+                  <div className="settingsProviderTitle">
+                    <div className="settingsProviderIconTile settingsProviderIconTileAccent">
+                      <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
+                    </div>
+                    <div>
+                      <h3>Self-Hosted Storage</h3>
+                      <p>Connect a local server, NAS, or music library.</p>
+                    </div>
+                  </div>
+                  <Router.Link className="button" to="/add-storage-provider">
+                    Add Storage Provider
+                  </Router.Link>
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+        <div className="settingsSectionGrid">
+          <div className="settingsCard settingsSectionCard">
+            <div className="settingsSectionHeading">
+              <div className="settingsSectionTitleRow">
+                <img
+                  className="settingsSectionIcon"
+                  src="/svg/offline.svg"
+                  alt=""
+                />
+                <h2>Offline & Cache</h2>
               </div>
-            </section>
-          )}
-        </div>
-        <div className="settingsSectionHeading">
-          <div className="settingsSectionTitleRow">
-            <img className="settingsSectionIcon" src="/svg/offline.svg" alt="" />
-            <h2>Offline & Cache</h2>
+              <p>
+                Cache files in your browser for faster access and offline use.
+              </p>
+            </div>
+            <p>
+              <input
+                type="checkbox"
+                id="file-store-cache"
+                defaultChecked={fileStoreCacheEnabled}
+                onChange={(event) => {
+                  dispatch(
+                    A.setFileStoreCacheEnabled(Boolean(event.target.checked)),
+                  );
+                }}
+              />
+              <label htmlFor="file-store-cache">
+                Enable offline file caching
+              </label>
+            </p>
+            {fileStoreCacheEnabled && cacheTargets.length === 0 && (
+              <p>Files you view will appear here for offline use.</p>
+            )}
+            {fileStoreCacheEnabled && cacheTargets.length > 0 && (
+              <div>
+                {cacheTargets.map((target) => {
+                  const estimate = cacheEstimates[target.id];
+                  let label = `${target.label}: Estimating...`;
+                  if (estimate?.status === 'error') {
+                    label = `${target.label}: ${estimate.error}`;
+                  } else if (estimate?.status === 'ready') {
+                    label = `${target.label}: ${formatBytes(estimate.size ?? 0)}`;
+                  }
+                  return (
+                    <div key={target.id}>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setCacheEstimates((prev) => ({
+                            ...prev,
+                            [target.id]: {
+                              status: 'loading',
+                              size: null,
+                              error: null,
+                            },
+                          }));
+                          try {
+                            const cache = await openIDBFS(
+                              target.dbName,
+                              workerClient,
+                            );
+                            await cache.clear();
+                            await estimateCacheSizeForTarget(target);
+                          } catch (error) {
+                            console.error(error);
+                            if (!isMountedRef.current) {
+                              return;
+                            }
+                            setCacheEstimates((prev) => ({
+                              ...prev,
+                              [target.id]: {
+                                status: 'error',
+                                size: null,
+                                error: 'Could not clear cache.',
+                              },
+                            }));
+                          }
+                        }}
+                      >
+                        Clear Cache
+                      </button>{' '}
+                      {label}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <p>
-            While you passively view your files, {getEnv('SITE_DISPLAY_NAME')} can
-            cache the files to your browser allowing for faster retrieval and
-            offline support for your files.
-          </p>
-        </div>
-        <p>
-          <input
-            type="checkbox"
-            id="file-store-cache"
-            defaultChecked={fileStoreCacheEnabled}
-            onChange={(event) => {
-              dispatch(
-                A.setFileStoreCacheEnabled(Boolean(event.target.checked)),
-              );
-            }}
-          />
-          <label htmlFor="file-store-cache">Enable offline file caching</label>
-        </p>
-        {fileStoreCacheEnabled && cacheTargets.length === 0 && (
-          <p>Files you view will appear here for offline use.</p>
-        )}
-        {fileStoreCacheEnabled && cacheTargets.length > 0 && (
-          <div>
-            {cacheTargets.map((target) => {
-              const estimate = cacheEstimates[target.id];
-              let label = `${target.label}: Estimating...`;
-              if (estimate?.status === 'error') {
-                label = `${target.label}: ${estimate.error}`;
-              } else if (estimate?.status === 'ready') {
-                label = `${target.label}: ${formatBytes(estimate.size ?? 0)}`;
-              }
-              return (
-                <div key={target.id}>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setCacheEstimates((prev) => ({
-                        ...prev,
-                        [target.id]: {
-                          status: 'loading',
-                          size: null,
-                          error: null,
-                        },
-                      }));
-                      try {
-                        const cache = await openIDBFS(
-                          target.dbName,
-                          workerClient,
-                        );
-                        await cache.clear();
-                        await estimateCacheSizeForTarget(target);
-                      } catch (error) {
-                        console.error(error);
-                        if (!isMountedRef.current) {
-                          return;
-                        }
-                        setCacheEstimates((prev) => ({
-                          ...prev,
-                          [target.id]: {
-                            status: 'error',
-                            size: null,
-                            error: 'Could not clear cache.',
-                          },
-                        }));
-                      }
-                    }}
-                  >
-                    Clear Cache
-                  </button>{' '}
-                  {label}
-                </div>
-              );
-            })}
+          <div className="settingsCard settingsSectionCard">
+            <div className="settingsSectionHeading">
+              <div className="settingsSectionTitleRow">
+                <img
+                  className="settingsSectionIcon"
+                  src="/svg/pencil.svg"
+                  alt=""
+                />
+                <h2>Editor</h2>
+              </div>
+              <p>Customize the editing experience.</p>
+            </div>
+            <p>
+              <input
+                type="checkbox"
+                id="editor-autocomplete-markdown"
+                defaultChecked={editorAutocomplete.markdown}
+                onChange={(event) => {
+                  dispatch(
+                    A.setEditorAutocomplete(
+                      'markdown',
+                      Boolean(event.target.checked),
+                    ),
+                  );
+                }}
+              />
+              <label htmlFor="editor-autocomplete-markdown">
+                Enable Markdown autocompletion
+              </label>
+            </p>
+            <p>
+              <input
+                type="checkbox"
+                id="editor-autocomplete-chordpro"
+                defaultChecked={editorAutocomplete.chordpro}
+                onChange={(event) => {
+                  dispatch(
+                    A.setEditorAutocomplete(
+                      'chordpro',
+                      Boolean(event.target.checked),
+                    ),
+                  );
+                }}
+              />
+              <label htmlFor="editor-autocomplete-chordpro">
+                Enable ChordPro autocompletion
+              </label>
+            </p>
           </div>
-        )}
-        <div className="settingsSectionHeading">
-          <div className="settingsSectionTitleRow">
-            <img
-              className="settingsSectionIcon"
-              src="/svg/pencil-fill.svg"
-              alt=""
-            />
-            <h2>Editor</h2>
+          <div className="settingsCard settingsSectionCard">
+            <div className="settingsSectionHeading">
+              <div className="settingsSectionTitleRow">
+                <img
+                  className="settingsSectionIcon"
+                  src="/svg/lab.svg"
+                  alt=""
+                />
+                <h2>Developer</h2>
+              </div>
+              <p>
+                Enable experimental features which may not be as fully fleshed
+                out, not documented, and may have bugs.
+              </p>
+            </div>
+            <p>
+              <input
+                type="checkbox"
+                id="experimental-features"
+                defaultChecked={experimentalFeatures}
+                onChange={(event) => {
+                  dispatch(
+                    A.setExperimentalFeatures(Boolean(event.target.checked)),
+                  );
+                }}
+              />
+              <label htmlFor="experimental-features">
+                Enable experimental features
+              </label>
+            </p>
           </div>
         </div>
-        <p>
-          <input
-            type="checkbox"
-            id="editor-autocomplete-markdown"
-            defaultChecked={editorAutocomplete.markdown}
-            onChange={(event) => {
-              dispatch(
-                A.setEditorAutocomplete(
-                  'markdown',
-                  Boolean(event.target.checked),
-                ),
-              );
-            }}
-          />
-          <label htmlFor="editor-autocomplete-markdown">
-            Enable Markdown autocompletion
-          </label>
-        </p>
-        <p>
-          <input
-            type="checkbox"
-            id="editor-autocomplete-chordpro"
-            defaultChecked={editorAutocomplete.chordpro}
-            onChange={(event) => {
-              dispatch(
-                A.setEditorAutocomplete(
-                  'chordpro',
-                  Boolean(event.target.checked),
-                ),
-              );
-            }}
-          />
-          <label htmlFor="editor-autocomplete-chordpro">
-            Enable ChordPro autocompletion
-          </label>
-        </p>
-        <div className="settingsSectionHeading">
-          <div className="settingsSectionTitleRow">
-            <img className="settingsSectionIcon" src="/svg/lab.svg" alt="" />
-            <h2>Developer</h2>
-          </div>
-          <p>
-            Enable experimental features which may not be as fully fleshed out,
-            not documented, and may have bugs.
-          </p>
-        </div>
-        <p>
-          <input
-            type="checkbox"
-            id="experimental-features"
-            defaultChecked={experimentalFeatures}
-            onChange={(event) => {
-              dispatch(
-                A.setExperimentalFeatures(Boolean(event.target.checked)),
-              );
-            }}
-          />
-          <label htmlFor="experimental-features">
-            Enable experimental features
-          </label>
-        </p>
         <h2>About</h2>
         <p>
           <Router.Link to="/privacy">Privacy Policy and Usage.</Router.Link>
@@ -356,15 +379,15 @@ function BrowserStorageProvider() {
       (error) => console.error(error),
     );
   }, [idbfs]);
-  
+
   let browserFileCountLabel;
   if (!idbfs) {
-    browserFileCountLabel = 'No browser storage activated'
+    browserFileCountLabel = 'No browser storage activated';
   } else if (fileCount === null) {
-    browserFileCountLabel = 'Counting files stored…'
+    browserFileCountLabel = 'Counting files stored…';
   } else if (fileCount === 0) {
-    browserFileCountLabel = 'No files stored yet'
-  } else{
+    browserFileCountLabel = 'No files stored yet';
+  } else {
     browserFileCountLabel = `${fileCount} file${fileCount === 1 ? '' : 's'} stored in the browser`;
   }
 
@@ -386,9 +409,7 @@ function BrowserStorageProvider() {
           </div>
           <div>
             <h3>{getBrowserName()}</h3>
-            <p>
-              {browserFileCountLabel}
-            </p>
+            <p>{browserFileCountLabel}</p>
           </div>
         </div>
         {idbfs ? (
@@ -445,7 +466,11 @@ function DropboxStorageProvider() {
       <div className="settingsProviderSummary">
         <div className="settingsProviderTitle">
           <div className="settingsProviderIconTile">
-            <img className="settingsProviderIcon" src="/svg/dropbox.svg" alt="" />
+            <img
+              className="settingsProviderIcon"
+              src="/svg/dropbox.svg"
+              alt=""
+            />
           </div>
           <div>
             <h3>Dropbox</h3>

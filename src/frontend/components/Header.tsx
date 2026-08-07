@@ -107,7 +107,7 @@ export function Header() {
         <Path
           path="/"
           key={key}
-          title="👀 Privacy Policy and Usage"
+          title="Privacy Policy and Usage"
           hideSiteName={true}
         />
       );

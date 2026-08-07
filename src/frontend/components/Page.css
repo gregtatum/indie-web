@@ -39,16 +39,39 @@
   }
 }
 
+.settingsCard {
+  border: 1px solid var(--light-border);
+  border-radius: 10px;
+  box-shadow:
+    0px 3px 4px #0001,
+    0px 2px 2px #0001;
+  padding: 20px;
+}
+
+.pageInner > .settingsCard {
+  margin-top: 20px;
+}
+
+.settingsSectionGrid {
+  display: grid;
+  gap: 30px;
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 30px;
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settingsSectionCard {
+}
+
 .settingsProviderList {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--light-border);
-  border-radius: 10px; 
-  box-shadow: 0px 3px 4px #0001, 0px 2px 2px #0001;
-  margin-top: 15px;
-  
+
   & .button {
-    padding: var(--button-big-padding); 
+    padding: var(--button-big-padding);
     font-size: var(--font-size-small);
     white-space: nowrap;
   }
@@ -60,7 +83,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 20px;
-  
+
   &:first-child {
     border: none;
   }
@@ -81,7 +104,7 @@
   gap: 12px;
   justify-content: space-between;
   width: 100%;
-  
+
   @media (max-width: 500px) {
     & {
       flex-direction: column;
@@ -133,12 +156,10 @@
   mask-image: url('/data/common/svg/server.svg');
 }
 
-
 .settingsSectionHeading {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 32px;
 }
 
 .settingsSectionTitleRow {
