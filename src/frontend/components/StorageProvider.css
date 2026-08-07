@@ -49,6 +49,14 @@
     grid-template-columns: 1fr 1fr auto;
     gap: 10px;
     margin: 0;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+
+      & button {
+        justify-self: start;
+      }
+    }
   }
 
   & input {
