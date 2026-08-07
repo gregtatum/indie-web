@@ -13,6 +13,11 @@
 .pageInner {
   width: 100%;
   margin: 40px;
+  @media (max-width: 600px) {
+    & {
+      width: calc(100% - 30px);
+    }
+  }
 }
 
 .pageInner > h1:first-child,
