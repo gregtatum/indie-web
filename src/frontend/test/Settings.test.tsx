@@ -12,50 +12,112 @@ import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import type { FetchMockSandbox } from 'fetch-mock';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 
+type Store = ReturnType<typeof createStore>;
+
+const NAS_STORAGE = {
+  id: 'nas-storage',
+  name: 'NAS Storage',
+  url: 'http://localhost:6543',
+  storeType: 'files' as const,
+};
+
 beforeEach(() => {
   window.localStorage.clear();
 });
+
+function onboard(store: Store) {
+  store.dispatch(A.setHasOnboarded(true));
+}
+
+function connectDropbox(store: Store) {
+  store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
+  store.dispatch(A.setFileStoreCacheEnabled(false));
+}
+
+function addNasStorage(store: Store) {
+  store.dispatch(A.addFileStoreServer(NAS_STORAGE));
+}
+
+function renderSettings(store: Store) {
+  render(
+    <MemoryRouter initialEntries={['/settings']}>
+      <Provider store={store as any}>
+        <AppRoutes />
+      </Provider>
+    </MemoryRouter>,
+  );
+}
+
+function watchDatabaseDeletes() {
+  return jest.spyOn(indexedDB, 'deleteDatabase');
+}
+
+function confirmPrompts() {
+  return jest.spyOn(window, 'confirm').mockReturnValue(true);
+}
+
+async function requestBrowserFileDeletion() {
+  await screen.findByText('1 file stored locally');
+  await act(async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Files' }));
+  });
+  expect(
+    await screen.findByText(/This removes the files stored in this browser/),
+  ).toBeTruthy();
+}
+
+async function confirmBrowserFileDeletion() {
+  await act(async () => {
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Delete Local Files' }),
+    );
+  });
+}
+
+async function signOutOfDropbox() {
+  await act(async () => {
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Sign Out' }),
+    );
+  });
+}
+
+async function removeStorageProvider() {
+  await act(async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+  });
+}
+
+function expectBrowserFilesDeleted(deleteDatabase: jest.SpyInstance) {
+  expect(deleteDatabase).toHaveBeenCalledWith(BROWSER_FILES_DB_NAME);
+}
+
+function expectDropboxCacheDeleted(deleteDatabase: jest.SpyInstance) {
+  expect(deleteDatabase).toHaveBeenCalledWith(IDB_CACHE_NAME);
+}
+
+async function expectOnboardingHomeScreen() {
+  expect(window.localStorage.length).toBe(0);
+  expect(await screen.findByText(/On your storage/)).toBeTruthy();
+  expect(screen.queryByText('Enable experimental features')).toBeNull();
+}
 
 describe('Settings', () => {
   const { getIDBFS } = useTestIDBFS('settings-test-db');
 
   it('returns to the onboarding home screen after deleting the last storage', async () => {
     const store = createStore();
-    store.dispatch(A.setHasOnboarded(true));
+    onboard(store);
     await connectBrowserFiles(store, getIDBFS());
-    const deleteDatabase = jest.spyOn(indexedDB, 'deleteDatabase');
+    const deleteDatabase = watchDatabaseDeletes();
 
-    render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
+    renderSettings(store);
+    await requestBrowserFileDeletion();
+    await confirmBrowserFileDeletion();
 
-    await screen.findByText('1 file stored locally');
-
-    await act(async () => {
-      await userEvent.click(
-        screen.getByRole('button', { name: 'Delete Files' }),
-      );
-    });
-
-    expect(
-      await screen.findByText(/This removes the files stored in this browser/),
-    ).toBeTruthy();
-
-    await act(async () => {
-      await userEvent.click(
-        screen.getByRole('button', { name: 'Delete Local Files' }),
-      );
-    });
-
-    expect(deleteDatabase).toHaveBeenCalledWith(BROWSER_FILES_DB_NAME);
-    expect(deleteDatabase).toHaveBeenCalledWith(IDB_CACHE_NAME);
-    expect(window.localStorage.length).toBe(0);
-    expect(await screen.findByText(/On your storage/)).toBeTruthy();
-    expect(screen.queryByText('Enable experimental features')).toBeNull();
+    expectBrowserFilesDeleted(deleteDatabase);
+    expectDropboxCacheDeleted(deleteDatabase);
+    await expectOnboardingHomeScreen();
 
     (window.fetch as FetchMockSandbox).get(
       '/guide/Getting Started.chopro',
@@ -73,39 +135,16 @@ describe('Settings', () => {
 
   it('only deletes browser files when another storage is still configured', async () => {
     const store = createStore();
-    store.dispatch(A.setHasOnboarded(true));
-    store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
-    store.dispatch(A.setFileStoreCacheEnabled(false));
+    onboard(store);
+    connectDropbox(store);
     await connectBrowserFiles(store, getIDBFS());
-    const deleteDatabase = jest.spyOn(indexedDB, 'deleteDatabase');
+    const deleteDatabase = watchDatabaseDeletes();
 
-    render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
+    renderSettings(store);
+    await requestBrowserFileDeletion();
+    await confirmBrowserFileDeletion();
 
-    await screen.findByText('1 file stored locally');
-
-    await act(async () => {
-      await userEvent.click(
-        screen.getByRole('button', { name: 'Delete Files' }),
-      );
-    });
-
-    expect(
-      await screen.findByText(/This removes the files stored in this browser/),
-    ).toBeTruthy();
-
-    await act(async () => {
-      await userEvent.click(
-        screen.getByRole('button', { name: 'Delete Local Files' }),
-      );
-    });
-
-    expect(deleteDatabase).toHaveBeenCalledWith(BROWSER_FILES_DB_NAME);
+    expectBrowserFilesDeleted(deleteDatabase);
     expect(deleteDatabase).not.toHaveBeenCalledWith(IDB_CACHE_NAME);
     expect(window.localStorage.length).toBeGreaterThan(0);
     expect(await screen.findByText('No local files stored')).toBeTruthy();
@@ -115,29 +154,17 @@ describe('Settings', () => {
 
   it('only removes Dropbox data when another storage is still configured', async () => {
     const store = createStore();
-    store.dispatch(A.setHasOnboarded(true));
-    store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
-    store.dispatch(A.setFileStoreCacheEnabled(false));
+    onboard(store);
+    connectDropbox(store);
     await connectBrowserFiles(store, getIDBFS());
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
-    const deleteDatabase = jest.spyOn(indexedDB, 'deleteDatabase');
+    const confirm = confirmPrompts();
+    const deleteDatabase = watchDatabaseDeletes();
 
-    render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
-
-    await act(async () => {
-      await userEvent.click(
-        await screen.findByRole('button', { name: 'Sign Out' }),
-      );
-    });
+    renderSettings(store);
+    await signOutOfDropbox();
 
     expect(confirm).toHaveBeenCalled();
-    expect(deleteDatabase).toHaveBeenCalledWith(IDB_CACHE_NAME);
+    expectDropboxCacheDeleted(deleteDatabase);
     expect(deleteDatabase).not.toHaveBeenCalledWith(BROWSER_FILES_DB_NAME);
     expect(window.localStorage.length).toBeGreaterThan(0);
     expect(
@@ -151,63 +178,33 @@ describe('Settings', () => {
 
   it('returns to onboarding after removing Dropbox as the last storage', async () => {
     const store = createStore();
-    store.dispatch(A.setHasOnboarded(true));
-    store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
-    store.dispatch(A.setFileStoreCacheEnabled(false));
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
-    const deleteDatabase = jest.spyOn(indexedDB, 'deleteDatabase');
+    onboard(store);
+    connectDropbox(store);
+    const confirm = confirmPrompts();
+    const deleteDatabase = watchDatabaseDeletes();
 
-    render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
-
-    await act(async () => {
-      await userEvent.click(
-        await screen.findByRole('button', { name: 'Sign Out' }),
-      );
-    });
+    renderSettings(store);
+    await signOutOfDropbox();
 
     expect(confirm).toHaveBeenCalled();
-    expect(deleteDatabase).toHaveBeenCalledWith(BROWSER_FILES_DB_NAME);
-    expect(deleteDatabase).toHaveBeenCalledWith(IDB_CACHE_NAME);
-    expect(window.localStorage.length).toBe(0);
-    expect(await screen.findByText(/On your storage/)).toBeTruthy();
-    expect(screen.queryByText('Enable experimental features')).toBeNull();
+    expectBrowserFilesDeleted(deleteDatabase);
+    expectDropboxCacheDeleted(deleteDatabase);
+    await expectOnboardingHomeScreen();
   });
 
   it('removes self-hosted storage from settings', async () => {
     const store = createStore();
-    store.dispatch(A.setHasOnboarded(true));
-    store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
-    store.dispatch(A.setFileStoreCacheEnabled(false));
-    store.dispatch(
-      A.addFileStoreServer({
-        id: 'nas-storage',
-        name: 'NAS Storage',
-        url: 'http://localhost:6543',
-        storeType: 'files',
-      }),
-    );
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    onboard(store);
+    connectDropbox(store);
+    addNasStorage(store);
+    const confirm = confirmPrompts();
 
-    render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
+    renderSettings(store);
 
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
     expect(screen.getByText('1 configured')).toBeTruthy();
 
-    await act(async () => {
-      await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
-    });
+    await removeStorageProvider();
 
     expect(confirm).toHaveBeenCalledWith(
       'Are you sure you want to remove this storage provider?',
@@ -220,31 +217,17 @@ describe('Settings', () => {
 
   it('switches to browser storage after removing the active self-hosted storage', async () => {
     const store = createStore();
-    store.dispatch(A.setHasOnboarded(true));
+    onboard(store);
     await connectBrowserFiles(store, getIDBFS());
-    const server = {
-      id: 'nas-storage',
-      name: 'NAS Storage',
-      url: 'http://localhost:6543',
-      storeType: 'files' as const,
-    };
-    store.dispatch(A.addFileStoreServer(server));
-    store.dispatch(A.changeFileStore('server', server));
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    addNasStorage(store);
+    store.dispatch(A.changeFileStore('server', NAS_STORAGE));
+    const confirm = confirmPrompts();
 
-    render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
+    renderSettings(store);
 
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
 
-    await act(async () => {
-      await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
-    });
+    await removeStorageProvider();
 
     expect(confirm).toHaveBeenCalledWith(
       'Are you sure you want to remove this storage provider?',
@@ -260,39 +243,22 @@ describe('Settings', () => {
 
   it('returns to onboarding after removing self-hosted storage as the last storage', async () => {
     const store = createStore();
-    store.dispatch(A.setHasOnboarded(true));
-    store.dispatch(
-      A.addFileStoreServer({
-        id: 'nas-storage',
-        name: 'NAS Storage',
-        url: 'http://localhost:6543',
-        storeType: 'files',
-      }),
-    );
-    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
-    const deleteDatabase = jest.spyOn(indexedDB, 'deleteDatabase');
+    onboard(store);
+    addNasStorage(store);
+    const confirm = confirmPrompts();
+    const deleteDatabase = watchDatabaseDeletes();
 
-    render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
+    renderSettings(store);
 
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
 
-    await act(async () => {
-      await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
-    });
+    await removeStorageProvider();
 
     expect(confirm).toHaveBeenCalledWith(
       'Are you sure you want to remove this storage provider?',
     );
-    expect(deleteDatabase).toHaveBeenCalledWith(BROWSER_FILES_DB_NAME);
-    expect(deleteDatabase).toHaveBeenCalledWith(IDB_CACHE_NAME);
-    expect(window.localStorage.length).toBe(0);
-    expect(await screen.findByText(/On your storage/)).toBeTruthy();
-    expect(screen.queryByText('Enable experimental features')).toBeNull();
+    expectBrowserFilesDeleted(deleteDatabase);
+    expectDropboxCacheDeleted(deleteDatabase);
+    await expectOnboardingHomeScreen();
   });
 });
