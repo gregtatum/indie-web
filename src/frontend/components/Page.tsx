@@ -123,62 +123,65 @@ export function Settings() {
   return (
     <div className="page">
       <div className="pageInner">
-        <h1>Settings</h1>
-        <div className="settingsCard settingsSectionCard">
-          <div className="settingsSectionHeading">
-            <div className="settingsSectionTitleRow">
-              <img
-                className="settingsSectionIcon"
-                src="/svg/database.svg"
-                alt=""
+        <h1 className="settingsTitle">Settings</h1>
+        <p className="settingsSubtitle">
+          Manage where your files are stored, how the editor works,
+          <br />
+          and advanced options for {getEnv('SITE_DISPLAY_NAME')}.
+        </p>
+        <div className="settingsSectionHeading">
+          <div className="settingsSectionTitleRow">
+            <img
+              className="settingsSectionIcon"
+              src="/svg/database.svg"
+              alt=""
+            />
+            <h2>Storage Providers</h2>
+          </div>
+          <p>Where your files live.</p>
+        </div>
+        <div className="settingsCard settingsProviderList">
+          <BrowserStorageProvider />
+          <DropboxStorageProvider />
+          {servers.length > 0 ? (
+            <section className="settingsProvider">
+              <div className="settingsProviderSummary">
+                <div className="settingsProviderTitle">
+                  <div className="settingsProviderIconTile settingsProviderIconTileAccent">
+                    <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
+                  </div>
+                  <div>
+                    <h3>Self-Hosted Storage</h3>
+                    <p>{servers.length} configured</p>
+                  </div>
+                </div>
+                <Router.Link className="button" to="/add-storage-provider">
+                  Add Storage Provider
+                </Router.Link>
+              </div>
+              <ServerStorageProviderSettings
+                fileStoreServers={servers}
+                nonServerFallbackStorage={nonServerFallbackStorage}
               />
-              <h2>Storage Providers</h2>
-            </div>
-            <p>Where your files live.</p>
-          </div>
-          <div className="settingsProviderList">
-            <BrowserStorageProvider />
-            <DropboxStorageProvider />
-            {servers.length > 0 ? (
-              <section className="settingsProvider">
-                <div className="settingsProviderSummary">
-                  <div className="settingsProviderTitle">
-                    <div className="settingsProviderIconTile settingsProviderIconTileAccent">
-                      <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
-                    </div>
-                    <div>
-                      <h3>Self-Hosted Storage</h3>
-                      <p>{servers.length} configured</p>
-                    </div>
+            </section>
+          ) : (
+            <section className="settingsProvider">
+              <div className="settingsProviderSummary">
+                <div className="settingsProviderTitle">
+                  <div className="settingsProviderIconTile settingsProviderIconTileAccent">
+                    <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
                   </div>
-                  <Router.Link className="button" to="/add-storage-provider">
-                    Add Storage Provider
-                  </Router.Link>
-                </div>
-                <ServerStorageProviderSettings
-                  fileStoreServers={servers}
-                  nonServerFallbackStorage={nonServerFallbackStorage}
-                />
-              </section>
-            ) : (
-              <section className="settingsProvider">
-                <div className="settingsProviderSummary">
-                  <div className="settingsProviderTitle">
-                    <div className="settingsProviderIconTile settingsProviderIconTileAccent">
-                      <span className="settingsProviderIconMask settingsProviderIconMaskServer" />
-                    </div>
-                    <div>
-                      <h3>Self-Hosted Storage</h3>
-                      <p>Connect a local server, NAS, or music library.</p>
-                    </div>
+                  <div>
+                    <h3>Self-Hosted Storage</h3>
+                    <p>Connect a local server, NAS, or music library.</p>
                   </div>
-                  <Router.Link className="button" to="/add-storage-provider">
-                    Add Storage Provider
-                  </Router.Link>
                 </div>
-              </section>
-            )}
-          </div>
+                <Router.Link className="button" to="/add-storage-provider">
+                  Add Storage Provider
+                </Router.Link>
+              </div>
+            </section>
+          )}
         </div>
         <div className="settingsSectionGrid">
           <div className="settingsCard settingsSectionCard">
