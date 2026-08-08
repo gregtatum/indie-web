@@ -12,7 +12,6 @@ import {
   ensureNever,
 } from 'frontend/utils';
 import { persistedState } from 'frontend/logic/persisted-state';
-import { Privacy } from './Page';
 import { getRedirectUri, useCodeVerifier } from '../hooks/pcse';
 import { MainView } from './App';
 
@@ -226,7 +225,6 @@ export function LinkDropbox(props: { children: any }) {
     case 'add-storage-provider':
     case 'settings':
     case 'connect':
-    case 'privacy':
       return props.children;
     case null:
     case 'list-files':
@@ -292,8 +290,8 @@ export function LinkDropbox(props: { children: any }) {
                     only be given access to the{' '}
                     <code>Dropbox/Apps/{getDropboxSubfolder()}</code> folder in
                     Dropbox to manage files. See the{' '}
-                    <Router.Link to="/privacy">privacy policy</Router.Link> for
-                    more details. The source code is on{' '}
+                    <a href="/docs/privacy.html">privacy policy</a> for more
+                    details. The source code is on{' '}
                     <a href="https://github.com/gregtatum/indie-web">GitHub</a>.
                   </p>
                 </div>
@@ -547,7 +545,6 @@ export function DropboxLogin(props: { children: any }) {
   }, [isLogin]);
 
   const { persistCodeVerifier, authorizationUrl } = useCodeVerifier();
-  const view = $$.getView();
 
   if (isDropboxInitiallyExpired) {
     return (
@@ -566,9 +563,6 @@ export function DropboxLogin(props: { children: any }) {
   if (!oauth) {
     switch (authState) {
       case 'no-auth':
-        if (view === 'privacy') {
-          return <Privacy />;
-        }
         return (
           <div className="linkDropbox">
             <div className="linkDropboxContent">
@@ -595,8 +589,8 @@ export function DropboxLogin(props: { children: any }) {
                   Privacy is important. {getEnv('SITE_DISPLAY_NAME')} will only
                   be given access to the <code>Dropbox/Apps/Chords</code> folder
                   in Dropbox to manage files. See the{' '}
-                  <Router.Link to="/privacy">privacy policy</Router.Link> for
-                  more details. The source code is on{' '}
+                  <a href="/docs/privacy.html">privacy policy</a> for more
+                  details. The source code is on{' '}
                   <a href="https://github.com/gregtatum/indie-web">GitHub</a>.
                 </p>
               </div>

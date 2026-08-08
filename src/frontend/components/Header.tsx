@@ -101,17 +101,6 @@ export function Header() {
         />
       );
       break;
-    case 'privacy':
-      isOpen = true;
-      title = (
-        <Path
-          path="/"
-          key={key}
-          title="Privacy Policy and Usage"
-          hideSiteName={true}
-        />
-      );
-      break;
     case 'view-file':
     case 'view-pdf':
     case 'view-image':
@@ -231,7 +220,7 @@ function HeaderMenu() {
       {
         key: 'Privacy',
         onClick: () => {
-          navigate('/privacy');
+          window.location.assign('/docs/privacy.html');
         },
         children: 'Privacy',
       },

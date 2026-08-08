@@ -439,8 +439,6 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
       return 'connect';
     case 'view-add-storage-provider':
       return 'add-storage-provider';
-    case 'view-privacy':
-      return 'privacy';
     default:
       return state;
   }

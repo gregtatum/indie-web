@@ -13,7 +13,7 @@ import { ViewMarkdown } from './ViewMarkdown';
 
 import { Messages } from './Messages';
 import { ensureNever, UnhandledCaseError } from 'frontend/utils';
-import { Settings, Privacy, Connect } from './Page';
+import { Settings, Connect } from './Page';
 import { useFilesIndex } from 'frontend/logic/files-index';
 
 import { toFileStoreName } from 'frontend/logic/app-logic';
@@ -184,14 +184,6 @@ function AddStorageProviderRouter() {
   return null;
 }
 
-function PrivacyRouter() {
-  const dispatch = Hooks.useDispatch();
-  React.useEffect(() => {
-    dispatch(A.viewPrivacy());
-  });
-  return null;
-}
-
 export function App() {
   useFilesIndex();
   return (
@@ -213,7 +205,6 @@ export function AppRoutes() {
           path="add-storage-provider"
           element={<AddStorageProviderRouter />}
         />
-        <Router.Route path="privacy" element={<PrivacyRouter />} />
         <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
         </Router.Route>
@@ -288,8 +279,6 @@ function Views() {
       return <Settings key={key} />;
     case 'add-storage-provider':
       return <AddStorageProvider key={key} />;
-    case 'privacy':
-      return <Privacy key={key} />;
     case 'language-coach':
       return <LanguageCoach key={key} />;
     case 'music':

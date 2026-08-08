@@ -84,7 +84,7 @@ exports[`LinkDropbox can render 1`] = `
            folder in Dropbox to manage files. See the
            
           <a
-            href="/privacy"
+            href="/docs/privacy.html"
           >
             privacy policy
           </a>

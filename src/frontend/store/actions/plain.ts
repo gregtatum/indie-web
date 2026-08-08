@@ -166,10 +166,6 @@ export function viewAddStorageProvider() {
   return { type: 'view-add-storage-provider' as const };
 }
 
-export function viewPrivacy() {
-  return { type: 'view-privacy' as const };
-}
-
 export function dismissMessage(generation: number) {
   return {
     type: 'dismiss-message' as const,

@@ -599,7 +599,6 @@ export function canGoFullScreen(state: State) {
     case 'settings':
     case 'connect':
     case 'add-storage-provider':
-    case 'privacy':
     case 'language-coach':
       return false;
     default:

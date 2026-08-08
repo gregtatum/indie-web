@@ -67,7 +67,6 @@ export type View =
   | 'add-storage-provider'
   | 'settings'
   | 'connect'
-  | 'privacy'
   | 'language-coach'
   | 'music';
 
