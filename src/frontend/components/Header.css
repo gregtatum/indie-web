@@ -42,6 +42,7 @@
 .headerSiteNameTitle {
   padding-inline-start: 5px;
   font-weight: bold;
+  font-weight: 600;
 }
 
 .headerSiteNameSuffix {

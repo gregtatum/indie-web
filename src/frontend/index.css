@@ -7,5 +7,5 @@ body {
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  font-family: sans-serif;
+  font-family: system-ui, sans-serif;
 }

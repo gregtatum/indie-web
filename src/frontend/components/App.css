@@ -99,12 +99,24 @@ body,
 
 body {
   margin: 0;
-  font-family: sans-serif;
+  font-family: system-ui, sans-serif;
   font-size: var(--font-size-normal);
 }
 
 a {
   color: var(--primary-color);
+}
+
+h1 {
+  font-weight: 700;
+}
+
+h2 {
+  font-weight: 650;
+}
+
+body {
+  font-weight: 400;
 }
 
 .button,
@@ -121,7 +133,7 @@ a {
   opacity: var(--button-opacity);
   text-decoration: none;
   line-height: 1.2;
-  font-family: sans-serif;
+  font-family: system-ui, sans-serif;
 }
 
 button.icon {
