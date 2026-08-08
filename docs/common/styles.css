@@ -1,3 +1,7 @@
+/**
+ * This is the style for only the docs, which is somewhat duplicated from the built
+ * CSS for the rest of the app. It's a minimal load.
+ */
 :root {
   --font-size-normal: 16px;
   --font-size-small: 13px;
@@ -22,7 +26,7 @@
 
 body {
   margin: 0;
-  font-family: sans-serif;
+  font-family: system-ui, sans-serif;
   font-size: var(--font-size-normal);
   background: #fff;
   color: #000;
@@ -224,7 +228,7 @@ td {
   opacity: var(--button-opacity);
   text-decoration: none;
   line-height: 1.2;
-  font-family: sans-serif;
+  font-family: system-ui, sans-serif;
 }
 
 .button:active:not(:disabled) {

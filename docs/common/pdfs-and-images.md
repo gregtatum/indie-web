@@ -6,7 +6,7 @@ order: 1
 # PDFs and images
 
 PDFs and images live alongside your other files. Drop them into any folder and
-open them directly from the file list.
+open them directly from the file view.
 
 ## PDFs
 
