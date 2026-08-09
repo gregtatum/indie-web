@@ -153,17 +153,17 @@ export function Settings() {
                   </div>
                   <div>
                     <div className="settingsProviderNameRow">
-                      <h3>Self-Hosted Storage</h3>
+                      <h3>Local &amp; Network Storage</h3>
                       <InfoLink
                         href="/docs/file-store-server.html"
-                        title="Connect a local or network folder you host yourself."
+                        title="Access folders from your computer, home server, or NAS."
                       />
                     </div>
                     <p>{servers.length} configured</p>
                   </div>
                 </div>
                 <Router.Link className="button" to="/add-storage-provider">
-                  Add Storage Provider
+                  Connect Folder
                 </Router.Link>
               </div>
               <ServerStorageProviderSettings
@@ -180,17 +180,17 @@ export function Settings() {
                   </div>
                   <div>
                     <div className="settingsProviderNameRow">
-                      <h3>Self-Hosted Storage</h3>
+                      <h3>Local &amp; Network Storage</h3>
                       <InfoLink
                         href="/docs/file-store-server.html"
-                        title="Connect a local or network folder you host yourself."
+                        title="Access folders from your computer, home server, or NAS."
                       />
                     </div>
-                    <p>Connect a local server, NAS, or music library.</p>
+                    <p>Access folders from your computer, home server, or NAS.</p>
                   </div>
                 </div>
                 <Router.Link className="button" to="/add-storage-provider">
-                  Add Storage Provider
+                  Connect Folder
                 </Router.Link>
               </div>
             </section>
@@ -562,9 +562,9 @@ export function Connect() {
         <h1>Connect to Storage</h1>
         <p>
           Different storage locations are available. Choose between storing the
-          files directly in your browser, on Dropbox, or host your own server to
-          connect to a NAS or your local file system. You can always add another
-          storage location later.
+          files directly in your browser, on Dropbox, or connecting a folder from
+          your computer, home server, or NAS. You can always add another storage
+          location later.
         </p>
         <div className="pageButtonList">
           <button
@@ -595,7 +595,7 @@ export function Connect() {
               navigate('/add-storage-provider');
             }}
           >
-            Add Storage Provider <span className="pageButtonBeta">Beta</span>
+            Connect Folder <span className="pageButtonBeta">Beta</span>
           </button>
         </div>
       </div>

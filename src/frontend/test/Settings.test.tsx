@@ -211,7 +211,7 @@ describe('Settings', () => {
     );
     expect(screen.queryByDisplayValue('NAS Storage')).toBeNull();
     expect(
-      screen.getByText('Connect a local server, NAS, or music library.'),
+      screen.getByText('Access folders from your computer, home server, or NAS.'),
     ).toBeTruthy();
   });
 

@@ -95,7 +95,7 @@ export function Header() {
         <Path
           path="/"
           key={key}
-          title="Add Storage Provider"
+          title="Connect Folder"
           hideSiteName={true}
           showFileStoreSelection={false}
         />
@@ -293,7 +293,7 @@ function FileStoreSelection() {
         onClick: () => {
           navigate('/add-storage-provider');
         },
-        children: 'Add Storage Provider',
+        children: 'Connect Folder',
       },
     ],
     [],
