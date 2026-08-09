@@ -447,6 +447,12 @@ function buildxUnavailableMessage({ colimaInstalled }) {
   ].join('\n');
 }
 
+const credentialHelperMissingMessage = [
+  'docker-credential-osxkeychain not found. Docker needs it to push images.',
+  '',
+  '  brew install docker-credential-helper',
+].join('\n');
+
 /**
  * @param {string} command
  * @returns {boolean}
@@ -473,12 +479,8 @@ function isColimaRunning() {
 }
 
 /**
- * Fails fast, before touching git at all, if Docker or its buildx plugin
- * aren't usable. This is checked first so a missing Docker install never
- * leaves a half-finished release commit behind. Tailors the recovery
- * message to colima when it's detected, since it doesn't set itself up as
- * fully as Docker Desktop does (separate CLI/plugin install, manual start,
- * manual multi-arch emulator registration).
+ * Checked first so a missing Docker install never leaves a half-finished
+ * release commit behind.
  */
 function requireDockerAvailable() {
   const colimaInstalled = commandExists('colima');
@@ -504,6 +506,10 @@ function requireDockerAvailable() {
     run('docker', ['buildx', 'version'], { capture: true });
   } catch {
     throw new Error(buildxUnavailableMessage({ colimaInstalled }));
+  }
+
+  if (!commandExists('docker-credential-osxkeychain')) {
+    throw new Error(credentialHelperMissingMessage);
   }
 }
 
