@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { type Hunspell } from 'hunspell-asm';
+import { type Hunspell } from 'hunspell-wasm';
 import { $$, A, Hooks, T } from 'frontend';
 import { computeStems } from 'frontend/logic/language-tools';
 import { isElementInViewport } from 'frontend/utils';
@@ -11,27 +11,17 @@ export function useHunspell() {
   React.useEffect(() => {
     // TODO - Implement proper async behavior here and error handling.
     (async () => {
-      const [{ loadModule }, affResponse, dicResponse] = await Promise.all([
-        import(/* webpackChunkName: "hunspell" */ 'hunspell-asm'),
-        fetch(`dictionaries/${languageCode}/index.aff`),
-        fetch(`dictionaries/${languageCode}/index.dic`),
-      ]);
-      const affBuffer = new Uint8Array(await affResponse.arrayBuffer());
-      const dicBuffer = new Uint8Array(await dicResponse.arrayBuffer());
-
-      const hunspellFactory = await loadModule();
-
-      const affFile = hunspellFactory.mountBuffer(
-        affBuffer,
-        `${languageCode}.aff`,
-      );
-      const dictFile = hunspellFactory.mountBuffer(
-        dicBuffer,
-        `${languageCode}.dic`,
-      );
+      const [{ createHunspellFromStrings }, affResponse, dicResponse] =
+        await Promise.all([
+          import(/* webpackChunkName: "hunspell" */ 'hunspell-wasm'),
+          fetch(`dictionaries/${languageCode}/index.aff`),
+          fetch(`dictionaries/${languageCode}/index.dic`),
+        ]);
+      const affixes = await affResponse.text();
+      const dictionary = await dicResponse.text();
 
       console.log(`Hunspell loaded for "${languageCode}".`);
-      setHunspell(hunspellFactory.create(affFile, dictFile));
+      setHunspell(await createHunspellFromStrings(affixes, dictionary));
     })().catch((error) => console.error(error));
   }, [languageCode]);
 

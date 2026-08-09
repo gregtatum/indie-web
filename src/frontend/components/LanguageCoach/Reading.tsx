@@ -308,7 +308,9 @@ function RenderedReading() {
     const unknownWords: Map<string, string> = new Map();
     const isNumber = /^\d+$/;
     for (const { segment } of wordSegmenter.segment(selectionText)) {
-      const stemmedWord = (hunspell?.stem(segment)[0] ?? segment).toLowerCase();
+      const stemmedWord = (
+        hunspell?.stemWord(segment)[0] ?? segment
+      ).toLowerCase();
       if (
         segment.trim() &&
         !learnedOrIgnored.has(stemmedWord) &&

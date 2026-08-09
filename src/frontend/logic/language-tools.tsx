@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Stem } from 'frontend/@types';
-import { type Hunspell } from 'hunspell-asm';
+import { type Hunspell } from 'hunspell-wasm';
 
 export function segmentSentence(text: string, locale = 'es'): string[] {
   if (Intl.Segmenter) {
@@ -60,7 +60,7 @@ export function computeStems(
       if (word.match(isNumeric)) {
         continue;
       }
-      const stemmedWord = (hunspell?.stem(word)[0] ?? word).toLowerCase();
+      const stemmedWord = (hunspell?.stemWord(word)[0] ?? word).toLowerCase();
       let stem = stemsByStem.get(stemmedWord);
       if (!stem) {
         stem = {

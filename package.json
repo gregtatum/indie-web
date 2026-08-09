@@ -82,7 +82,7 @@
     "codemirror": "^6.0.2",
     "dedent": "^1.5.3",
     "dropbox": "^10.34.0",
-    "hunspell-asm": "github:gregtatum/hunspell-asm#72494a846ea709815b0bebf037f59853912dd4a3",
+    "hunspell-wasm": "^0.3.0",
     "idb": "^8.0.2",
     "marked": "^11.1.0",
     "openai": "^4.56.0",
