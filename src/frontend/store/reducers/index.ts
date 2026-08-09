@@ -438,7 +438,7 @@ function view(state: T.View | null = null, action: T.Action): T.View | null {
     case 'view-connect':
       return 'connect';
     case 'view-connect-folder':
-      return 'add-storage-provider';
+      return 'connect-folder';
     default:
       return state;
   }

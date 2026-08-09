@@ -89,7 +89,7 @@ export function Header() {
         <Path path="/" key={key} title="⚙️ Settings" hideSiteName={true} />
       );
       break;
-    case 'add-storage-provider':
+    case 'connect-folder':
       isOpen = true;
       title = (
         <Path
@@ -291,7 +291,7 @@ function FileStoreSelection() {
       {
         key: 'add-fs-server',
         onClick: () => {
-          navigate('/add-storage-provider');
+          navigate('/connect-folder');
         },
         children: 'Connect Folder',
       },

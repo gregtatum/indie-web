@@ -27,6 +27,20 @@ describe('Connect', () => {
     );
   }
 
+  it('redirects the old add-storage-provider path to connect-folder', async () => {
+    render(
+      <MemoryRouter initialEntries={['/add-storage-provider']}>
+        <Provider store={createStore() as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: /Connect a Folder/ }),
+    ).toBeTruthy();
+  });
+
   it('does not select Dropbox before Dropbox auth completes', async () => {
     render(
       <MemoryRouter initialEntries={['/connect']}>
@@ -71,7 +85,7 @@ describe('Connect', () => {
     );
 
     render(
-      <MemoryRouter initialEntries={['/add-storage-provider']}>
+      <MemoryRouter initialEntries={['/connect-folder']}>
         <Provider store={createStore() as any}>
           <AppRoutes />
         </Provider>
@@ -180,7 +194,7 @@ describe('Connect', () => {
       }
 
       render(
-        <MemoryRouter initialEntries={['/add-storage-provider']}>
+        <MemoryRouter initialEntries={['/connect-folder']}>
           <Provider store={store as any}>
             <AppRoutes />
           </Provider>

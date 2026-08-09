@@ -12,4 +12,4 @@ Only the folders you choose are accessible, and you can connect multiple folders
 Your files remain ordinary files on your storage, so you can open, edit, move, or back them up with other tools as usual.
 
 
-[Connect local or network storage →](/add-storage-provider)
+[Connect local or network storage →](/connect-folder)

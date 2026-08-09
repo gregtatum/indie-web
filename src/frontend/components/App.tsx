@@ -201,9 +201,10 @@ export function AppRoutes() {
         <Router.Route path="settings" element={<SettingsRouter />} />
         <Router.Route path="connect" element={<ConnectRouter />} />
         <Router.Route path="dropbox" element={<ConnectRouter />} />
+        <Router.Route path="connect-folder" element={<ConnectFolderRouter />} />
         <Router.Route
           path="add-storage-provider"
-          element={<ConnectFolderRouter />}
+          element={<Router.Navigate to="/connect-folder" replace />}
         />
         <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
@@ -277,7 +278,7 @@ function Views() {
       return <Connect key={key} />;
     case 'settings':
       return <Settings key={key} />;
-    case 'add-storage-provider':
+    case 'connect-folder':
       return <ConnectFolder key={key} />;
     case 'language-coach':
       return <LanguageCoach key={key} />;

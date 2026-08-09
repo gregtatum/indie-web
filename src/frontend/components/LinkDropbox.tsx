@@ -222,7 +222,7 @@ export function LinkDropbox(props: { children: any }) {
   }, [isLogin]);
 
   switch (view) {
-    case 'add-storage-provider':
+    case 'connect-folder':
     case 'settings':
     case 'connect':
       return props.children;

@@ -162,7 +162,7 @@ export function Settings() {
                     <p>{servers.length} configured</p>
                   </div>
                 </div>
-                <Router.Link className="button" to="/add-storage-provider">
+                <Router.Link className="button" to="/connect-folder">
                   Connect Folder
                 </Router.Link>
               </div>
@@ -191,7 +191,7 @@ export function Settings() {
                     </p>
                   </div>
                 </div>
-                <Router.Link className="button" to="/add-storage-provider">
+                <Router.Link className="button" to="/connect-folder">
                   Connect Folder
                 </Router.Link>
               </div>
@@ -594,7 +594,7 @@ export function Connect() {
             type="button"
             className="button button-primary"
             onClick={() => {
-              navigate('/add-storage-provider');
+              navigate('/connect-folder');
             }}
           >
             Connect Folder <span className="pageButtonBeta">Beta</span>

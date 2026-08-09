@@ -64,7 +64,7 @@ export type View =
   | 'view-image'
   | 'view-markdown'
   | 'list-files'
-  | 'add-storage-provider'
+  | 'connect-folder'
   | 'settings'
   | 'connect'
   | 'language-coach'
