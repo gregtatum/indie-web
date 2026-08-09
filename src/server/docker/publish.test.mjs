@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { bumpVersion, dockerTags, parsePublishArgs } from './publish.mjs';
+import {
+  bumpVersion,
+  dockerTags,
+  isPendingReleaseCommit,
+  parsePublishArgs,
+} from './publish.mjs';
 
 describe('docker publish helpers', () => {
   it('parses a positional patch bump with dry-run', () => {
@@ -52,5 +57,57 @@ describe('docker publish helpers', () => {
       'tatumcreative/floppydisk.link:1',
       'tatumcreative/floppydisk.link:latest',
     ]);
+  });
+
+  it('detects a pending release commit sitting on top of origin/main', () => {
+    assert.equal(
+      isPendingReleaseCommit({
+        headMessage: 'Release server v3.0.0',
+        expectedMessage: 'Release server v3.0.0',
+        head: 'aaa',
+        headParent: 'bbb',
+        originMain: 'bbb',
+      }),
+      true,
+    );
+  });
+
+  it('is not pending when the commit message does not match', () => {
+    assert.equal(
+      isPendingReleaseCommit({
+        headMessage: 'Some other commit',
+        expectedMessage: 'Release server v3.0.0',
+        head: 'aaa',
+        headParent: 'bbb',
+        originMain: 'bbb',
+      }),
+      false,
+    );
+  });
+
+  it('is not pending once HEAD already matches origin/main', () => {
+    assert.equal(
+      isPendingReleaseCommit({
+        headMessage: 'Release server v3.0.0',
+        expectedMessage: 'Release server v3.0.0',
+        head: 'bbb',
+        headParent: 'ccc',
+        originMain: 'bbb',
+      }),
+      false,
+    );
+  });
+
+  it('is not pending when unrelated commits sit between HEAD and origin/main', () => {
+    assert.equal(
+      isPendingReleaseCommit({
+        headMessage: 'Release server v3.0.0',
+        expectedMessage: 'Release server v3.0.0',
+        head: 'aaa',
+        headParent: 'ccc',
+        originMain: 'bbb',
+      }),
+      false,
+    );
   });
 });

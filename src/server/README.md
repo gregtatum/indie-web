@@ -26,28 +26,10 @@ This builds `src/server/docker/Dockerfile.dev`, live-mounts `src/`, keeps
 container `node_modules` isolated, and serves the repo's `mount` folder at
 `/app/mount`.
 
-For a deployed server, use the published image in a `docker-compose.yml`:
-
-```yaml
-services:
-  floppydisk:
-    image: tatumcreative/floppydisk.link:latest
-    container_name: floppydisk
-    restart: unless-stopped
-    ports:
-      - "6543:6543"
-    volumes:
-      - ./mount:/app/mount
-```
-
-Start it with:
-
-```shell
-docker compose up --detach
-```
-
-The host path on the left side of the volume is the folder to serve. The
-container path on the right must be `/app/mount` unless `MOUNT_PATH` is set.
+For a deployed server, use the published `tatumcreative/floppydisk.link`
+image. See [`docker/example/README.md`](./docker/example/README.md) for a
+`docker-compose.yml` to copy, including notes on running it on a Synology NAS
+and tunneling it privately with Tailscale.
 
 ## Publishing The Docker Image
 
@@ -67,30 +49,15 @@ The positional argument controls the next server version from
 - `minor`: `1.2.3` becomes `1.3.0`
 - `major`: `1.2.3` becomes `2.0.0`
 
-The publish command requires:
+It builds and pushes a multi-platform (`linux/amd64`, `linux/arm64`) image to
+Docker Hub, tagged `X.Y.Z`, `X.Y`, `X`, and `latest`, then commits, tags, and
+pushes the release in git. This requires Docker (with `buildx`) and a clean,
+`main`-synced working tree.
 
-- Docker is running and authenticated for `tatumcreative/floppydisk.link`.
-- The current branch is `main`.
-- The working tree is clean, including untracked files.
-- Local `main` matches `origin/main`.
-- The target git tag does not already exist locally or on `origin`.
+`--dry-run` prints the planned version, git tag, Docker tags, and commands
+without changing anything.
 
-`--dry-run` performs validation and prints the planned version, git tag, Docker
-tags, and commands. It does not edit files, commit, tag, build, or push.
-
-A real publish:
-
-1. Bumps `src/server/package.json` and `src/server/package-lock.json`.
-2. Commits the bump as `Release server vX.Y.Z`.
-3. Builds and pushes a multi-platform (`linux/amd64`, `linux/arm64`) image
-   from `src/server/docker/Dockerfile.prod`, tagged `X.Y.Z`, `X.Y`, `X`, and
-   `latest`.
-4. Creates annotated git tag `vX.Y.Z`.
-5. Pushes `main` and pushes the git tag.
-
-Because multi-platform images can't be built locally without pushing, the
-Docker build+push happens before the git tag and push. If it fails, fix the
-problem and rerun the same publish command. Nothing has been pushed to git
-yet, and re-pushing the same Docker tags is safe. If a step after that fails
-(git tag or push), rerun the command after confirming local state matches the
-intended release, following the recovery instructions the command prints.
+If a publish fails partway, just fix the problem and rerun the exact same
+command — it detects an unfinished release and resumes it rather than
+bumping the version again. See `src/server/docker/publish.mjs` for exactly
+what it checks and what counts as "unfinished."

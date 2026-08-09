@@ -302,6 +302,41 @@ function compareSemver(left, right) {
 }
 
 /**
+ * Fails fast, before touching git at all, if Docker or its buildx plugin
+ * aren't usable. This is checked first so a missing Docker install never
+ * leaves a half-finished release commit behind.
+ */
+function requireDockerAvailable() {
+  try {
+    run('docker', ['version', '--format', '{{.Client.Version}}'], {
+      capture: true,
+    });
+  } catch {
+    throw new Error(
+      [
+        'Docker CLI not found or not responding.',
+        '',
+        'Install Docker Desktop: https://www.docker.com/products/docker-desktop/',
+        'Confirm it works with: docker version',
+      ].join('\n'),
+    );
+  }
+
+  try {
+    run('docker', ['buildx', 'version'], { capture: true });
+  } catch {
+    throw new Error(
+      [
+        'Docker is installed, but the buildx plugin is not available.',
+        '',
+        'Docker Desktop bundles buildx by default. Confirm it works with:',
+        '  docker buildx version',
+      ].join('\n'),
+    );
+  }
+}
+
+/**
  * @param {VersionBump} bump
  */
 function requireMainBranch(bump) {
@@ -331,6 +366,63 @@ function requireCleanTree(bump) {
       ),
     );
   }
+}
+
+/**
+ * A previous run may have bumped the version and committed, then failed
+ * before finishing. When that happens, HEAD sits exactly one commit ahead
+ * of origin/main with a matching "Release server vX.Y.Z" message. This
+ * checks for exactly that shape so a rerun can resume instead of bumping
+ * the version again on top of an already-pending release.
+ * @param {{ headMessage: string, expectedMessage: string, head: string, headParent: string, originMain: string }} info
+ * @returns {boolean}
+ */
+export function isPendingReleaseCommit({
+  headMessage,
+  expectedMessage,
+  head,
+  headParent,
+  originMain,
+}) {
+  return (
+    headMessage === expectedMessage &&
+    head !== originMain &&
+    headParent === originMain
+  );
+}
+
+/**
+ * @returns {{ version: string, tag: string } | null}
+ */
+function findPendingRelease() {
+  const currentVersion = readServerVersion();
+  const tag = `v${currentVersion}`;
+
+  let head;
+  let headParent;
+  let originMain;
+  try {
+    head = run('git', ['rev-parse', 'HEAD'], { capture: true });
+    headParent = run('git', ['rev-parse', 'HEAD^'], { capture: true });
+    originMain = run('git', ['rev-parse', 'origin/main'], { capture: true });
+  } catch {
+    // No parent commit, or origin/main isn't known locally yet.
+    return null;
+  }
+
+  const headMessage = run('git', ['log', '-1', '--format=%s'], {
+    capture: true,
+  });
+
+  const pending = isPendingReleaseCommit({
+    headMessage,
+    expectedMessage: `Release server ${tag}`,
+    head,
+    headParent,
+    originMain,
+  });
+
+  return pending ? { version: currentVersion, tag } : null;
 }
 
 /**
@@ -389,8 +481,15 @@ function syncedMainFailureMessage(head, originMain, bump, currentVersion) {
 /**
  * @param {VersionBump} bump
  * @param {string} currentVersion
+ * @param {boolean} resuming
  */
-function requireSyncedMain(bump, currentVersion) {
+function requireSyncedMain(bump, currentVersion, resuming) {
+  if (resuming) {
+    // findPendingRelease already confirmed HEAD is exactly one release
+    // commit ahead of origin/main, which is expected while resuming.
+    return;
+  }
+
   const head = run('git', ['rev-parse', 'HEAD'], { capture: true });
   const originMain = run('git', ['rev-parse', 'origin/main'], {
     capture: true,
@@ -406,11 +505,12 @@ function requireSyncedMain(bump, currentVersion) {
 /**
  * @param {string} tag
  * @param {VersionBump} bump
+ * @param {boolean} resuming
  */
-function requireTagAvailable(tag, bump) {
+function requireTagAvailable(tag, bump, resuming) {
   const localTag = run('git', ['tag', '--list', tag], { capture: true });
 
-  if (localTag) {
+  if (localTag && !resuming) {
     throw new Error(
       retrySameReleaseMessage(`Git tag already exists locally: ${tag}`, bump),
     );
@@ -430,36 +530,17 @@ function requireTagAvailable(tag, bump) {
 }
 
 /**
- * @param {string} tag
- * @param {string} currentVersion
- * @param {PublishOptions} options
+ * @param {{ currentVersion: string, nextVersion: string, tag: string, resuming: boolean }} release
  */
-function preflight(tag, currentVersion, { bump, dryRun }) {
-  requireMainBranch(bump);
-  requireCleanTree(bump);
-
-  if (!dryRun) {
-    try {
-      run('git', ['fetch', 'origin', 'main', '--tags']);
-    } catch {
-      throw new Error(
-        retrySameReleaseMessage('Failed to fetch origin/main and tags.', bump),
-      );
-    }
-  }
-
-  requireSyncedMain(bump, currentVersion);
-  requireTagAvailable(tag, bump);
-}
-
-/**
- * @param {{ currentVersion: string, nextVersion: string, tag: string }} release
- */
-function printDryRun({ currentVersion, nextVersion, tag }) {
+function printDryRun({ currentVersion, nextVersion, tag, resuming }) {
   const tags = dockerTags(nextVersion);
 
   console.log('Dry run: no files, commits, tags, images, or remotes changed.');
   console.log('');
+  if (resuming) {
+    console.log(`Resuming pending release ${tag} left by a previous attempt.`);
+    console.log('');
+  }
   console.log(`Current server version: ${currentVersion}`);
   console.log(`Next server version:    ${nextVersion}`);
   console.log(`Git tag:                ${tag}`);
@@ -469,53 +550,72 @@ function printDryRun({ currentVersion, nextVersion, tag }) {
   }
   console.log('');
   console.log('Planned commands:');
-  printCommand('npm', [
-    '--prefix',
-    'src/server',
-    'version',
-    nextVersion,
-    '--no-git-tag-version',
-  ]);
-  printCommand('git', [
-    'add',
-    'src/server/package.json',
-    'src/server/package-lock.json',
-  ]);
-  printCommand('git', ['commit', '-m', `Release server ${tag}`]);
-  console.log(
-    `  (ensure buildx builder "${buildxBuilder}" exists, creating it if not)`,
-  );
-  printCommand('docker', buildxBuildArgs(tags));
-  printCommand('git', ['tag', '-a', tag, '-m', `Release server ${tag}`]);
-  printCommand('git', ['push', 'origin', 'main']);
-  printCommand('git', ['push', 'origin', tag]);
-}
-
-/**
- * @param {{ nextVersion: string, tag: string, bump: VersionBump }} release
- */
-function publish({ nextVersion, tag, bump }) {
-  const tags = dockerTags(nextVersion);
-  let releaseCommitPushed = false;
-
-  try {
-    run('npm', [
+  if (resuming) {
+    console.log(
+      '  (skip version bump/commit — already done by a previous attempt)',
+    );
+  } else {
+    printCommand('npm', [
       '--prefix',
       'src/server',
       'version',
       nextVersion,
       '--no-git-tag-version',
     ]);
-    run('git', [
+    printCommand('git', [
       'add',
       'src/server/package.json',
       'src/server/package-lock.json',
     ]);
-    run('git', ['commit', '-m', `Release server ${tag}`]);
+    printCommand('git', ['commit', '-m', `Release server ${tag}`]);
+  }
+  console.log(
+    `  (ensure buildx builder "${buildxBuilder}" exists, creating it if not)`,
+  );
+  printCommand('docker', buildxBuildArgs(tags));
+  console.log('  (create the git tag, unless it already exists locally)');
+  printCommand('git', ['tag', '-a', tag, '-m', `Release server ${tag}`]);
+  printCommand('git', ['push', 'origin', 'main']);
+  printCommand('git', ['push', 'origin', tag]);
+}
+
+/**
+ * @param {{ nextVersion: string, tag: string, bump: VersionBump, resuming: boolean }} release
+ */
+function publish({ nextVersion, tag, bump, resuming }) {
+  const tags = dockerTags(nextVersion);
+  let releaseCommitPushed = false;
+
+  try {
+    if (!resuming) {
+      run('npm', [
+        '--prefix',
+        'src/server',
+        'version',
+        nextVersion,
+        '--no-git-tag-version',
+      ]);
+      run('git', [
+        'add',
+        'src/server/package.json',
+        'src/server/package-lock.json',
+      ]);
+      run('git', ['commit', '-m', `Release server ${tag}`]);
+    }
+
     ensureBuildxBuilder();
     run('docker', buildxBuildArgs(tags));
 
-    run('git', ['tag', '-a', tag, '-m', `Release server ${tag}`]);
+    // Idempotent: a previous attempt may have already created this tag
+    // before failing on a later step.
+    const tagExistsLocally = Boolean(
+      run('git', ['tag', '--list', tag], { capture: true }),
+    );
+    if (!tagExistsLocally) {
+      run('git', ['tag', '-a', tag, '-m', `Release server ${tag}`]);
+    }
+
+    // A no-op if there's nothing new to push, so this is safe to repeat.
     run('git', ['push', 'origin', 'main']);
     releaseCommitPushed = true;
     run('git', ['push', 'origin', tag]);
@@ -530,7 +630,7 @@ function publish({ nextVersion, tag, bump }) {
 
     throw new Error(
       retrySameReleaseMessage(
-        `Publishing ${tag} failed before the release was pushed to origin.`,
+        `Publishing ${tag} failed before the release was pushed to origin. Rerun the exact same command — it will resume from here.`,
         bump,
       ),
     );
@@ -547,18 +647,46 @@ function publish({ nextVersion, tag, bump }) {
  */
 export function main(args) {
   const options = parsePublishArgs(args);
-  const currentVersion = readServerVersion();
-  const nextVersion = bumpVersion(currentVersion, options.bump);
-  const tag = `v${nextVersion}`;
 
-  preflight(tag, currentVersion, options);
+  requireDockerAvailable();
+  requireMainBranch(options.bump);
+  requireCleanTree(options.bump);
+
+  if (!options.dryRun) {
+    try {
+      run('git', ['fetch', 'origin', 'main', '--tags']);
+    } catch {
+      throw new Error(
+        retrySameReleaseMessage(
+          'Failed to fetch origin/main and tags.',
+          options.bump,
+        ),
+      );
+    }
+  }
+
+  const pending = findPendingRelease();
+  const currentVersion = readServerVersion();
+  const nextVersion = pending
+    ? pending.version
+    : bumpVersion(currentVersion, options.bump);
+  const tag = pending ? pending.tag : `v${nextVersion}`;
+  const resuming = pending !== null;
+
+  if (resuming) {
+    console.log(`Resuming pending release ${tag} left by a previous attempt.`);
+    console.log('');
+  }
+
+  requireSyncedMain(options.bump, currentVersion, resuming);
+  requireTagAvailable(tag, options.bump, resuming);
 
   if (options.dryRun) {
-    printDryRun({ currentVersion, nextVersion, tag });
+    printDryRun({ currentVersion, nextVersion, tag, resuming });
     return;
   }
 
-  publish({ nextVersion, tag, bump: options.bump });
+  publish({ nextVersion, tag, bump: options.bump, resuming });
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
