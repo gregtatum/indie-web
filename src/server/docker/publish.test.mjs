@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   bumpVersion,
   dockerTags,
+  hasUnreleasedChangelogEntry,
   isPendingReleaseCommit,
   parsePublishArgs,
 } from './publish.mjs';
@@ -108,6 +109,67 @@ describe('docker publish helpers', () => {
         originMain: 'bbb',
       }),
       false,
+    );
+  });
+
+  it('finds an unreleased changelog entry under a subheading', () => {
+    assert.equal(
+      hasUnreleasedChangelogEntry(
+        [
+          '## [Unreleased]',
+          '',
+          '### Added',
+          '',
+          '- Multi-arch Docker builds.',
+          '',
+          '## [2.0.0] - 2026-06-12',
+        ].join('\n'),
+      ),
+      true,
+    );
+  });
+
+  it('rejects an unreleased section with no bullets', () => {
+    assert.equal(
+      hasUnreleasedChangelogEntry(
+        [
+          '## [Unreleased]',
+          '',
+          '## [2.0.0] - 2026-06-12',
+          '',
+          '- old entry',
+        ].join('\n'),
+      ),
+      false,
+    );
+  });
+
+  it('rejects an unreleased section with only a subheading', () => {
+    assert.equal(
+      hasUnreleasedChangelogEntry(
+        ['## [Unreleased]', '', '### Added', '', '## [2.0.0]'].join('\n'),
+      ),
+      false,
+    );
+  });
+
+  it('rejects a changelog missing the Unreleased heading entirely', () => {
+    assert.equal(
+      hasUnreleasedChangelogEntry(
+        ['## [2.0.0] - 2026-06-12', '', '- Some entry'].join('\n'),
+      ),
+      false,
+    );
+  });
+
+  it('finds an entry when Unreleased is the last section in the file', () => {
+    assert.equal(
+      hasUnreleasedChangelogEntry(
+        ['## [Unreleased]', '', '- Last section, no trailing heading.'].join(
+          '\n',
+        ),
+      ),
+      true,
     );
   });
 });

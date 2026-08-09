@@ -10,6 +10,7 @@ const platforms = 'linux/amd64,linux/arm64';
 const buildxBuilder = 'floppydisk-release';
 const repoRoot = resolve(import.meta.dirname, '../../..');
 const serverPackageJson = resolve(repoRoot, 'src/server/package.json');
+const changelogPath = resolve(repoRoot, 'src/server/CHANGELOG.md');
 
 /**
  * @typedef {'major' | 'minor' | 'patch'} VersionBump
@@ -275,6 +276,36 @@ function readServerVersion() {
 }
 
 /**
+ * Checks whether the "## [Unreleased]" section of a Keep a Changelog style
+ * CHANGELOG.md has at least one bullet under it, so a release always ships
+ * with a written-down reason.
+ * @param {string} changelog
+ * @returns {boolean}
+ */
+export function hasUnreleasedChangelogEntry(changelog) {
+  const lines = changelog.split('\n');
+  const startIndex = lines.findIndex(
+    (line) => line.trim() === '## [Unreleased]',
+  );
+
+  if (startIndex === -1) {
+    return false;
+  }
+
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^## \[/.test(line)) {
+      break;
+    }
+    if (/^\s*-\s+\S/.test(line)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * @param {string} ref
  * @returns {string | null}
  */
@@ -502,6 +533,35 @@ function requireCleanTree(bump) {
     throw new Error(
       retrySameReleaseMessage(
         `Publishing requires a clean working tree. Commit or remove these changes first:\n${status}`,
+        bump,
+      ),
+    );
+  }
+}
+
+/**
+ * @param {VersionBump} bump
+ */
+function requireChangelogEntry(bump) {
+  let changelog;
+  try {
+    changelog = readFileSync(changelogPath, 'utf8');
+  } catch {
+    throw new Error(
+      retrySameReleaseMessage(`Missing changelog: ${changelogPath}`, bump),
+    );
+  }
+
+  if (!hasUnreleasedChangelogEntry(changelog)) {
+    throw new Error(
+      retrySameReleaseMessage(
+        [
+          'CHANGELOG.md has no entries under "## [Unreleased]".',
+          '',
+          'Add at least one bullet describing this release, commit it, then',
+          'retry:',
+          `  ${changelogPath}`,
+        ].join('\n'),
         bump,
       ),
     );
@@ -804,6 +864,7 @@ export function main(args) {
   requireDockerAvailable();
   requireMainBranch(options.bump);
   requireCleanTree(options.bump);
+  requireChangelogEntry(options.bump);
 
   if (!options.dryRun) {
     try {
