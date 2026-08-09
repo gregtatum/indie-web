@@ -30,5 +30,10 @@ export default class FixJSDOMEnvironment extends JSDOMEnvironment {
     this.global.Request = Request;
     this.global.Response = Response;
     this.global.ReadableStream = ReadableStream;
+
+    // jsdom has no TextEncoder/TextDecoder, but react-router references them
+    // at import time.
+    this.global.TextEncoder = TextEncoder;
+    this.global.TextDecoder = TextDecoder as any;
   }
 }
