@@ -82,7 +82,7 @@ async function signOutOfDropbox() {
   });
 }
 
-async function removeStorageProvider() {
+async function removeFolder() {
   await act(async () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
   });
@@ -204,14 +204,16 @@ describe('Settings', () => {
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
     expect(screen.getByText('1 configured')).toBeTruthy();
 
-    await removeStorageProvider();
+    await removeFolder();
 
     expect(confirm).toHaveBeenCalledWith(
       'Are you sure you want to remove this folder?',
     );
     expect(screen.queryByDisplayValue('NAS Storage')).toBeNull();
     expect(
-      screen.getByText('Access folders from your computer, home server, or NAS.'),
+      screen.getByText(
+        'Access folders from your computer, home server, or NAS.',
+      ),
     ).toBeTruthy();
   });
 
@@ -227,7 +229,7 @@ describe('Settings', () => {
 
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
 
-    await removeStorageProvider();
+    await removeFolder();
 
     expect(confirm).toHaveBeenCalledWith(
       'Are you sure you want to remove this folder?',
@@ -252,7 +254,7 @@ describe('Settings', () => {
 
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
 
-    await removeStorageProvider();
+    await removeFolder();
 
     expect(confirm).toHaveBeenCalledWith(
       'Are you sure you want to remove this folder?',

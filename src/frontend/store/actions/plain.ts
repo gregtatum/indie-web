@@ -162,8 +162,8 @@ export function viewConnect() {
   return { type: 'view-connect' as const };
 }
 
-export function viewAddStorageProvider() {
-  return { type: 'view-add-storage-provider' as const };
+export function viewConnectFolder() {
+  return { type: 'view-connect-folder' as const };
 }
 
 export function dismissMessage(generation: number) {

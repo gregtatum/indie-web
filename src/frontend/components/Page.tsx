@@ -10,7 +10,7 @@ import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { formatBytes, getEnv } from 'frontend/utils';
 import { useCodeVerifier } from 'frontend/hooks/pcse';
-import { ServerStorageProviderSettings } from './StorageProvider';
+import { ConnectedFoldersSettings } from './ConnectFolder';
 import { InfoLink } from './InfoLink';
 import './Page.css';
 
@@ -166,7 +166,7 @@ export function Settings() {
                   Connect Folder
                 </Router.Link>
               </div>
-              <ServerStorageProviderSettings
+              <ConnectedFoldersSettings
                 fileStoreServers={servers}
                 nonServerFallbackStorage={nonServerFallbackStorage}
               />
@@ -186,7 +186,9 @@ export function Settings() {
                         title="Access folders from your computer, home server, or NAS."
                       />
                     </div>
-                    <p>Access folders from your computer, home server, or NAS.</p>
+                    <p>
+                      Access folders from your computer, home server, or NAS.
+                    </p>
                   </div>
                 </div>
                 <Router.Link className="button" to="/add-storage-provider">
@@ -562,9 +564,9 @@ export function Connect() {
         <h1>Connect to Storage</h1>
         <p>
           Different storage locations are available. Choose between storing the
-          files directly in your browser, on Dropbox, or connecting a folder from
-          your computer, home server, or NAS. You can always add another storage
-          location later.
+          files directly in your browser, on Dropbox, or connecting a folder
+          from your computer, home server, or NAS. You can always add another
+          storage location later.
         </p>
         <div className="pageButtonList">
           <button

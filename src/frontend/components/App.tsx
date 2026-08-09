@@ -18,7 +18,7 @@ import { useFilesIndex } from 'frontend/logic/files-index';
 
 import { toFileStoreName } from 'frontend/logic/app-logic';
 import { LanguageCoach } from './LanguageCoach';
-import { AddStorageProvider } from './StorageProvider';
+import { ConnectFolder } from './ConnectFolder';
 import { Music } from './Music';
 
 import './App.css';
@@ -176,10 +176,10 @@ function ConnectRouter() {
   return null;
 }
 
-function AddStorageProviderRouter() {
+function ConnectFolderRouter() {
   const dispatch = Hooks.useDispatch();
   React.useEffect(() => {
-    dispatch(A.viewAddStorageProvider());
+    dispatch(A.viewConnectFolder());
   });
   return null;
 }
@@ -203,7 +203,7 @@ export function AppRoutes() {
         <Router.Route path="dropbox" element={<ConnectRouter />} />
         <Router.Route
           path="add-storage-provider"
-          element={<AddStorageProviderRouter />}
+          element={<ConnectFolderRouter />}
         />
         <Router.Route path="/:fs/folder" element={<ListFilesRouter />}>
           <Router.Route path="*" element={<ListFilesRouter />} />
@@ -278,7 +278,7 @@ function Views() {
     case 'settings':
       return <Settings key={key} />;
     case 'add-storage-provider':
-      return <AddStorageProvider key={key} />;
+      return <ConnectFolder key={key} />;
     case 'language-coach':
       return <LanguageCoach key={key} />;
     case 'music':

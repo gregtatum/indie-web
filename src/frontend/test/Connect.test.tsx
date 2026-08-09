@@ -78,10 +78,7 @@ describe('Connect', () => {
       </MemoryRouter>,
     );
 
-    await userEvent.type(
-      screen.getByLabelText('Name'),
-      'NAS Storage',
-    );
+    await userEvent.type(screen.getByLabelText('Name'), 'NAS Storage');
     await userEvent.clear(screen.getByLabelText('Server Address'));
     await userEvent.type(
       screen.getByLabelText('Server Address'),
@@ -191,10 +188,7 @@ describe('Connect', () => {
       );
 
       if (providerName) {
-        await userEvent.type(
-          screen.getByLabelText('Name'),
-          providerName,
-        );
+        await userEvent.type(screen.getByLabelText('Name'), providerName);
       }
       await userEvent.clear(screen.getByLabelText('Server Address'));
       if (providerAddress) {

@@ -1,13 +1,13 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 
-import './StorageProvider.css';
+import './ConnectFolder.css';
 import dedent from 'dedent';
 import { $, $$, A, T, Hooks } from 'frontend';
 import { sluggify } from 'frontend/utils';
 import { InfoLink } from './InfoLink';
 
-export function AddStorageProvider() {
+export function ConnectFolder() {
   const experimentalFeatures = $$.getExperimentalFeatures();
   const { dispatch, getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
@@ -60,7 +60,7 @@ export function AddStorageProvider() {
         </p>
 
         <h3>1: Start the server</h3>
-        <pre className="storageProviderPre">
+        <pre className="connectFolderPre">
           {dedent`
               git clone git@github.com:gregtatum/indie-web.git
               cd indie-web/src/server
@@ -72,7 +72,7 @@ export function AddStorageProvider() {
 
         <h3>2: Connect the Folder</h3>
         <form onSubmit={(event) => addFileServer(event.nativeEvent)}>
-          <div className="storageProviderInput">
+          <div className="connectFolderInput">
             <label htmlFor="storage-provider-name">Name</label>
             <input
               type="text"
@@ -82,7 +82,7 @@ export function AddStorageProvider() {
               maxLength={200}
             ></input>
           </div>
-          <div className="storageProviderInput">
+          <div className="connectFolderInput">
             <label htmlFor="storage-provider-address">Server Address</label>
             <input
               type="text"
@@ -92,9 +92,9 @@ export function AddStorageProvider() {
             ></input>
           </div>
           {experimentalFeatures ? (
-            <div className="storageProviderInput">
+            <div className="connectFolderInput">
               <label>Storage Type</label>
-              <div className="storageProviderRadioGroup">
+              <div className="connectFolderRadioGroup">
                 <label>
                   <input
                     type="radio"
@@ -120,7 +120,7 @@ export function AddStorageProvider() {
                 </label>
               </div>
               {storeType === 'music' ? (
-                <p className="storageProviderNote">
+                <p className="connectFolderNote">
                   Point the server&apos;s mount at your music folder. To use
                   multiple music folders, run a separate server instance for
                   each one.
@@ -136,15 +136,15 @@ export function AddStorageProvider() {
   );
 }
 
-interface ServerStorageProviderSettingsProps {
+interface ConnectedFoldersSettingsProps {
   fileStoreServers: T.FileStoreServer[];
   nonServerFallbackStorage?: T.FileStoreName | null;
 }
 
-export function ServerStorageProviderSettings({
+export function ConnectedFoldersSettings({
   fileStoreServers,
   nonServerFallbackStorage = null,
-}: ServerStorageProviderSettingsProps) {
+}: ConnectedFoldersSettingsProps) {
   const { dispatch, getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
   const { error, setError } = Hooks.useError();
@@ -195,7 +195,7 @@ export function ServerStorageProviderSettings({
   return (
     <>
       {error}
-      <div className="storageProviderList">
+      <div className="connectedFolderList">
         {fileStoreServers.map((server) => (
           <form
             key={server.id}
@@ -215,9 +215,7 @@ export function ServerStorageProviderSettings({
             <button
               type="button"
               onClick={() => {
-                if (
-                  confirm('Are you sure you want to remove this folder?')
-                ) {
+                if (confirm('Are you sure you want to remove this folder?')) {
                   const nextServer =
                     fileStoreServers.find(
                       (candidate) => candidate.id !== server.id,
