@@ -199,11 +199,31 @@ function run(command, args, { capture = false } = {}) {
 }
 
 /**
+ * @param {string} code
+ * @returns {(text: string) => string}
+ */
+function ansi(code) {
+  return (text) =>
+    process.stdout.isTTY ? `\x1b[${code}m${text}\x1b[0m` : text;
+}
+
+const color = {
+  bold: ansi('1'),
+  dim: ansi('2'),
+  green: ansi('32'),
+  cyan: ansi('36'),
+  yellow: ansi('33'),
+};
+
+/**
  * @param {string} command
  * @param {string[]} args
  */
 function printCommand(command, args) {
-  console.log(`  ${[command, ...args].map(shellQuote).join(' ')}`);
+  const [executable, ...rest] = [command, ...args].map(shellQuote);
+  console.log(
+    `  ${color.dim('$')} ${color.cyan(executable)} ${rest.join(' ')}`,
+  );
 }
 
 /**
@@ -655,24 +675,28 @@ function requireTagAvailable(tag, bump, resuming) {
 function printDryRun({ currentVersion, nextVersion, tag, resuming }) {
   const tags = dockerTags(nextVersion);
 
-  console.log('Dry run: no files, commits, tags, images, or remotes changed.');
+  console.log(
+    color.bold(color.yellow('Dry run:')) +
+      ' no files, commits, tags, images, or remotes changed.',
+  );
   console.log('');
-  if (resuming) {
-    console.log(`Resuming pending release ${tag} left by a previous attempt.`);
-    console.log('');
-  }
-  console.log(`Current server version: ${currentVersion}`);
-  console.log(`Next server version:    ${nextVersion}`);
-  console.log(`Git tag:                ${tag}`);
-  console.log('Docker tags:');
+  console.log(`${color.dim('Current server version:')} ${currentVersion}`);
+  console.log(
+    `${color.dim('Next server version:')}    ${color.green(nextVersion)}`,
+  );
+  console.log(`${color.dim('Git tag:')}                ${color.green(tag)}`);
+  console.log('');
+  console.log(color.bold('Docker tags:'));
   for (const dockerTag of tags) {
-    console.log(`  ${dockerTag}`);
+    console.log(`  ${color.cyan(dockerTag)}`);
   }
   console.log('');
-  console.log('Planned commands:');
+  console.log(color.bold('Planned commands:'));
   if (resuming) {
     console.log(
-      '  (skip version bump/commit — already done by a previous attempt)',
+      color.dim(
+        '  (skip version bump/commit — already done by a previous attempt)',
+      ),
     );
   } else {
     printCommand('npm', [
@@ -690,10 +714,14 @@ function printDryRun({ currentVersion, nextVersion, tag, resuming }) {
     printCommand('git', ['commit', '-m', `Release server ${tag}`]);
   }
   console.log(
-    `  (ensure buildx builder "${buildxBuilder}" exists, creating it if not)`,
+    color.dim(
+      `  (ensure buildx builder "${buildxBuilder}" exists, creating it if not)`,
+    ),
   );
   printCommand('docker', buildxBuildArgs(tags));
-  console.log('  (create the git tag, unless it already exists locally)');
+  console.log(
+    color.dim('  (create the git tag, unless it already exists locally)'),
+  );
   printCommand('git', ['tag', '-a', tag, '-m', `Release server ${tag}`]);
   printCommand('git', ['push', 'origin', 'main']);
   printCommand('git', ['push', 'origin', tag]);
@@ -756,9 +784,9 @@ function publish({ nextVersion, tag, bump, resuming }) {
     );
   }
 
-  console.log('Published:');
+  console.log(color.bold(color.green('Published:')));
   for (const dockerTag of tags) {
-    console.log(`  ${dockerTag}`);
+    console.log(`  ${color.cyan(dockerTag)}`);
   }
 }
 
@@ -799,7 +827,11 @@ export function main(args) {
   const resuming = pending !== null;
 
   if (resuming) {
-    console.log(`Resuming pending release ${tag} left by a previous attempt.`);
+    console.log(
+      color.yellow(
+        `Resuming pending release ${tag} left by a previous attempt.`,
+      ),
+    );
     console.log('');
   }
 
