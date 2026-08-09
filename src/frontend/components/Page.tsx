@@ -158,9 +158,6 @@ export function Settings() {
                         href="/docs/file-store-server.html"
                         title="Connect a local or network folder you host yourself."
                       />
-                      <span className="settingsStatusPill settingsStatusPillConnected">
-                        Connected
-                      </span>
                     </div>
                     <p>{servers.length} configured</p>
                   </div>
@@ -188,9 +185,6 @@ export function Settings() {
                         href="/docs/file-store-server.html"
                         title="Connect a local or network folder you host yourself."
                       />
-                      <span className="settingsStatusPill settingsStatusPillDisconnected">
-                        Not Connected
-                      </span>
                     </div>
                     <p>Connect a local server, NAS, or music library.</p>
                   </div>
@@ -435,17 +429,8 @@ function BrowserStorageProvider() {
               <h3>{getBrowserName()}</h3>
               <InfoLink
                 href="/docs/file-store-browser.html"
-                title="Files stay in this browser via IndexedDB — nothing leaves your device."
+                title="Store files directly in your browser. This is convenient, but clearing your browser data will also remove your files."
               />
-              <span
-                className={`settingsStatusPill ${
-                  idbfs
-                    ? 'settingsStatusPillConnected'
-                    : 'settingsStatusPillDisconnected'
-                }`}
-              >
-                {idbfs ? 'Connected' : 'Not Connected'}
-              </span>
             </div>
             <p>{browserFileCountLabel}</p>
           </div>
@@ -520,17 +505,8 @@ function DropboxStorageProvider() {
               <h3>Dropbox</h3>
               <InfoLink
                 href="/docs/file-store-dropbox.html"
-                title="Sync files through a scoped Dropbox app folder across your devices."
+                title="Sync files across your devices using a Dropbox folder dedicated to this app."
               />
-              <span
-                className={`settingsStatusPill ${
-                  dropbox
-                    ? 'settingsStatusPillConnected'
-                    : 'settingsStatusPillDisconnected'
-                }`}
-              >
-                {dropbox ? 'Connected' : 'Not Connected'}
-              </span>
             </div>
             <p>
               {dropbox
