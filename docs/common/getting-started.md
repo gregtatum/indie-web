@@ -14,7 +14,7 @@ store like Dropbox. Pick the store that matches where your files already live:
 
 - [Local browser storage](/docs/file-store-browser.html)
 - [Dropbox](/docs/file-store-dropbox.html)
-- [Server store](/docs/file-store-server.html)
+- [Local & network storage](/docs/file-store-server.html)
 
 ## Add files
 
