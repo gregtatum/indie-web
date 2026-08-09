@@ -13,7 +13,7 @@
   opacity: 0;
   padding: 6px 10px;
   pointer-events: none;
-  position: absolute;
+  position: fixed;
   text-align: center;
   transform: translateY(4px);
   transition:
@@ -32,6 +32,15 @@
   position: absolute;
   top: 100%;
   transform: translateX(-50%);
+}
+
+/* When flipped below the anchor, the arrow moves to the bubble's top edge and
+   points up instead of down. */
+.tooltipBubble.flipped::after {
+  border-top-color: transparent;
+  border-bottom-color: #0009;
+  top: auto;
+  bottom: 100%;
 }
 
 .visible {
