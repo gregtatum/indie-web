@@ -14,7 +14,7 @@ const changelogPath = resolve(repoRoot, 'src/server/CHANGELOG.md');
 
 /**
  * @typedef {'major' | 'minor' | 'patch'} VersionBump
- * @typedef {{ bump: VersionBump, dryRun: boolean }} PublishOptions
+ * @typedef {{ bump: VersionBump, dryRun: boolean, forceBump: boolean }} PublishOptions
  * @typedef {{ capture?: boolean }} RunOptions
  */
 
@@ -32,10 +32,13 @@ export function parsePublishArgs(args) {
   /** @type {VersionBump[]} */
   const bumps = [];
   let dryRun = false;
+  let forceBump = false;
 
   for (const arg of args) {
     if (arg === '--dry-run') {
       dryRun = true;
+    } else if (arg === '--force-bump') {
+      forceBump = true;
     } else if (arg === 'major' || arg === 'minor' || arg === 'patch') {
       bumps.push(arg);
     } else {
@@ -53,7 +56,7 @@ export function parsePublishArgs(args) {
     );
   }
 
-  return { bump: bumps[0], dryRun };
+  return { bump: bumps[0], dryRun, forceBump };
 }
 
 /**
@@ -169,11 +172,15 @@ function retryPatchReleaseMessage(message) {
 
 function usage() {
   return [
-    'Usage: task docker-publish -- major|minor|patch [--dry-run]',
+    'Usage: task docker-publish -- major|minor|patch [--dry-run] [--force-bump]',
     '',
     'Examples:',
     '  task docker-publish -- patch --dry-run',
     '  task docker-publish -- patch',
+    '  task docker-publish -- patch --force-bump',
+    '',
+    '--force-bump ignores a pending release left by a previous failed',
+    'attempt and bumps the version again instead of resuming it.',
   ].join('\n');
 }
 
@@ -902,16 +909,23 @@ export function main(args) {
 
   const pending = findPendingRelease();
   const currentVersion = readServerVersion();
-  const nextVersion = pending
+  const resuming = pending !== null && !options.forceBump;
+  const nextVersion = resuming
     ? pending.version
     : bumpVersion(currentVersion, options.bump);
-  const tag = pending ? pending.tag : `v${nextVersion}`;
-  const resuming = pending !== null;
+  const tag = resuming ? pending.tag : `v${nextVersion}`;
 
   if (resuming) {
     console.log(
       color.yellow(
         `Resuming pending release ${tag} left by a previous attempt.`,
+      ),
+    );
+    console.log('');
+  } else if (pending) {
+    console.log(
+      color.yellow(
+        `Ignoring pending release ${pending.tag} left by a previous attempt (--force-bump).`,
       ),
     );
     console.log('');

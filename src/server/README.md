@@ -62,6 +62,9 @@ command — it detects an unfinished release and resumes it rather than
 bumping the version again. See `src/server/docker/publish.mjs` for exactly
 what it checks and what counts as "unfinished."
 
+Pass `--force-bump` to ignore an unfinished release and bump the version
+again anyway, instead of resuming it.
+
 Before publishing, add an entry to [`CHANGELOG.md`](./CHANGELOG.md) under
 `## [Unreleased]` and commit it — publishing refuses to run otherwise. Rename
 that section to the new version once the release is out.

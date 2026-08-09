@@ -13,6 +13,7 @@ describe('docker publish helpers', () => {
     assert.deepEqual(parsePublishArgs(['patch', '--dry-run']), {
       bump: 'patch',
       dryRun: true,
+      forceBump: false,
     });
   });
 
@@ -20,6 +21,15 @@ describe('docker publish helpers', () => {
     assert.deepEqual(parsePublishArgs(['--dry-run', 'minor']), {
       bump: 'minor',
       dryRun: true,
+      forceBump: false,
+    });
+  });
+
+  it('parses --force-bump', () => {
+    assert.deepEqual(parsePublishArgs(['patch', '--force-bump']), {
+      bump: 'patch',
+      dryRun: false,
+      forceBump: true,
     });
   });
 
