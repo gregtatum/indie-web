@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 import process from 'node:process';
 
 const image = 'tatumcreative/floppydisk.link';
+const platforms = 'linux/amd64,linux/arm64';
+const buildxBuilder = 'floppydisk-release';
 const repoRoot = resolve(import.meta.dirname, '../../..');
 const serverPackageJson = resolve(repoRoot, 'src/server/package.json');
 
@@ -95,6 +97,26 @@ export function dockerTags(version) {
 }
 
 /**
+ * @param {string[]} tags
+ * @returns {string[]}
+ */
+function buildxBuildArgs(tags) {
+  return [
+    'buildx',
+    'build',
+    '--builder',
+    buildxBuilder,
+    '--platform',
+    platforms,
+    '--file',
+    'src/server/docker/Dockerfile.prod',
+    ...tags.flatMap((dockerTag) => ['--tag', dockerTag]),
+    '--push',
+    '.',
+  ];
+}
+
+/**
  * @param {VersionBump} bump
  * @returns {string}
  */
@@ -138,26 +160,6 @@ function retryPatchReleaseMessage(message) {
   ].join('\n');
 }
 
-/**
- * @param {string} failedTag
- * @param {string} releaseTag
- * @returns {string}
- */
-function dockerPushFailureMessage(failedTag, releaseTag) {
-  return retryPatchReleaseMessage(
-    [
-      `Docker push failed for ${failedTag}.`,
-      '',
-      `The git release ${releaseTag} was already pushed, so this release version is spent.`,
-      '',
-      'Before retrying, authenticate Docker Hub:',
-      '     docker login',
-      'Confirm your Docker account can push this repository:',
-      `     ${image}`,
-    ].join('\n'),
-  );
-}
-
 function usage() {
   return [
     'Usage: task docker-publish -- major|minor|patch [--dry-run]',
@@ -196,6 +198,27 @@ function run(command, args, { capture = false } = {}) {
  */
 function printCommand(command, args) {
   console.log(`  ${[command, ...args].map(shellQuote).join(' ')}`);
+}
+
+/**
+ * Multi-platform images can only be built by a `docker-container` (or
+ * remote) buildx driver, not the classic `docker` driver. Create a
+ * dedicated builder on demand so this doesn't depend on whatever the
+ * default builder happens to be on the machine running the release.
+ */
+function ensureBuildxBuilder() {
+  try {
+    run('docker', ['buildx', 'inspect', buildxBuilder], { capture: true });
+  } catch {
+    run('docker', [
+      'buildx',
+      'create',
+      '--name',
+      buildxBuilder,
+      '--driver',
+      'docker-container',
+    ]);
+  }
 }
 
 /**
@@ -459,23 +482,13 @@ function printDryRun({ currentVersion, nextVersion, tag }) {
     'src/server/package-lock.json',
   ]);
   printCommand('git', ['commit', '-m', `Release server ${tag}`]);
-  printCommand('docker', [
-    'build',
-    '--file',
-    'src/server/docker/Dockerfile.prod',
-    '--tag',
-    tags[0],
-    '.',
-  ]);
-  for (let index = 1; index < tags.length; index += 1) {
-    printCommand('docker', ['tag', tags[0], tags[index]]);
-  }
+  console.log(
+    `  (ensure buildx builder "${buildxBuilder}" exists, creating it if not)`,
+  );
+  printCommand('docker', buildxBuildArgs(tags));
   printCommand('git', ['tag', '-a', tag, '-m', `Release server ${tag}`]);
   printCommand('git', ['push', 'origin', 'main']);
   printCommand('git', ['push', 'origin', tag]);
-  for (const dockerTag of tags) {
-    printCommand('docker', ['push', dockerTag]);
-  }
 }
 
 /**
@@ -499,18 +512,8 @@ function publish({ nextVersion, tag, bump }) {
       'src/server/package-lock.json',
     ]);
     run('git', ['commit', '-m', `Release server ${tag}`]);
-    run('docker', [
-      'build',
-      '--file',
-      'src/server/docker/Dockerfile.prod',
-      '--tag',
-      tags[0],
-      '.',
-    ]);
-
-    for (let index = 1; index < tags.length; index += 1) {
-      run('docker', ['tag', tags[0], tags[index]]);
-    }
+    ensureBuildxBuilder();
+    run('docker', buildxBuildArgs(tags));
 
     run('git', ['tag', '-a', tag, '-m', `Release server ${tag}`]);
     run('git', ['push', 'origin', 'main']);
@@ -531,14 +534,6 @@ function publish({ nextVersion, tag, bump }) {
         bump,
       ),
     );
-  }
-
-  for (const dockerTag of tags) {
-    try {
-      run('docker', ['push', dockerTag]);
-    } catch {
-      throw new Error(dockerPushFailureMessage(dockerTag, tag));
-    }
   }
 
   console.log('Published:');

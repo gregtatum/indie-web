@@ -82,13 +82,15 @@ A real publish:
 
 1. Bumps `src/server/package.json` and `src/server/package-lock.json`.
 2. Commits the bump as `Release server vX.Y.Z`.
-3. Builds `src/server/docker/Dockerfile.prod` from the local release commit.
-4. Tags the image as `X.Y.Z`, `X.Y`, `X`, and `latest`.
-5. Creates annotated git tag `vX.Y.Z`.
-6. Pushes `main`, pushes the git tag, and pushes all Docker tags.
+3. Builds and pushes a multi-platform (`linux/amd64`, `linux/arm64`) image
+   from `src/server/docker/Dockerfile.prod`, tagged `X.Y.Z`, `X.Y`, `X`, and
+   `latest`.
+4. Creates annotated git tag `vX.Y.Z`.
+5. Pushes `main` and pushes the git tag.
 
-If Docker build fails, fix the problem on top of the local release commit and
-rerun the publish command only after restoring a clean, synced `main` state. If
-a Docker push fails after the git commit or tag has already been pushed, rerun
-the command after confirming the local version and tag match the intended
-release, or push the missing Docker tags manually.
+Because multi-platform images can't be built locally without pushing, the
+Docker build+push happens before the git tag and push. If it fails, fix the
+problem and rerun the same publish command. Nothing has been pushed to git
+yet, and re-pushing the same Docker tags is safe. If a step after that fails
+(git tag or push), rerun the command after confirming local state matches the
+intended release, following the recovery instructions the command prints.
