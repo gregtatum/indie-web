@@ -96,7 +96,14 @@ export function bumpVersion(version, bump) {
  * @returns {string[]}
  */
 export function dockerTags(version) {
-  return [`${image}:${version}`, `${image}:latest`];
+  const [major, minor] = version.split('.');
+
+  return [
+    `${image}:${version}`,
+    `${image}:${major}.${minor}`,
+    `${image}:${major}`,
+    `${image}:latest`,
+  ];
 }
 
 /**

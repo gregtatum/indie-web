@@ -20,12 +20,6 @@ and this project uses [Semantic Versioning](https://semver.org/).
   where it left off instead of bumping the version again.
 - Colored, easier-to-read `--dry-run` output.
 
-### Changed
-
-- The published Docker image is now only tagged `X.Y.Z` and `latest`,
-  dropping the `X` and `X.Y` floating tags. Nothing referenced them, and
-  they conflicted with marking exact version tags immutable on Docker Hub.
-
 ## [2.0.0] - 2026-06-12
 
 ### Fixed

@@ -64,6 +64,8 @@ describe('docker publish helpers', () => {
   it('builds Docker tag aliases from a version', () => {
     assert.deepEqual(dockerTags('1.2.3'), [
       'tatumcreative/floppydisk.link:1.2.3',
+      'tatumcreative/floppydisk.link:1.2',
+      'tatumcreative/floppydisk.link:1',
       'tatumcreative/floppydisk.link:latest',
     ]);
   });
