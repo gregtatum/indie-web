@@ -15,4 +15,9 @@ COPY src/shared ./src/shared
 
 WORKDIR /app/src/server
 ENV NODE_ENV=production
-CMD npm run start
+
+# Mirrors package.json's "start" script, invoked directly instead of via
+# `npm run start` so node is PID 1 and receives signals like SIGTERM
+# directly (npm doesn't reliably forward them to the process it spawns).
+# Keep this in sync with the "start" script in src/server/package.json.
+CMD ["node", "--disable-warning=ExperimentalWarning", "."]
