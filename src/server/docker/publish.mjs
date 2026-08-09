@@ -18,6 +18,12 @@ const serverPackageJson = resolve(repoRoot, 'src/server/package.json');
  */
 
 /**
+ * Thrown for bad CLI usage, which will be caught and handled with a graceful
+ * error message.
+ */
+export class UsageError extends Error {}
+
+/**
  * @param {string[]} args
  * @returns {PublishOptions}
  */
@@ -32,16 +38,16 @@ export function parsePublishArgs(args) {
     } else if (arg === 'major' || arg === 'minor' || arg === 'patch') {
       bumps.push(arg);
     } else {
-      throw new Error(`Unknown argument: ${arg}`);
+      throw new UsageError(`Unknown argument: ${arg}`);
     }
   }
 
   if (bumps.length === 0) {
-    throw new Error('Missing version bump: major, minor, or patch.');
+    throw new UsageError('Missing version bump: major, minor, or patch.');
   }
 
   if (bumps.length > 1) {
-    throw new Error(
+    throw new UsageError(
       'Specify exactly one version bump: major, minor, or patch.',
     );
   }
@@ -646,6 +652,11 @@ function publish({ nextVersion, tag, bump, resuming }) {
  * @param {string[]} args
  */
 export function main(args) {
+  if (args.length === 0 || args.includes('--help')) {
+    console.log(usage());
+    return;
+  }
+
   const options = parsePublishArgs(args);
 
   requireDockerAvailable();
@@ -694,8 +705,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     main(process.argv.slice(2));
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
-    console.error('');
-    console.error(usage());
+    if (error instanceof UsageError) {
+      console.error('');
+      console.error(usage());
+    }
     process.exitCode = 1;
   }
 }
