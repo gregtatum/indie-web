@@ -11,6 +11,7 @@ import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { formatBytes, getEnv } from 'frontend/utils';
 import { useCodeVerifier } from 'frontend/hooks/pcse';
 import { ServerStorageProviderSettings } from './StorageProvider';
+import { InfoLink } from './InfoLink';
 import './Page.css';
 
 type CacheEstimate = {
@@ -153,6 +154,10 @@ export function Settings() {
                   <div>
                     <div className="settingsProviderNameRow">
                       <h3>Self-Hosted Storage</h3>
+                      <InfoLink
+                        href="/docs/file-store-server.html"
+                        title="Connect a local or network folder you host yourself."
+                      />
                       <span className="settingsStatusPill settingsStatusPillConnected">
                         Connected
                       </span>
@@ -179,6 +184,10 @@ export function Settings() {
                   <div>
                     <div className="settingsProviderNameRow">
                       <h3>Self-Hosted Storage</h3>
+                      <InfoLink
+                        href="/docs/file-store-server.html"
+                        title="Connect a local or network folder you host yourself."
+                      />
                       <span className="settingsStatusPill settingsStatusPillDisconnected">
                         Not Connected
                       </span>
@@ -424,6 +433,10 @@ function BrowserStorageProvider() {
           <div>
             <div className="settingsProviderNameRow">
               <h3>{getBrowserName()}</h3>
+              <InfoLink
+                href="/docs/file-store-browser.html"
+                title="Files stay in this browser via IndexedDB — nothing leaves your device."
+              />
               <span
                 className={`settingsStatusPill ${
                   idbfs
@@ -505,6 +518,10 @@ function DropboxStorageProvider() {
           <div>
             <div className="settingsProviderNameRow">
               <h3>Dropbox</h3>
+              <InfoLink
+                href="/docs/file-store-dropbox.html"
+                title="Sync files through a scoped Dropbox app folder across your devices."
+              />
               <span
                 className={`settingsStatusPill ${
                   dropbox

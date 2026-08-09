@@ -5,6 +5,7 @@ import './StorageProvider.css';
 import dedent from 'dedent';
 import { $, $$, A, T, Hooks } from 'frontend';
 import { sluggify } from 'frontend/utils';
+import { InfoLink } from './InfoLink';
 
 export function AddStorageProvider() {
   const experimentalFeatures = $$.getExperimentalFeatures();
@@ -44,7 +45,13 @@ export function AddStorageProvider() {
           Add Self-Hosted Storage
           <span className="pageBeta">Beta</span>
         </h1>
-        <h2>Add a Storage Provider</h2>
+        <h2>
+          Add a Storage Provider{' '}
+          <InfoLink
+            href="/docs/file-store-server.html"
+            title="Connect a local or network folder you host yourself."
+          />
+        </h2>
         <p>
           Whether you are accessing files stored locally on your machine, or you
           want to access files on your NAS (Network Attached Storage), you can

@@ -1,0 +1,22 @@
+.infoLink {
+  color: inherit;
+  display: inline-flex;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.infoLink:hover,
+.infoLink:focus-visible {
+  opacity: 1;
+}
+
+.infoLinkIcon {
+  background-color: currentColor;
+  display: block;
+  height: 15px;
+  width: 15px;
+  mask-image: url('/data/common/svg/info.svg');
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}

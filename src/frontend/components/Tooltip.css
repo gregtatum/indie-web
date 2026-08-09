@@ -1,0 +1,41 @@
+.tooltip {
+  display: inline-flex;
+}
+
+.tooltipBubble {
+  background: #0009;
+  backdrop-filter: blur(10px);
+  border-radius: 6px;
+  color: #fff;
+  font-size: var(--font-size-small);
+  line-height: 1.4;
+  max-width: 220px;
+  opacity: 0;
+  padding: 6px 10px;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  transform: translateY(4px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+  visibility: hidden;
+  width: max-content;
+}
+
+.tooltipBubble::after {
+  backdrop-filter: blur(10px);
+  border: 5px solid transparent;
+  border-top-color: #0009;
+  content: '';
+  left: 50%;
+  position: absolute;
+  top: 100%;
+  transform: translateX(-50%);
+}
+
+.visible {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
