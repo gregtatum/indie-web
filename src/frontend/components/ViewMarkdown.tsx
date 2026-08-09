@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { EditorView } from '@codemirror/view';
 import { markdown } from '@codemirror/lang-markdown';
-import TurndownService from 'turndown';
+import { type default as TurndownService } from 'turndown';
 import { A, T, $, $$, Hooks } from 'frontend';
 import { downloadImage } from 'frontend/logic/download-image';
 import { getEnv, getDirName, htmlElementOrNull } from 'frontend/utils';
@@ -123,8 +123,13 @@ export function ViewMarkdown() {
       // Convert HTML to Markdown.
       event.preventDefault();
 
-      const turndownService: TurndownService = new TurndownService();
-      addText(view, turndownService.turndown(html));
+      import(/* webpackChunkName: "turndown" */ 'turndown').then(
+        ({ default: TurndownService }) => {
+          const turndownService: TurndownService = new TurndownService();
+          addText(view, turndownService.turndown(html));
+        },
+        (error) => void console.error(error),
+      );
     }
   }
 
