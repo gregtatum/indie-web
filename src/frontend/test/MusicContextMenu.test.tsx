@@ -6,7 +6,7 @@ import { Provider } from 'react-redux';
 import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
-import type { FetchMockSandbox } from 'fetch-mock';
+import fetchMock from '@fetch-mock/jest';
 import { mockMusicMediaElement } from './utils/music';
 import { MUSIC_INDEX_VERSION } from 'shared/music';
 
@@ -82,7 +82,7 @@ function setup(tracks = TRACKS) {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
 
-  (window.fetch as FetchMockSandbox).get(
+  fetchMock.get(
     `${FAKE_SERVER.url}/music/music-index`,
     {
       body: JSON.stringify({
@@ -93,7 +93,7 @@ function setup(tracks = TRACKS) {
       status: 200,
     },
   );
-  (window.fetch as FetchMockSandbox).get(
+  fetchMock.get(
     new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
     { body: JSON.stringify({ native: [] }), status: 200 },
   );

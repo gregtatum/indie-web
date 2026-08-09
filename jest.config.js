@@ -19,7 +19,10 @@ export default {
   // before transformation. If the file path matches any of the patterns, it will not
   // be transformed.
   // Default: ["/node_modules/", "\\.pnp\\.[^\\\/]+$"]
-  transformIgnorePatterns: ['/node_modules/(?!${esModules})'],
+  //
+  // uuid ships as ESM-only, so it needs to be transformed like our own source rather
+  // than being left as-is like the rest of node_modules.
+  transformIgnorePatterns: ['/node_modules/(?!(uuid)/)'],
 
   // A map from regular expressions to module names or to arrays of module names that
   // allow to stub out resources, like images or styles with a single module. Modules
@@ -35,7 +38,7 @@ export default {
     // import { Hunspell, loadModule } from 'hunspell-asm';
     '^nanoid(/(.*)|$)': 'nanoid$1',
 
-    // Babel handles the aliasing in .babelrc
+    // Babel handles the aliasing in babel.config.js
   },
 
   // A list of paths to directories that Jest should use to search for files in.

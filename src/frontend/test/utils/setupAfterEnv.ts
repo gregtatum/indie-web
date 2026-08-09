@@ -1,8 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-
-const fetchMockJest =
-  require('fetch-mock-jest') as typeof import('fetch-mock-jest');
-import { Headers, Request, Response } from 'node-fetch';
+import fetchMock from '@fetch-mock/jest';
 import { resetTestGeneration } from './fixtures';
 import { persistedState } from 'frontend/logic/persisted-state';
 import 'fake-indexeddb/auto';
@@ -52,12 +48,7 @@ beforeEach(function () {
     originalConsoleWarn.call(console, message, ...rest);
   });
   global.indexedDB = new IDBFactory();
-  const fetchSandbox = fetchMockJest.sandbox();
-  fetchSandbox.config.warnOnFallback = false;
-  (global as any).fetch = fetchSandbox;
-  (global as any).Headers = Headers;
-  (global as any).Request = Request;
-  (global as any).Response = Response;
+  fetchMock.mockGlobal();
   (global as any).Blob = Blob;
   (crypto as any).subtle = { digest: simpleDigest256 };
 
@@ -138,7 +129,7 @@ afterEach(() => {
   jest.restoreAllMocks();
   jest.clearAllTimers();
   jest.useRealTimers();
-  fetchMockJest.mockReset();
+  fetchMock.mockReset();
   resetTestGeneration();
 
   process.env = originalEnv;

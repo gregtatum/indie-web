@@ -14,7 +14,7 @@ import { createStore } from 'frontend/store/create-store';
 import { A, T } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
 import { BULK_SMALL_LOAD_NOTICE_DELAY } from 'frontend/components/Music/EditTrackModal';
-import type { FetchMockSandbox } from 'fetch-mock';
+import fetchMock from '@fetch-mock/jest';
 import type {
   WriteTrackTagsRequest,
   WriteTrackTagsResponse,
@@ -87,10 +87,10 @@ function mockWriteTrackTags(
   },
 ): WriteTrackTagsRequest[] {
   const requests: WriteTrackTagsRequest[] = [];
-  (window.fetch as FetchMockSandbox).post(
+  fetchMock.post(
     `${FAKE_SERVER.url}/music/write-track-tags`,
-    (_url, opts: any) => {
-      requests.push(JSON.parse(opts.body));
+    ({ options }: any) => {
+      requests.push(JSON.parse(options.body));
       return {
         body: JSON.stringify(response),
         status: 200,
@@ -125,7 +125,7 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
 
-  (window.fetch as FetchMockSandbox).get(
+  fetchMock.get(
     `${FAKE_SERVER.url}/music/music-index`,
     options.musicIndexResponse ?? {
       body: JSON.stringify({
@@ -137,7 +137,7 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
     },
   );
 
-  (window.fetch as FetchMockSandbox).get(
+  fetchMock.get(
     new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
     options.trackTagsResponse ?? {
       body: JSON.stringify({ native: [] }),
@@ -835,7 +835,7 @@ describe('edit track modal', () => {
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     let trackTagsFetchCount = 0;
 
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       `${FAKE_SERVER.url}/music/music-index`,
       {
         body: JSON.stringify({
@@ -846,7 +846,7 @@ describe('edit track modal', () => {
         status: 200,
       },
     );
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
       () => {
         trackTagsFetchCount++;
@@ -921,7 +921,7 @@ describe('edit track modal', () => {
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     let trackTagsFetchCount = 0;
 
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       `${FAKE_SERVER.url}/music/music-index`,
       {
         body: JSON.stringify({
@@ -932,7 +932,7 @@ describe('edit track modal', () => {
         status: 200,
       },
     );
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
       () => {
         trackTagsFetchCount++;
@@ -1003,7 +1003,7 @@ describe('edit track modal', () => {
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     const signals: AbortSignal[] = [];
 
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       `${FAKE_SERVER.url}/music/music-index`,
       {
         body: JSON.stringify({
@@ -1014,12 +1014,12 @@ describe('edit track modal', () => {
         status: 200,
       },
     );
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-      (_url, opts: any) => {
-        signals.push(opts.signal);
+      ({ options }: any) => {
+        signals.push(options.signal);
         return new Promise((_resolve, reject) => {
-          opts.signal.addEventListener('abort', () => {
+          options.signal.addEventListener('abort', () => {
             reject(new DOMException('Aborted', 'AbortError'));
           });
         });
@@ -1089,7 +1089,7 @@ describe('edit track modal', () => {
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     let trackTagsFetchCount = 0;
 
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       `${FAKE_SERVER.url}/music/music-index`,
       {
         body: JSON.stringify({
@@ -1100,7 +1100,7 @@ describe('edit track modal', () => {
         status: 200,
       },
     );
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
       () => {
         trackTagsFetchCount++;

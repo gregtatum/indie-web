@@ -13,7 +13,7 @@ import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
 import { MUSIC_URL_SERIALIZATION_CUTOFF } from 'frontend/components/Music/UrlSerialization';
-import type { FetchMockSandbox } from 'fetch-mock';
+import fetchMock from '@fetch-mock/jest';
 import { mockServerListFiles } from './utils/fixtures';
 import { MUSIC_INDEX_VERSION } from 'shared/music';
 
@@ -85,7 +85,7 @@ function setup(search = '', tracks = TRACKS) {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
 
-  (window.fetch as FetchMockSandbox).get(
+  fetchMock.get(
     `${FAKE_SERVER.url}/music/music-index`,
     {
       body: JSON.stringify({
@@ -420,11 +420,11 @@ describe('music URL serialization', () => {
       TRACKS[1],
     ];
     const { store, getLocation } = setup('?genre=Indie', tracks);
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
       { body: JSON.stringify({ native: [] }), status: 200 },
     );
-    (window.fetch as FetchMockSandbox).post(
+    fetchMock.post(
       `${FAKE_SERVER.url}/music/write-track-tags`,
       {
         body: JSON.stringify({
@@ -510,7 +510,7 @@ describe('edit track modal tab URL serialization', () => {
   it('replaces tab param when switching tabs, back navigation skips tab history', async () => {
     const { getLocation, getNavigate } = setup();
 
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
       { body: JSON.stringify({ native: [] }), status: 200 },
     );
@@ -553,7 +553,7 @@ describe('edit track modal URL serialization', () => {
   it('pushes edit param on open and close, with back navigation restoring each state', async () => {
     const { getLocation, getNavigate } = setup();
 
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
       { body: JSON.stringify({ native: [] }), status: 200 },
     );

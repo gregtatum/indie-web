@@ -18,4 +18,17 @@ export default class FixJSDOMEnvironment extends JSDOMEnvironment {
     }
     this.global.structuredClone = structuredClone;
   }
+
+  async setup() {
+    await super.setup();
+
+    // jsdom has no native fetch/Request/Response/ReadableStream. @fetch-mock/jest
+    // requires the real Node implementations of these (not a polyfill like
+    // node-fetch) since it does `instanceof` checks against them internally.
+    this.global.fetch = fetch;
+    this.global.Headers = Headers;
+    this.global.Request = Request;
+    this.global.Response = Response;
+    this.global.ReadableStream = ReadableStream;
+  }
 }

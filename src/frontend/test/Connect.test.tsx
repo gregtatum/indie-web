@@ -9,7 +9,7 @@ import { Connect } from 'frontend/components/Page';
 import { persistedState } from 'frontend/logic/persisted-state';
 import { createStore } from 'frontend/store/create-store';
 import { A } from 'frontend';
-import type { FetchMockSandbox } from 'fetch-mock';
+import fetchMock from '@fetch-mock/jest';
 import { createFileMetadata, mockServerListFiles } from './utils/fixtures';
 
 beforeEach(() => {
@@ -126,7 +126,7 @@ describe('Connect', () => {
 
     await waitFor(() => {
       expect(
-        (window.fetch as FetchMockSandbox).called(
+        fetchMock.callHistory.called(
           'http://localhost:6543/file-store/list-files',
         ),
       ).toBe(true);
@@ -225,7 +225,7 @@ describe('Connect', () => {
       expect(persistedState.fileStoreServers.read()).toEqual(existingServers);
       expect(persistedState.fileStoreName.read()).toBe('browser');
       expect(persistedState.fileStoreServer.read()).toBeNull();
-      expect((window.fetch as FetchMockSandbox).calls()).toHaveLength(0);
+      expect(fetchMock.callHistory.calls()).toHaveLength(0);
     },
   );
 });

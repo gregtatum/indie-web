@@ -9,7 +9,7 @@ import { createStore } from 'frontend/store/create-store';
 import { A } from 'frontend';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
-import type { FetchMockSandbox } from 'fetch-mock';
+import fetchMock from '@fetch-mock/jest';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 
 type Store = ReturnType<typeof createStore>;
@@ -119,7 +119,7 @@ describe('Settings', () => {
     expectDropboxCacheDeleted(deleteDatabase);
     await expectOnboardingHomeScreen();
 
-    (window.fetch as FetchMockSandbox).get(
+    fetchMock.get(
       '/guide/Getting Started.chopro',
       'Getting started',
     );

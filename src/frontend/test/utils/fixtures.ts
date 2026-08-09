@@ -5,7 +5,7 @@ import {
   ensureExists,
   UnhandledCaseError,
 } from '../../utils';
-import type { FetchMockSandbox } from 'fetch-mock';
+import fetchMock from '@fetch-mock/jest';
 import { createStore } from 'frontend/store/create-store';
 import { fixupMetadata } from 'frontend/logic/file-store/dropbox-fs';
 import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
@@ -50,9 +50,9 @@ export function mockDropboxListFolder(
   items: MockedListFolderItem[],
 ): T.FolderListing {
   const fileList = createFileList(items);
-  (window.fetch as FetchMockSandbox)
+  fetchMock
     .catch(404)
-    .mock('https://api.dropboxapi.com/2/files/list_folder', () => {
+    .route('https://api.dropboxapi.com/2/files/list_folder', () => {
       return createListFolderResponse(fileList);
     });
   return fileList.map((file) => fixupMetadata(file));
@@ -64,10 +64,13 @@ export interface MockedFilesDownload {
 }
 
 export function mockDropboxFilesDownload(mocks: MockedFilesDownload[] = []) {
-  (window.fetch as FetchMockSandbox).post(
+  // Tests may call this more than once to change the mocked response after
+  // the initial `setup()` call, so the route must be replaced, not stacked.
+  fetchMock.removeRoute('dropbox-files-download');
+  fetchMock.post(
     'https://content.dropboxapi.com/2/files/download',
-    (url, opts: any) => {
-      const argsString = opts?.headers?.['Dropbox-API-Arg'];
+    ({ options }: any) => {
+      const argsString = options?.headers?.['dropbox-api-arg'];
       ensureExists(argsString, 'Expected dropbox arguments to be present.');
       const { path } = JSON.parse(argsString);
       const mock = mocks.find((mock) => mock.metadata.path === path);
@@ -88,7 +91,7 @@ export function mockDropboxFilesDownload(mocks: MockedFilesDownload[] = []) {
         body: mock.text,
       };
     },
-    { overwriteRoutes: true },
+    { name: 'dropbox-files-download' },
   );
 }
 
@@ -99,11 +102,11 @@ interface UploadSpy {
 
 export function spyOnDropboxFilesUpload(): UploadSpy[] {
   const results: UploadSpy[] = [];
-  (window.fetch as FetchMockSandbox).post(
+  fetchMock.post(
     'https://content.dropboxapi.com/2/files/upload',
-    async (url, opts) => {
-      const { path } = JSON.parse((opts.headers as any)['Dropbox-API-Arg']);
-      results.push({ path, body: await (opts.body as Blob).text() });
+    async ({ options }: any) => {
+      const { path } = JSON.parse(options.headers['dropbox-api-arg']);
+      results.push({ path, body: await (options.body as Blob).text() });
       return {
         status: 200,
         body: createFileMetadataReference(path),
@@ -183,10 +186,10 @@ export function mockServerListFiles(
   server: T.FileStoreServer,
   listing: T.FolderListing = [],
 ): void {
-  (window.fetch as FetchMockSandbox).post(
-    `${server.url}/file-store/list-files`,
-    { body: JSON.stringify(listing), status: 200 },
-  );
+  fetchMock.post(`${server.url}/file-store/list-files`, {
+    body: JSON.stringify(listing),
+    status: 200,
+  });
 }
 
 export function mockDropboxAccessToken(store: T.Store) {

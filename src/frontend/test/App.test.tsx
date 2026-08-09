@@ -16,7 +16,7 @@ import {
 import { ensureExists } from 'frontend/utils';
 import { FilesIndex, useFilesIndex } from 'frontend/logic/files-index';
 import { stripIndent } from 'common-tags';
-import type { FetchMockSandbox } from 'fetch-mock';
+import fetchMock from '@fetch-mock/jest';
 import { MemoryRouter } from 'react-router-dom';
 
 const coldplayChordProText = stripIndent`
@@ -35,7 +35,7 @@ beforeEach(() => {
 afterEach(() => {
   // Clears dropbox refresh token timeouts.
   jest.clearAllTimers();
-  (window.fetch as FetchMockSandbox).restore();
+  fetchMock.mockRestore();
 });
 
 describe('App', () => {
