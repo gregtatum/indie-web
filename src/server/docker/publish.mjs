@@ -453,6 +453,30 @@ const credentialHelperMissingMessage = [
   '  brew install docker-credential-helper',
 ].join('\n');
 
+const dockerHubRegistry = 'https://index.docker.io/v1/';
+
+const dockerLoginMissingMessage = [
+  'Not logged in to Docker Hub.',
+  '',
+  '  docker login',
+].join('\n');
+
+/**
+ * @returns {boolean}
+ */
+function isLoggedInToDockerHub() {
+  try {
+    execFileSync('docker-credential-osxkeychain', ['get'], {
+      input: `${dockerHubRegistry}\n`,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * @param {string} command
  * @returns {boolean}
@@ -510,6 +534,10 @@ function requireDockerAvailable() {
 
   if (!commandExists('docker-credential-osxkeychain')) {
     throw new Error(credentialHelperMissingMessage);
+  }
+
+  if (!isLoggedInToDockerHub()) {
+    throw new Error(dockerLoginMissingMessage);
   }
 }
 
