@@ -33,38 +33,15 @@ and tunneling it privately with Tailscale.
 
 ## Publishing The Docker Image
 
-Use the Taskfile entrypoint:
-
 ```shell
 task docker-publish -- patch --dry-run
 task docker-publish -- patch
-task docker-publish -- minor
-task docker-publish -- major
 ```
 
-The positional argument controls the next server version from
-`src/server/package.json`:
+Bumps the server version, builds and pushes a multi-platform Docker image to
+Docker Hub, and tags the release in git. Failed publishes are safe to retry.
 
-- `patch`: `1.2.3` becomes `1.2.4`
-- `minor`: `1.2.3` becomes `1.3.0`
-- `major`: `1.2.3` becomes `2.0.0`
+Before publishing, add an entry under `## [Unreleased]` in
+[`CHANGELOG.md`](./CHANGELOG.md) — publishing refuses to run otherwise.
 
-It builds and pushes a multi-platform (`linux/amd64`, `linux/arm64`) image to
-Docker Hub, tagged `X.Y.Z`, `X.Y`, `X`, and `latest`, then commits, tags, and
-pushes the release in git. This requires Docker (with `buildx`) and a clean,
-`main`-synced working tree.
-
-`--dry-run` prints the planned version, git tag, Docker tags, and commands
-without changing anything.
-
-If a publish fails partway, just fix the problem and rerun the exact same
-command — it detects an unfinished release and resumes it rather than
-bumping the version again. See `src/server/docker/publish.mjs` for exactly
-what it checks and what counts as "unfinished."
-
-Pass `--force-bump` to ignore an unfinished release and bump the version
-again anyway, instead of resuming it.
-
-Before publishing, add an entry to [`CHANGELOG.md`](./CHANGELOG.md) under
-`## [Unreleased]` and commit it — publishing refuses to run otherwise. Rename
-that section to the new version once the release is out.
+Run `task docker-publish -- --help` for the full set of flags.
