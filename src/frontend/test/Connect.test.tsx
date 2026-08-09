@@ -79,18 +79,18 @@ describe('Connect', () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText('Storage Provider Name'),
+      screen.getByLabelText('Name'),
       'NAS Storage',
     );
-    await userEvent.clear(screen.getByLabelText('Storage Provider Address'));
+    await userEvent.clear(screen.getByLabelText('Server Address'));
     await userEvent.type(
-      screen.getByLabelText('Storage Provider Address'),
+      screen.getByLabelText('Server Address'),
       'http://localhost:6543',
     );
 
     await act(async () => {
       await userEvent.click(
-        screen.getByRole('button', { name: 'Add Storage Provider' }),
+        screen.getByRole('button', { name: 'Connect Folder' }),
       );
     });
 
@@ -100,7 +100,7 @@ describe('Connect', () => {
       }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole('heading', { name: 'Add Self-Hosted Storage' }),
+      screen.queryByRole('heading', { name: 'Connect a Folder' }),
     ).toBeNull();
     expect(persistedState.fileStoreServers.read()).toEqual([
       {
@@ -192,27 +192,27 @@ describe('Connect', () => {
 
       if (providerName) {
         await userEvent.type(
-          screen.getByLabelText('Storage Provider Name'),
+          screen.getByLabelText('Name'),
           providerName,
         );
       }
-      await userEvent.clear(screen.getByLabelText('Storage Provider Address'));
+      await userEvent.clear(screen.getByLabelText('Server Address'));
       if (providerAddress) {
         await userEvent.type(
-          screen.getByLabelText('Storage Provider Address'),
+          screen.getByLabelText('Server Address'),
           providerAddress,
         );
       }
 
       await act(async () => {
         await userEvent.click(
-          screen.getByRole('button', { name: 'Add Storage Provider' }),
+          screen.getByRole('button', { name: 'Connect Folder' }),
         );
       });
 
       expect(await screen.findByText(error)).toBeTruthy();
       expect(
-        screen.getByRole('heading', { name: /Add Self-Hosted Storage/ }),
+        screen.getByRole('heading', { name: /Connect a Folder/ }),
       ).toBeTruthy();
       expect(persistedState.fileStoreServers.read()).toEqual(existingServers);
       expect(persistedState.fileStoreName.read()).toBe('browser');

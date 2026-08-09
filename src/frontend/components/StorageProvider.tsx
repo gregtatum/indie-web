@@ -42,21 +42,21 @@ export function AddStorageProvider() {
     <div className="page">
       <div className="pageInner">
         <h1>
-          Add Self-Hosted Storage
+          Connect a Folder
           <span className="pageBeta">Beta</span>
         </h1>
         <h2>
-          Add a Storage Provider{' '}
+          Local &amp; Network Storage{' '}
           <InfoLink
             href="/docs/file-store-server.html"
-            title="Connect a local or network folder you host yourself."
+            title="Access folders from your computer, home server, or NAS."
           />
         </h2>
         <p>
           Whether you are accessing files stored locally on your machine, or you
           want to access files on your NAS (Network Attached Storage), you can
-          run the storage provider server, and mount a folder on a machine you
-          have access to.
+          run the storage server and connect a folder on a machine you have
+          access to.
         </p>
 
         <h3>1: Start the server</h3>
@@ -70,10 +70,10 @@ export function AddStorageProvider() {
         </pre>
         <p>Follow the installation instructions.</p>
 
-        <h3>2: Add the Server</h3>
+        <h3>2: Connect the Folder</h3>
         <form onSubmit={(event) => addFileServer(event.nativeEvent)}>
           <div className="storageProviderInput">
-            <label htmlFor="storage-provider-name">Storage Provider Name</label>
+            <label htmlFor="storage-provider-name">Name</label>
             <input
               type="text"
               id="storage-provider-name"
@@ -83,9 +83,7 @@ export function AddStorageProvider() {
             ></input>
           </div>
           <div className="storageProviderInput">
-            <label htmlFor="storage-provider-address">
-              Storage Provider Address
-            </label>
+            <label htmlFor="storage-provider-address">Server Address</label>
             <input
               type="text"
               id="storage-provider-address"
@@ -131,7 +129,7 @@ export function AddStorageProvider() {
             </div>
           ) : null}
           {error}
-          <button type="submit">Add Storage Provider</button>
+          <button type="submit">Connect Folder</button>
         </form>
       </div>
     </div>
@@ -187,7 +185,7 @@ export function ServerStorageProviderSettings({
       dispatch(A.updateFileStoreServer(oldServer, server));
       dispatch(
         A.addMessage({
-          message: <>Storage provider updated</>,
+          message: <>Folder updated</>,
           timeout: true,
         }),
       );
@@ -218,9 +216,7 @@ export function ServerStorageProviderSettings({
               type="button"
               onClick={() => {
                 if (
-                  confirm(
-                    'Are you sure you want to remove this storage provider?',
-                  )
+                  confirm('Are you sure you want to remove this folder?')
                 ) {
                   const nextServer =
                     fileStoreServers.find(

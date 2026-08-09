@@ -207,7 +207,7 @@ describe('Settings', () => {
     await removeStorageProvider();
 
     expect(confirm).toHaveBeenCalledWith(
-      'Are you sure you want to remove this storage provider?',
+      'Are you sure you want to remove this folder?',
     );
     expect(screen.queryByDisplayValue('NAS Storage')).toBeNull();
     expect(
@@ -230,7 +230,7 @@ describe('Settings', () => {
     await removeStorageProvider();
 
     expect(confirm).toHaveBeenCalledWith(
-      'Are you sure you want to remove this storage provider?',
+      'Are you sure you want to remove this folder?',
     );
     expect(screen.queryByDisplayValue('NAS Storage')).toBeNull();
     expect(
@@ -255,7 +255,7 @@ describe('Settings', () => {
     await removeStorageProvider();
 
     expect(confirm).toHaveBeenCalledWith(
-      'Are you sure you want to remove this storage provider?',
+      'Are you sure you want to remove this folder?',
     );
     expectBrowserFilesDeleted(deleteDatabase);
     expectDropboxCacheDeleted(deleteDatabase);
