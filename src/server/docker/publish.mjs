@@ -308,37 +308,151 @@ function compareSemver(left, right) {
 }
 
 /**
+ * Steps to get a working Docker setup via colima instead of Docker Desktop.
+ * colima only provides the VM/daemon, so the CLI and its plugins need to be
+ * installed and wired in separately.
+ */
+const colimaSetupSteps = [
+  'brew install colima docker docker-buildx docker-compose',
+  'mkdir -p ~/.docker/cli-plugins',
+  'ln -sfn "$(brew --prefix)/opt/docker-buildx/bin/docker-buildx" ~/.docker/cli-plugins/docker-buildx',
+  'ln -sfn "$(brew --prefix)/opt/docker-compose/bin/docker-compose" ~/.docker/cli-plugins/docker-compose',
+  'colima start',
+  'docker run --privileged --rm tonistiigi/binfmt --install all  # one-time, enables multi-arch builds',
+];
+
+/**
+ * @param {{ colimaInstalled: boolean }} state
+ * @returns {string}
+ */
+function dockerCliMissingMessage({ colimaInstalled }) {
+  return [
+    'Docker CLI not found.',
+    '',
+    colimaInstalled
+      ? 'colima is installed, but the Docker CLI and plugins are not set up yet:'
+      : 'Install colima (lighter weight than Docker Desktop, no licensing):',
+    ...colimaSetupSteps.map((step) => `  ${step}`),
+    '',
+    'Or install Docker Desktop: https://www.docker.com/products/docker-desktop/',
+    'Confirm it works with: docker version',
+  ].join('\n');
+}
+
+/**
+ * @param {{ colimaInstalled: boolean, colimaRunning: boolean }} state
+ * @returns {string}
+ */
+function dockerDaemonUnreachableMessage({ colimaInstalled, colimaRunning }) {
+  if (colimaInstalled && !colimaRunning) {
+    return [
+      'Docker CLI found, but colima is not running.',
+      '',
+      'Start it:',
+      '  colima start',
+      '',
+      'Confirm it works with: docker version',
+    ].join('\n');
+  }
+
+  if (colimaInstalled && colimaRunning) {
+    return [
+      'Docker CLI found, and colima is running, but Docker is not using it.',
+      '',
+      'Point Docker at the colima context:',
+      '  docker context use colima',
+      '',
+      'Confirm it works with: docker version',
+    ].join('\n');
+  }
+
+  return [
+    'Docker CLI not found or not responding.',
+    '',
+    'If Docker Desktop is installed, make sure it is running. Otherwise,',
+    'install colima (lighter weight than Docker Desktop, no licensing):',
+    ...colimaSetupSteps.map((step) => `  ${step}`),
+    '',
+    'Confirm it works with: docker version',
+  ].join('\n');
+}
+
+/**
+ * @param {{ colimaInstalled: boolean }} state
+ * @returns {string}
+ */
+function buildxUnavailableMessage({ colimaInstalled }) {
+  return [
+    'Docker is installed, but the buildx plugin is not available.',
+    '',
+    colimaInstalled
+      ? 'Wire up the buildx plugin colima needs:'
+      : 'Docker Desktop bundles buildx by default. If you use colima instead, wire it up:',
+    '  brew install docker-buildx',
+    '  mkdir -p ~/.docker/cli-plugins',
+    '  ln -sfn "$(brew --prefix)/opt/docker-buildx/bin/docker-buildx" ~/.docker/cli-plugins/docker-buildx',
+    '',
+    'Confirm it works with: docker buildx version',
+  ].join('\n');
+}
+
+/**
+ * @param {string} command
+ * @returns {boolean}
+ */
+function commandExists(command) {
+  try {
+    run('which', [command], { capture: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * @returns {boolean}
+ */
+function isColimaRunning() {
+  try {
+    run('colima', ['status'], { capture: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Fails fast, before touching git at all, if Docker or its buildx plugin
  * aren't usable. This is checked first so a missing Docker install never
- * leaves a half-finished release commit behind.
+ * leaves a half-finished release commit behind. Tailors the recovery
+ * message to colima when it's detected, since it doesn't set itself up as
+ * fully as Docker Desktop does (separate CLI/plugin install, manual start,
+ * manual multi-arch emulator registration).
  */
 function requireDockerAvailable() {
+  const colimaInstalled = commandExists('colima');
+
+  if (!commandExists('docker')) {
+    throw new Error(dockerCliMissingMessage({ colimaInstalled }));
+  }
+
   try {
     run('docker', ['version', '--format', '{{.Client.Version}}'], {
       capture: true,
     });
   } catch {
     throw new Error(
-      [
-        'Docker CLI not found or not responding.',
-        '',
-        'Install Docker Desktop: https://www.docker.com/products/docker-desktop/',
-        'Confirm it works with: docker version',
-      ].join('\n'),
+      dockerDaemonUnreachableMessage({
+        colimaInstalled,
+        colimaRunning: colimaInstalled && isColimaRunning(),
+      }),
     );
   }
 
   try {
     run('docker', ['buildx', 'version'], { capture: true });
   } catch {
-    throw new Error(
-      [
-        'Docker is installed, but the buildx plugin is not available.',
-        '',
-        'Docker Desktop bundles buildx by default. Confirm it works with:',
-        '  docker buildx version',
-      ].join('\n'),
-    );
+    throw new Error(buildxUnavailableMessage({ colimaInstalled }));
   }
 }
 
