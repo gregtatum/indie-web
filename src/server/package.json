@@ -1,6 +1,6 @@
 {
-  "name": "indie-web-server",
-  "version": "3.0.0",
+  "name": "@tatumcreative/indie-web",
+  "version": "2.0.0",
   "main": "index.ts",
   "author": "Greg Tatum",
   "type": "module",
