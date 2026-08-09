@@ -603,26 +603,16 @@ function requireChangelogEntry(bump) {
 }
 
 /**
- * A previous run may have bumped the version and committed, then failed
- * before finishing. When that happens, HEAD sits exactly one commit ahead
- * of origin/main with a matching "Release server vX.Y.Z" message. This
- * checks for exactly that shape so a rerun can resume instead of bumping
- * the version again on top of an already-pending release.
- * @param {{ headMessage: string, expectedMessage: string, head: string, headParent: string, originMain: string }} info
+ * A version is only truly published once its tag has been pushed to
+ * origin — that's the one signal that both the git history and the Docker
+ * image push succeeded. A local "Release server vX.Y.Z" commit without a
+ * pushed tag means a previous attempt started this version and didn't
+ * finish, no matter how many other commits have since landed on top of it.
+ * @param {{ releaseCommitExists: boolean, taggedOnOrigin: boolean }} info
  * @returns {boolean}
  */
-export function isPendingReleaseCommit({
-  headMessage,
-  expectedMessage,
-  head,
-  headParent,
-  originMain,
-}) {
-  return (
-    headMessage === expectedMessage &&
-    head !== originMain &&
-    headParent === originMain
-  );
+export function isVersionPending({ releaseCommitExists, taggedOnOrigin }) {
+  return releaseCommitExists && !taggedOnOrigin;
 }
 
 /**
@@ -632,31 +622,18 @@ function findPendingRelease() {
   const currentVersion = readServerVersion();
   const tag = `v${currentVersion}`;
 
-  let head;
-  let headParent;
-  let originMain;
-  try {
-    head = run('git', ['rev-parse', 'HEAD'], { capture: true });
-    headParent = run('git', ['rev-parse', 'HEAD^'], { capture: true });
-    originMain = run('git', ['rev-parse', 'origin/main'], { capture: true });
-  } catch {
-    // No parent commit, or origin/main isn't known locally yet.
-    return null;
-  }
+  const taggedOnOrigin = Boolean(
+    run('git', ['ls-remote', '--tags', 'origin', tag], { capture: true }),
+  );
 
-  const headMessage = run('git', ['log', '-1', '--format=%s'], {
+  const commitMessages = run('git', ['log', '--format=%s'], {
     capture: true,
-  });
+  }).split('\n');
+  const releaseCommitExists = commitMessages.includes(`Release server ${tag}`);
 
-  const pending = isPendingReleaseCommit({
-    headMessage,
-    expectedMessage: `Release server ${tag}`,
-    head,
-    headParent,
-    originMain,
-  });
-
-  return pending ? { version: currentVersion, tag } : null;
+  return isVersionPending({ releaseCommitExists, taggedOnOrigin })
+    ? { version: currentVersion, tag }
+    : null;
 }
 
 /**
@@ -718,16 +695,26 @@ function syncedMainFailureMessage(head, originMain, bump, currentVersion) {
  * @param {boolean} resuming
  */
 function requireSyncedMain(bump, currentVersion, resuming) {
-  if (resuming) {
-    // findPendingRelease already confirmed HEAD is exactly one release
-    // commit ahead of origin/main, which is expected while resuming.
-    return;
-  }
-
   const head = run('git', ['rev-parse', 'HEAD'], { capture: true });
   const originMain = run('git', ['rev-parse', 'origin/main'], {
     capture: true,
   });
+
+  if (resuming) {
+    // A pending release may have other local commits stacked on top of it
+    // by now, so an exact match isn't expected. Just make sure origin/main
+    // hasn't moved somewhere our local history doesn't contain.
+    try {
+      run('git', ['merge-base', '--is-ancestor', 'origin/main', 'HEAD'], {
+        capture: true,
+      });
+    } catch {
+      throw new Error(
+        syncedMainFailureMessage(head, originMain, bump, currentVersion),
+      );
+    }
+    return;
+  }
 
   if (head !== originMain) {
     throw new Error(

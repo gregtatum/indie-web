@@ -4,7 +4,7 @@ import {
   bumpVersion,
   dockerTags,
   hasUnreleasedChangelogEntry,
-  isPendingReleaseCommit,
+  isVersionPending,
   parsePublishArgs,
 } from './publish.mjs';
 
@@ -60,54 +60,30 @@ describe('docker publish helpers', () => {
     ]);
   });
 
-  it('detects a pending release commit sitting on top of origin/main', () => {
+  it('is pending when the release commit exists but the tag never reached origin', () => {
     assert.equal(
-      isPendingReleaseCommit({
-        headMessage: 'Release server v3.0.0',
-        expectedMessage: 'Release server v3.0.0',
-        head: 'aaa',
-        headParent: 'bbb',
-        originMain: 'bbb',
-      }),
+      isVersionPending({ releaseCommitExists: true, taggedOnOrigin: false }),
       true,
     );
   });
 
-  it('is not pending when the commit message does not match', () => {
+  it('is not pending once the tag is fully pushed, even with a release commit', () => {
     assert.equal(
-      isPendingReleaseCommit({
-        headMessage: 'Some other commit',
-        expectedMessage: 'Release server v3.0.0',
-        head: 'aaa',
-        headParent: 'bbb',
-        originMain: 'bbb',
-      }),
+      isVersionPending({ releaseCommitExists: true, taggedOnOrigin: true }),
       false,
     );
   });
 
-  it('is not pending once HEAD already matches origin/main', () => {
+  it('is not pending when no release commit has been made yet', () => {
     assert.equal(
-      isPendingReleaseCommit({
-        headMessage: 'Release server v3.0.0',
-        expectedMessage: 'Release server v3.0.0',
-        head: 'bbb',
-        headParent: 'ccc',
-        originMain: 'bbb',
-      }),
+      isVersionPending({ releaseCommitExists: false, taggedOnOrigin: false }),
       false,
     );
   });
 
-  it('is not pending when unrelated commits sit between HEAD and origin/main', () => {
+  it('is not pending when the tag exists without a matching local commit', () => {
     assert.equal(
-      isPendingReleaseCommit({
-        headMessage: 'Release server v3.0.0',
-        expectedMessage: 'Release server v3.0.0',
-        head: 'aaa',
-        headParent: 'ccc',
-        originMain: 'bbb',
-      }),
+      isVersionPending({ releaseCommitExists: false, taggedOnOrigin: true }),
       false,
     );
   });
