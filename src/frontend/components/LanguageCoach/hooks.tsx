@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Hunspell, loadModule } from 'hunspell-asm';
+import { type Hunspell } from 'hunspell-asm';
 import { $$, A, Hooks, T } from 'frontend';
 import { computeStems } from 'frontend/logic/language-tools';
 import { isElementInViewport } from 'frontend/utils';
@@ -11,8 +11,11 @@ export function useHunspell() {
   React.useEffect(() => {
     // TODO - Implement proper async behavior here and error handling.
     (async () => {
-      const affResponse = await fetch(`dictionaries/${languageCode}/index.aff`);
-      const dicResponse = await fetch(`dictionaries/${languageCode}/index.dic`);
+      const [{ loadModule }, affResponse, dicResponse] = await Promise.all([
+        import(/* webpackChunkName: "hunspell" */ 'hunspell-asm'),
+        fetch(`dictionaries/${languageCode}/index.aff`),
+        fetch(`dictionaries/${languageCode}/index.dic`),
+      ]);
       const affBuffer = new Uint8Array(await affResponse.arrayBuffer());
       const dicBuffer = new Uint8Array(await dicResponse.arrayBuffer());
 
