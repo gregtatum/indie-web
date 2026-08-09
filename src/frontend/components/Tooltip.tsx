@@ -49,6 +49,7 @@ export function Tooltip(props: TooltipProps) {
   const [position, setPosition] = React.useState<null | {
     top: number;
     left: number;
+    arrowLeft: number;
     flipped: boolean;
   }>(null);
 
@@ -85,7 +86,17 @@ export function Tooltip(props: TooltipProps) {
       top = anchorRect.bottom + 10;
     }
 
-    setPosition({ top, left, flipped });
+    // Point the arrow at the anchor's center, clamped so it stays within the
+    // bubble's rounded corners even when the bubble itself got clamped to the
+    // edge of the screen.
+    const arrowMargin = 10;
+    let arrowLeft = anchorRect.left + anchorRect.width / 2 - left;
+    arrowLeft = Math.min(
+      Math.max(arrowLeft, arrowMargin),
+      bubbleRect.width - arrowMargin,
+    );
+
+    setPosition({ top, left, arrowLeft, flipped });
   }, []);
 
   React.useLayoutEffect(() => {
@@ -123,7 +134,13 @@ export function Tooltip(props: TooltipProps) {
         className={classNames.join(' ')}
         role="tooltip"
         ref={bubbleRef}
-        style={{ top: position?.top ?? 0, left: position?.left ?? 0 }}
+        style={
+          {
+            top: position?.top ?? 0,
+            left: position?.left ?? 0,
+            '--arrow-left': `${position?.arrowLeft ?? 0}px`,
+          } as React.CSSProperties
+        }
       >
         {props.text}
       </span>

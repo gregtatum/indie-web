@@ -225,6 +225,103 @@ describe('Tooltip flipping to avoid occlusion in a scroll panel', () => {
   });
 });
 
+describe('Tooltip arrow tracks the anchor horizontally', () => {
+  it('points at the anchor center even when the bubble is clamped off it near the left edge', () => {
+    const { link } = renderTooltip();
+    jest
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.classList.contains('tooltip')) {
+          // Anchor center is at 60, close to the left edge of a narrow window.
+          return makeDOMRect({
+            top: 200,
+            bottom: 220,
+            left: 50,
+            right: 70,
+            width: 20,
+            height: 20,
+          });
+        }
+        if (this.getAttribute('role') === 'tooltip') {
+          // Much wider than the anchor, so centering it on the anchor would
+          // push its left edge off-screen and force the bubble to clamp.
+          return makeDOMRect({ width: 200, height: 40 });
+        }
+        return makeDOMRect({
+          top: 0,
+          left: 0,
+          right: 320,
+          bottom: 600,
+          width: 320,
+          height: 600,
+        });
+      });
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 320,
+    });
+
+    fireEvent.mouseOver(link);
+
+    const bubble = screen.getByRole('tooltip');
+    const bubbleLeft = parseFloat(bubble.style.left);
+    const arrowLeft = parseFloat(bubble.style.getPropertyValue('--arrow-left'));
+    const anchorCenter = 60;
+
+    // Confirm the bubble actually got clamped away from naive centering
+    // (otherwise this test wouldn't be exercising the bug at all).
+    expect(bubbleLeft).not.toBeCloseTo(anchorCenter - 100, 0);
+    // The arrow's absolute screen position (bubble's left edge + its offset
+    // into the bubble) should still land on the anchor's real center, even
+    // though the bubble box itself was pushed away from it.
+    expect(bubbleLeft + arrowLeft).toBeCloseTo(anchorCenter, 0);
+  });
+
+  it('points at the anchor center even when the bubble is clamped off it near the right edge', () => {
+    const { link } = renderTooltip();
+    jest
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.classList.contains('tooltip')) {
+          // Anchor center is at 260, close to the right edge of a narrow window.
+          return makeDOMRect({
+            top: 200,
+            bottom: 220,
+            left: 250,
+            right: 270,
+            width: 20,
+            height: 20,
+          });
+        }
+        if (this.getAttribute('role') === 'tooltip') {
+          return makeDOMRect({ width: 200, height: 40 });
+        }
+        return makeDOMRect({
+          top: 0,
+          left: 0,
+          right: 320,
+          bottom: 600,
+          width: 320,
+          height: 600,
+        });
+      });
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 320,
+    });
+
+    fireEvent.mouseOver(link);
+
+    const bubble = screen.getByRole('tooltip');
+    const bubbleLeft = parseFloat(bubble.style.left);
+    const arrowLeft = parseFloat(bubble.style.getPropertyValue('--arrow-left'));
+    const anchorCenter = 260;
+
+    expect(bubbleLeft).not.toBeCloseTo(anchorCenter - 100, 0);
+    expect(bubbleLeft + arrowLeft).toBeCloseTo(anchorCenter, 0);
+  });
+});
+
 describe('Tooltip clip boundary without a scroll panel', () => {
   it('flips against the real viewport top, not a drifted document.body/documentElement rect', () => {
     // document.body/documentElement's rect can drift far from 0 while the page is
