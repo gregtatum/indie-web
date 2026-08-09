@@ -36,8 +36,8 @@ const config = {
   },
   output: {
     path: path.join(rootDir, 'dist'),
-    filename: '[fullhash].bundle.js',
-    chunkFilename: '[id].[fullhash].bundle.js',
+    filename: '[name].[contenthash].bundle.js',
+    chunkFilename: '[name].[id].[contenthash].bundle.js',
     publicPath: '/',
   },
   performance: { hints: false },
