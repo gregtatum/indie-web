@@ -20,6 +20,14 @@ and this project uses [Semantic Versioning](https://semver.org/).
   where it left off instead of bumping the version again.
 - Colored, easier-to-read `--dry-run` output.
 
+### Fixed
+
+- A music library scan no longer crashes the whole server when it hits a
+  corrupt or malformed audio file. `music-metadata`/`strtok3` can throw from
+  a detached background read that escapes the per-file error handling; a
+  crash guard installed only for the duration of a scan now catches this
+  instead of taking down every connected client.
+
 ## [2.0.0] - 2026-06-12
 
 ### Fixed

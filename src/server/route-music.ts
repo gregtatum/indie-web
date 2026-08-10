@@ -1,6 +1,7 @@
 import {
   ApiRoute,
   ClientError,
+  colors,
   MountPath,
   NotFoundError,
   RequestConflict,
@@ -96,9 +97,11 @@ export function musicRoute(mountPath: MountPath) {
       throw new RequestConflict('A scan is already in progress.');
     }
     scanInProgress = true;
+    const uninstallScanCrashGuard = installScanCrashGuard();
     try {
       return await performScan(mountPath);
     } finally {
+      uninstallScanCrashGuard();
       scanInProgress = false;
     }
   });
@@ -124,6 +127,7 @@ export function musicRoute(mountPath: MountPath) {
     }
 
     scanInProgress = true;
+    const uninstallScanCrashGuard = installScanCrashGuard();
     const sendProgress = throttle(
       (scanCount: number, path: string) =>
         sendData({ type: 'progress', scanCount, path }),
@@ -144,6 +148,7 @@ export function musicRoute(mountPath: MountPath) {
       sendData({ type: 'error', message: err?.message ?? 'Scan failed.' });
       response.end();
     } finally {
+      uninstallScanCrashGuard();
       scanInProgress = false;
     }
   });
@@ -380,6 +385,32 @@ export function musicRoute(mountPath: MountPath) {
 interface ScanCallbacks {
   onTotalTracksCounted: (count: number) => void;
   onTrackScanned: (scanCount: number, path: string) => void;
+}
+
+/**
+ * Corrupt or malformed audio files can trigger bugs in music-metadata's
+ * underlying parsers (e.g. strtok3) that throw from a detached background
+ * read rather than the awaited parseFile() call, escaping the per-file
+ * try/catch below entirely and crashing the whole process. Install a
+ * temporary safety net only for the duration of a scan so a bad file can't
+ * take down the server, while leaving crashes elsewhere in the app
+ * untouched — those should still fail loudly.
+ * Returns a function that uninstalls the guard; always call it when the
+ * scan finishes (success, error, or otherwise).
+ */
+function installScanCrashGuard(): () => void {
+  function onCrash(error: unknown) {
+    console.error(
+      `${colors.FgRed}[scan-guard]${colors.Reset} Suppressed a crash during a music scan (likely a corrupt/malformed audio file):`,
+      error,
+    );
+  }
+  process.on('uncaughtException', onCrash);
+  process.on('unhandledRejection', onCrash);
+  return () => {
+    process.off('uncaughtException', onCrash);
+    process.off('unhandledRejection', onCrash);
+  };
 }
 
 /**
