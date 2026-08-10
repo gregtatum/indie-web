@@ -18,6 +18,8 @@ Setup has two parts: run a small server on the computer or NAS where your files 
 
 Docker is the recommended way to run the server, especially on a NAS or an always-on computer. It keeps the server isolated from the rest of the system and is generally the safer option.
 
+Some NAS devices (for example, Synology's [Container Manager](https://kb.synology.com/en-us/DSM/help/ContainerManager/docker_desc)) support Docker directly through their admin UI, so you can run the same image there without a separate machine.
+
 Create a `docker-compose.yml`, or add this service to an existing one. Give the container a name that matches the folder or workspace you’ll use in the app, and change `./mount` to the folder you want to connect.
 
 ```yaml
@@ -57,6 +59,8 @@ Once the server is running, go to [Connect a Folder](http://localhost:2345/conne
 
 ## What's next
 
-See the [File Server reference](/docs/file-server.html) for running the server with Node.js instead of Docker, connecting multiple folders, accessing your files remotely, and how access is secured.
+- [Connect Multiple Folders](/docs/connect-multiple-folders.html) — run more than one server instance to connect additional folders.
+- [Run Directly with Node.js](/docs/run-with-nodejs.html) — run the server without Docker.
+- [Remote Access](/docs/remote-access.html) — connect from other devices, and how access is secured.
 
 [Connect local or network storage →](/connect-folder)
