@@ -5,7 +5,7 @@ order: 1
 
 # Docs
 
-Floppy Disk is a personal workspace built with indie web principles. Your creative documents and personal knowledge live on your own storage, not on someone else’s platform. Bring your writing, research, art, notes, and other creative work together in one place, accessible wherever you are.
+Floppy Disk is your personal workspace built with indie web principles. Your creative documents and personal knowledge live on your own storage, not on someone else’s platform. Bring your writing, research, art, notes, and other creative work together in one place, accessible wherever you are.
 
 ## Indie web principles
 
