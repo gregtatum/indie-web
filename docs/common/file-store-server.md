@@ -5,40 +5,42 @@ order: 4
 
 # Local & Network Storage
 
-Local and network storage lets you use folders from your computer, a home server, or a network storage device (NAS) as a workspace. It’s a good choice when you already keep your files on your own hardware or want to work directly with existing folders.
+Local and network storage lets you use folders from your computer, home server, or network storage device (NAS) as a workspace. It’s a good choice if you already keep your files on your own hardware or want to work directly with existing folders.
 
 Only the folders you choose are accessible, and you can connect multiple folders as separate workspaces.
 
-Your files remain ordinary files on your storage, so you can open, edit, move, or back them up with other tools as usual.
+Your files remain ordinary files, so you can open, edit, move, or back them up with other tools as usual.
 
-Getting this running has two parts: start a small server next to your files, then connect to it from the app.
+Setup has two parts: run a small server on the computer or NAS where your files are stored, then connect to it from the app.
 
-## 1: Start the server
 
-Pick whichever fits the machine you're running it on.
+## Start the server
 
-### Option A: Docker (recommended for a NAS or always-on machine)
+Docker is the recommended way to run the server, especially on a NAS or an always-on computer. It keeps the server isolated from the rest of the system and is generally the safer option.
 
-Create a `docker-compose.yml` next to the folder you want to serve, or add this service to an existing one:
+You can also run the server directly with Node.js. This is simpler if you already use Node.js or don't want to set up Docker, but the server will have the same access to your computer as your user account.
+
+### Docker
+
+Create a `docker-compose.yml`, or add this service to an existing one. Give the container a name that matches the folder or workspace you’ll use in the app, and change `./mount` to the folder you want to connect.
 
 ```yaml
 services:
   floppydisk:
-    # Use the latest published Docker image.
     image: tatumcreative/floppydisk.link:latest
-    # The name of the running container.
     container_name: floppydisk
-    # Automatically restart the container unless it is explicitly stopped.
     restart: unless-stopped
+
     ports:
-      # Expose the container's internal port 6543 on the host machine.
-      # Change the number on the left if you need to use a different external port.
+      # Change the first number if you want it on a different port.
       - "6543:6543"
+
     volumes:
-      # Mount a local folder into the container at /app/mount.
-      # Replace "./mount" with the path to the folder you want to serve.
-      - ./mount:/app/mount
+      # Change "/path/to/documents" to the folder you want to connect.
+      - /path/to/documents:/app/mount
 ```
+
+Then add each folder separately in the app, using the matching port.
 
 Start it with:
 
@@ -52,32 +54,74 @@ Stop it with:
 docker compose down
 ```
 
-Some NAS devices (for example, Synology) support Docker directly through their admin UI, so you can run the same image there without a separate machine.
+Some NAS devices (for example, Synology's [Container Manager](https://kb.synology.com/en-us/DSM/help/ContainerManager/docker_desc)) support Docker directly through their admin UI, so you can run the same image there without a separate machine.
 
-### Option B: Run from source with Node.js
+For additional folders, add another service with its own name, port, and folder:
 
-```shell
-git clone git@github.com:gregtatum/indie-web.git
-cd indie-web/src/server
-npm install
-npm start
+```yaml
+services:
+  floppydisk-docs:
+    image: tatumcreative/floppydisk.link:latest
+    container_name: floppydisk-docs
+    restart: unless-stopped
+    ports:
+      - "6543:6543"
+    volumes:
+      - /path/to/documents:/app/mount
+
+  floppydisk-music:
+    image: tatumcreative/floppydisk.link:latest
+    container_name: floppydisk-music
+    restart: unless-stopped
+    ports:
+      - "6544:6543"
+    volumes:
+      - /path/to/music:/app/mount
 ```
 
-The server listens on port `6543` by default and serves the repo's `mount` folder. Set the `PORT` or `MOUNT_PATH` environment variables to change either.
+### Node.js
 
-## 2: Connect the folder
+Clone the project and install the server:
 
-Once the server is running, go to [Connect a Folder](/connect-folder) and fill in:
+```shell
+git clone https://github.com/gregtatum/indie-web.git
+cd indie-web/src/server
+npm install
+```
 
-- **Name** — any label to identify this folder in the app.
-- **Server Address** — where the server is reachable, for example `http://localhost:6543` on the same machine, or `http://<host-ip>:6543` for a NAS or another machine on your network.
+Then start the server with the folder you want to connect:
+
+```shell
+MOUNT_PATH=/path/to/folder npm start
+```
+
+The server uses port `6543` by default. To use a different port, set `PORT` when starting it:
+
+```shell
+PORT=6544 MOUNT_PATH=/path/to/folder npm start
+```
+
+
+## Connect the folder
+
+Once the server is running, go to [Connect a Folder](http://localhost:2345/connect-folder) and enter:
+
+- **Name** — a name for the folder, such as `Documents` or `Music`.
+- **Server Address** — the address of the computer or NAS running the server. Use <span style='white-space: nowrap'>`http://localhost:6543`</span> if it’s running on this computer, or an address like <span style='white-space: nowrap'>`http://servername.local:6543`</span> if it’s running on a NAS or another computer on your network.
+
+
 
 ## Multiple folders
 
-Each server instance serves a single mounted folder. To connect more than one folder (for example, a separate music library), run another server instance on a different port and add it in the app as its own connection, pointing at that port.
+Each server connects a single folder. To use another folder, start another server for it using a different port, then add that folder as a separate connection in the app.
 
-## Security
 
-By default, access to the server is controlled only by network reachability — anyone who can reach the address can use it. Avoid exposing it directly to the public internet. To reach it securely from other devices, consider tunneling it through a private network such as [Tailscale](https://tailscale.com/kb/1282/docker).
+## Accessing your files on the go
+
+To use your workspace from other devices, such as your phone or laptop, you can connect them through a private network. This also lets you access your files when you’re away from home.
+
+A service such as [Tailscale](https://tailscale.com/kb/1282/docker) can provide this private connection. Once connected, use your server’s private network address as the **Server Address** in the app.
+
+Avoid exposing the server directly to the public internet. The server does not provide its own authentication, so anyone who can reach its address can access the connected folder.
 
 [Connect local or network storage →](/connect-folder)
