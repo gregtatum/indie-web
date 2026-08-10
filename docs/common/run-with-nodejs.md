@@ -3,9 +3,11 @@ parent: file-store-server
 order: 3
 ---
 
-# Run Directly with Node.js
+# Run with Node.js
 
-You can also run the server directly with Node.js. This is simpler if you already use Node.js or don't want to set up Docker, but the server will have the same access to your computer as your user account.
+You can run the server directly with Node.js instead of Docker. This is a good option if you already use Node.js or don't want to set up Docker.
+
+When run this way, the server has the same access to your computer as your user account. Only run it on a computer you trust.
 
 Clone the project and install the server:
 
@@ -15,18 +17,16 @@ cd indie-web/src/server
 npm install
 ```
 
-Then start the server with the folder you want to connect:
+Start the server with the folder you want to connect:
 
 ```shell
 MOUNT_PATH=/path/to/folder npm start
 ```
 
-The server uses port `6543` by default. To use a different port, set `PORT` when starting it:
+The server uses port `6543` by default. To use a different port:
 
 ```shell
 PORT=6544 MOUNT_PATH=/path/to/folder npm start
 ```
 
 To connect more than one folder, see [Connect Multiple Folders](/docs/connect-multiple-folders.html).
-
-[Local & Network Storage ←](/docs/file-store-server.html)

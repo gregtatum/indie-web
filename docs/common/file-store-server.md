@@ -7,7 +7,7 @@ order: 4
 
 Local and network storage lets you use folders from your computer, home server, or network storage device (NAS) as a workspace. It’s a good choice if you already keep your files on your own hardware or want to work directly with existing folders.
 
-Only the folders you choose are accessible, and you can connect multiple folders as separate workspaces.
+You choose which folders to make available, and you can connect multiple folders as separate workspaces.
 
 Your files remain ordinary files, so you can open, edit, move, or back them up with other tools as usual.
 
@@ -20,13 +20,13 @@ Docker is the recommended way to run the server, especially on a NAS or an alway
 
 Some NAS devices (for example, Synology's [Container Manager](https://kb.synology.com/en-us/DSM/help/ContainerManager/docker_desc)) support Docker directly through their admin UI, so you can run the same image there without a separate machine.
 
-Create a `docker-compose.yml`, or add this service to an existing one. Give the container a name that matches the folder or workspace you’ll use in the app, and change `./mount` to the folder you want to connect.
+Create a `docker-compose.yml`, or add this service to an existing one. Give the container a name that matches the folder or workspace you’ll use in the app, and change `/path/to/documents` to the folder you want to connect.
 
 ```yaml
 services:
   floppydisk:
     image: tatumcreative/floppydisk.link:latest
-    container_name: floppydisk
+    container_name: floppydisk-docs
     restart: unless-stopped
 
     ports:
@@ -59,8 +59,6 @@ Once the server is running, go to [Connect a Folder](http://localhost:2345/conne
 
 ## What's next
 
-- [Connect Multiple Folders](/docs/connect-multiple-folders.html) — run more than one server instance to connect additional folders.
-- [Run Directly with Node.js](/docs/run-with-nodejs.html) — run the server without Docker.
-- [Remote Access](/docs/remote-access.html) — connect from other devices, and how access is secured.
-
-[Connect local or network storage →](/connect-folder)
+* [Connect Multiple Folders](/docs/connect-multiple-folders.html) — connect additional folders as separate workspaces.
+* [Run with Node.js](/docs/run-with-nodejs.html) — run the server without Docker.
+* [Connect from Other Devices](/docs/remote-access.html) — use your workspace from your phone, laptop, or away from home.
