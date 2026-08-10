@@ -1,6 +1,6 @@
 ---
 section: Working with files
-order: 2
+order: 3
 ---
 
 # ChordPro Files
