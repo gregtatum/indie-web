@@ -128,6 +128,7 @@ main {
 .docsSidebar h2 {
   margin-top: 0;
   font-size: 1rem;
+  border: none;
 }
 
 .docsSidebar ul {
@@ -137,7 +138,7 @@ main {
 }
 
 .docsSidebar li {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.6rem;
 }
 
 .docsSidebar a {
@@ -147,6 +148,58 @@ main {
 
 .docsSidebar a:hover {
   color: var(--primary-color-hover);
+}
+
+.docsSidebar > ul {
+  border-left: 1px solid var(--light-border);
+  padding-left: 0.75rem;
+}
+
+.docsSidebarItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.docsSidebarCaretSlot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.docsSidebarToggle {
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.docsSidebarCaret {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: var(--text-border);
+  transition: transform 120ms ease;
+}
+
+.docsSidebarToggle[aria-expanded='true'] .docsSidebarCaret {
+  transform: rotate(90deg);
+}
+
+.docsSidebar .docsSidebarSubtree {
+  margin: 0.4rem 0 0 calc(1rem + 4px);
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--light-border);
 }
 
 h1 {

@@ -251,11 +251,15 @@ async function buildSidebarEntries() {
         titleFromTokens(tokens, path.basename(filePath, '.md'));
       const order = parseNumber(frontmatter.order) ?? 1000;
       const section = frontmatter.section || 'Docs';
+      const slug = path.basename(filePath, '.md');
+      const parent = frontmatter.parent || null;
       entries.push({
         title,
         outputPath,
         order,
         section,
+        slug,
+        parent,
       });
     }
   }
@@ -281,9 +285,56 @@ async function buildSidebarEntries() {
   return uniqueEntries;
 }
 
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+function sortEntries(a, b) {
+  if (a.order !== b.order) {
+    return a.order - b.order;
+  }
+  return a.title.localeCompare(b.title);
+}
+
 function renderSidebarHtml(entries) {
-  const sections = new Map();
+  const topLevelEntries = entries.filter((entry) => !entry.parent);
+  const childrenByParentSlug = new Map();
   for (const entry of entries) {
+    if (!entry.parent) {
+      continue;
+    }
+    const siblings = childrenByParentSlug.get(entry.parent) ?? [];
+    siblings.push(entry);
+    childrenByParentSlug.set(entry.parent, siblings);
+  }
+
+  function renderEntry(entry) {
+    const link = `<a href="/docs/${entry.outputPath}">${escapeHtml(entry.title)}</a>`;
+    const children = (childrenByParentSlug.get(entry.slug) ?? []).sort(
+      sortEntries,
+    );
+    if (children.length === 0) {
+      return `<li><span class="docsSidebarItem"><span class="docsSidebarCaretSlot"></span>${link}</span></li>`;
+    }
+    const targetId = `sidebar-${slugify(entry.slug)}-children`;
+    const childItems = children
+      .map((child) => {
+        return `<li><a href="/docs/${child.outputPath}">${escapeHtml(child.title)}</a></li>`;
+      })
+      .join('');
+    return (
+      `<li><span class="docsSidebarItem"><span class="docsSidebarCaretSlot">` +
+      `<button type="button" class="docsSidebarToggle" aria-expanded="false" aria-controls="${targetId}" aria-label="Toggle sub-pages">` +
+      `<span class="docsSidebarCaret" aria-hidden="true">&gt;</span></button></span>${link}</span>` +
+      `<ul class="docsSidebarSubtree" id="${targetId}" hidden>${childItems}</ul></li>`
+    );
+  }
+
+  const sections = new Map();
+  for (const entry of topLevelEntries) {
     const sectionName = entry.section || 'Docs';
     const existing = sections.get(sectionName);
     if (existing) {
@@ -307,17 +358,8 @@ function renderSidebarHtml(entries) {
 
   return sortedSections
     .map((section) => {
-      const listItems = section.entries
-        .sort((a, b) => {
-          if (a.order !== b.order) {
-            return a.order - b.order;
-          }
-          return a.title.localeCompare(b.title);
-        })
-        .map((entry) => {
-          return `<li><a href="/docs/${entry.outputPath}">${escapeHtml(entry.title)}</a></li>`;
-        })
-        .join('');
+      const sortedEntries = section.entries.sort(sortEntries);
+      const listItems = sortedEntries.map(renderEntry).join('');
       return `<h2>${escapeHtml(section.name)}</h2><ul>${listItems}</ul>`;
     })
     .join('');

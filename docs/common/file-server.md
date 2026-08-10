@@ -1,6 +1,6 @@
 ---
-section: Reference
-order: 10
+parent: file-store-server
+order: 1
 ---
 
 # File Server
