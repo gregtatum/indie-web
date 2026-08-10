@@ -67,7 +67,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
           eventSource.close();
           setScanPhase('done');
           setScanProgress(null);
-          setStatusMessage(`Found ${data.tracks.length} tracks.`);
+          setStatusMessage(`Found ${data.tracks.length.toLocaleString()} tracks.`);
           dispatch(A.setMusicTracks(data.tracks, false));
           setCompletedScanCount((count) => count + 1);
           break;
@@ -93,7 +93,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   let displayMessage: string | null = null;
   if (scanPhase === 'scanning') {
     if (scanProgress?.total !== null && scanProgress?.total !== undefined) {
-      displayMessage = `Scanning… ${scanProgress.scanCount} / ${scanProgress.total} files`;
+      displayMessage = `Scanning… ${scanProgress.scanCount.toLocaleString()} / ${scanProgress.total.toLocaleString()} files`;
     } else {
       displayMessage = 'Scanning…';
     }

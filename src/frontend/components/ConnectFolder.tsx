@@ -281,6 +281,10 @@ function validateFileStoreServer(
     }
   }
 
+  // Strip trailing slashes so that URLs built by concatenation (e.g.
+  // `${server.url}/music/music-index`) don't end up with a double slash.
+  url = url.replace(/\/+$/, '');
+
   if (name.length > 200) {
     setError('The server name should be less than 200 characters.');
     return null;
