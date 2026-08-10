@@ -1,15 +1,16 @@
-FROM node:24
-
-WORKDIR /app
-
 # The build.context is assumed to be the repo's root directory.
-COPY src/server/package.json ./src/server/package.json
-COPY src/server/package-lock.json ./src/server/package-lock.json
+
+FROM node:24-alpine AS deps
 
 WORKDIR /app/src/server
-RUN npm ci
+COPY src/server/package.json ./package.json
+COPY src/server/package-lock.json ./package-lock.json
+RUN npm ci --omit=dev
+
+FROM node:24-alpine
 
 WORKDIR /app
+COPY --from=deps /app/src/server/node_modules ./src/server/node_modules
 COPY src/server ./src/server
 COPY src/shared ./src/shared
 

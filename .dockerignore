@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.git
+dist
+coverage
+mount
+artifacts
+stats.json
+*.log
+.DS_Store

@@ -136,6 +136,12 @@ tasks:
       - docker compose build
       - docker compose up
 
+  docker-image-size:
+    desc: Build the production server Docker image and report its final size.
+    cmds:
+      - docker build --file src/server/docker/Dockerfile.prod --tag indie-web-server-prod .
+      - docker images indie-web-server-prod
+
   docker-publish:
     desc: "Publish the server Docker image. See src/server/README.md or run: `task docker-publish -- --help`"
     cmds:
