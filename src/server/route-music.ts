@@ -116,8 +116,13 @@ export function musicRoute(mountPath: MountPath) {
     response.setHeader('Connection', 'keep-alive');
     response.flushHeaders();
 
+    // Guard against sending throttled updates after the scan finishes. This is a
+    // separate local declaration from scanInProgress to guard against racy behavior.
+    let canSendData = true;
     function sendData(event: Record<string, unknown>) {
-      response.write('data: ' + JSON.stringify(event) + '\n\n');
+      if (canSendData) {
+        response.write('data: ' + JSON.stringify(event) + '\n\n');
+      }
     }
 
     if (scanInProgress) {
@@ -150,6 +155,7 @@ export function musicRoute(mountPath: MountPath) {
     } finally {
       uninstallScanCrashGuard();
       scanInProgress = false;
+      canSendData = false;
     }
   });
 
