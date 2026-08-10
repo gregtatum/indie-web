@@ -10,6 +10,40 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-08-10
+
+### Added
+
+- `task docker-image-size` to build the production Docker image and report
+  its size, for measuring the impact of image-size changes.
+
+### Changed
+
+- Shrunk the production Docker image (~1.7GB to ~255MB) by switching to a
+  multi-stage `node:24-alpine` build that installs only production
+  dependencies (`npm ci --omit=dev`), instead of the full `node:24` image
+  with its build toolchain.
+- Added a root `.dockerignore` so local build artifacts like `node_modules`
+  no longer leak into the image alongside the ones installed by `npm ci`.
+
+### Fixed
+
+- A throttled `/music-index/scan` progress stream could still write an event
+  to the response after the scan had already finished and the response
+  ended; the stream now stops sending once the scan is done.
+
+## [3.4.0] - 2026-08-09
+
+### Fixed
+
+- A music library scan no longer crashes the whole server when it hits a
+  corrupt or malformed audio file. `music-metadata`/`strtok3` can throw from
+  a detached background read that escapes the per-file error handling; a
+  crash guard installed only for the duration of a scan now catches this
+  instead of taking down every connected client.
+
+## [3.0.0] - 2026-08-09
+
 ### Added
 
 - Multi-platform Docker builds (`linux/amd64`, `linux/arm64`) via `docker buildx`.
@@ -19,14 +53,6 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - A resumable publish flow: a failed release can be safely rerun and picks up
   where it left off instead of bumping the version again.
 - Colored, easier-to-read `--dry-run` output.
-
-### Fixed
-
-- A music library scan no longer crashes the whole server when it hits a
-  corrupt or malformed audio file. `music-metadata`/`strtok3` can throw from
-  a detached background read that escapes the per-file error handling; a
-  crash guard installed only for the duration of a scan now catches this
-  instead of taking down every connected client.
 
 ## [2.0.0] - 2026-06-12
 
@@ -47,7 +73,10 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 - Initial Docker support for running the server in a container.
 
-[unreleased]: https://github.com/gregtatum/indie-web/compare/v2.0.0...HEAD
+[unreleased]: https://github.com/gregtatum/indie-web/compare/v3.5.0...HEAD
+[3.5.0]: https://github.com/gregtatum/indie-web/compare/v3.4.0...v3.5.0
+[3.4.0]: https://github.com/gregtatum/indie-web/compare/v3.0.0...v3.4.0
+[3.0.0]: https://github.com/gregtatum/indie-web/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/gregtatum/indie-web/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/gregtatum/indie-web/compare/v0.0.1...v1.0.0
 [0.0.1]: https://github.com/gregtatum/indie-web/releases/tag/v0.0.1
