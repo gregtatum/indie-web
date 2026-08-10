@@ -10,6 +10,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-08-10
+
 ### Added
 
 - `task docker-image-size` to build the production Docker image and report
@@ -72,6 +74,7 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Initial Docker support for running the server in a container.
 
 [unreleased]: https://github.com/gregtatum/indie-web/compare/v3.5.0...HEAD
+[3.5.0]: https://github.com/gregtatum/indie-web/compare/v3.4.0...v3.5.0
 [3.5.0]: https://github.com/gregtatum/indie-web/compare/v3.4.0...v3.5.0
 [3.4.0]: https://github.com/gregtatum/indie-web/compare/v3.0.0...v3.4.0
 [3.0.0]: https://github.com/gregtatum/indie-web/compare/v2.0.0...v3.0.0
