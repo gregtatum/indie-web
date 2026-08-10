@@ -4,6 +4,7 @@ import console from 'node:console';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
+import { createInterface } from 'node:readline/promises';
 
 const image = 'tatumcreative/floppydisk.link';
 const platforms = 'linux/amd64,linux/arm64';
@@ -236,10 +237,38 @@ function printCommand(command, args) {
 }
 
 /**
- * Multi-platform images can only be built by a `docker-container` (or
- * remote) buildx driver, not the classic `docker` driver. Create a
- * dedicated builder on demand so this doesn't depend on whatever the
- * default builder happens to be on the machine running the release.
+ * @param {string} ref
+ * @returns {string}
+ */
+function readCommitSubject(ref) {
+  try {
+    return run('git', ['log', '-1', '--format=%s', ref], { capture: true });
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * @param {string} question
+ * @returns {Promise<boolean>}
+ */
+async function promptYesNo(question) {
+  if (!process.stdin.isTTY) {
+    return false;
+  }
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await rl.question(`${question} [Y/n] `);
+    const normalized = answer.trim().toLowerCase();
+    return normalized === '' || normalized === 'y' || normalized === 'yes';
+  } finally {
+    rl.close();
+  }
+}
+
+/**
+ * @returns {void}
  */
 function ensureBuildxBuilder() {
   try {
@@ -284,9 +313,6 @@ function readServerVersion() {
 }
 
 /**
- * Checks whether the "## [Unreleased]" section of a Keep a Changelog style
- * CHANGELOG.md has at least one bullet under it, so a release always ships
- * with a written-down reason.
  * @param {string} changelog
  * @returns {boolean}
  */
@@ -314,11 +340,6 @@ export function hasUnreleasedChangelogEntry(changelog) {
 }
 
 /**
- * Moves the body of the "## [Unreleased]" section into a new dated version
- * section right below it, leaving an empty "## [Unreleased]" header behind
- * so the next release has somewhere to write its own notes. Also inserts a
- * matching compare-link in the footer and repoints the "[unreleased]" link
- * at the new version.
  * @param {string} changelog
  * @param {{ version: string, date: string }} release
  * @returns {string}
@@ -720,88 +741,125 @@ function findPendingRelease() {
 }
 
 /**
- * @param {string} head
- * @param {string} originMain
- * @param {VersionBump} bump
- * @param {string} currentVersion
- * @returns {string}
- */
-function syncedMainFailureMessage(head, originMain, bump, currentVersion) {
-  const originVersion = readServerVersionFromGitRef('origin/main');
-  const originVersionComparison = originVersion
-    ? compareSemver(originVersion, currentVersion)
-    : null;
-  const originIsAhead =
-    originVersionComparison !== null && originVersionComparison > 0;
-
-  const message = [
-    'Publishing requires local main to match origin/main.',
-    '',
-    `Local HEAD:  ${head.slice(0, 12)}`,
-    `origin/main: ${originMain.slice(0, 12)}`,
-    `Local server version:  ${currentVersion}`,
-    originVersion ? `Origin server version: ${originVersion}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  if (originIsAhead) {
-    return [
-      message,
-      '',
-      'origin/main already contains a newer server release, which usually means a previous publish pushed the release commit before failing later.',
-      '',
-      'Recovery:',
-      '  1. Sync the pushed release commit:',
-      '     git pull --ff-only origin main',
-      '  2. Publish a patch recovery release:',
-      `     ${publishCommand('patch')}`,
-      '',
-      'Do not rerun the original major or minor bump. That version is already spent.',
-    ].join('\n');
-  }
-
-  return [
-    message,
-    '',
-    'Recovery:',
-    '  1. Update local main without creating a merge commit:',
-    '     git pull --ff-only origin main',
-    '  2. Retry the same release bump:',
-    `     ${publishCommand(bump)}`,
-  ].join('\n');
-}
-
-/**
+ * Confirms local main is in sync with origin/main, offering to run
+ * `git push origin main` or `git pull --ff-only origin main` on the user's
+ * behalf — whichever direction actually fixes it — when it isn't.
  * @param {VersionBump} bump
  * @param {string} currentVersion
  * @param {boolean} resuming
+ * @param {boolean} dryRun
+ * @returns {Promise<void>}
  */
-function requireSyncedMain(bump, currentVersion, resuming) {
+async function requireSyncedMain(bump, currentVersion, resuming, dryRun) {
+  // A pending (resuming) release may have other local commits stacked on
+  // top of it by now, so an exact match isn't expected there — just make
+  // sure origin/main hasn't moved somewhere our local history doesn't
+  // contain.
+  const isSyncedWithOrigin = () => {
+    const currentHead = run('git', ['rev-parse', 'HEAD'], { capture: true });
+    if (!resuming) {
+      const currentOriginMain = run('git', ['rev-parse', 'origin/main'], {
+        capture: true,
+      });
+      return currentHead === currentOriginMain;
+    }
+    try {
+      run('git', ['merge-base', '--is-ancestor', 'origin/main', currentHead], {
+        capture: true,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (isSyncedWithOrigin()) {
+    return;
+  }
+
   const head = run('git', ['rev-parse', 'HEAD'], { capture: true });
   const originMain = run('git', ['rev-parse', 'origin/main'], {
     capture: true,
   });
+  const localAheadCount = Number(
+    run('git', ['rev-list', '--count', 'origin/main..HEAD'], {
+      capture: true,
+    }),
+  );
+  const originAheadCount = Number(
+    run('git', ['rev-list', '--count', 'HEAD..origin/main'], {
+      capture: true,
+    }),
+  );
+  const originVersion = readServerVersionFromGitRef('origin/main');
 
-  if (resuming) {
-    // A pending release may have other local commits stacked on top of it
-    // by now, so an exact match isn't expected. Just make sure origin/main
-    // hasn't moved somewhere our local history doesn't contain.
-    try {
-      run('git', ['merge-base', '--is-ancestor', 'origin/main', 'HEAD'], {
-        capture: true,
-      });
-    } catch {
-      throw new Error(
-        syncedMainFailureMessage(head, originMain, bump, currentVersion),
-      );
-    }
-    return;
+  console.log(color.bold('Local main is out of sync with origin/main:'));
+  console.log('');
+  console.log(
+    `  Local HEAD:  ${head.slice(0, 12)}  ${readCommitSubject(head)}`,
+  );
+  console.log(
+    `  origin/main: ${originMain.slice(0, 12)}  ${readCommitSubject(originMain)}`,
+  );
+  console.log(`  Local server version:  ${currentVersion}`);
+  if (originVersion) {
+    console.log(`  Origin server version: ${originVersion}`);
+  }
+  console.log('');
+
+  if (localAheadCount > 0 && originAheadCount > 0) {
+    throw new Error(
+      'Local main and origin/main have diverged and need to be reconciled by hand (e.g. `git rebase origin/main`) before publishing.',
+    );
   }
 
-  if (head !== originMain) {
+  if (dryRun) {
     throw new Error(
-      syncedMainFailureMessage(head, originMain, bump, currentVersion),
+      'Publishing requires local main to match origin/main. Sync it, then retry.',
+    );
+  }
+
+  if (localAheadCount > 0) {
+    // Local has commits origin doesn't — push them.
+    const consented = await promptYesNo('Run `git push origin main`?');
+    if (!consented) {
+      throw new Error(
+        'Publishing requires local main to match origin/main. Run `git push origin main`, then retry.',
+      );
+    }
+    run('git', ['push', 'origin', 'main']);
+    console.log(color.green('Pushed origin/main.'));
+    console.log('');
+  } else {
+    // origin/main has commits local doesn't — pull them.
+    const originVersionComparison = originVersion
+      ? compareSemver(originVersion, currentVersion)
+      : null;
+    const originIsAhead =
+      originVersionComparison !== null && originVersionComparison > 0;
+
+    const consented = await promptYesNo(
+      'Run `git pull --ff-only origin main`?',
+    );
+    if (!consented) {
+      throw new Error(
+        'Publishing requires local main to match origin/main. Run `git pull --ff-only origin main`, then retry.',
+      );
+    }
+    run('git', ['pull', '--ff-only', 'origin', 'main']);
+    console.log(color.green('Pulled origin/main.'));
+    console.log('');
+
+    if (originIsAhead) {
+      throw new Error(
+        `origin/main already contains a newer server release (${originVersion}) than the ${bump} bump you started, so that bump is already spent. Publish a patch recovery release instead: ${publishCommand('patch')}`,
+      );
+    }
+  }
+
+  if (!isSyncedWithOrigin()) {
+    throw new Error(
+      'Local main is still out of sync with origin/main after syncing.',
     );
   }
 }
@@ -971,8 +1029,9 @@ function publish({ nextVersion, tag, bump, resuming }) {
 
 /**
  * @param {string[]} args
+ * @returns {Promise<void>}
  */
-export function main(args) {
+export async function main(args) {
   if (args.length === 0 || args.includes('--help')) {
     console.log(usage());
     return;
@@ -1022,7 +1081,12 @@ export function main(args) {
     console.log('');
   }
 
-  requireSyncedMain(options.bump, currentVersion, resuming);
+  await requireSyncedMain(
+    options.bump,
+    currentVersion,
+    resuming,
+    options.dryRun,
+  );
   requireTagAvailable(tag, options.bump, resuming);
 
   if (options.dryRun) {
@@ -1034,14 +1098,12 @@ export function main(args) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  try {
-    main(process.argv.slice(2));
-  } catch (error) {
+  main(process.argv.slice(2)).catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     if (error instanceof UsageError) {
       console.error('');
       console.error(usage());
     }
     process.exitCode = 1;
-  }
+  });
 }
