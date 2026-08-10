@@ -10,8 +10,6 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [3.5.0] - 2026-08-10
-
 ### Added
 
 - `task docker-image-size` to build the production Docker image and report

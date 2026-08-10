@@ -6,6 +6,7 @@ import {
   hasUnreleasedChangelogEntry,
   isVersionPending,
   parsePublishArgs,
+  promoteUnreleasedChangelog,
 } from './publish.mjs';
 
 describe('docker publish helpers', () => {
@@ -156,6 +157,75 @@ describe('docker publish helpers', () => {
         ),
       ),
       true,
+    );
+  });
+
+  it('promotes the Unreleased body into a new dated version section', () => {
+    const changelog = [
+      '## [Unreleased]',
+      '',
+      '### Added',
+      '',
+      '- Multi-arch Docker builds.',
+      '',
+      '## [2.0.0] - 2026-06-12',
+      '',
+      '### Fixed',
+      '',
+      '- Something old.',
+      '',
+      '[unreleased]: https://github.com/gregtatum/indie-web/compare/v2.0.0...HEAD',
+      '[2.0.0]: https://github.com/gregtatum/indie-web/compare/v1.0.0...v2.0.0',
+    ].join('\n');
+
+    const result = promoteUnreleasedChangelog(changelog, {
+      version: '2.1.0',
+      date: '2026-08-10',
+    });
+
+    assert.equal(
+      result,
+      [
+        '## [Unreleased]',
+        '',
+        '## [2.1.0] - 2026-08-10',
+        '',
+        '### Added',
+        '',
+        '- Multi-arch Docker builds.',
+        '',
+        '## [2.0.0] - 2026-06-12',
+        '',
+        '### Fixed',
+        '',
+        '- Something old.',
+        '',
+        '[unreleased]: https://github.com/gregtatum/indie-web/compare/v2.1.0...HEAD',
+        '[2.1.0]: https://github.com/gregtatum/indie-web/compare/v2.0.0...v2.1.0',
+        '[2.0.0]: https://github.com/gregtatum/indie-web/compare/v1.0.0...v2.0.0',
+      ].join('\n'),
+    );
+  });
+
+  it('throws when promoting a changelog with no Unreleased section', () => {
+    assert.throws(
+      () =>
+        promoteUnreleasedChangelog(['## [2.0.0]', '', '- old'].join('\n'), {
+          version: '2.1.0',
+          date: '2026-08-10',
+        }),
+      /no "## \[Unreleased\]" section/,
+    );
+  });
+
+  it('throws when promoting a changelog with no prior version section', () => {
+    assert.throws(
+      () =>
+        promoteUnreleasedChangelog(
+          ['## [Unreleased]', '', '- new entry'].join('\n'),
+          { version: '1.0.0', date: '2026-08-10' },
+        ),
+      /no prior "## \[x\.y\.z\]" section/,
     );
   });
 });

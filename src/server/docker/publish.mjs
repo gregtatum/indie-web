@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
 import console from 'node:console';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
 
 const image = 'tatumcreative/floppydisk.link';
 const platforms = 'linux/amd64,linux/arm64';
 const buildxBuilder = 'floppydisk-release';
+const repoUrl = 'https://github.com/gregtatum/indie-web';
 const repoRoot = resolve(import.meta.dirname, '../../..');
 const serverPackageJson = resolve(repoRoot, 'src/server/package.json');
 const changelogPath = resolve(repoRoot, 'src/server/CHANGELOG.md');
@@ -310,6 +311,81 @@ export function hasUnreleasedChangelogEntry(changelog) {
   }
 
   return false;
+}
+
+/**
+ * Moves the body of the "## [Unreleased]" section into a new dated version
+ * section right below it, leaving an empty "## [Unreleased]" header behind
+ * so the next release has somewhere to write its own notes. Also inserts a
+ * matching compare-link in the footer and repoints the "[unreleased]" link
+ * at the new version.
+ * @param {string} changelog
+ * @param {{ version: string, date: string }} release
+ * @returns {string}
+ */
+export function promoteUnreleasedChangelog(changelog, { version, date }) {
+  const lines = changelog.split('\n');
+  const unreleasedIndex = lines.findIndex(
+    (line) => line.trim() === '## [Unreleased]',
+  );
+
+  if (unreleasedIndex === -1) {
+    throw new Error('CHANGELOG.md has no "## [Unreleased]" section.');
+  }
+
+  let nextHeadingIndex = lines.length;
+  let previousVersion = null;
+  for (let index = unreleasedIndex + 1; index < lines.length; index += 1) {
+    const match = /^## \[([^\]]+)\]/.exec(lines[index]);
+    if (match) {
+      nextHeadingIndex = index;
+      previousVersion = match[1];
+      break;
+    }
+  }
+
+  if (!previousVersion) {
+    throw new Error(
+      'CHANGELOG.md has no prior "## [x.y.z]" section to compare the new release against.',
+    );
+  }
+
+  const body = lines.slice(unreleasedIndex + 1, nextHeadingIndex);
+  while (body.length && body[0].trim() === '') {
+    body.shift();
+  }
+  while (body.length && body[body.length - 1].trim() === '') {
+    body.pop();
+  }
+
+  const promoted = [
+    '## [Unreleased]',
+    '',
+    `## [${version}] - ${date}`,
+    '',
+    ...body,
+    '',
+    ...lines.slice(nextHeadingIndex),
+  ];
+
+  const rewritten = [...lines.slice(0, unreleasedIndex), ...promoted];
+
+  const unreleasedLinkIndex = rewritten.findIndex((line) =>
+    line.startsWith('[unreleased]:'),
+  );
+  if (unreleasedLinkIndex === -1) {
+    throw new Error('CHANGELOG.md has no "[unreleased]:" compare link.');
+  }
+
+  rewritten[unreleasedLinkIndex] =
+    `[unreleased]: ${repoUrl}/compare/v${version}...HEAD`;
+  rewritten.splice(
+    unreleasedLinkIndex + 1,
+    0,
+    `[${version}]: ${repoUrl}/compare/v${previousVersion}...v${version}`,
+  );
+
+  return rewritten.join('\n');
 }
 
 /**
@@ -794,10 +870,16 @@ function printDryRun({ currentVersion, nextVersion, tag, resuming }) {
       nextVersion,
       '--no-git-tag-version',
     ]);
+    console.log(
+      color.dim(
+        `  (move CHANGELOG.md's "## [Unreleased]" notes into "## [${nextVersion}]")`,
+      ),
+    );
     printCommand('git', [
       'add',
       'src/server/package.json',
       'src/server/package-lock.json',
+      'src/server/CHANGELOG.md',
     ]);
     printCommand('git', ['commit', '-m', `Release server ${tag}`]);
   }
@@ -831,10 +913,19 @@ function publish({ nextVersion, tag, bump, resuming }) {
         nextVersion,
         '--no-git-tag-version',
       ]);
+      const changelog = readFileSync(changelogPath, 'utf8');
+      writeFileSync(
+        changelogPath,
+        promoteUnreleasedChangelog(changelog, {
+          version: nextVersion,
+          date: new Date().toISOString().slice(0, 10),
+        }),
+      );
       run('git', [
         'add',
         'src/server/package.json',
         'src/server/package-lock.json',
+        'src/server/CHANGELOG.md',
       ]);
       run('git', ['commit', '-m', `Release server ${tag}`]);
     }
