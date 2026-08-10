@@ -1,6 +1,5 @@
 import * as T from 'frontend/@types';
 import { Dropbox } from 'dropbox';
-import OpenAI from 'openai';
 import { createSelector } from 'reselect';
 import {
   ensureExists,
@@ -809,21 +808,4 @@ export const getFileFocusIndex = createSelector(
     }
     return index;
   },
-);
-
-export const getOpenAIOrNull = createSelector(getOpenAIApiKey, (apiKey) => {
-  if (!apiKey) {
-    return null;
-  }
-
-  // An OAuth flow here would be nice.
-  // https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety
-  const dangerouslyAllowBrowser = true;
-
-  return new OpenAI({ apiKey, dangerouslyAllowBrowser });
-});
-
-export const getOpenAI = dangerousSelector(
-  getOpenAIOrNull,
-  'The OpenAI API is not initialized.',
 );

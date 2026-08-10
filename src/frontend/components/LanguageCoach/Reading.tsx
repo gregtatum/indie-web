@@ -12,7 +12,7 @@ import { overlayPortal, useRetainScroll } from 'frontend/hooks';
 import { NextPrevLinks, useNextPrevSwipe } from '../NextPrev';
 import { TextArea } from '../TextArea';
 import { Splitter } from '../Splitter';
-import { useHunspell, useStemNavigation, useStems } from './hooks';
+import { useHunspell, useOpenAI, useStemNavigation, useStems } from './hooks';
 import { applyClassToWords } from 'frontend/logic/language-tools';
 import * as Router from 'react-router-dom';
 import { TextSelectionTooltip } from '../TextSelectionTooltip';
@@ -260,7 +260,8 @@ function RenderedReading() {
   const language = $$.getLanguageCode();
   const selectedSentence = $$.getSelectedSentence();
   const learnedOrIgnored = $$.getLearnedAndIgnoredStems();
-  const openAI = $$.getOpenAIOrNull();
+  const openAIApiKey = $$.getOpenAIApiKey();
+  const openAI = useOpenAI(openAIApiKey);
 
   const dispatch = Hooks.useDispatch();
   const container = React.useRef<null | HTMLDivElement>(null);

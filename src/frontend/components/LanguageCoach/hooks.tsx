@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { type Hunspell } from 'hunspell-wasm';
+import { type default as OpenAI } from 'openai';
 import { $$, A, Hooks, T } from 'frontend';
 import { computeStems } from 'frontend/logic/language-tools';
 import { isElementInViewport } from 'frontend/utils';
@@ -26,6 +27,37 @@ export function useHunspell() {
   }, [languageCode]);
 
   return hunspell;
+}
+
+/**
+ * Lazily loads the OpenAI SDK and creates a client once an API key is available.
+ */
+export function useOpenAI(apiKey: string | null): OpenAI | undefined {
+  const [openAI, setOpenAI] = React.useState<OpenAI | undefined>();
+
+  React.useEffect(() => {
+    if (!apiKey) {
+      setOpenAI(undefined);
+      return undefined;
+    }
+    let canceled = false;
+    import(/* webpackChunkName: "openai" */ 'openai')
+      .then(({ default: OpenAI }) => {
+        if (canceled) {
+          return;
+        }
+        // An OAuth flow here would be nice.
+        // https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety
+        const dangerouslyAllowBrowser = true;
+        setOpenAI(new OpenAI({ apiKey, dangerouslyAllowBrowser }));
+      })
+      .catch((error) => console.error(error));
+    return () => {
+      canceled = true;
+    };
+  }, [apiKey]);
+
+  return openAI;
 }
 
 /**
