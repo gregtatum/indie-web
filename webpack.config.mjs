@@ -32,7 +32,12 @@ const config = {
       shared: path.resolve(rootDir, 'src/shared'),
       server: path.resolve(rootDir, 'src/server'),
     },
-    fallback: { crypto: false, util: false, 'fs/promises': false, module: false },
+    fallback: {
+      crypto: false,
+      util: false,
+      'fs/promises': false,
+      module: false,
+    },
   },
   output: {
     path: path.join(rootDir, 'dist'),

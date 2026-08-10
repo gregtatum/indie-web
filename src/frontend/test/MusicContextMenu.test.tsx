@@ -82,21 +82,18 @@ function setup(tracks = TRACKS) {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
 
-  fetchMock.get(
-    `${FAKE_SERVER.url}/music/music-index`,
-    {
-      body: JSON.stringify({
-        version: MUSIC_INDEX_VERSION,
-        scannedAt: '2024-01-01T00:00:00Z',
-        tracks,
-      }),
-      status: 200,
-    },
-  );
-  fetchMock.get(
-    new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-    { body: JSON.stringify({ native: [] }), status: 200 },
-  );
+  fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
+    body: JSON.stringify({
+      version: MUSIC_INDEX_VERSION,
+      scannedAt: '2024-01-01T00:00:00Z',
+      tracks,
+    }),
+    status: 200,
+  });
+  fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
+    body: JSON.stringify({ native: [] }),
+    status: 200,
+  });
 
   render(
     <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>

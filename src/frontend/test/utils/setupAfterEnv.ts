@@ -122,8 +122,7 @@ beforeEach(function () {
 });
 
 afterEach(() => {
-  const FDBFactory = require('fake-indexeddb/lib/FDBFactory');
-  indexedDB = new FDBFactory();
+  indexedDB = new IDBFactory();
 
   jest.resetAllMocks();
   jest.restoreAllMocks();

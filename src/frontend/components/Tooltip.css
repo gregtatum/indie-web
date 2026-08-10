@@ -28,7 +28,7 @@
   border: 5px solid transparent;
   border-top-color: #0009;
   content: '';
-  left: var(--arrow-left, 50%);
+  left: var(--arrow-left);
   position: absolute;
   top: 100%;
   transform: translateX(-50%);

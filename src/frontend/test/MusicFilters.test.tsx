@@ -85,17 +85,14 @@ function setup(search = '', tracks = TRACKS) {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
 
-  fetchMock.get(
-    `${FAKE_SERVER.url}/music/music-index`,
-    {
-      body: JSON.stringify({
-        version: MUSIC_INDEX_VERSION,
-        scannedAt: '2024-01-01T00:00:00Z',
-        tracks,
-      }),
-      status: 200,
-    },
-  );
+  fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
+    body: JSON.stringify({
+      version: MUSIC_INDEX_VERSION,
+      scannedAt: '2024-01-01T00:00:00Z',
+      tracks,
+    }),
+    status: 200,
+  });
   const genreFolders: T.FolderListing = [
     ...new Set(tracks.map((t) => t.genre).filter(Boolean)),
   ].map((genre) => ({
@@ -420,24 +417,21 @@ describe('music URL serialization', () => {
       TRACKS[1],
     ];
     const { store, getLocation } = setup('?genre=Indie', tracks);
-    fetchMock.get(
-      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-      { body: JSON.stringify({ native: [] }), status: 200 },
-    );
-    fetchMock.post(
-      `${FAKE_SERVER.url}/music/write-track-tags`,
-      {
-        body: JSON.stringify({
-          updated: [
-            '/Indie/Andrew Bird/Album A/Song A.mp3',
-            '/Indie/Andrew Bird/Album A/Song B.mp3',
-          ],
-          errors: [],
-          index: { status: 'updated', message: null },
-        }),
-        status: 200,
-      },
-    );
+    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
+      body: JSON.stringify({ native: [] }),
+      status: 200,
+    });
+    fetchMock.post(`${FAKE_SERVER.url}/music/write-track-tags`, {
+      body: JSON.stringify({
+        updated: [
+          '/Indie/Andrew Bird/Album A/Song A.mp3',
+          '/Indie/Andrew Bird/Album A/Song B.mp3',
+        ],
+        errors: [],
+        index: { status: 'updated', message: null },
+      }),
+      status: 200,
+    });
 
     await screen.findByText('Song A');
     await waitFor(() => {
@@ -510,10 +504,10 @@ describe('edit track modal tab URL serialization', () => {
   it('replaces tab param when switching tabs, back navigation skips tab history', async () => {
     const { getLocation, getNavigate } = setup();
 
-    fetchMock.get(
-      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-      { body: JSON.stringify({ native: [] }), status: 200 },
-    );
+    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
+      body: JSON.stringify({ native: [] }),
+      status: 200,
+    });
 
     const sovayTrack = await screen.findByText('Sovay');
 
@@ -553,10 +547,10 @@ describe('edit track modal URL serialization', () => {
   it('pushes edit param on open and close, with back navigation restoring each state', async () => {
     const { getLocation, getNavigate } = setup();
 
-    fetchMock.get(
-      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-      { body: JSON.stringify({ native: [] }), status: 200 },
-    );
+    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
+      body: JSON.stringify({ native: [] }),
+      status: 200,
+    });
 
     const sovayTrack = await screen.findByText('Sovay');
 

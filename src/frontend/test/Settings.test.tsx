@@ -11,6 +11,7 @@ import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import fetchMock from '@fetch-mock/jest';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
+import { mockDropboxListFolder } from './utils/fixtures';
 
 type Store = ReturnType<typeof createStore>;
 
@@ -57,7 +58,7 @@ function confirmPrompts() {
 }
 
 async function requestBrowserFileDeletion() {
-  await screen.findByText('1 file stored locally');
+  await screen.findByText('1 file stored in the browser');
   await act(async () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete Files' }));
   });
@@ -119,10 +120,7 @@ describe('Settings', () => {
     expectDropboxCacheDeleted(deleteDatabase);
     await expectOnboardingHomeScreen();
 
-    fetchMock.get(
-      '/guide/Getting Started.chopro',
-      'Getting started',
-    );
+    fetchMock.get('/guide/Getting Started.chopro', 'Getting started');
 
     await act(async () => {
       await userEvent.click(
@@ -138,6 +136,7 @@ describe('Settings', () => {
     onboard(store);
     connectDropbox(store);
     await connectBrowserFiles(store, getIDBFS());
+    mockDropboxListFolder([]);
     const deleteDatabase = watchDatabaseDeletes();
 
     renderSettings(store);
@@ -147,9 +146,12 @@ describe('Settings', () => {
     expectBrowserFilesDeleted(deleteDatabase);
     expect(deleteDatabase).not.toHaveBeenCalledWith(IDB_CACHE_NAME);
     expect(window.localStorage.length).toBeGreaterThan(0);
-    expect(await screen.findByText('No local files stored')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Developer' })).toBeTruthy();
-    expect(screen.queryByText(/On your storage/)).toBeNull();
+    // Deleting the active storage switches to the remaining Dropbox storage and
+    // navigates to its (empty) file list, matching the folder-removal behavior below.
+    expect(
+      await screen.findByRole('button', { name: 'Add File or Folder' }),
+    ).toBeTruthy();
+    expect(await screen.findByTestId('list-files')).toBeTruthy();
   });
 
   it('only removes Dropbox data when another storage is still configured', async () => {

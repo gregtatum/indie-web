@@ -835,24 +835,18 @@ describe('edit track modal', () => {
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     let trackTagsFetchCount = 0;
 
-    fetchMock.get(
-      `${FAKE_SERVER.url}/music/music-index`,
-      {
-        body: JSON.stringify({
-          version: 4,
-          scannedAt: '2024-01-01T00:00:00Z',
-          tracks: manyTracks,
-        }),
-        status: 200,
-      },
-    );
-    fetchMock.get(
-      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-      () => {
-        trackTagsFetchCount++;
-        return { body: JSON.stringify({ native: [] }), status: 200 };
-      },
-    );
+    fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
+      body: JSON.stringify({
+        version: 4,
+        scannedAt: '2024-01-01T00:00:00Z',
+        tracks: manyTracks,
+      }),
+      status: 200,
+    });
+    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
+      trackTagsFetchCount++;
+      return { body: JSON.stringify({ native: [] }), status: 200 };
+    });
 
     render(
       <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
@@ -921,24 +915,18 @@ describe('edit track modal', () => {
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     let trackTagsFetchCount = 0;
 
-    fetchMock.get(
-      `${FAKE_SERVER.url}/music/music-index`,
-      {
-        body: JSON.stringify({
-          version: 4,
-          scannedAt: '2024-01-01T00:00:00Z',
-          tracks: manyTracks,
-        }),
-        status: 200,
-      },
-    );
-    fetchMock.get(
-      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-      () => {
-        trackTagsFetchCount++;
-        return { body: JSON.stringify({ native: [] }), status: 200 };
-      },
-    );
+    fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
+      body: JSON.stringify({
+        version: 4,
+        scannedAt: '2024-01-01T00:00:00Z',
+        tracks: manyTracks,
+      }),
+      status: 200,
+    });
+    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
+      trackTagsFetchCount++;
+      return { body: JSON.stringify({ native: [] }), status: 200 };
+    });
     const writeRequests = mockWriteTrackTags({
       updated: manyTracks.map((track) => track.path),
       errors: [],
@@ -1003,17 +991,14 @@ describe('edit track modal', () => {
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     const signals: AbortSignal[] = [];
 
-    fetchMock.get(
-      `${FAKE_SERVER.url}/music/music-index`,
-      {
-        body: JSON.stringify({
-          version: 4,
-          scannedAt: '2024-01-01T00:00:00Z',
-          tracks: manyTracks,
-        }),
-        status: 200,
-      },
-    );
+    fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
+      body: JSON.stringify({
+        version: 4,
+        scannedAt: '2024-01-01T00:00:00Z',
+        tracks: manyTracks,
+      }),
+      status: 200,
+    });
     fetchMock.get(
       new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
       ({ options }: any) => {
@@ -1089,27 +1074,21 @@ describe('edit track modal', () => {
     store.dispatch(A.addFileStoreServer(FAKE_SERVER));
     let trackTagsFetchCount = 0;
 
-    fetchMock.get(
-      `${FAKE_SERVER.url}/music/music-index`,
-      {
-        body: JSON.stringify({
-          version: 4,
-          scannedAt: '2024-01-01T00:00:00Z',
-          tracks: manyTracks,
-        }),
-        status: 200,
-      },
-    );
-    fetchMock.get(
-      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-      () => {
-        trackTagsFetchCount++;
-        if (trackTagsFetchCount === 1) {
-          return { body: 'Nope', status: 500 };
-        }
-        return { body: JSON.stringify({ native: [] }), status: 200 };
-      },
-    );
+    fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
+      body: JSON.stringify({
+        version: 4,
+        scannedAt: '2024-01-01T00:00:00Z',
+        tracks: manyTracks,
+      }),
+      status: 200,
+    });
+    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
+      trackTagsFetchCount++;
+      if (trackTagsFetchCount === 1) {
+        return { body: 'Nope', status: 500 };
+      }
+      return { body: JSON.stringify({ native: [] }), status: 200 };
+    });
 
     render(
       <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
