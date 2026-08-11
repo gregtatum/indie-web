@@ -26,7 +26,9 @@ const serverConfig = {
     // The historyApiFallback middleware runs before the static docs
     // middleware, so without this it swallows /docs/* requests and
     // serves the SPA's index.html instead of the static docs files.
-    rewrites: [{ from: /^\/docs\/.*$/, to: (context) => context.parsedUrl.pathname }],
+    rewrites: [
+      { from: /^\/docs\/.*$/, to: (context) => context.parsedUrl.pathname },
+    ],
   },
 
   // TODO - Make this more secure.

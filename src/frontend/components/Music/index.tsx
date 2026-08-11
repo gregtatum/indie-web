@@ -67,7 +67,9 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
           eventSource.close();
           setScanPhase('done');
           setScanProgress(null);
-          setStatusMessage(`Found ${data.tracks.length.toLocaleString()} tracks.`);
+          setStatusMessage(
+            `Found ${data.tracks.length.toLocaleString()} tracks.`,
+          );
           dispatch(A.setMusicTracks(data.tracks, false));
           setCompletedScanCount((count) => count + 1);
           break;
