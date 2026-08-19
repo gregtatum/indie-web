@@ -1058,7 +1058,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             hideEmbeddedArt={isBulkEdit}
             tagsState={
               isBulkEdit
-                ? { status: 'loaded', data: { native: [] } }
+                ? { status: 'loaded', data: { native: [], resolved: {} } }
                 : tagsState
             }
             trackPath={editTracks[0].path}

@@ -250,3 +250,136 @@ export function buildMp3WithTags(tags: Partial<Mp3Tags> = {}): Buffer {
 
   return Buffer.concat([id3Header, frameData, AUDIO_PAYLOAD]);
 }
+
+export interface NativeId3v2Block {
+  version: 2 | 3 | 4;
+  frames: Array<{ id: string; text: string }>;
+}
+
+export type Id3v1Fields = Partial<{
+  title: string;
+  artist: string;
+  album: string;
+  year: string;
+  comment: string;
+  track: number;
+  /** ID3v1 numeric genre code, e.g. 17 = "Rock". 0xff means unset. */
+  genre: number;
+}>;
+
+function id3v2FrameHeader(
+  version: 2 | 3 | 4,
+  id: string,
+  contentLength: number,
+): Buffer {
+  if (version === 2) {
+    // ID3v2.2: 3-char frame ID, 3-byte plain (non-syncsafe) size, no flags.
+    const header = Buffer.alloc(6);
+    header.write(id, 0, 3, 'ascii');
+    header.writeUIntBE(contentLength, 3, 3);
+    return header;
+  }
+  const header = Buffer.alloc(10);
+  header.write(id, 0, 4, 'ascii');
+  if (version === 3) {
+    // ID3v2.3: 4-byte plain (non-syncsafe) size.
+    header.writeUInt32BE(contentLength, 4);
+  } else {
+    // ID3v2.4: 4-byte syncsafe size (7 bits per byte).
+    header.writeUInt8((contentLength >> 21) & 0x7f, 4);
+    header.writeUInt8((contentLength >> 14) & 0x7f, 5);
+    header.writeUInt8((contentLength >> 7) & 0x7f, 6);
+    header.writeUInt8(contentLength & 0x7f, 7);
+  }
+  header.writeUInt16BE(0, 8); // flags (absent entirely for v2.2, harmless here)
+  return header;
+}
+
+/**
+ * Builds one ID3v2.x tag (header + text frames), for combining with other
+ * tags in buildMp3WithNativeBlocks.
+ */
+function buildId3v2Block(
+  version: 2 | 3 | 4,
+  frames: Array<{ id: string; text: string }>,
+): Buffer {
+  const frameBuffers = frames.map(({ id, text }) => {
+    // encoding byte 0x00 = Latin-1, followed by the text
+    const content = Buffer.concat([
+      Buffer.from([0x00]),
+      Buffer.from(text, 'latin1'),
+    ]);
+    return Buffer.concat([
+      id3v2FrameHeader(version, id, content.length),
+      content,
+    ]);
+  });
+  const frameData = Buffer.concat(frameBuffers);
+
+  const header = Buffer.alloc(10);
+  header.write('ID3', 0, 3, 'ascii');
+  header.writeUInt8(version, 3);
+  header.writeUInt8(0, 4); // revision
+  header.writeUInt8(0, 5); // flags
+
+  // The outer tag header size is always syncsafe, in every ID3v2.x version.
+  const size = frameData.length;
+  header.writeUInt8((size >> 21) & 0x7f, 6);
+  header.writeUInt8((size >> 14) & 0x7f, 7);
+  header.writeUInt8((size >> 7) & 0x7f, 8);
+  header.writeUInt8(size & 0x7f, 9);
+
+  return Buffer.concat([header, frameData]);
+}
+
+/**
+ * Builds a fixed-width 128-byte ID3v1.1 block (title/artist/album/year/
+ * comment/track/genre — the only fields ID3v1 supports).
+ */
+function buildId3v1Block(fields: Id3v1Fields): Buffer {
+  const block = Buffer.alloc(128, 0x00);
+  block.write('TAG', 0, 3, 'ascii');
+  block.write((fields.title ?? '').slice(0, 30), 3, 30, 'latin1');
+  block.write((fields.artist ?? '').slice(0, 30), 33, 30, 'latin1');
+  block.write((fields.album ?? '').slice(0, 30), 63, 30, 'latin1');
+  block.write((fields.year ?? '').slice(0, 4), 93, 4, 'latin1');
+  block.write((fields.comment ?? '').slice(0, 28), 97, 28, 'latin1');
+  block.writeUInt8(0, 125); // zero byte marks ID3v1.1 (track number present)
+  block.writeUInt8(fields.track ?? 0, 126);
+  block.writeUInt8(fields.genre ?? 0xff, 127); // 0xff = genre unset
+  return block;
+}
+
+// A fake single MPEG frame header + filler, distinct from AUDIO_PAYLOAD.
+// AUDIO_PAYLOAD encodes a 128kbps/44100Hz frame (frame_size ~417 bytes):
+// music-metadata's frame scanner, on failing to find a Xing/LAME info tag
+// right after the first frame, unconditionally skips ahead by the frame's
+// full computed size looking for the next frame — with only ~260 bytes of
+// filler after the header, that skip overruns past a trailing ID3v1 block
+// entirely, so the parser never sees it. This header instead encodes the
+// lowest standard bitrate, 32kbps (frame_size ~104 bytes), which the 256
+// bytes of filler here comfortably absorb, leaving the tokenizer position
+// well before a trailing ID3v1 block by the time the scanner gives up.
+const SHORT_FRAME_AUDIO_PAYLOAD = Buffer.concat([
+  Buffer.from([0xff, 0xfb, 0x10, 0x44]),
+  Buffer.alloc(256, 0x41),
+]);
+
+/**
+ * Builds a minimal, real MP3 whose tag section can carry multiple native
+ * ID3v2 tags (in the given order) plus an optional trailing ID3v1 block —
+ * reproducing files with more than one tag source, e.g. a legacy ID3v2.4 tag
+ * an old iTunes version left behind, wrapped by a newer, prepended ID3v2.3
+ * tag. Unlike buildMp3WithTags (a single ID3v2.3 tag), this is for exercising
+ * the priority order across multiple tag sources on one file.
+ */
+export function buildMp3WithNativeBlocks(opts: {
+  id3v2Blocks?: NativeId3v2Block[];
+  id3v1?: Id3v1Fields;
+}): Buffer {
+  const id3v2 = (opts.id3v2Blocks ?? []).map((block) =>
+    buildId3v2Block(block.version, block.frames),
+  );
+  const id3v1 = opts.id3v1 ? buildId3v1Block(opts.id3v1) : Buffer.alloc(0);
+  return Buffer.concat([...id3v2, SHORT_FRAME_AUDIO_PAYLOAD, id3v1]);
+}

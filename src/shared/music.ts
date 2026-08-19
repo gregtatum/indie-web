@@ -1,7 +1,7 @@
 /**
  * Shared utils and constants for the music component.
  */
-import type { TrackMetadata } from './@types/shared.ts';
+import type { TrackMetadata, TrackTagsResponse } from './@types/shared.ts';
 
 /**
  * The serialized music index is read by the server and frontend. Keeping the
@@ -154,3 +154,82 @@ export function getTrackFilterArtist(track: TrackMetadata): string | null {
   }
   return track.albumArtist || track.artist;
 }
+
+/**
+ * Some files contain more than one tag source. For example, an older iTunes
+ * version may have left an ID3v2.4 tag that is now wrapped by a newer ID3v2.3
+ * tag. The app standardizes on ID3v2.3 because it is the most widely compatible
+ * format and the only format that node-id3 writes. Reads therefore prefer
+ * ID3v2.3 and fall back to other formats only for fields that it does not
+ * contain.
+ */
+export const TAG_FORMAT_PRIORITY = [
+  'ID3v2.3',
+  'ID3v2.4',
+  'ID3v2.2',
+  'ID3v1',
+] as const;
+
+/**
+ * ID3v2.2 uses 3-character frame IDs. ID3v1 uses fixed fields instead of frame
+ * IDs, which music-metadata exposes as plain words such as "genre". This maps
+ * a canonical ID3v2.3 or ID3v2.4 frame ID to the frame ID used by formats
+ * that name the same field differently.
+ */
+const FRAME_ID_ALIASES: Record<string, Partial<Record<string, string>>> = {
+  TIT2: { 'ID3v2.2': 'TT2', ID3v1: 'title' },
+  TPE1: { 'ID3v2.2': 'TP1', ID3v1: 'artist' },
+  TPE2: { 'ID3v2.2': 'TP2' },
+  TALB: { 'ID3v2.2': 'TAL', ID3v1: 'album' },
+  TCOM: { 'ID3v2.2': 'TCM' },
+  TRCK: { 'ID3v2.2': 'TRK', ID3v1: 'track' },
+  TPOS: { 'ID3v2.2': 'TPA' },
+  TYER: { 'ID3v2.2': 'TYE', ID3v1: 'year' },
+  TCON: { 'ID3v2.2': 'TCO', ID3v1: 'genre' },
+  TBPM: { 'ID3v2.2': 'TBP' },
+  COMM: { 'ID3v2.2': 'COM', ID3v1: 'comment' },
+};
+
+/**
+ * Resolves a single field's value across a file's embedded tag blocks, in
+ * TAG_FORMAT_PRIORITY order. Binary and empty values don't count as a
+ * match, so the chain keeps falling through to the next format.
+ */
+export function resolveTagValue(
+  blocks: TrackTagsResponse['native'],
+  frameId: string,
+): string | undefined {
+  for (const format of TAG_FORMAT_PRIORITY) {
+    const block = blocks.find((b) => b.format === format);
+    if (!block) {
+      continue;
+    }
+    const lookupId = FRAME_ID_ALIASES[frameId]?.[format] ?? frameId;
+    const tag = block.tags.find(
+      (t) => t.id === lookupId && t.binary === undefined,
+    );
+    if (tag && tag.value !== '') {
+      return tag.value;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The frame IDs the app reads, edits, and migrates. Kept as one shared list
+ * so the scanner, the /track-tags resolved view, and write-time gap-fill
+ * migration all agree on exactly which fields "belong" to ID3v2.3.
+ */
+export const APP_FRAME_IDS = [
+  'TIT2',
+  'TPE1',
+  'TPE2',
+  'TALB',
+  'TCOM',
+  'TRCK',
+  'TPOS',
+  'TYER',
+  'TCON',
+  'TBPM',
+  'COMM',
+] as const;

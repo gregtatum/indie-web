@@ -14,11 +14,13 @@ import { finished } from 'stream/promises';
 import { parseFile } from 'music-metadata';
 import { throttle } from '../shared/utils.ts';
 import {
+  APP_FRAME_IDS,
   MUSIC_INDEX_VERSION,
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
   nativePrivateTextTagValue,
   parseBooleanTagValue,
   parsePreferComposerGroupingTag,
+  resolveTagValue,
 } from '../shared/music.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
@@ -253,18 +255,15 @@ export function musicRoute(mountPath: MountPath) {
       throw new ClientError('Invalid path.');
     }
     const meta = await parseFile(resolvedPath);
-    const native = Object.entries(meta.native ?? {}).map(
-      ([format, frames]) => ({
-        format,
-        tags: frames.map((frame) => {
-          const { value, binary } = serializeTag(frame.value);
-          return binary !== undefined
-            ? { id: frame.id, value, binary }
-            : { id: frame.id, value };
-        }),
-      }),
-    );
-    return { native };
+    const native = serializeTagBlocks(meta.native ?? {});
+    const resolved: Record<string, string> = {};
+    for (const frameId of APP_FRAME_IDS) {
+      const value = resolveTagValue(native, frameId);
+      if (value !== undefined) {
+        resolved[frameId] = value;
+      }
+    }
+    return { native, resolved };
   });
 
   /**
@@ -516,16 +515,17 @@ async function performScan(
       let hasEmbeddedArt = false;
       try {
         const meta = await parseFile(fullPath, { duration: true });
-        title = meta.common.title ?? null;
-        artist = meta.common.artist ?? null;
-        albumArtist = meta.common.albumartist ?? null;
-        composer = meta.common.composer?.[0] ?? null;
-        album = meta.common.album ?? null;
-        genre = meta.common.genre?.[0] ?? null;
+        const blocks = serializeTagBlocks(meta.native ?? {});
+        title = resolveTagValue(blocks, 'TIT2') ?? null;
+        artist = resolveTagValue(blocks, 'TPE1') ?? null;
+        albumArtist = resolveTagValue(blocks, 'TPE2') ?? null;
+        composer = resolveTagValue(blocks, 'TCOM') ?? null;
+        album = resolveTagValue(blocks, 'TALB') ?? null;
+        genre = resolveTagValue(blocks, 'TCON') ?? null;
         preferComposerGrouping = parsePreferComposerGroupingTag(
           getNativePrivateTextTags(meta.native),
         );
-        track = meta.common.track.no ?? null;
+        track = parseLeadingInt(resolveTagValue(blocks, 'TRCK'));
         duration = meta.format.duration ?? null;
         hasEmbeddedArt = (meta.common.picture?.length ?? 0) > 0;
 
@@ -578,6 +578,17 @@ async function performScan(
   await fs.rename(tmpPath, indexPath);
 
   return index;
+}
+
+/**
+ * Parses a TRCK-style frame value ("4", "4/16") into its leading track number.
+ */
+function parseLeadingInt(value: string | undefined): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  const n = parseInt(value, 10);
+  return Number.isNaN(n) ? null : n;
 }
 
 function getNativePrivateTextTags(
@@ -906,6 +917,26 @@ function serializeTag(value: unknown): { value: string; binary?: string } {
     }
   }
   return { value: String(value) };
+}
+
+/**
+ * Converts music-metadata's per-format tag data into the serialized, grouped
+ * tag blocks used both by the raw tag browser (/track-tags) and by field
+ * resolution (scanner + /track-tags `resolved`), so both read the exact same
+ * values.
+ */
+function serializeTagBlocks(
+  rawTags: Record<string, Array<{ id: string; value: unknown }>>,
+): T.TrackTagsResponse['native'] {
+  return Object.entries(rawTags).map(([format, frames]) => ({
+    format,
+    tags: frames.map((frame) => {
+      const { value, binary } = serializeTag(frame.value);
+      return binary !== undefined
+        ? { id: frame.id, value, binary }
+        : { id: frame.id, value };
+    }),
+  }));
 }
 
 async function findAudioFiles(

@@ -124,6 +124,14 @@ export interface TrackTagsResponse {
     format: string;
     tags: RawTagEntry[];
   }>;
+  /**
+   * Field values resolved across embedded tag blocks by format priority (see
+   * TAG_FORMAT_PRIORITY in shared/music.ts), keyed by frame ID. This is the
+   * single source of truth for "what is this file's title/genre/etc" — the
+   * scanner uses the same resolution to build the music index, so this view
+   * and the index never disagree.
+   */
+  resolved: Record<string, string>;
 }
 
 export interface TrackTagUpdate {
