@@ -8,7 +8,7 @@ import type { TrackMetadata, TrackTagsResponse } from './@types/shared.ts';
  * current version here avoids the two environments drifting when a new indexed
  * field is added.
  */
-export const MUSIC_INDEX_VERSION = 7 as const;
+export const MUSIC_INDEX_VERSION = 8 as const;
 
 /**
  * App-owned ID3 user-defined text (TXXX) description. Normal music players

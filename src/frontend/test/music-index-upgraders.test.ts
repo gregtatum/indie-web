@@ -307,3 +307,56 @@ describe('upgradeMusicIndex v3 → current', () => {
     expect(track.duration).toBeNull();
   });
 });
+
+// v7 → current: no schema change. The server changed how text fields are
+// resolved when a file has more than one ID3 tag source (prefer ID3v2.3),
+// so a v7 index may hold values computed the old way — this bump exists
+// purely to force a rescan, not to backfill any field.
+describe('upgradeMusicIndex v7 → current', () => {
+  const v7Fixture = JSON.parse(
+    readFileSync(join(__dirname, 'fixtures/music-index-v7.json'), 'utf-8'),
+  );
+
+  it('upgrades a v7 index to current', () => {
+    const { index, wasUpgraded } = upgradeMusicIndex(v7Fixture);
+    expect(wasUpgraded).toBe(true);
+    expect(index).toMatchSnapshot();
+  });
+
+  it('sets version to current', () => {
+    const { index } = upgradeMusicIndex(v7Fixture);
+    expect(index.version).toBe(CURRENT_MUSIC_INDEX_VERSION);
+  });
+
+  it('preserves every track field unchanged', () => {
+    const { index } = upgradeMusicIndex(v7Fixture);
+    const track = index.tracks[0];
+    expect(track.path).toBe('/Artist/Album/track.mp3');
+    expect(track.title).toBe('Test Track');
+    expect(track.artist).toBe('Test Artist');
+    expect(track.albumArtist).toBe('Test Album Artist');
+    expect(track.composer).toBe('Test Composer');
+    expect(track.album).toBe('Test Album');
+    expect(track.genre).toBe('Rock');
+    expect(track.preferComposerGrouping).toBeNull();
+    expect(track.track).toBe(1);
+    expect(track.duration).toBe(180.5);
+    expect(track.size).toBe(3145728);
+    expect(track.coverArt).toBe('/Artist/Album/Folder.jpg');
+    expect(track.hasEmbeddedArt).toBe(false);
+  });
+
+  it('preserves null fields', () => {
+    const { index } = upgradeMusicIndex(v7Fixture);
+    const track = index.tracks[1];
+    expect(track.title).toBeNull();
+    expect(track.artist).toBeNull();
+    expect(track.albumArtist).toBeNull();
+    expect(track.composer).toBeNull();
+    expect(track.album).toBeNull();
+    expect(track.genre).toBeNull();
+    expect(track.preferComposerGrouping).toBeNull();
+    expect(track.track).toBeNull();
+    expect(track.duration).toBeNull();
+  });
+});

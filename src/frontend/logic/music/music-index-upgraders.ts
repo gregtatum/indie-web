@@ -160,7 +160,7 @@ function upgradeV5ToV6(blob: IndexVersion<5>): IndexVersion<6> {
 /**
  * v6 → v7: backfill composer and preferComposerGrouping.
  */
-function upgradeV6ToV7(blob: IndexVersion<6>): T.MusicIndex {
+function upgradeV6ToV7(blob: IndexVersion<6>): IndexVersion<7> {
   const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
     path: t.path as string,
     title: (t.title as string | null) ?? null,
@@ -181,7 +181,19 @@ function upgradeV6ToV7(blob: IndexVersion<6>): T.MusicIndex {
     version: 7 as const,
     scannedAt: blob.scannedAt as string,
     tracks,
-  };
+  } as unknown as IndexVersion<7>;
+}
+
+/**
+ * v7 to v8 changes no fields in the schema. The server changed how it
+ * resolves text fields across a file's tag blocks, so a v7 index may hold
+ * stale values. This bump exists purely to force a rescan.
+ */
+function upgradeV7ToV8(blob: IndexVersion<7>): T.MusicIndex {
+  return {
+    ...blob,
+    version: 8 as const,
+  } as unknown as T.MusicIndex;
 }
 
 /**
@@ -223,6 +235,10 @@ export function upgradeMusicIndex(blob: unknown): {
   }
   if (raw.version === 6) {
     raw = upgradeV6ToV7(raw as IndexVersion<6>) as unknown as typeof raw;
+    wasUpgraded = true;
+  }
+  if (raw.version === 7) {
+    raw = upgradeV7ToV8(raw as IndexVersion<7>) as unknown as typeof raw;
     wasUpgraded = true;
   }
   return { index: raw as unknown as T.MusicIndex, wasUpgraded };
