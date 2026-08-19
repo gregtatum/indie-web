@@ -196,7 +196,7 @@ const FRAME_ID_ALIASES: Record<string, Partial<Record<string, string>>> = {
  * match, so the chain keeps falling through to the next format.
  */
 export function resolveTagValue(
-  blocks: TrackTagsResponse['native'],
+  blocks: TrackTagsResponse['blocks'],
   frameId: string,
 ): string | undefined {
   for (const format of TAG_FORMAT_PRIORITY) {

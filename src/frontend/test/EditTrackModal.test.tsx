@@ -140,7 +140,7 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
   fetchMock.get(
     new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
     options.trackTagsResponse ?? {
-      body: JSON.stringify({ native: [], resolved: {} }),
+      body: JSON.stringify({ blocks: [], resolved: {} }),
       status: 200,
     },
   );
@@ -454,7 +454,7 @@ describe('edit track modal', () => {
     await act(async () => {
       resolveTags!({
         body: JSON.stringify({
-          native: [
+          blocks: [
             {
               format: 'ID3v2.3',
               tags: [
@@ -783,7 +783,7 @@ describe('edit track modal', () => {
     const { store } = setup(tracksWithArt, {
       trackTagsResponse: {
         body: JSON.stringify({
-          native: [
+          blocks: [
             {
               format: 'ID3v2.3',
               tags: [
@@ -848,7 +848,7 @@ describe('edit track modal', () => {
     fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
       trackTagsFetchCount++;
       return {
-        body: JSON.stringify({ native: [], resolved: {} }),
+        body: JSON.stringify({ blocks: [], resolved: {} }),
         status: 200,
       };
     });
@@ -931,7 +931,7 @@ describe('edit track modal', () => {
     fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
       trackTagsFetchCount++;
       return {
-        body: JSON.stringify({ native: [], resolved: {} }),
+        body: JSON.stringify({ blocks: [], resolved: {} }),
         status: 200,
       };
     });
@@ -1096,7 +1096,7 @@ describe('edit track modal', () => {
         return { body: 'Nope', status: 500 };
       }
       return {
-        body: JSON.stringify({ native: [], resolved: {} }),
+        body: JSON.stringify({ blocks: [], resolved: {} }),
         status: 200,
       };
     });

@@ -91,7 +91,7 @@ function setup(tracks = TRACKS) {
     status: 200,
   });
   fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
-    body: JSON.stringify({ native: [], resolved: {} }),
+    body: JSON.stringify({ blocks: [], resolved: {} }),
     status: 200,
   });
 

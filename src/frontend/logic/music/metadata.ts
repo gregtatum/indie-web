@@ -27,15 +27,16 @@ const PRIORITY_IDS = [
 const priorityIndex = new Map(PRIORITY_IDS.map((id, i) => [id, i]));
 
 /**
- * Looks up a frame ID's value across all native tag blocks, taking whichever
- * block happens to list it first. Used only for app-owned private (TXXX)
- * tags, which aren't part of the server's version-priority `resolved` set.
+ * Looks up a frame ID's value across all embedded tag blocks, taking
+ * whichever block happens to list it first. Used only for app-owned private
+ * (TXXX) tags, which aren't part of the server's version-priority `resolved`
+ * set.
  */
-function firstNativeTagValue(
-  native: TrackTagsResponse['native'],
+function firstTagBlockValue(
+  blocks: TrackTagsResponse['blocks'],
   frameId: string,
 ): string | undefined {
-  for (const block of native) {
+  for (const block of blocks) {
     const tag = block.tags.find(
       (t) => t.id === frameId && t.binary === undefined,
     );
@@ -346,20 +347,20 @@ export function detailFieldValues(
   tagsResponse: TrackTagsResponse | null,
 ): DetailFieldValues {
   const state = emptyDetailFieldValues();
-  let nativePreferComposerGrouping: boolean | null = null;
-  let hasNativePreferComposerGrouping = false;
+  let filePreferComposerGrouping: boolean | null = null;
+  let hasFilePreferComposerGrouping = false;
 
   if (tagsResponse) {
     // The prefer-composer-grouping private tag is app-owned and isn't part of
     // the version-priority resolution the server applies to `resolved` —
-    // still derived directly from the raw native blocks.
-    const preferComposerValue = firstNativeTagValue(
-      tagsResponse.native,
+    // still derived directly from the raw tag blocks.
+    const preferComposerValue = firstTagBlockValue(
+      tagsResponse.blocks,
       `TXXX:${PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION}`,
     );
     if (preferComposerValue !== undefined) {
-      hasNativePreferComposerGrouping = true;
-      nativePreferComposerGrouping = parseBooleanTagValue(preferComposerValue);
+      hasFilePreferComposerGrouping = true;
+      filePreferComposerGrouping = parseBooleanTagValue(preferComposerValue);
     }
 
     for (const field of DETAIL_FIELDS) {
@@ -386,7 +387,7 @@ export function detailFieldValues(
     }
   }
 
-  // Fall back to TrackMetadata for the fields it tracks, where native tags are empty
+  // Fall back to TrackMetadata for the fields it tracks, where tag values are empty
   if (track) {
     if (!state.title && track.title) {
       state.title = track.title;
@@ -409,8 +410,8 @@ export function detailFieldValues(
   }
 
   state.preferComposerGrouping = preferComposerGroupingFormValue(
-    hasNativePreferComposerGrouping
-      ? nativePreferComposerGrouping
+    hasFilePreferComposerGrouping
+      ? filePreferComposerGrouping
       : (track?.preferComposerGrouping ?? null),
     state.genre,
   );

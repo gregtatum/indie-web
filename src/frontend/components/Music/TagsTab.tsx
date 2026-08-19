@@ -43,9 +43,9 @@ export function TagsTab({ tagsState }: Props) {
     );
   }
 
-  const { native } = tagsState.data;
+  const { blocks } = tagsState.data;
 
-  if (native.length === 0 || native.every((block) => block.tags.length === 0)) {
+  if (blocks.length === 0 || blocks.every((block) => block.tags.length === 0)) {
     return (
       <div className="editTrackModalTags">
         <div className="editTrackModalTagsLoading">No tags found</div>
@@ -55,7 +55,7 @@ export function TagsTab({ tagsState }: Props) {
 
   return (
     <div className="editTrackModalTags">
-      {native.map(({ format, tags }) =>
+      {blocks.map(({ format, tags }) =>
         tags.length === 0 ? null : (
           <div key={format}>
             <div className="editTrackModalTagsFormat">{format}</div>

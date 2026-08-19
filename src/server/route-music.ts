@@ -241,7 +241,7 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /**
-   * Returns all raw native tag frames for a single audio file, serialized to
+   * Returns all raw tag frames for a single audio file, serialized to
    * human-readable strings. Binary values (e.g. embedded pictures) are
    * represented as '[binary]'. Grouped by tag format (e.g. 'ID3v2.4', 'vorbis').
    */
@@ -255,15 +255,15 @@ export function musicRoute(mountPath: MountPath) {
       throw new ClientError('Invalid path.');
     }
     const meta = await parseFile(resolvedPath);
-    const native = serializeTagBlocks(meta.native ?? {});
+    const blocks = serializeTagBlocks(meta.native ?? {});
     const resolved: Record<string, string> = {};
     for (const frameId of APP_FRAME_IDS) {
-      const value = resolveTagValue(native, frameId);
+      const value = resolveTagValue(blocks, frameId);
       if (value !== undefined) {
         resolved[frameId] = value;
       }
     }
-    return { native, resolved };
+    return { blocks, resolved };
   });
 
   /**
@@ -696,7 +696,7 @@ async function computeGapFillChanges(
   changes: T.WriteTrackTagsRequest['changes'],
 ): Promise<T.TrackTagUpdate[]> {
   const requestedFrameIds = new Set(changes.map((change) => change.frameId));
-  let blocks: T.TrackTagsResponse['native'];
+  let blocks: T.TrackTagsResponse['blocks'];
   try {
     const meta = await parseFile(resolvedPath);
     blocks = serializeTagBlocks(meta.native ?? {});
@@ -1007,7 +1007,7 @@ function serializeTag(value: unknown): { value: string; binary?: string } {
  */
 function serializeTagBlocks(
   rawTags: Record<string, Array<{ id: string; value: unknown }>>,
-): T.TrackTagsResponse['native'] {
+): T.TrackTagsResponse['blocks'] {
   return Object.entries(rawTags).map(([format, frames]) => ({
     format,
     tags: frames.map((frame) => {

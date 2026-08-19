@@ -266,12 +266,12 @@ describe('<Music> with real server', () => {
       `${getServer().baseUrl}/music/track-tags?path=${encodeURIComponent('/EditTest.mp3')}`,
     );
     const tagsData = (await tagsRes.json()) as {
-      native: Array<{
+      blocks: Array<{
         format: string;
         tags: Array<{ id: string; value: string }>;
       }>;
     };
-    const allTags = tagsData.native.flatMap((b) => b.tags);
+    const allTags = tagsData.blocks.flatMap((b) => b.tags);
     expect(allTags.find((t) => t.id === 'TIT2')?.value).toBe('Updated Title');
   }, 30_000);
 
@@ -352,12 +352,12 @@ describe('<Music> with real server', () => {
         )}`,
       );
       const tagsData = (await tagsRes.json()) as {
-        native: Array<{
+        blocks: Array<{
           format: string;
           tags: Array<{ id: string; value: string }>;
         }>;
       };
-      const allTags = tagsData.native.flatMap((b) => b.tags);
+      const allTags = tagsData.blocks.flatMap((b) => b.tags);
       expect(allTags.find((t) => t.id === 'TCON')?.value).toBe(
         'New Album Genre',
       );

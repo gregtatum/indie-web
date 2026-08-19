@@ -120,7 +120,7 @@ export interface WriteFolderArtResponse {
 }
 
 export interface TrackTagsResponse {
-  native: Array<{
+  blocks: Array<{
     format: string;
     tags: RawTagEntry[];
   }>;

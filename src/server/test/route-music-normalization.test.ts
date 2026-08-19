@@ -63,8 +63,8 @@ function trackByPath(index: T.MusicIndex, clientPath: string): T.TrackMetadata {
 }
 
 function tagsOf(response: T.TrackTagsResponse, format: string) {
-  const block = response.native.find((b) => b.format === format);
-  assert.ok(block, `expected a ${format} block in the native tags`);
+  const block = response.blocks.find((b) => b.format === format);
+  assert.ok(block, `expected a ${format} block in the tag blocks`);
   return new Map(block!.tags.map((t) => [t.id, t.value]));
 }
 
@@ -199,7 +199,7 @@ describe('scan resolves fields by ID3v2.3 > ID3v2.4 > ID3v2.2 > ID3v1 priority',
   );
 });
 
-describe('GET /music/track-tags resolved values agree with the scanner; raw native stays complete', () => {
+describe('GET /music/track-tags resolved values agree with the scanner; raw tag blocks stay complete', () => {
   let server: TestServer;
   before(async () => {
     server = await createTestServer((app, mountPath) => {
@@ -209,7 +209,7 @@ describe('GET /music/track-tags resolved values agree with the scanner; raw nati
   after(() => server.close());
 
   it(
-    'resolved matches the index, while native still exposes every original source block for the raw tag browser',
+    'resolved matches the index, while blocks still exposes every original source block for the raw tag browser',
     withLogs([], async () => {
       await writeFile(
         join(server.mountDir, 'resolved.mp3'),
@@ -242,7 +242,7 @@ describe('GET /music/track-tags resolved values agree with the scanner; raw nati
 
       // The raw browser (TagsTab.tsx) still needs every original block,
       // unmodified — normalization must not collapse it away.
-      const formats = tags.native.map((b) => b.format).sort();
+      const formats = tags.blocks.map((b) => b.format).sort();
       assert.deepEqual(formats, ['ID3v1', 'ID3v2.3', 'ID3v2.4']);
       assert.equal(
         tagsOf(tags, 'ID3v2.4').get('TCON'),
@@ -350,7 +350,7 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
 
       const before = await getTrackTags(server, clientPath);
       assert.equal(
-        before.native.find((b) => b.format === 'ID3v2.3'),
+        before.blocks.find((b) => b.format === 'ID3v2.3'),
         undefined,
       );
       const v1Before = tagsOf(before, 'ID3v1');
@@ -368,7 +368,7 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
       // The old leading ID3v2.4 tag is gone: it was the only ID3v2 tag, so
       // node-id3 rewrote it in place — and this app always writes ID3v2.3.
       assert.equal(
-        after.native.find((b) => b.format === 'ID3v2.4'),
+        after.blocks.find((b) => b.format === 'ID3v2.4'),
         undefined,
       );
       const v23After = tagsOf(after, 'ID3v2.3');
@@ -423,7 +423,7 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
         [{ frameId: 'TALB', value: 'Second Album' }],
       );
       const afterSecond = await getTrackTags(server, clientPath);
-      const v23TagsAfterSecond = afterSecond.native.find(
+      const v23TagsAfterSecond = afterSecond.blocks.find(
         (b) => b.format === 'ID3v2.3',
       )!.tags;
 

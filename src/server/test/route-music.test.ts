@@ -345,7 +345,7 @@ describe('POST /music/music-index/scan incremental behavior', () => {
       );
       assert.equal(tagsRes.status, 200);
       const tagsData = await tagsRes.json();
-      const allTags = tagsData.native.flatMap(
+      const allTags = tagsData.blocks.flatMap(
         (block: { tags: Array<{ id: string; value: string }> }) => block.tags,
       );
       assert.equal(

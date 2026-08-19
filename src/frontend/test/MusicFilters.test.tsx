@@ -418,7 +418,7 @@ describe('music URL serialization', () => {
     ];
     const { store, getLocation } = setup('?genre=Indie', tracks);
     fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
-      body: JSON.stringify({ native: [], resolved: {} }),
+      body: JSON.stringify({ blocks: [], resolved: {} }),
       status: 200,
     });
     fetchMock.post(`${FAKE_SERVER.url}/music/write-track-tags`, {
@@ -505,7 +505,7 @@ describe('edit track modal tab URL serialization', () => {
     const { getLocation, getNavigate } = setup();
 
     fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
-      body: JSON.stringify({ native: [], resolved: {} }),
+      body: JSON.stringify({ blocks: [], resolved: {} }),
       status: 200,
     });
 
@@ -548,7 +548,7 @@ describe('edit track modal URL serialization', () => {
     const { getLocation, getNavigate } = setup();
 
     fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
-      body: JSON.stringify({ native: [], resolved: {} }),
+      body: JSON.stringify({ blocks: [], resolved: {} }),
       status: 200,
     });
 

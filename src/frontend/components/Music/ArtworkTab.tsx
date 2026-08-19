@@ -154,7 +154,7 @@ export function ArtworkTab({
     if (tagsState.status !== 'loaded') {
       return [];
     }
-    return tagsState.data.native
+    return tagsState.data.blocks
       .flatMap((block) => block.tags)
       .filter((tag) => tag.id === 'APIC' && tag.binary !== undefined)
       .map((tag) => ({ value: tag.value, binary: tag.binary! }))
