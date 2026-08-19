@@ -63,6 +63,13 @@ tasks:
       - '[ -d "node_modules" ] || npm install'
       - npm run start-dev
 
+  start-music-server:
+    desc: Start the server in development mode, serving the music folder
+    dir: src/server
+    cmds:
+      - '[ -d "node_modules" ] || npm install'
+      - MOUNT_PATH=../../music PORT=6544 npm run start-dev
+
   lint-js:
     desc: Lint the JavaScript files.
     cmds:
