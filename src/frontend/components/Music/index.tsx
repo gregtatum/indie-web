@@ -4,6 +4,8 @@ import { $$, A, Hooks, T } from 'frontend';
 import { ListFiles } from '../ListFiles';
 import { MusicLibraryView } from './MusicLibraryView';
 import { useMusicUrlSerialization } from './UrlSerialization';
+import { Tooltip } from '../Tooltip';
+import { CURRENT_MUSIC_INDEX_VERSION } from 'frontend/logic/music/music-index-upgraders';
 import './index.css';
 
 type ScanPhase = 'idle' | 'scanning' | 'done' | 'error';
@@ -24,6 +26,7 @@ export function Music() {
 
 function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const needsRescan = $$.getMusicNeedsRescan();
+  const servedIndexVersion = $$.getMusicServedIndexVersion();
   const { dispatch } = Hooks.useStore();
   const { isFilesView } = useMusicUrlSerialization();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
@@ -110,17 +113,29 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     scanLabel = 'Scan Library (updates detected)';
   }
 
+  const scanButton = (
+    <button
+      type="button"
+      className={`button${needsRescan && scanPhase !== 'scanning' ? ' button-primary musicScanLibraryButton-rescan' : ''}`}
+      onClick={handleScan}
+      disabled={scanPhase === 'scanning'}
+    >
+      {scanLabel}
+    </button>
+  );
+
   return (
     <div className="music musicContainer">
       <div className="musicToolbar">
-        <button
-          type="button"
-          className={`button${needsRescan && scanPhase !== 'scanning' ? ' button-primary musicScanLibraryButton-rescan' : ''}`}
-          onClick={handleScan}
-          disabled={scanPhase === 'scanning'}
-        >
-          {scanLabel}
-        </button>
+        {needsRescan && scanPhase !== 'scanning' ? (
+          <Tooltip
+            text={`Your library scan can be updated from version ${servedIndexVersion ?? '?'} to ${CURRENT_MUSIC_INDEX_VERSION}.`}
+          >
+            {scanButton}
+          </Tooltip>
+        ) : (
+          scanButton
+        )}
         {displayMessage ? (
           <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
             {displayMessage}

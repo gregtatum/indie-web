@@ -130,12 +130,14 @@ const PlainInternal = {
   setMusicTracks(
     tracks: T.TrackMetadata[],
     needsRescan: boolean,
+    servedVersion: number | null,
     panelSelections: Partial<Record<T.MusicPanelType, string[]>>,
   ) {
     return {
       type: 'set-music-tracks' as const,
       tracks,
       needsRescan,
+      servedVersion,
       panelSelections,
     };
   },
@@ -169,12 +171,18 @@ const PlainInternal = {
 export function setMusicTracks(
   tracks: T.TrackMetadata[],
   needsRescan: boolean,
+  servedVersion: number | null = null,
 ): Thunk {
   return (dispatch, getState) => {
     const existingSelections = $.getMusicPanelSelections(getState());
 
     dispatch(
-      PlainInternal.setMusicTracks(tracks, needsRescan, existingSelections),
+      PlainInternal.setMusicTracks(
+        tracks,
+        needsRescan,
+        servedVersion,
+        existingSelections,
+      ),
     );
   };
 }

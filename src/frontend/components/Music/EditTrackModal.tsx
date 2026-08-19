@@ -280,6 +280,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const server = $$.getCurrentServer();
   const activeTab = $$.getMusicEditTab();
   const needsRescan = $$.getMusicNeedsRescan();
+  const servedIndexVersion = $$.getMusicServedIndexVersion();
   const dispatch = Hooks.useDispatch();
 
   const [formState, setFormState] = React.useState<DetailFieldValues>(
@@ -698,6 +699,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
               : t,
           ),
           needsRescan,
+          servedIndexVersion,
         ),
       );
 

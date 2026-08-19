@@ -197,6 +197,20 @@ function needsRescan(state = false, action: T.Action): boolean {
   }
 }
 
+function servedIndexVersion(
+  state: number | null = null,
+  action: T.Action,
+): number | null {
+  switch (action.type) {
+    case 'set-music-tracks':
+      return action.servedVersion;
+    case 'view-music':
+      return null;
+    default:
+      return state;
+  }
+}
+
 const emptyPlaybackQueue: MusicPlaybackQueue = {
   tracks: [],
   panelSelections: {},
@@ -227,6 +241,7 @@ const combinedMusicReducer = combineReducers({
   tracks,
   selectedTrackPaths,
   needsRescan,
+  servedIndexVersion,
   playingTrackPath,
   playbackLoadId,
   playbackStatus,

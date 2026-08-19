@@ -43,6 +43,10 @@ export function getMusicNeedsRescan(state: State): boolean {
   return getMusic(state).needsRescan;
 }
 
+export function getMusicServedIndexVersion(state: State): number | null {
+  return getMusic(state).servedIndexVersion;
+}
+
 function filterByPanel(
   filteredTracks: T.TrackMetadata[],
   panel: T.MusicPanelType,

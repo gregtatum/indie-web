@@ -210,8 +210,10 @@ function upgradeV7ToV8(blob: IndexVersion<7>): T.MusicIndex {
 export function upgradeMusicIndex(blob: unknown): {
   index: T.MusicIndex;
   wasUpgraded: boolean;
+  servedVersion: number | null;
 } {
   let raw = blob as { version?: number } & Record<string, unknown>;
+  const servedVersion = raw.version ?? null;
   let wasUpgraded = false;
   if (raw.version === 1) {
     raw = upgradeV1ToV2(raw as IndexVersion<1>) as unknown as typeof raw;
@@ -241,5 +243,5 @@ export function upgradeMusicIndex(blob: unknown): {
     raw = upgradeV7ToV8(raw as IndexVersion<7>) as unknown as typeof raw;
     wasUpgraded = true;
   }
-  return { index: raw as unknown as T.MusicIndex, wasUpgraded };
+  return { index: raw as unknown as T.MusicIndex, wasUpgraded, servedVersion };
 }

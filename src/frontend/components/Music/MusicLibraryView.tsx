@@ -68,8 +68,10 @@ export function MusicLibraryView({
           setError('Music library not found. Run a scan first.');
           return;
         }
-        const { index, wasUpgraded } = upgradeMusicIndex(await res.json());
-        dispatch(A.setMusicTracks(index.tracks, wasUpgraded));
+        const { index, wasUpgraded, servedVersion } = upgradeMusicIndex(
+          await res.json(),
+        );
+        dispatch(A.setMusicTracks(index.tracks, wasUpgraded, servedVersion));
         setError(null);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {

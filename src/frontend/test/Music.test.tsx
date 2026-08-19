@@ -190,6 +190,21 @@ describe('<Music> with real server', () => {
     });
   });
 
+  it('discloses the index format mismatch in a tooltip', async () => {
+    await writeFile(join(getServer().mountDir, '.music-index.json'), v1Fixture);
+
+    setup();
+
+    const button = await screen.findByRole('button', {
+      name: 'Scan Library (updates detected)',
+    });
+
+    fireEvent.mouseOver(button);
+    expect(screen.getByRole('tooltip').textContent).toBe(
+      'Library index format 1 → 8. Rescan to refresh data read with the older format.',
+    );
+  });
+
   it('reverts to "Scan Library" after scanning clears the stale index', async () => {
     await writeFile(join(getServer().mountDir, '.music-index.json'), v1Fixture);
 
