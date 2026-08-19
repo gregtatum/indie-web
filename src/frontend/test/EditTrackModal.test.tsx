@@ -140,7 +140,7 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
   fetchMock.get(
     new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
     options.trackTagsResponse ?? {
-      body: JSON.stringify({ native: [] }),
+      body: JSON.stringify({ native: [], resolved: {} }),
       status: 200,
     },
   );
@@ -463,6 +463,7 @@ describe('edit track modal', () => {
               ],
             },
           ],
+          resolved: { TIT2: 'Live Title', TPE1: 'Live Artist' },
         }),
         status: 200,
       });
@@ -794,6 +795,7 @@ describe('edit track modal', () => {
               ],
             },
           ],
+          resolved: {},
         }),
         status: 200,
       },
@@ -845,7 +847,10 @@ describe('edit track modal', () => {
     });
     fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
       trackTagsFetchCount++;
-      return { body: JSON.stringify({ native: [] }), status: 200 };
+      return {
+        body: JSON.stringify({ native: [], resolved: {} }),
+        status: 200,
+      };
     });
 
     render(
@@ -925,7 +930,10 @@ describe('edit track modal', () => {
     });
     fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
       trackTagsFetchCount++;
-      return { body: JSON.stringify({ native: [] }), status: 200 };
+      return {
+        body: JSON.stringify({ native: [], resolved: {} }),
+        status: 200,
+      };
     });
     const writeRequests = mockWriteTrackTags({
       updated: manyTracks.map((track) => track.path),
@@ -1087,7 +1095,10 @@ describe('edit track modal', () => {
       if (trackTagsFetchCount === 1) {
         return { body: 'Nope', status: 500 };
       }
-      return { body: JSON.stringify({ native: [] }), status: 200 };
+      return {
+        body: JSON.stringify({ native: [], resolved: {} }),
+        status: 200,
+      };
     });
 
     render(

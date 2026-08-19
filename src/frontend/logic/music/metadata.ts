@@ -26,6 +26,26 @@ const PRIORITY_IDS = [
 
 const priorityIndex = new Map(PRIORITY_IDS.map((id, i) => [id, i]));
 
+/**
+ * Looks up a frame ID's value across all native tag blocks, taking whichever
+ * block happens to list it first. Used only for app-owned private (TXXX)
+ * tags, which aren't part of the server's version-priority `resolved` set.
+ */
+function firstNativeTagValue(
+  native: TrackTagsResponse['native'],
+  frameId: string,
+): string | undefined {
+  for (const block of native) {
+    const tag = block.tags.find(
+      (t) => t.id === frameId && t.binary === undefined,
+    );
+    if (tag) {
+      return tag.value;
+    }
+  }
+  return undefined;
+}
+
 export function sortTags<T extends { id: string }>(tags: T[]): T[] {
   return [...tags].sort((a, b) => {
     const ai = priorityIndex.get(a.id);
@@ -330,15 +350,11 @@ export function detailFieldValues(
   let hasNativePreferComposerGrouping = false;
 
   if (tagsResponse) {
-    const frameMap = new Map<string, string>();
-    for (const block of tagsResponse.native) {
-      for (const tag of block.tags) {
-        if (!frameMap.has(tag.id) && tag.binary === undefined) {
-          frameMap.set(tag.id, tag.value);
-        }
-      }
-    }
-    const preferComposerValue = frameMap.get(
+    // The prefer-composer-grouping private tag is app-owned and isn't part of
+    // the version-priority resolution the server applies to `resolved` —
+    // still derived directly from the raw native blocks.
+    const preferComposerValue = firstNativeTagValue(
+      tagsResponse.native,
       `TXXX:${PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION}`,
     );
     if (preferComposerValue !== undefined) {
@@ -347,7 +363,12 @@ export function detailFieldValues(
     }
 
     for (const field of DETAIL_FIELDS) {
-      const raw = frameMap.get(field.frameId) ?? '';
+      // The server resolves each field across a file's embedded tag blocks
+      // (e.g. a co-located legacy ID3v2.4 tag alongside the current ID3v2.3
+      // one) by a shared priority order, so this is the same value the
+      // scanner used to build the music index — see resolveTagValue in
+      // shared/music.ts.
+      const raw = tagsResponse.resolved[field.frameId] ?? '';
       if (isSplitField(field)) {
         const slash = raw.indexOf('/');
         state[field.key] = slash === -1 ? raw : raw.slice(0, slash);
