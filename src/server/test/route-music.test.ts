@@ -20,6 +20,25 @@ if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
   };
 }
 
+describe('GET /music', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+
+  after(() => server.close());
+
+  it('reports the max MusicIndex version this server supports', async () => {
+    const res = await fetch(`${server.baseUrl}/music`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.maxMusicIndexVersion, MUSIC_INDEX_VERSION);
+  });
+});
+
 describe('GET /music/music-index', () => {
   let server: TestServer;
 

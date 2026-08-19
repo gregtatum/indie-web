@@ -357,6 +357,13 @@ export function setMusicSelectedTracks(paths: string[]) {
   };
 }
 
+export function setMusicServerMaxIndexVersion(version: number) {
+  return {
+    type: 'set-music-server-max-index-version' as const,
+    version,
+  };
+}
+
 export function musicPlaybackReady() {
   return { type: 'music-playback-ready' as const };
 }

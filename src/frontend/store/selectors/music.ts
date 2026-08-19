@@ -47,6 +47,10 @@ export function getMusicServedIndexVersion(state: State): number | null {
   return getMusic(state).servedIndexVersion;
 }
 
+export function getMusicServerMaxIndexVersion(state: State): number | null {
+  return getMusic(state).serverMaxIndexVersion;
+}
+
 function filterByPanel(
   filteredTracks: T.TrackMetadata[],
   panel: T.MusicPanelType,

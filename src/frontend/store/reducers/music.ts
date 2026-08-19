@@ -211,6 +211,20 @@ function servedIndexVersion(
   }
 }
 
+function serverMaxIndexVersion(
+  state: number | null = null,
+  action: T.Action,
+): number | null {
+  switch (action.type) {
+    case 'set-music-server-max-index-version':
+      return action.version;
+    case 'view-music':
+      return null;
+    default:
+      return state;
+  }
+}
+
 const emptyPlaybackQueue: MusicPlaybackQueue = {
   tracks: [],
   panelSelections: {},
@@ -242,6 +256,7 @@ const combinedMusicReducer = combineReducers({
   selectedTrackPaths,
   needsRescan,
   servedIndexVersion,
+  serverMaxIndexVersion,
   playingTrackPath,
   playbackLoadId,
   playbackStatus,

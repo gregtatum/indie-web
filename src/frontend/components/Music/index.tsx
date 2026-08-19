@@ -27,6 +27,7 @@ export function Music() {
 function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const needsRescan = $$.getMusicNeedsRescan();
   const servedIndexVersion = $$.getMusicServedIndexVersion();
+  const serverMaxIndexVersion = $$.getMusicServerMaxIndexVersion();
   const { dispatch } = Hooks.useStore();
   const { isFilesView } = useMusicUrlSerialization();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
@@ -106,17 +107,25 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     displayMessage = statusMessage;
   }
 
+  // A rescan can't produce current-format data from a server that doesn't
+  // know about it yet, so don't prompt for a rescan in that case — updating
+  // the server is the actual fix.
+  const serverOutdated =
+    serverMaxIndexVersion !== null &&
+    serverMaxIndexVersion < CURRENT_MUSIC_INDEX_VERSION;
+  const showRescanPrompt = needsRescan && !serverOutdated;
+
   let scanLabel = 'Scan Library';
   if (scanPhase === 'scanning') {
     scanLabel = 'Scanning…';
-  } else if (needsRescan) {
+  } else if (showRescanPrompt) {
     scanLabel = 'Scan Library (updates detected)';
   }
 
   const scanButton = (
     <button
       type="button"
-      className={`button${needsRescan && scanPhase !== 'scanning' ? ' button-primary musicScanLibraryButton-rescan' : ''}`}
+      className={`button${showRescanPrompt && scanPhase !== 'scanning' ? ' button-primary musicScanLibraryButton-rescan' : ''}`}
       onClick={handleScan}
       disabled={scanPhase === 'scanning'}
     >
@@ -127,7 +136,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   return (
     <div className="music musicContainer">
       <div className="musicToolbar">
-        {needsRescan && scanPhase !== 'scanning' ? (
+        {showRescanPrompt && scanPhase !== 'scanning' ? (
           <Tooltip
             text={`Your library scan can be updated from version ${servedIndexVersion ?? '?'} to ${CURRENT_MUSIC_INDEX_VERSION}.`}
           >
@@ -136,6 +145,16 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
         ) : (
           scanButton
         )}
+        {serverOutdated ? (
+          <a
+            className="button button-primary"
+            href="/docs/file-store-server.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Server update needed
+          </a>
+        ) : null}
         {displayMessage ? (
           <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
             {displayMessage}

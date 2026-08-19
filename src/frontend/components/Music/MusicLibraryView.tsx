@@ -60,6 +60,20 @@ export function MusicLibraryView({
     const fetchController = new AbortController();
 
     async function loadIndex() {
+      const serverInfoResponse = await fetch(`${currentServer.url}/music`, {
+        signal: fetchController.signal,
+      }).catch(() => null);
+
+      // The first index check happened at version 8, so assume version 7 if none exists.
+      let maxMusicIndexVersion = 7;
+      if (serverInfoResponse?.ok) {
+        const serverInfo = await serverInfoResponse.json().catch(() => null);
+        if (typeof serverInfo?.maxMusicIndexVersion === 'number') {
+          maxMusicIndexVersion = serverInfo.maxMusicIndexVersion;
+        }
+      }
+      dispatch(A.setMusicServerMaxIndexVersion(maxMusicIndexVersion));
+
       try {
         const res = await fetch(`${currentServer.url}/music/music-index`, {
           signal: fetchController.signal,

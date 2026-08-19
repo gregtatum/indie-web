@@ -62,11 +62,17 @@ export function musicRoute(mountPath: MountPath) {
   let scanInProgress = false;
 
   /**
-   * List out the routes that are available, just as a simple hint.
+   * List out the API routes as a simple hint and music index version.
    */
-  route.get('/', async (): Promise<{ routes: string[] }> => {
-    return { routes: route.routes.map((r) => r.toString()) };
-  });
+  route.get(
+    '/',
+    async (): Promise<{ routes: string[]; maxMusicIndexVersion: number }> => {
+      return {
+        routes: route.routes.map((r) => r.toString()),
+        maxMusicIndexVersion: MUSIC_INDEX_VERSION,
+      };
+    },
+  );
 
   /**
    * Returns the current music index, or 404 if no scan has been run yet.

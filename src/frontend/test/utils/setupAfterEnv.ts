@@ -4,6 +4,7 @@ import { persistedState } from 'frontend/logic/persisted-state';
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { Blob } from 'node:buffer';
+import { MUSIC_INDEX_VERSION } from 'shared/music';
 
 globalThis.structuredClone = structuredClone;
 
@@ -49,6 +50,16 @@ beforeEach(function () {
   });
   global.indexedDB = new IDBFactory();
   fetchMock.mockGlobal();
+  // Default response for a music server's root route, so tests using a mocked
+  // FAKE_SERVER report as fully up to date rather than spuriously showing the
+  // "server outdated" notice added in Music/index.tsx.
+  fetchMock.get(/\/music$/, {
+    body: JSON.stringify({
+      routes: [],
+      maxMusicIndexVersion: MUSIC_INDEX_VERSION,
+    }),
+    status: 200,
+  });
   (global as any).Blob = Blob;
   (crypto as any).subtle = { digest: simpleDigest256 };
 

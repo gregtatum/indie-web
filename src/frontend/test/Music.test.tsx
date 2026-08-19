@@ -66,6 +66,14 @@ describe('<Music> with real server', () => {
     await screen.findByText('Music library not found. Run a scan first.');
   });
 
+  it('does not show a server update notice against an up-to-date server', async () => {
+    setup();
+    await screen.findByRole('button', { name: 'Scan Library' });
+    expect(
+      screen.queryByRole('link', { name: 'Server update needed' }),
+    ).toBeNull();
+  });
+
   it('shows files from the server in the listing', async () => {
     await writeFile(join(getServer().mountDir, 'Blue.mp3'), buildMinimalMp3());
 
@@ -201,7 +209,7 @@ describe('<Music> with real server', () => {
 
     fireEvent.mouseOver(button);
     expect(screen.getByRole('tooltip').textContent).toBe(
-      'Library index format 1 → 8. Rescan to refresh data read with the older format.',
+      'Your library scan can be updated from version 1 to 8.',
     );
   });
 
