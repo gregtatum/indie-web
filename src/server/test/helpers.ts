@@ -22,6 +22,23 @@ export interface TestServer {
   close: () => Promise<void>;
 }
 
+/**
+ * Returns everything in `buffer` after the leading ID3v2 tag (size is
+ * syncsafe in bytes 6..9). Useful for proving a write didn't touch anything
+ * beyond the tag it's meant to edit — the leading tag's size can change
+ * across a write, so this re-reads it fresh each time rather than assuming a
+ * fixed offset.
+ */
+export function getBytesAfterId3(buffer: Buffer): Buffer {
+  assert.equal(buffer.subarray(0, 3).toString('ascii'), 'ID3');
+  const size =
+    (buffer.readUInt8(6) << 21) |
+    (buffer.readUInt8(7) << 14) |
+    (buffer.readUInt8(8) << 7) |
+    buffer.readUInt8(9);
+  return buffer.subarray(10 + size);
+}
+
 function stripAnsi(str: string): string {
   // eslint-disable-next-line no-control-regex
   return str.replace(/\x1b\[[0-9;]*m/g, '');

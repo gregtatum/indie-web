@@ -11,6 +11,7 @@ import {
   buildMp3WithTags,
   withLogs,
   AUDIO_PAYLOAD,
+  getBytesAfterId3,
 } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
 
@@ -27,19 +28,6 @@ function findFrames(meta: IAudioMetadata, id: string): ITag[] {
 function findFrameValue(meta: IAudioMetadata, id: string): unknown {
   const frame = findFrames(meta, id)[0];
   return frame?.value;
-}
-
-/**
- * Returns the bytes after the ID3v2 chunk (size is syncsafe in bytes 6..9).
- */
-function getBytesAfterId3(buffer: Buffer): Buffer {
-  assert.equal(buffer.subarray(0, 3).toString('ascii'), 'ID3');
-  const size =
-    (buffer.readUInt8(6) << 21) |
-    (buffer.readUInt8(7) << 14) |
-    (buffer.readUInt8(8) << 7) |
-    buffer.readUInt8(9);
-  return buffer.subarray(10 + size);
 }
 
 async function writeTrackTags(

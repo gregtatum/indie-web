@@ -358,12 +358,18 @@ export function musicRoute(mountPath: MountPath) {
       if (!Array.isArray(changes) || changes.length === 0) {
         throw new ClientError('Missing or empty changes array.');
       }
-      const tags = buildNodeId3Tags(changes);
+      // Validate/build the requested tags once up front so a malformed
+      // request fails before any file is touched.
+      buildNodeId3Tags(changes);
       const updatedTracks: TrackTagWriteResult[] = [];
       const errors: T.WriteTrackTagsResponse['errors'] = [];
 
       for (const clientPath of paths) {
-        const result = await writeTrackTagsForPath(mountPath, clientPath, tags);
+        const result = await writeTrackTagsForPath(
+          mountPath,
+          clientPath,
+          changes,
+        );
         if ('message' in result) {
           errors.push(result);
         } else {
@@ -616,6 +622,10 @@ function getNativePrivateTextTags(
 interface TrackTagWriteResult {
   clientPath: string;
   resolvedPath: string;
+  /**
+   * Fields eagerly migrated into ID3v2.3 alongside the requested changes.
+   */
+  gapFillChanges: T.TrackTagUpdate[];
 }
 
 type IndexTagWriteResult = T.WriteTrackTagsResponse['index'];
@@ -653,10 +663,74 @@ function buildNodeId3Tags(
   return tags;
 }
 
+/**
+ * serializeTag JSON-stringifies a COMM frame's value into an object with
+ * language, descriptor, and text fields. This function extracts just the
+ * text. The frontend's detailFieldValues() duplicates this same parsing.
+ * Keep the two in sync.
+ */
+function extractCommentText(rawValue: string): string {
+  try {
+    const parsed = JSON.parse(rawValue) as { text?: string };
+    return parsed.text ?? '';
+  } catch {
+    return rawValue;
+  }
+}
+
+/**
+ * Computes fields to backfill into ID3v2.3 during a write. Each
+ * APP_FRAME_IDS field missing from the ID3v2.3 block gets its value from
+ * another embedded tag block, chosen by TAG_FORMAT_PRIORITY. Fields the
+ * caller is already writing are skipped, since an explicit change always
+ * wins.
+ *
+ * This function assumes the ID3v2.3 tag, when present, is the file's
+ * leading tag. That holds for every tag this app writes and for the common
+ * re-tagger case of prepending a fresh tag over an old one. NodeID3.update()
+ * only edits the leading tag, so a non-leading legacy ID3v2.3 tag will not
+ * migrate. This is an accepted, atypical edge case.
+ */
+async function computeGapFillChanges(
+  resolvedPath: string,
+  changes: T.WriteTrackTagsRequest['changes'],
+): Promise<T.TrackTagUpdate[]> {
+  const requestedFrameIds = new Set(changes.map((change) => change.frameId));
+  let blocks: T.TrackTagsResponse['native'];
+  try {
+    const meta = await parseFile(resolvedPath);
+    blocks = serializeTagBlocks(meta.native ?? {});
+  } catch {
+    // This function can't read the file's tag blocks for gap-fill. The
+    // write below will still be attempted and will surface any real error
+    // on its own.
+    return [];
+  }
+
+  const v23Tags = blocks.find((block) => block.format === 'ID3v2.3');
+  const v23FrameIds = new Set(v23Tags?.tags.map((tag) => tag.id) ?? []);
+
+  const gapFill: T.TrackTagUpdate[] = [];
+  for (const frameId of APP_FRAME_IDS) {
+    if (v23FrameIds.has(frameId) || requestedFrameIds.has(frameId)) {
+      continue;
+    }
+    const rawValue = resolveTagValue(blocks, frameId);
+    if (rawValue === undefined) {
+      continue;
+    }
+    gapFill.push({
+      frameId,
+      value: frameId === 'COMM' ? extractCommentText(rawValue) : rawValue,
+    });
+  }
+  return gapFill;
+}
+
 async function writeTrackTagsForPath(
   mountPath: MountPath,
   clientPath: unknown,
-  tags: Record<string, unknown>,
+  changes: T.WriteTrackTagsRequest['changes'],
 ): Promise<TrackTagWriteResult | { path: string; message: string }> {
   const pathForError = typeof clientPath === 'string' ? clientPath : '';
   let errorPath = pathForError;
@@ -692,11 +766,14 @@ async function writeTrackTagsForPath(
       };
     }
 
+    const gapFillChanges = await computeGapFillChanges(resolvedPath, changes);
+    const tags = buildNodeId3Tags([...gapFillChanges, ...changes]);
+
     const result = NodeID3.update(tags, resolvedPath);
     if (result instanceof Error) {
       return { path: normalizedClientPath, message: result.message };
     }
-    return { clientPath: normalizedClientPath, resolvedPath };
+    return { clientPath: normalizedClientPath, resolvedPath, gapFillChanges };
   } catch (error) {
     return {
       path: errorPath,
@@ -779,7 +856,10 @@ async function updateIndexAfterTrackTagWrites(
       updatedTrack.size = stats.size;
       updatedTrack.mtime = stats.mtime.toISOString();
 
-      for (const { frameId, value, description } of changes) {
+      for (const { frameId, value, description } of [
+        ...updated.gapFillChanges,
+        ...changes,
+      ]) {
         switch (frameId) {
           case 'TIT2':
             updatedTrack.title = value || null;

@@ -1,6 +1,6 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFile, stat } from 'node:fs/promises';
+import { writeFile, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { musicRoute, MUSIC_INDEX_FILENAME } from '../route-music.ts';
 import type { T } from '../index.ts';
@@ -8,6 +8,7 @@ import {
   createTestServer,
   buildMp3WithNativeBlocks,
   withLogs,
+  getBytesAfterId3,
 } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
 
@@ -39,6 +40,19 @@ async function getTrackTags(
   const res = await fetch(
     `${server.baseUrl}/music/track-tags?path=${encodeURIComponent(clientPath)}`,
   );
+  return res.json();
+}
+
+async function writeTags(
+  server: TestServer,
+  paths: string[],
+  changes: T.TrackTagUpdate[],
+): Promise<T.WriteTrackTagsResponse> {
+  const res = await fetch(`${server.baseUrl}/music/write-track-tags`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths, changes }),
+  });
   return res.json();
 }
 
@@ -238,6 +252,245 @@ describe('GET /music/track-tags resolved values agree with the scanner; raw nati
         tagsOf(tags, 'ID3v1').get('title'),
         'Resolved-V1-Title-ignored',
       );
+    }),
+  );
+});
+
+describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v2.3', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  it(
+    'backfills ID3v2.3 from legacy tags, keeps its own pre-existing field, and never touches the legacy tags on disk',
+    withLogs([], async () => {
+      const clientPath = '/migrate.mp3';
+      await writeFile(
+        join(server.mountDir, 'migrate.mp3'),
+        buildMp3WithNativeBlocks({
+          id3v2Blocks: [
+            // v2.3 owns genre only.
+            { version: 3, frames: [{ id: 'TCON', text: 'Migrate-V23-Genre' }] },
+            {
+              version: 4,
+              frames: [
+                { id: 'TCON', text: 'Migrate-V24-Genre-should-not-win' },
+                { id: 'TIT2', text: 'Migrate-V24-Title' },
+                { id: 'TPE1', text: 'Migrate-V24-Artist' },
+              ],
+            },
+          ],
+          id3v1: { album: 'Migrate-V1-Album' },
+        }),
+      );
+
+      const before = await getTrackTags(server, clientPath);
+      const v24Before = tagsOf(before, 'ID3v2.4');
+      const v1Before = tagsOf(before, 'ID3v1');
+
+      const fileBefore = await readFile(join(server.mountDir, 'migrate.mp3'));
+      const tailBefore = getBytesAfterId3(fileBefore);
+
+      // Write a field with nothing to do with genre/title/artist.
+      const writeRes = await writeTags(
+        server,
+        [clientPath],
+        [{ frameId: 'TALB', value: 'Migrate-New-Album' }],
+      );
+      assert.deepEqual(writeRes.errors, []);
+
+      const after = await getTrackTags(server, clientPath);
+      const v23After = tagsOf(after, 'ID3v2.3');
+
+      // The requested edit landed.
+      assert.equal(v23After.get('TALB'), 'Migrate-New-Album');
+      // v2.3's own pre-existing field survives — not overwritten by the
+      // lower-priority ID3v2.4 value for the same frame.
+      assert.equal(v23After.get('TCON'), 'Migrate-V23-Genre');
+      // Fields v2.3 didn't have were migrated in from ID3v2.4 (which
+      // outranks ID3v1), not from ID3v1.
+      assert.equal(v23After.get('TIT2'), 'Migrate-V24-Title');
+      assert.equal(v23After.get('TPE1'), 'Migrate-V24-Artist');
+
+      // Legacy tags: same values...
+      assert.deepEqual(tagsOf(after, 'ID3v2.4'), v24Before);
+      assert.deepEqual(tagsOf(after, 'ID3v1'), v1Before);
+
+      // ...and byte-for-byte identical on disk, not just re-derived to the
+      // same values by coincidence.
+      const fileAfter = await readFile(join(server.mountDir, 'migrate.mp3'));
+      const tailAfter = getBytesAfterId3(fileAfter);
+      assert.deepEqual(tailAfter, tailBefore);
+    }),
+  );
+
+  it(
+    'promotes ID3v2.4 to ID3v2.3 (absorbing its fields) when no ID3v2.3 exists yet, leaving a separate trailing legacy tag untouched',
+    withLogs([], async () => {
+      const clientPath = '/promote.mp3';
+      await writeFile(
+        join(server.mountDir, 'promote.mp3'),
+        buildMp3WithNativeBlocks({
+          id3v2Blocks: [
+            {
+              version: 4,
+              frames: [
+                { id: 'TIT2', text: 'Promote-V24-Title' },
+                { id: 'TPE1', text: 'Promote-V24-Artist' },
+              ],
+            },
+          ],
+          id3v1: { album: 'Promote-V1-Album' },
+        }),
+      );
+
+      const before = await getTrackTags(server, clientPath);
+      assert.equal(
+        before.native.find((b) => b.format === 'ID3v2.3'),
+        undefined,
+      );
+      const v1Before = tagsOf(before, 'ID3v1');
+      const fileBefore = await readFile(join(server.mountDir, 'promote.mp3'));
+      const tailBefore = getBytesAfterId3(fileBefore);
+
+      const writeRes = await writeTags(
+        server,
+        [clientPath],
+        [{ frameId: 'TALB', value: 'Promote-Album' }],
+      );
+      assert.deepEqual(writeRes.errors, []);
+
+      const after = await getTrackTags(server, clientPath);
+      // The old leading ID3v2.4 tag is gone: it was the only ID3v2 tag, so
+      // node-id3 rewrote it in place — and this app always writes ID3v2.3.
+      assert.equal(
+        after.native.find((b) => b.format === 'ID3v2.4'),
+        undefined,
+      );
+      const v23After = tagsOf(after, 'ID3v2.3');
+      assert.equal(v23After.get('TIT2'), 'Promote-V24-Title');
+      assert.equal(v23After.get('TPE1'), 'Promote-V24-Artist');
+      assert.equal(v23After.get('TALB'), 'Promote-Album');
+
+      // The separate, trailing ID3v1 tag was never the leading tag, so it's
+      // untouched — same values, same bytes.
+      assert.deepEqual(tagsOf(after, 'ID3v1'), v1Before);
+      const fileAfter = await readFile(join(server.mountDir, 'promote.mp3'));
+      const tailAfter = getBytesAfterId3(fileAfter);
+      assert.deepEqual(tailAfter, tailBefore);
+    }),
+  );
+
+  it(
+    'is idempotent: a second write does not duplicate migrated frames or re-touch legacy tags',
+    withLogs([], async () => {
+      const clientPath = '/idempotent.mp3';
+      await writeFile(
+        join(server.mountDir, 'idempotent.mp3'),
+        buildMp3WithNativeBlocks({
+          id3v2Blocks: [
+            {
+              version: 3,
+              frames: [{ id: 'TCON', text: 'Idempotent-V23-Genre' }],
+            },
+            {
+              version: 4,
+              frames: [{ id: 'TIT2', text: 'Idempotent-V24-Title' }],
+            },
+          ],
+        }),
+      );
+
+      await writeTags(
+        server,
+        [clientPath],
+        [{ frameId: 'TALB', value: 'First Album' }],
+      );
+      const afterFirst = await getTrackTags(server, clientPath);
+      const v24AfterFirst = tagsOf(afterFirst, 'ID3v2.4');
+      const fileAfterFirst = await readFile(
+        join(server.mountDir, 'idempotent.mp3'),
+      );
+      const tailAfterFirst = getBytesAfterId3(fileAfterFirst);
+
+      await writeTags(
+        server,
+        [clientPath],
+        [{ frameId: 'TALB', value: 'Second Album' }],
+      );
+      const afterSecond = await getTrackTags(server, clientPath);
+      const v23TagsAfterSecond = afterSecond.native.find(
+        (b) => b.format === 'ID3v2.3',
+      )!.tags;
+
+      // No duplicate frames from being gap-filled a second time.
+      assert.equal(v23TagsAfterSecond.filter((t) => t.id === 'TIT2').length, 1);
+      assert.equal(v23TagsAfterSecond.filter((t) => t.id === 'TCON').length, 1);
+      const v23AfterSecond = tagsOf(afterSecond, 'ID3v2.3');
+      assert.equal(v23AfterSecond.get('TALB'), 'Second Album');
+      assert.equal(v23AfterSecond.get('TIT2'), 'Idempotent-V24-Title');
+      assert.equal(v23AfterSecond.get('TCON'), 'Idempotent-V23-Genre');
+
+      // The legacy tag is still untouched after the second write too.
+      assert.deepEqual(tagsOf(afterSecond, 'ID3v2.4'), v24AfterFirst);
+      const fileAfterSecond = await readFile(
+        join(server.mountDir, 'idempotent.mp3'),
+      );
+      const tailAfterSecond = getBytesAfterId3(fileAfterSecond);
+      assert.deepEqual(tailAfterSecond, tailAfterFirst);
+    }),
+  );
+});
+
+describe('write -> rescan keeps the index and the details panel in agreement', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  it(
+    'a rescan after a write reflects both the edit and the migrated fields, matching /track-tags resolved',
+    withLogs([], async () => {
+      const clientPath = '/e2e.mp3';
+      await writeFile(
+        join(server.mountDir, 'e2e.mp3'),
+        buildMp3WithNativeBlocks({
+          id3v2Blocks: [
+            { version: 3, frames: [{ id: 'TCON', text: 'E2E-V23-Genre' }] },
+            { version: 4, frames: [{ id: 'TPE1', text: 'E2E-V24-Artist' }] },
+          ],
+        }),
+      );
+
+      // Baseline scan, mirroring a file that was already indexed before the
+      // user opens the edit panel.
+      await scan(server);
+
+      await writeTags(
+        server,
+        [clientPath],
+        [{ frameId: 'TIT2', value: 'E2E-New-Title' }],
+      );
+
+      const rescanned = await scan(server);
+      const track = trackByPath(rescanned, clientPath);
+      assert.equal(track.title, 'E2E-New-Title');
+      assert.equal(track.genre, 'E2E-V23-Genre');
+      // Migrated in by the write, even though it was never explicitly
+      // written by this request.
+      assert.equal(track.artist, 'E2E-V24-Artist');
+
+      const tags = await getTrackTags(server, clientPath);
+      assert.equal(tags.resolved.TIT2, track.title);
+      assert.equal(tags.resolved.TCON, track.genre);
+      assert.equal(tags.resolved.TPE1, track.artist);
     }),
   );
 });
