@@ -709,24 +709,24 @@ function useFileNavigation(
           openFile();
           break;
         }
-        case 'Meta+c':
-        case 'Control+c': {
+        case 'Meta+C':
+        case 'Control+C': {
           if (focusedFile) {
             event.preventDefault();
             dispatch(A.setCopyFile(focusedFile.path, false));
           }
           break;
         }
-        case 'Meta+x':
-        case 'Control+x': {
+        case 'Meta+X':
+        case 'Control+X': {
           if (focusedFile) {
             event.preventDefault();
             dispatch(A.setCopyFile(focusedFile.path, true));
           }
           break;
         }
-        case 'Meta+v':
-        case 'Control+v': {
+        case 'Meta+V':
+        case 'Control+V': {
           const clipboard = $.getCopyFile(state);
           if (clipboard) {
             event.preventDefault();
@@ -735,7 +735,7 @@ function useFileNavigation(
           }
           break;
         }
-        case 'Meta+Alt+v':
+        case 'Meta+Alt+V':
         case 'Meta+Alt+√': {
           // Handle the macOS-specific pasting of files. The "Meta+Alt+√" is a little
           // weird, but I'm lazy and that's how the event is represented when option

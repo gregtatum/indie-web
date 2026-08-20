@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { $$, T, A, Hooks, $ } from 'frontend';
-import { UnhandledCaseError } from 'frontend/utils';
+import { UnhandledCaseError, getKeyboardString } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
@@ -865,58 +865,49 @@ function Tracks() {
       const currentIndex = currentPath
         ? currentTracks.findIndex((t) => t.path === currentPath)
         : -1;
-      const isPrimaryShortcut =
-        (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey;
-      const isShiftedPrimaryShortcut =
-        (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey;
 
-      if (isPrimaryShortcut) {
+      function getShortcutTargetPaths(): string[] {
         const selectedPaths = $.getMusicSelectedTrackPaths(getState());
-        let shortcutTargetPaths: string[] = [];
         if (selectedPaths.length > 0) {
-          shortcutTargetPaths = selectedPaths;
-        } else if (currentPath) {
-          shortcutTargetPaths = [currentPath];
+          return selectedPaths;
         }
+        return currentPath ? [currentPath] : [];
+      }
 
-        switch (event.key.toLowerCase()) {
-          case 'a': {
-            event.preventDefault();
-            const allPaths = currentTracks.map((track) => track.path);
-            anchorPathRef.current = currentPath ?? allPaths[0] ?? null;
-            dispatch(A.setMusicSelectedTracks(allPaths));
-            return;
-          }
-          case 'e': {
-            event.preventDefault();
-            contextMenuRef.current?.edit(shortcutTargetPaths, 'details');
-            return;
-          }
-          case 'i': {
-            event.preventDefault();
-            contextMenuRef.current?.edit(shortcutTargetPaths, 'id3');
-            return;
-          }
-          case 'enter': {
-            event.preventDefault();
-            if (shortcutTargetPaths.length === 1) {
-              contextMenuRef.current?.showInFiles(shortcutTargetPaths[0]);
-            }
-            return;
-          }
-          default:
-            break;
-        }
-      } else if (isShiftedPrimaryShortcut) {
-        if (event.key.toLowerCase() === 'enter') {
+      switch (getKeyboardString(event)) {
+        case 'Meta+A':
+        case 'Control+A': {
           event.preventDefault();
-          const selectedPaths = $.getMusicSelectedTrackPaths(getState());
-          let shortcutTargetPaths: string[] = [];
-          if (selectedPaths.length > 0) {
-            shortcutTargetPaths = selectedPaths;
-          } else if (currentPath) {
-            shortcutTargetPaths = [currentPath];
+          const allPaths = currentTracks.map((track) => track.path);
+          anchorPathRef.current = currentPath ?? allPaths[0] ?? null;
+          dispatch(A.setMusicSelectedTracks(allPaths));
+          return;
+        }
+        case 'Meta+E':
+        case 'Control+E': {
+          event.preventDefault();
+          contextMenuRef.current?.edit(getShortcutTargetPaths(), 'details');
+          return;
+        }
+        case 'Meta+I':
+        case 'Control+I': {
+          event.preventDefault();
+          contextMenuRef.current?.edit(getShortcutTargetPaths(), 'id3');
+          return;
+        }
+        case 'Meta+Enter':
+        case 'Control+Enter': {
+          event.preventDefault();
+          const shortcutTargetPaths = getShortcutTargetPaths();
+          if (shortcutTargetPaths.length === 1) {
+            contextMenuRef.current?.showInFiles(shortcutTargetPaths[0]);
           }
+          return;
+        }
+        case 'Meta+Shift+Enter':
+        case 'Control+Shift+Enter': {
+          event.preventDefault();
+          const shortcutTargetPaths = getShortcutTargetPaths();
           if (
             shortcutTargetPaths.length === 1 &&
             $.getFileManagerRevealLabel(getState())
@@ -925,6 +916,8 @@ function Tracks() {
           }
           return;
         }
+        default:
+          break;
       }
 
       switch (event.key) {

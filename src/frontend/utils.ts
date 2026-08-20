@@ -533,6 +533,10 @@ export function getKeyboardString(event: KeyboardEvent) {
   if (event.shiftKey && event.key !== 'Shift') {
     key += 'Shift+';
   }
-  key += event.key;
+  key +=
+    event.key.length === 1
+      ? // Uppercase single letters to normalize shortcuts against caps-lock.
+        event.key.toUpperCase()
+      : event.key;
   return key;
 }
