@@ -547,6 +547,10 @@ function FilterPanel({
       switch (event.key) {
         case 'ArrowUp': {
           event.preventDefault();
+          // Shift extends the range selection instead of moving the cursor —
+          // it's a modifier of this same action, not a distinct shortcut, so
+          // this isn't the getKeyboardString switch-dispatch pattern.
+          /* eslint-disable indie-web/prefer-keyboard-string */
           if (
             event.shiftKey &&
             anchorRef.current !== null &&
@@ -578,6 +582,7 @@ function FilterPanel({
               dispatch(A.setMusicPanelSelection(panel));
             }
           }
+          /* eslint-enable indie-web/prefer-keyboard-string */
           break;
         }
         case 'ArrowDown': {
@@ -587,6 +592,9 @@ function FilterPanel({
               ? 0
               : Math.min(currentItems.length - 1, currentIndex + 1);
           if (currentItems[nextIndex] !== undefined) {
+            // Shift extends the range selection instead of moving the cursor —
+            // same rationale as the ArrowUp case above.
+            /* eslint-disable indie-web/prefer-keyboard-string */
             if (
               event.shiftKey &&
               anchorRef.current !== null &&
@@ -611,6 +619,7 @@ function FilterPanel({
               setCursor(next);
               dispatch(A.setMusicPanelSelection(panel, [next]));
             }
+            /* eslint-enable indie-web/prefer-keyboard-string */
           }
           break;
         }
@@ -925,6 +934,10 @@ function Tracks() {
           event.preventDefault();
           if (currentIndex > 0) {
             const newPath = currentTracks[currentIndex - 1].path;
+            // Shift extends the range selection instead of moving the cursor
+            // — it's a modifier of this same action, not a distinct shortcut,
+            // so this isn't the getKeyboardString switch-dispatch pattern.
+            // eslint-disable-next-line indie-web/prefer-keyboard-string
             if (event.shiftKey && anchorPathRef.current !== null) {
               setFocusedPath(newPath);
               const anchorIndex = currentTracks.findIndex(
@@ -956,6 +969,9 @@ function Tracks() {
               : Math.min(currentTracks.length - 1, currentIndex + 1);
           if (currentTracks[nextIndex]) {
             const newPath = currentTracks[nextIndex].path;
+            // Shift extends the range selection instead of moving the cursor
+            // — same rationale as the ArrowUp case above.
+            /* eslint-disable indie-web/prefer-keyboard-string */
             if (
               event.shiftKey &&
               anchorPathRef.current !== null &&
@@ -979,6 +995,7 @@ function Tracks() {
               setFocusedPath(newPath);
               dispatch(A.setMusicSelectedTracks([newPath]));
             }
+            /* eslint-enable indie-web/prefer-keyboard-string */
           }
           break;
         }

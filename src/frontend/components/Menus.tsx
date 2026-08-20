@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ensureExists } from 'frontend/utils';
+import { ensureExists, getKeyboardString } from 'frontend/utils';
 
 import './Menus.css';
 import { useEscape } from 'frontend/hooks';
@@ -143,14 +143,21 @@ export function Menu({
           event.preventDefault();
           setFocusIndex((index) => moveFocusDown(index, buttons));
           break;
-        case 'Tab':
+        case 'Tab': {
+          // Only handle plain Tab/Shift+Tab; let a Ctrl/Cmd/Alt+Tab combo
+          // (browser or OS tab-switching) pass through untouched.
+          const key = getKeyboardString(event);
+          if (key !== 'Tab' && key !== 'Shift+Tab') {
+            break;
+          }
           event.preventDefault();
-          if (event.shiftKey) {
+          if (key === 'Shift+Tab') {
             setFocusIndex((index) => moveFocusUp(index, buttons));
           } else {
             setFocusIndex((index) => moveFocusDown(index, buttons));
           }
           break;
+        }
         default:
           break;
       }

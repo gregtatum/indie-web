@@ -1,7 +1,11 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $$, A, Hooks } from 'frontend';
-import { assertType, isAppSettingScrollTop } from 'frontend/utils';
+import {
+  assertType,
+  isAppSettingScrollTop,
+  getKeyboardString,
+} from 'frontend/utils';
 import { getBrowserName } from 'frontend/logic/app-logic';
 import './Header.css';
 import { Menu, MenuButton } from './Menus';
@@ -161,13 +165,7 @@ function goFullScreen() {
 }
 
 function fullScreenEventHandler(event: KeyboardEvent) {
-  if (
-    event.key === 'f' &&
-    !event.shiftKey &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    !event.altKey
-  ) {
+  if (getKeyboardString(event) === 'F') {
     goFullScreen();
   }
 }

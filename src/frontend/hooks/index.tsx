@@ -4,6 +4,7 @@ import * as Router from 'react-router-dom';
 import { Selector } from 'frontend/@types';
 import {
   ensureExists,
+  getKeyboardString,
   getPathFileName,
   getPathFileNameNoExt,
   htmlElementOrNull,
@@ -604,7 +605,10 @@ export function useFocusTrap(
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') {
+      // Match Tab/Shift+Tab exactly so a Ctrl/Cmd/Alt+Tab combo (browser or OS
+      // tab-switching) passes through instead of being hijacked by the trap.
+      const key = getKeyboardString(event);
+      if (key !== 'Tab' && key !== 'Shift+Tab') {
         return;
       }
       const focusable = getFocusableElements(container);
@@ -615,10 +619,10 @@ export function useFocusTrap(
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       const active = document.activeElement;
-      if (event.shiftKey && active === first) {
+      if (key === 'Shift+Tab' && active === first) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && active === last) {
+      } else if (key === 'Tab' && active === last) {
         event.preventDefault();
         first.focus();
       }
@@ -848,6 +852,7 @@ export function useTypeAheadSearch(
       if (document.activeElement !== listRef.current) {
         return;
       }
+      /* eslint-disable indie-web/prefer-keyboard-string */
       if (
         event.key.length !== 1 ||
         event.ctrlKey ||
@@ -856,6 +861,7 @@ export function useTypeAheadSearch(
       ) {
         return;
       }
+      /* eslint-enable indie-web/prefer-keyboard-string */
 
       if (timer !== null) {
         clearTimeout(timer);

@@ -4,6 +4,7 @@ import { noPathInServer } from './src/shared/lint/js/no-path-in-server.mjs';
 import { noMountPathConcat } from './src/shared/lint/js/no-mount-path-concat.mjs';
 import { multilineJsdocDeclarationComments } from './src/shared/lint/js/multiline-jsdoc-declaration-comments.mjs';
 import { preferPartialForOptionalObjectType } from './src/shared/lint/ts/prefer-partial-for-optional-object-type.mjs';
+import { preferKeyboardString } from './src/shared/lint/js/prefer-keyboard-string.mjs';
 
 const indieWebPlugin = {
   rules: {
@@ -12,6 +13,7 @@ const indieWebPlugin = {
     'multiline-jsdoc-declaration-comments': multilineJsdocDeclarationComments,
     'prefer-partial-for-optional-object-type':
       preferPartialForOptionalObjectType,
+    'prefer-keyboard-string': preferKeyboardString,
   },
 };
 
@@ -44,6 +46,7 @@ export default [
   // Frontend
   {
     files: ['src/frontend/**/*.{ts,tsx,js,jsx}'],
+    plugins: { 'indie-web': indieWebPlugin },
     languageOptions: {
       parserOptions: {
         project: ['./src/frontend/tsconfig.json'],
@@ -52,7 +55,17 @@ export default [
         ecmaFeatures: { jsx: true },
       },
     },
-    rules: {},
+    rules: {
+      'indie-web/prefer-keyboard-string': 'error',
+    },
+  },
+  {
+    // getKeyboardString is the normalizer itself, so it's expected to read the
+    // raw modifier properties directly.
+    files: ['src/frontend/utils.ts'],
+    rules: {
+      'indie-web/prefer-keyboard-string': 'off',
+    },
   },
   {
     files: ['src/frontend/test/**/*.js'],
