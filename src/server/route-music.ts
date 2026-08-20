@@ -642,6 +642,40 @@ interface TrackTagWriteResult {
 
 type IndexTagWriteResult = T.WriteTrackTagsResponse['index'];
 
+/**
+ * True if every character is an ASCII digit and the string is non-empty.
+ */
+function isDigitsOnly(value: string): boolean {
+  if (value.length === 0) {
+    return false;
+  }
+  for (const char of value) {
+    if (char < '0' || char > '9') {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * TRCK/TPOS values are a plain integer, or "N/total" (e.g. "4/16").
+ */
+function isValidSplitNumericValue(value: string): boolean {
+  const parts = value.split('/');
+  return parts.length <= 2 && parts.every(isDigitsOnly);
+}
+
+/**
+ * Frames whose ID3 spec defines a numeric-string format, and the validator
+ * for the shape that's valid for each.
+ */
+const NUMERIC_FRAME_VALIDATORS: Record<string, (value: string) => boolean> = {
+  TRCK: isValidSplitNumericValue,
+  TPOS: isValidSplitNumericValue,
+  TYER: isDigitsOnly,
+  TBPM: isDigitsOnly,
+};
+
 function buildNodeId3Tags(
   changes: T.WriteTrackTagsRequest['changes'],
 ): Record<string, unknown> {
@@ -656,6 +690,10 @@ function buildNodeId3Tags(
     }
     if (typeof value !== 'string') {
       throw new ClientError('Invalid tag value.');
+    }
+    const numericValidator = NUMERIC_FRAME_VALIDATORS[frameId];
+    if (numericValidator && value !== '' && !numericValidator(value)) {
+      throw new ClientError(`${frameId} must be numeric, got: "${value}"`);
     }
     if (frameId === 'COMM') {
       tags.comment = { language: 'eng', shortText: '', text: value };

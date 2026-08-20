@@ -382,6 +382,10 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     setBulkForceLoadAll(true);
   }
 
+  function setNumericField(key: DetailFormValueKey, value: string) {
+    setField(key, value.replace(/[^0-9]/g, ''));
+  }
+
   function setField(key: DetailFormValueKey, value: string) {
     setCloseConfirmPending(false);
     setSaveNotice(null);
@@ -988,7 +992,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
               value={formState[field.key]}
               placeholder={formPlaceholders[field.key]}
               disabled={detailsEditingDisabled}
-              onChange={(e) => setField(field.key, e.target.value)}
+              onChange={(e) => setNumericField(field.key, e.target.value)}
             />
             <span className="editTrackModalSplitSep">of</span>
             <input
@@ -998,7 +1002,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
               value={formState[field.totalKey]}
               placeholder={formPlaceholders[field.totalKey]}
               disabled={detailsEditingDisabled}
-              onChange={(e) => setField(field.totalKey, e.target.value)}
+              onChange={(e) => setNumericField(field.totalKey, e.target.value)}
             />
           </div>
         </label>,
@@ -1014,7 +1018,11 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             value={formState[field.key]}
             placeholder={formPlaceholders[field.key]}
             disabled={detailsEditingDisabled}
-            onChange={(e) => setField(field.key, e.target.value)}
+            onChange={(e) =>
+              field.type === 'number'
+                ? setNumericField(field.key, e.target.value)
+                : setField(field.key, e.target.value)
+            }
           />
         </label>,
       );
