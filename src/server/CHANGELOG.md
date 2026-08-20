@@ -10,6 +10,32 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A "Show in Finder" option on tracks that reveals the file in the server's
+  native file manager (Finder, Explorer, ...) when running locally.
+- The music and file-store API roots now report a `maxMusicIndexVersion` and
+  `revealLabel` respectively, so the client can detect what the connected
+  server supports.
+
+### Changed
+
+- Track listings are now sorted after a scan instead of left in scan order.
+- Tag values are resolved across a file's embedded tag blocks instead of
+  only the primary one, so a value present in one block but missing from
+  another is no longer treated as absent.
+- Legacy tag fields are migrated into ID3v2.3 on write.
+- The trailing ID3v1 tag is regenerated from the file's post-write ID3v2.3
+  fields on every track-tag write, instead of going stale and later
+  resurrecting a cleared ID3v2.3 field via the format-priority fallback.
+- Renamed `TrackTagsResponse.native` to `blocks` to describe what the field
+  holds without leaning on `music-metadata`'s internal naming.
+
+### Fixed
+
+- Non-numeric track/disc/year/BPM values are now rejected instead of being
+  silently written into the tag.
+
 ## [3.5.0] - 2026-08-10
 
 ### Added
