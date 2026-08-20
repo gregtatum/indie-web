@@ -16,6 +16,7 @@ export interface TrackContextMenuHandle {
   edit(trackPaths: string[], tab?: T.MusicEditTab): void;
   open(event: React.MouseEvent, trackPath: string): void;
   showInFiles(trackPath: string): void;
+  revealInFileManager(trackPath: string): void;
 }
 
 export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
@@ -103,8 +104,9 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
           setOpenEventDetail(event.detail);
         },
         showInFiles,
+        revealInFileManager,
       }),
-      [editTracks, showInFiles],
+      [editTracks, showInFiles, revealInFileManager],
     );
 
     const selectedPaths = $$.getMusicSelectedTrackPaths();
@@ -113,6 +115,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     const shortcutModifier = getPlatformCtrlModifier();
     const editShortcut = `${shortcutModifier} E`;
     const showInFilesShortcut = `${shortcutModifier} Enter`;
+    const revealInFileManagerShortcut = `${shortcutModifier} Shift Enter`;
 
     const buttons: MenuButton[] = [
       {
@@ -168,6 +171,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
                   {
                     key: 'reveal-in-file-manager',
                     children: revealLabel,
+                    shortcut: revealInFileManagerShortcut,
                     onClick() {
                       revealInFileManager(contextTrackPath);
                     },

@@ -867,6 +867,8 @@ function Tracks() {
         : -1;
       const isPrimaryShortcut =
         (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey;
+      const isShiftedPrimaryShortcut =
+        (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey;
 
       if (isPrimaryShortcut) {
         const selectedPaths = $.getMusicSelectedTrackPaths(getState());
@@ -904,6 +906,24 @@ function Tracks() {
           }
           default:
             break;
+        }
+      } else if (isShiftedPrimaryShortcut) {
+        if (event.key.toLowerCase() === 'enter') {
+          event.preventDefault();
+          const selectedPaths = $.getMusicSelectedTrackPaths(getState());
+          let shortcutTargetPaths: string[] = [];
+          if (selectedPaths.length > 0) {
+            shortcutTargetPaths = selectedPaths;
+          } else if (currentPath) {
+            shortcutTargetPaths = [currentPath];
+          }
+          if (
+            shortcutTargetPaths.length === 1 &&
+            $.getFileManagerRevealLabel(getState())
+          ) {
+            contextMenuRef.current?.revealInFileManager(shortcutTargetPaths[0]);
+          }
+          return;
         }
       }
 

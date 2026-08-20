@@ -282,8 +282,10 @@ describe('track right-click context menu', () => {
 
     await screen.findByRole('button', { name: 'Edit' });
     await screen.findByRole('button', { name: 'Show in Files' });
+    await screen.findByRole('button', { name: 'Show in Finder' });
     screen.getByText('Ctrl E');
     screen.getByText('Ctrl Enter');
+    screen.getByText('Ctrl Shift Enter');
     expect(screen.queryByText('⌘ E')).toBeNull();
   });
 
@@ -446,6 +448,80 @@ describe('track list keyboard shortcuts', () => {
     });
 
     expect($.getFileFocusByPath(store.getState())).toEqual({});
+  });
+
+  it('cmd+shift+enter reveals one selected track in the file manager', async () => {
+    const requests: Array<{ path: string }> = [];
+    fetchMock.post(
+      `${FAKE_SERVER.url}/file-store/reveal`,
+      ({ options }: any) => {
+        requests.push(JSON.parse(options.body));
+        return { body: JSON.stringify({ ok: true }), status: 200 };
+      },
+    );
+    setup(TRACKS, 'Show in Finder');
+    const trackB = await screen.findByText('Song B');
+    await act(async () => {
+      fireEvent.click(trackB);
+      focusTrackList();
+      fireEvent.keyDown(document.body, {
+        key: 'Enter',
+        metaKey: true,
+        shiftKey: true,
+      });
+    });
+
+    expect(requests).toEqual([{ path: '/music/b.mp3' }]);
+  });
+
+  it('cmd+shift+enter does nothing for multi-track selection', async () => {
+    const requests: Array<{ path: string }> = [];
+    fetchMock.post(
+      `${FAKE_SERVER.url}/file-store/reveal`,
+      ({ options }: any) => {
+        requests.push(JSON.parse(options.body));
+        return { body: JSON.stringify({ ok: true }), status: 200 };
+      },
+    );
+    const { store } = setup(TRACKS, 'Show in Finder');
+    await screen.findByText('Song A');
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+      focusTrackList();
+      fireEvent.keyDown(document.body, {
+        key: 'Enter',
+        metaKey: true,
+        shiftKey: true,
+      });
+    });
+
+    expect(requests).toEqual([]);
+  });
+
+  it('cmd+shift+enter does nothing when the server reports no file manager launcher', async () => {
+    const requests: Array<{ path: string }> = [];
+    fetchMock.post(
+      `${FAKE_SERVER.url}/file-store/reveal`,
+      ({ options }: any) => {
+        requests.push(JSON.parse(options.body));
+        return { body: JSON.stringify({ ok: true }), status: 200 };
+      },
+    );
+    setup(TRACKS, null);
+    const trackB = await screen.findByText('Song B');
+    await act(async () => {
+      fireEvent.click(trackB);
+      focusTrackList();
+      fireEvent.keyDown(document.body, {
+        key: 'Enter',
+        metaKey: true,
+        shiftKey: true,
+      });
+    });
+
+    expect(requests).toEqual([]);
   });
 
   it('does not run track shortcuts when another panel has focus', async () => {
