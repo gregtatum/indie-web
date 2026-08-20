@@ -17,6 +17,7 @@ import {
   APP_FRAME_IDS,
   MUSIC_INDEX_VERSION,
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
+  compareTracksDefault,
   nativePrivateTextTagValue,
   parseBooleanTagValue,
   parsePreferComposerGroupingTag,
@@ -578,6 +579,8 @@ async function performScan(
 
     callbacks?.onTrackScanned(i + 1, clientPath);
   }
+
+  tracks.sort(compareTracksDefault);
 
   const index: T.MusicIndex = {
     version: MUSIC_INDEX_VERSION,

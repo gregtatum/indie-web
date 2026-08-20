@@ -156,6 +156,33 @@ export function getTrackFilterArtist(track: TrackMetadata): string | null {
 }
 
 /**
+ * Canonical default ordering for a flat track list: grouped by effective
+ * artist, then album, then track number, with title/path as a stable
+ * tiebreaker for missing track numbers. Used to sort the index at scan time;
+ * a future frontend sort UI can reuse this as its default/fallback order.
+ */
+export function compareTracksDefault(
+  a: TrackMetadata,
+  b: TrackMetadata,
+): number {
+  const artistCompare = (getTrackFilterArtist(a) ?? '').localeCompare(
+    getTrackFilterArtist(b) ?? '',
+  );
+  if (artistCompare !== 0) {
+    return artistCompare;
+  }
+  const albumCompare = (a.album ?? '').localeCompare(b.album ?? '');
+  if (albumCompare !== 0) {
+    return albumCompare;
+  }
+  const trackCompare = (a.track ?? Infinity) - (b.track ?? Infinity);
+  if (trackCompare !== 0) {
+    return trackCompare;
+  }
+  return (a.title ?? a.path).localeCompare(b.title ?? b.path);
+}
+
+/**
  * Some files contain more than one tag source. For example, an older iTunes
  * version may have left an ID3v2.4 tag that is now wrapped by a newer ID3v2.3
  * tag. The app standardizes on ID3v2.3 because it is the most widely compatible
