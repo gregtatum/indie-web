@@ -74,6 +74,22 @@ export function MusicLibraryView({
       }
       dispatch(A.setMusicServerMaxIndexVersion(maxMusicIndexVersion));
 
+      const fileStoreInfoResponse = await fetch(
+        `${currentServer.url}/file-store/`,
+        { signal: fetchController.signal },
+      ).catch(() => null);
+
+      let revealLabel: string | null = null;
+      if (fileStoreInfoResponse?.ok) {
+        const fileStoreInfo = await fileStoreInfoResponse
+          .json()
+          .catch(() => null);
+        if (typeof fileStoreInfo?.revealLabel === 'string') {
+          revealLabel = fileStoreInfo.revealLabel;
+        }
+      }
+      dispatch(A.setFileManagerRevealLabel(revealLabel));
+
       try {
         const res = await fetch(`${currentServer.url}/music/music-index`, {
           signal: fetchController.signal,

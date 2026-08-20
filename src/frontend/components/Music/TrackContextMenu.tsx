@@ -54,6 +54,25 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
       [dispatch, getState, navigate],
     );
 
+    const revealInFileManager = React.useCallback(
+      (trackPath: string) => {
+        const fs = $.getServerFSOrNull(getState());
+        if (!fs) {
+          return;
+        }
+        fs.reveal(trackPath).catch((error) => {
+          console.error(error);
+          dispatch(
+            A.addMessage({
+              message: 'Could not show the file.',
+              timeout: true,
+            }),
+          );
+        });
+      },
+      [dispatch, getState],
+    );
+
     React.useImperativeHandle(
       ref,
       () => ({
@@ -90,6 +109,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
 
     const selectedPaths = $$.getMusicSelectedTrackPaths();
     const isMultiSelect = selectedPaths.length > 1;
+    const revealLabel = $$.getFileManagerRevealLabel();
     const shortcutModifier = getPlatformCtrlModifier();
     const editShortcut = `${shortcutModifier} E`;
     const showInFilesShortcut = `${shortcutModifier} Enter`;
@@ -143,6 +163,17 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
                 showInFiles(contextTrackPath);
               },
             } as MenuButton,
+            ...(revealLabel
+              ? [
+                  {
+                    key: 'reveal-in-file-manager',
+                    children: revealLabel,
+                    onClick() {
+                      revealInFileManager(contextTrackPath);
+                    },
+                  } as MenuButton,
+                ]
+              : []),
           ]
         : []),
     ];

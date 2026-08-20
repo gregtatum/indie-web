@@ -51,6 +51,10 @@ export function getMusicServerMaxIndexVersion(state: State): number | null {
   return getMusic(state).serverMaxIndexVersion;
 }
 
+export function getFileManagerRevealLabel(state: State): string | null {
+  return getMusic(state).fileManagerRevealLabel;
+}
+
 function filterByPanel(
   filteredTracks: T.TrackMetadata[],
   panel: T.MusicPanelType,

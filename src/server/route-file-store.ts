@@ -11,6 +11,7 @@ import { createReadStream, promises as fs, type Stats } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
 import archiver from 'archiver';
 import { finished } from 'stream/promises';
+import { getFileManagerLauncher } from './file-manager-launcher.ts';
 
 const ignoredFiles = new Set(['.DS_Store']);
 
@@ -27,9 +28,15 @@ export function fileStoreRoute(mountPath: MountPath) {
   mountPath.logPath();
   mountPath.validate();
 
-  route.get('/', async (): Promise<{ routes: string[] }> => {
-    return { routes: route.routes.map((r) => r.toString()) };
-  });
+  route.get(
+    '/',
+    async (): Promise<{ routes: string[]; revealLabel: string | null }> => {
+      return {
+        routes: route.routes.map((r) => r.toString()),
+        revealLabel: getFileManagerLauncher()?.label ?? null,
+      };
+    },
+  );
 
   /**
    * List files that are within the mounted file store.
@@ -171,6 +178,48 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
     await mkdir(resolvedPath, { recursive: true });
     return getFolderMetadata(folderPath);
+  });
+
+  /**
+   * Reveal a file or folder in the server's native file manager (Finder, Explorer, ...).
+   */
+  route.post('/reveal', async (request): Promise<{ ok: true }> => {
+    const launcher = getFileManagerLauncher();
+    if (!launcher) {
+      throw new ClientError(
+        'Showing a file in the file manager is not supported on this server.',
+      );
+    }
+
+    const path = request.body?.path;
+    if (typeof path !== 'string') {
+      throw new ClientError('The path to reveal was not sent.');
+    }
+
+    const resolvedPath = mountPath.resolve(path);
+    if (!resolvedPath || mountPath.isEqualToMountPath(resolvedPath)) {
+      console.error('Resolved path:', path);
+      throw new ClientError('Invalid path.');
+    }
+
+    try {
+      await fs.stat(resolvedPath);
+    } catch {
+      throw mountPath.makeError(
+        RequestConflict,
+        'The requested path does not exist: %s',
+        resolvedPath,
+      );
+    }
+
+    try {
+      await launcher.reveal(resolvedPath);
+    } catch (error) {
+      console.error(error);
+      throw new ServerError('Failed to reveal the file.');
+    }
+
+    return { ok: true };
   });
 
   route.addBlobRoute('POST', '/compress-folder', async (req, res) => {

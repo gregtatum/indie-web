@@ -150,6 +150,12 @@ export class ServerFS extends FileStore {
     this.cache?.delete(targetPath).catch(console.error);
   }
 
+  async reveal(path: string): Promise<void> {
+    log('reveal requested', path);
+    await this.fetchJSON('/reveal', { path });
+    log('reveal completed', path);
+  }
+
   async compressFolder(path: string): Promise<Blob> {
     log('compressFolder requested', path);
     const response = await fetch(`${this.apiBaseUrl}/compress-folder`, {

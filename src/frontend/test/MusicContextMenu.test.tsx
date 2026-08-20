@@ -78,7 +78,7 @@ function mockPlatform(platform: string) {
   jest.spyOn(window.navigator, 'platform', 'get').mockReturnValue(platform);
 }
 
-function setup(tracks = TRACKS) {
+function setup(tracks = TRACKS, revealLabel: string | null = 'Show in Finder') {
   const store = createStore();
   store.dispatch(A.addFileStoreServer(FAKE_SERVER));
 
@@ -92,6 +92,10 @@ function setup(tracks = TRACKS) {
   });
   fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), {
     body: JSON.stringify({ blocks: [], resolved: {} }),
+    status: 200,
+  });
+  fetchMock.get(`${FAKE_SERVER.url}/file-store/`, {
+    body: JSON.stringify({ routes: [], revealLabel }),
     status: 200,
   });
 
@@ -204,6 +208,39 @@ describe('track right-click context menu', () => {
     expect($.getFileFocusByPath(state)).toMatchObject({
       '/music': 'b.mp3',
     });
+  });
+
+  it('shows the server-provided reveal label and reveals the file when clicked', async () => {
+    const requests: Array<{ path: string }> = [];
+    fetchMock.post(
+      `${FAKE_SERVER.url}/file-store/reveal`,
+      ({ options }: any) => {
+        requests.push(JSON.parse(options.body));
+        return { body: JSON.stringify({ ok: true }), status: 200 };
+      },
+    );
+    setup(TRACKS, 'Show in Finder');
+    const trackB = await screen.findByText('Song B');
+    await act(async () => {
+      fireEvent.contextMenu(trackB);
+    });
+    const showButton = await screen.findByRole('button', {
+      name: 'Show in Finder',
+    });
+    await act(async () => {
+      fireEvent.click(showButton);
+    });
+    expect(requests).toEqual([{ path: '/music/b.mp3' }]);
+  });
+
+  it('does not show a reveal item when the server reports no file manager launcher', async () => {
+    setup(TRACKS, null);
+    const trackB = await screen.findByText('Song B');
+    await act(async () => {
+      fireEvent.contextMenu(trackB);
+    });
+    await screen.findByRole('button', { name: 'Show in Files' });
+    expect(screen.queryByRole('button', { name: 'Show in Finder' })).toBeNull();
   });
 
   it('"Show in Files" is not shown for multi-track selection', async () => {

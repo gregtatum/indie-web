@@ -364,6 +364,13 @@ export function setMusicServerMaxIndexVersion(version: number) {
   };
 }
 
+export function setFileManagerRevealLabel(label: string | null) {
+  return {
+    type: 'set-file-manager-reveal-label' as const,
+    label,
+  };
+}
+
 export function musicPlaybackReady() {
   return { type: 'music-playback-ready' as const };
 }

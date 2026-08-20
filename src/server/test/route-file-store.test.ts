@@ -418,6 +418,123 @@ describe('POST /file-store/move', () => {
   );
 });
 
+describe('POST /file-store/reveal', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
+    });
+  });
+
+  after(() => server.close());
+
+  it(
+    'returns 400 when the platform has no file manager launcher',
+    withLogs(['[400err ]'], async () => {
+      const originalPlatform = process.platform;
+      // Linux intentionally has no launcher — see file-manager-launcher.ts.
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+      try {
+        const res = await fetch(`${server.baseUrl}/file-store/reveal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '/hello.txt' }),
+        });
+        assert.equal(res.status, 400);
+      } finally {
+        Object.defineProperty(process, 'platform', {
+          value: originalPlatform,
+        });
+      }
+    }),
+  );
+
+  it(
+    'returns 400 when path is missing from the request body',
+    withLogs(['[400err ]'], async () => {
+      const res = await fetch(`${server.baseUrl}/file-store/reveal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      assert.equal(res.status, 400);
+    }),
+  );
+
+  it(
+    'rejects path traversal attempts',
+    withLogs(['Resolved path:', '[400err ]'], async () => {
+      const res = await fetch(`${server.baseUrl}/file-store/reveal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: '/../../etc/passwd' }),
+      });
+      assert.equal(res.status, 400);
+    }),
+  );
+
+  it(
+    'returns 409 for a path that does not exist',
+    withLogs(['[400err ]'], async () => {
+      const res = await fetch(`${server.baseUrl}/file-store/reveal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: '/nonexistent.txt' }),
+      });
+      assert.equal(res.status, 409);
+    }),
+  );
+});
+
+describe('GET /file-store/', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
+    });
+  });
+
+  after(() => server.close());
+
+  it(
+    'reports revealLabel as null when the platform has no file manager launcher',
+    withLogs([], async () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+      try {
+        const res = await fetch(`${server.baseUrl}/file-store/`);
+        assert.equal(res.status, 200);
+        const body = await res.json();
+        assert.equal(body.revealLabel, null);
+      } finally {
+        Object.defineProperty(process, 'platform', {
+          value: originalPlatform,
+        });
+      }
+    }),
+  );
+
+  it(
+    'reports the darwin revealLabel',
+    withLogs([], async () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'darwin' });
+      try {
+        const res = await fetch(`${server.baseUrl}/file-store/`);
+        assert.equal(res.status, 200);
+        const body = await res.json();
+        assert.equal(body.revealLabel, 'Show in Finder');
+      } finally {
+        Object.defineProperty(process, 'platform', {
+          value: originalPlatform,
+        });
+      }
+    }),
+  );
+});
+
 describe('POST /file-store/compress-folder', () => {
   let server: TestServer;
 

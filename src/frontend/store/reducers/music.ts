@@ -225,6 +225,20 @@ function serverMaxIndexVersion(
   }
 }
 
+function fileManagerRevealLabel(
+  state: string | null = null,
+  action: T.Action,
+): string | null {
+  switch (action.type) {
+    case 'set-file-manager-reveal-label':
+      return action.label;
+    case 'view-music':
+      return null;
+    default:
+      return state;
+  }
+}
+
 const emptyPlaybackQueue: MusicPlaybackQueue = {
   tracks: [],
   panelSelections: {},
@@ -257,6 +271,7 @@ const combinedMusicReducer = combineReducers({
   needsRescan,
   servedIndexVersion,
   serverMaxIndexVersion,
+  fileManagerRevealLabel,
   playingTrackPath,
   playbackLoadId,
   playbackStatus,
