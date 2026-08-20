@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { writeFile, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { musicRoute, MUSIC_INDEX_FILENAME } from '../route-music.ts';
+import { ID3V1_TAG_SIZE } from '../../shared/music.ts';
 import type { T } from '../index.ts';
 import {
   createTestServer,
@@ -266,7 +267,7 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
   after(() => server.close());
 
   it(
-    'backfills ID3v2.3 from legacy tags, keeps its own pre-existing field, and never touches the legacy tags on disk',
+    'backfills ID3v2.3 from legacy tags, keeps its own pre-existing field, leaves a co-located ID3v2.4 tag untouched, and refreshes the trailing ID3v1 tag to match',
     withLogs([], async () => {
       const clientPath = '/migrate.mp3';
       await writeFile(
@@ -284,16 +285,12 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
               ],
             },
           ],
-          id3v1: { album: 'Migrate-V1-Album' },
+          id3v1: { album: 'Migrate-V1-Album-stale' },
         }),
       );
 
       const before = await getTrackTags(server, clientPath);
       const v24Before = tagsOf(before, 'ID3v2.4');
-      const v1Before = tagsOf(before, 'ID3v1');
-
-      const fileBefore = await readFile(join(server.mountDir, 'migrate.mp3'));
-      const tailBefore = getBytesAfterId3(fileBefore);
 
       // Write a field with nothing to do with genre/title/artist.
       const writeRes = await writeTags(
@@ -316,20 +313,23 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
       assert.equal(v23After.get('TIT2'), 'Migrate-V24-Title');
       assert.equal(v23After.get('TPE1'), 'Migrate-V24-Artist');
 
-      // Legacy tags: same values...
+      // The co-located ID3v2.4 tag: same values, untouched — node-id3 only
+      // ever edits the leading ID3v2 tag.
       assert.deepEqual(tagsOf(after, 'ID3v2.4'), v24Before);
-      assert.deepEqual(tagsOf(after, 'ID3v1'), v1Before);
 
-      // ...and byte-for-byte identical on disk, not just re-derived to the
-      // same values by coincidence.
-      const fileAfter = await readFile(join(server.mountDir, 'migrate.mp3'));
-      const tailAfter = getBytesAfterId3(fileAfter);
-      assert.deepEqual(tailAfter, tailBefore);
+      // The trailing ID3v1 tag is regenerated from the file's current
+      // ID3v2.3 values (not the requested edit's diff, and not its own old
+      // stale contents), so hardware players and other ID3v1-only tools
+      // that read this file directly stay in sync with the edit.
+      const v1After = tagsOf(after, 'ID3v1');
+      assert.equal(v1After.get('album'), 'Migrate-New-Album');
+      assert.equal(v1After.get('title'), 'Migrate-V24-Title');
+      assert.equal(v1After.get('artist'), 'Migrate-V24-Artist');
     }),
   );
 
   it(
-    'promotes ID3v2.4 to ID3v2.3 (absorbing its fields) when no ID3v2.3 exists yet, leaving a separate trailing legacy tag untouched',
+    'promotes ID3v2.4 to ID3v2.3 (absorbing its fields) when no ID3v2.3 exists yet, and refreshes the separate trailing legacy ID3v1 tag to match',
     withLogs([], async () => {
       const clientPath = '/promote.mp3';
       await writeFile(
@@ -344,7 +344,7 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
               ],
             },
           ],
-          id3v1: { album: 'Promote-V1-Album' },
+          id3v1: { album: 'Promote-V1-Album-stale' },
         }),
       );
 
@@ -353,9 +353,6 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
         before.blocks.find((b) => b.format === 'ID3v2.3'),
         undefined,
       );
-      const v1Before = tagsOf(before, 'ID3v1');
-      const fileBefore = await readFile(join(server.mountDir, 'promote.mp3'));
-      const tailBefore = getBytesAfterId3(fileBefore);
 
       const writeRes = await writeTags(
         server,
@@ -376,12 +373,13 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
       assert.equal(v23After.get('TPE1'), 'Promote-V24-Artist');
       assert.equal(v23After.get('TALB'), 'Promote-Album');
 
-      // The separate, trailing ID3v1 tag was never the leading tag, so it's
-      // untouched — same values, same bytes.
-      assert.deepEqual(tagsOf(after, 'ID3v1'), v1Before);
-      const fileAfter = await readFile(join(server.mountDir, 'promote.mp3'));
-      const tailAfter = getBytesAfterId3(fileAfter);
-      assert.deepEqual(tailAfter, tailBefore);
+      // The separate, trailing ID3v1 tag was never the leading tag node-id3
+      // edits, so it's explicitly refreshed afterward to match, rather than
+      // left with its old, now-stale album value.
+      const v1After = tagsOf(after, 'ID3v1');
+      assert.equal(v1After.get('album'), 'Promote-Album');
+      assert.equal(v1After.get('title'), 'Promote-V24-Title');
+      assert.equal(v1After.get('artist'), 'Promote-V24-Artist');
     }),
   );
 
@@ -441,7 +439,129 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
         join(server.mountDir, 'idempotent.mp3'),
       );
       const tailAfterSecond = getBytesAfterId3(fileAfterSecond);
-      assert.deepEqual(tailAfterSecond, tailAfterFirst);
+      // Everything up to the trailing ID3v1 tag (the co-located ID3v2.4
+      // block, then the audio payload) is byte-for-byte identical across
+      // both writes — only the regenerated ID3v1 tag at the very end
+      // legitimately differs, since the album value it mirrors changed.
+      assert.deepEqual(
+        tailAfterSecond.subarray(0, tailAfterSecond.length - ID3V1_TAG_SIZE),
+        tailAfterFirst.subarray(0, tailAfterFirst.length - ID3V1_TAG_SIZE),
+      );
+      const v1AfterSecond = tagsOf(afterSecond, 'ID3v1');
+      assert.equal(v1AfterSecond.get('album'), 'Second Album');
+    }),
+  );
+});
+
+describe('POST /music/write-track-tags backfills a trailing ID3v1 tag on every write', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  it(
+    'creates an ID3v1 tag on a file that never had one',
+    withLogs([], async () => {
+      const clientPath = '/no-id3v1.mp3';
+      await writeFile(
+        join(server.mountDir, 'no-id3v1.mp3'),
+        buildMp3WithNativeBlocks({
+          id3v2Blocks: [
+            {
+              version: 3,
+              frames: [
+                { id: 'TIT2', text: 'Fresh-Title' },
+                { id: 'TPE1', text: 'Fresh-Artist' },
+              ],
+            },
+          ],
+          // No id3v1 field, so this file has no trailing ID3v1 tag at all.
+        }),
+      );
+
+      const before = await getTrackTags(server, clientPath);
+      assert.equal(
+        before.blocks.find((b) => b.format === 'ID3v1'),
+        undefined,
+      );
+
+      const writeRes = await writeTags(
+        server,
+        [clientPath],
+        [{ frameId: 'TALB', value: 'Fresh-Album' }],
+      );
+      assert.deepEqual(writeRes.errors, []);
+
+      const after = await getTrackTags(server, clientPath);
+      const v1After = tagsOf(after, 'ID3v1');
+      assert.equal(v1After.get('title'), 'Fresh-Title');
+      assert.equal(v1After.get('artist'), 'Fresh-Artist');
+      assert.equal(v1After.get('album'), 'Fresh-Album');
+    }),
+  );
+
+  it(
+    'closes the original resurrection bug: clearing the track number stays cleared in ID3v1 too, even across a later unrelated write',
+    withLogs([], async () => {
+      const clientPath = '/clear-track.mp3';
+      await writeFile(
+        join(server.mountDir, 'clear-track.mp3'),
+        buildMp3WithNativeBlocks({
+          id3v2Blocks: [
+            {
+              version: 3,
+              frames: [
+                { id: 'TIT2', text: 'Clear-Track-Title' },
+                { id: 'TRCK', text: '13' },
+              ],
+            },
+          ],
+          // A stale legacy ID3v1 tag with the same track number, mirroring a
+          // real file re-tagged by an old tool — this is exactly the
+          // situation that used to let a cleared TRCK come back from behind.
+          id3v1: { title: 'Clear-Track-Title', track: 13 },
+        }),
+      );
+
+      // Sanity check the fixture: resolveTagValue's ID3v2.3-first priority
+      // means the index sees track 13 from ID3v2.3 before anything changes.
+      const beforeScan = await scan(server);
+      assert.equal(trackByPath(beforeScan, clientPath).track, 13);
+
+      // Clear the track number.
+      const clearRes = await writeTags(
+        server,
+        [clientPath],
+        [{ frameId: 'TRCK', value: '' }],
+      );
+      assert.deepEqual(clearRes.errors, []);
+
+      const afterClear = await getTrackTags(server, clientPath);
+      assert.equal(tagsOf(afterClear, 'ID3v2.3').has('TRCK'), false);
+      // The regenerated ID3v1 tag no longer carries the old track number —
+      // the ID3v1.1 track byte is reset to 0 (unset) along with it.
+      assert.equal(tagsOf(afterClear, 'ID3v1').get('track'), undefined);
+
+      // A second, unrelated write must not resurrect it: computeGapFillChanges
+      // only backfills a field ID3v2.3 is missing from another embedded tag
+      // block, and with ID3v1 also cleared now, there's nothing left to pull
+      // the stale "13" back from.
+      const secondRes = await writeTags(
+        server,
+        [clientPath],
+        [{ frameId: 'TIT2', value: 'Clear-Track-Title-2' }],
+      );
+      assert.deepEqual(secondRes.errors, []);
+
+      const afterSecond = await getTrackTags(server, clientPath);
+      assert.equal(tagsOf(afterSecond, 'ID3v2.3').has('TRCK'), false);
+      assert.equal(tagsOf(afterSecond, 'ID3v1').get('track'), undefined);
+
+      const rescanned = await scan(server);
+      assert.equal(trackByPath(rescanned, clientPath).track, null);
     }),
   );
 });

@@ -260,3 +260,184 @@ export const APP_FRAME_IDS = [
   'TBPM',
   'COMM',
 ] as const;
+
+/**
+ * "TAG" + title(30) + artist(30) + album(30) + year(4) + comment(28) + zero
+ * byte + track byte + genre byte.
+ */
+export const ID3V1_TAG_SIZE = 128;
+
+/**
+ * The 80 canonical ID3v1 genre names, in their spec byte-index order. Later
+ * "Winamp extended" genres (80+) are excluded as not universally supported.
+ */
+export const ID3V1_GENRES = [
+  'Blues',
+  'Classic Rock',
+  'Country',
+  'Dance',
+  'Disco',
+  'Funk',
+  'Grunge',
+  'Hip-Hop',
+  'Jazz',
+  'Metal',
+  'New Age',
+  'Oldies',
+  'Other',
+  'Pop',
+  'R&B',
+  'Rap',
+  'Reggae',
+  'Rock',
+  'Techno',
+  'Industrial',
+  'Alternative',
+  'Ska',
+  'Death Metal',
+  'Pranks',
+  'Soundtrack',
+  'Euro-Techno',
+  'Ambient',
+  'Trip-Hop',
+  'Vocal',
+  'Jazz+Funk',
+  'Fusion',
+  'Trance',
+  'Classical',
+  'Instrumental',
+  'Acid',
+  'House',
+  'Game',
+  'Sound Clip',
+  'Gospel',
+  'Noise',
+  'Alt. Rock',
+  'Bass',
+  'Soul',
+  'Punk',
+  'Space',
+  'Meditative',
+  'Instrumental Pop',
+  'Instrumental Rock',
+  'Ethnic',
+  'Gothic',
+  'Darkwave',
+  'Techno-Industrial',
+  'Electronic',
+  'Pop-Folk',
+  'Eurodance',
+  'Dream',
+  'Southern Rock',
+  'Comedy',
+  'Cult',
+  'Gangsta Rap',
+  'Top 40',
+  'Christian Rap',
+  'Pop/Funk',
+  'Jungle',
+  'Native American',
+  'Cabaret',
+  'New Wave',
+  'Psychedelic',
+  'Rave',
+  'Showtunes',
+  'Trailer',
+  'Lo-Fi',
+  'Tribal',
+  'Acid Punk',
+  'Acid Jazz',
+  'Polka',
+  'Retro',
+  'Musical',
+  'Rock & Roll',
+  'Hard Rock',
+] as const;
+
+/**
+ * The ID3v1 byte value meaning "no genre set".
+ */
+export const ID3V1_GENRE_UNSET = 0xff;
+
+const ID3V1_GENRE_LOOKUP = new Map(
+  ID3V1_GENRES.map((name, index) => [name.toLowerCase(), index]),
+);
+
+/**
+ * Maps a free-text ID3v2 genre (TCON) to its ID3v1 byte value. Only an exact
+ * (case-insensitive) match survives; anything else maps to "unset".
+ */
+export function id3v1GenreIndex(genre: string | null | undefined): number {
+  if (!genre) {
+    return ID3V1_GENRE_UNSET;
+  }
+  return ID3V1_GENRE_LOOKUP.get(genre.toLowerCase()) ?? ID3V1_GENRE_UNSET;
+}
+
+/**
+ * The subset of a track's fields ID3v1 can represent (no album artist,
+ * composer, or "total tracks" — ID3v1 has no room for them).
+ */
+export interface Id3v1TagFields {
+  title?: string | null;
+  artist?: string | null;
+  album?: string | null;
+  /** A 4-character numeric year string, e.g. "1988". */
+  year?: string | null;
+  genre?: string | null;
+  /** Clamped to the 0-255 byte range; 0 (or missing) means "unset". */
+  track?: number | null;
+}
+
+/**
+ * Replaces characters outside Latin-1 with "?" rather than letting Buffer's
+ * latin1 encoding silently truncate them to the wrong character.
+ */
+function toLatin1Sanitized(value: string): string {
+  let result = '';
+  for (const char of value) {
+    result += (char.codePointAt(0) ?? 0) <= 0xff ? char : '?';
+  }
+  return result;
+}
+
+/**
+ * Writes a Latin-1 field into a fixed-width slot, truncating as needed.
+ * Leaves a missing value's (already zero-filled) slot untouched.
+ */
+function writeFixedLatin1Field(
+  buffer: Buffer,
+  value: string | null | undefined,
+  offset: number,
+  length: number,
+): void {
+  if (!value) {
+    return;
+  }
+  buffer.write(
+    toLatin1Sanitized(value).slice(0, length),
+    offset,
+    length,
+    'latin1',
+  );
+}
+
+/**
+ * Builds a fresh 128-byte ID3v1.1 tag block from a track's current ID3v2
+ * field values.
+ */
+export function buildId3v1TagBuffer(fields: Id3v1TagFields): Buffer {
+  const block = Buffer.alloc(ID3V1_TAG_SIZE, 0x00);
+  block.write('TAG', 0, 3, 'ascii');
+  writeFixedLatin1Field(block, fields.title, 3, 30);
+  writeFixedLatin1Field(block, fields.artist, 33, 30);
+  writeFixedLatin1Field(block, fields.album, 63, 30);
+  writeFixedLatin1Field(block, fields.year, 93, 4);
+  // Bytes 97-124: comment — this app never sets one on the ID3v1 tag it
+  // writes, so that range is left zero-filled.
+  block.writeUInt8(0, 125); // ID3v1.1 marker.
+  const track = fields.track ?? 0;
+  block.writeUInt8(track >= 0 && track <= 255 ? track : 0, 126);
+  block.writeUInt8(id3v1GenreIndex(fields.genre), 127);
+  return block;
+}

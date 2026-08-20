@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import type { IAudioMetadata, ITag } from 'music-metadata';
 import { musicRoute } from '../route-music.ts';
+import { ID3V1_TAG_SIZE } from '../../shared/music.ts';
 import type { T } from '../index.ts';
 import {
   createTestServer,
@@ -447,7 +448,7 @@ describe('POST /music/write-track-tags — audio data preservation', () => {
   after(() => server.close());
 
   it(
-    'preserves trailing bytes after the ID3v2 chunk byte-for-byte',
+    'preserves trailing audio bytes after the ID3v2 chunk byte-for-byte (aside from the regenerated ID3v1 tag appended after them)',
     withLogs([], async () => {
       const filePath = join(server.mountDir, 'audio.mp3');
       await writeFile(filePath, buildMp3WithTags({}));
@@ -458,16 +459,26 @@ describe('POST /music/write-track-tags — audio data preservation', () => {
 
       const written = await readFile(filePath);
       const trailing = getBytesAfterId3(written);
+      // The write also backfills a fresh trailing ID3v1 tag (the fixture
+      // starts with none), so the audio payload is followed by 128 more
+      // bytes rather than ending the file.
+      assert.equal(trailing.length, AUDIO_PAYLOAD.length + ID3V1_TAG_SIZE);
       assert.deepEqual(
-        trailing,
+        trailing.subarray(0, AUDIO_PAYLOAD.length),
         AUDIO_PAYLOAD,
         'bytes following the ID3v2 chunk must be unchanged',
+      );
+      assert.equal(
+        trailing
+          .subarray(AUDIO_PAYLOAD.length, AUDIO_PAYLOAD.length + 3)
+          .toString('ascii'),
+        'TAG',
       );
     }),
   );
 
   it(
-    'preserves trailing bytes across successive writes',
+    'preserves trailing audio bytes across successive writes (aside from the regenerated ID3v1 tag appended after them)',
     withLogs([], async () => {
       const filePath = join(server.mountDir, 'repeated.mp3');
       await writeFile(filePath, buildMp3WithTags({}));
@@ -483,7 +494,12 @@ describe('POST /music/write-track-tags — audio data preservation', () => {
       ]);
 
       const written = await readFile(filePath);
-      assert.deepEqual(getBytesAfterId3(written), AUDIO_PAYLOAD);
+      const trailing = getBytesAfterId3(written);
+      assert.equal(trailing.length, AUDIO_PAYLOAD.length + ID3V1_TAG_SIZE);
+      assert.deepEqual(
+        trailing.subarray(0, AUDIO_PAYLOAD.length),
+        AUDIO_PAYLOAD,
+      );
 
       const meta = await parseFile(filePath);
       assert.equal(meta.common.title, 'First');
@@ -572,8 +588,11 @@ describe('POST /music/write-track-tags — tag-less files', () => {
         'ID3',
         'file should now begin with an ID3v2 header',
       );
+      const trailing = getBytesAfterId3(written);
+      // A fresh ID3v1 tag is backfilled too, since this file had none.
+      assert.equal(trailing.length, AUDIO_PAYLOAD.length + ID3V1_TAG_SIZE);
       assert.deepEqual(
-        getBytesAfterId3(written),
+        trailing.subarray(0, AUDIO_PAYLOAD.length),
         AUDIO_PAYLOAD,
         'original audio bytes must follow the new ID3v2 chunk',
       );

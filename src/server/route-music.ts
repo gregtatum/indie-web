@@ -15,14 +15,17 @@ import { parseFile } from 'music-metadata';
 import { throttle } from '../shared/utils.ts';
 import {
   APP_FRAME_IDS,
+  ID3V1_TAG_SIZE,
   MUSIC_INDEX_VERSION,
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
+  buildId3v1TagBuffer,
   compareTracksDefault,
   nativePrivateTextTagValue,
   parseBooleanTagValue,
   parsePreferComposerGroupingTag,
   resolveTagValue,
 } from '../shared/music.ts';
+import type { Id3v1TagFields } from '../shared/music.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
 
@@ -736,6 +739,58 @@ async function computeGapFillChanges(
   return gapFill;
 }
 
+/**
+ * Maps the file's just-written ID3v2.3 fields into what ID3v1 can hold.
+ */
+function extractId3v1Fields(
+  blocks: T.TrackTagsResponse['blocks'],
+): Id3v1TagFields {
+  const v23 = blocks.find((block) => block.format === 'ID3v2.3');
+  const get = (frameId: string): string | undefined =>
+    v23?.tags.find((tag) => tag.id === frameId && tag.binary === undefined)
+      ?.value;
+  return {
+    title: get('TIT2') ?? null,
+    artist: get('TPE1') ?? null,
+    album: get('TALB') ?? null,
+    year: get('TYER') ?? null,
+    genre: get('TCON') ?? null,
+    track: parseLeadingInt(get('TRCK')),
+  };
+}
+
+/**
+ * Regenerates the trailing ID3v1 tag from the current ID3v2.3 fields, replacing or
+ * appending it. This is a best-effort, a failure here shouldn't fail a write whose
+ * ID3v2 portion already succeeded.
+ */
+async function backfillId3v1Tag(resolvedPath: string): Promise<void> {
+  try {
+    const meta = await parseFile(resolvedPath);
+    const blocks = serializeTagBlocks(meta.native ?? {});
+    const block = buildId3v1TagBuffer(extractId3v1Fields(blocks));
+
+    const stats = await fs.stat(resolvedPath);
+    const handle = await fs.open(resolvedPath, 'r+');
+    try {
+      let offset = stats.size;
+      if (stats.size >= ID3V1_TAG_SIZE) {
+        const marker = Buffer.alloc(3);
+        await handle.read(marker, 0, 3, stats.size - ID3V1_TAG_SIZE);
+        if (marker.toString('latin1') === 'TAG') {
+          offset = stats.size - ID3V1_TAG_SIZE;
+        }
+      }
+      await handle.write(block, 0, block.length, offset);
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    // Unable to read the file's tags or write the trailing block — leave
+    // the file as-is.
+  }
+}
+
 async function writeTrackTagsForPath(
   mountPath: MountPath,
   clientPath: unknown,
@@ -782,6 +837,7 @@ async function writeTrackTagsForPath(
     if (result instanceof Error) {
       return { path: normalizedClientPath, message: result.message };
     }
+    await backfillId3v1Tag(resolvedPath);
     return { clientPath: normalizedClientPath, resolvedPath, gapFillChanges };
   } catch (error) {
     return {
