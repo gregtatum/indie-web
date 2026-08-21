@@ -93,6 +93,14 @@ export function ListFiles() {
     setFileMenuFocused,
   );
 
+  Hooks.useTypeAheadSearch(
+    listFilesListRef,
+    files ? files.map((file) => file.name) : [],
+    (name) => {
+      dispatch(A.changeFileFocus(path, name));
+    },
+  );
+
   if (!files) {
     if (error) {
       return (
