@@ -33,13 +33,13 @@ services:
 After adding this service to your docker-compose file you can run it with:
 
 ```shell
-docker compose up --detach
+docker-compose up --detach
 ```
 
 If you want to stop it you can run:
 
 ```shell
-docker compose down
+docker-compose down
 ```
 
 ## Setting it up on a Synology NAS

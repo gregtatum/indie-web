@@ -28,6 +28,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const needsRescan = $$.getMusicNeedsRescan();
   const servedIndexVersion = $$.getMusicServedIndexVersion();
   const serverMaxIndexVersion = $$.getMusicServerMaxIndexVersion();
+  const containerName = $$.getFileStoreContainerName();
   const { dispatch } = Hooks.useStore();
   const { isFilesView } = useMusicUrlSerialization();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
@@ -115,6 +116,10 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     serverMaxIndexVersion < CURRENT_MUSIC_INDEX_VERSION;
   const showRescanPrompt = needsRescan && !serverOutdated;
 
+  const updateDocsHref = containerName
+    ? `/docs/update-docker.html?containerName=${encodeURIComponent(containerName)}`
+    : '/docs/update-npm.html';
+
   let scanLabel = 'Scan Library';
   if (scanPhase === 'scanning') {
     scanLabel = 'Scanning…';
@@ -148,7 +153,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
         {serverOutdated ? (
           <a
             className="button button-primary"
-            href="/docs/file-store-server.html"
+            href={updateDocsHref}
             target="_blank"
             rel="noopener noreferrer"
           >

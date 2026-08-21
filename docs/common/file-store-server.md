@@ -42,13 +42,13 @@ services:
 Start it with:
 
 ```shell
-docker compose up --detach
+docker-compose up --detach
 ```
 
 Stop it with:
 
 ```shell
-docker compose down
+docker-compose down
 ```
 
 ## Connect the folder
