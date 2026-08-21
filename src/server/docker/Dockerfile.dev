@@ -9,6 +9,7 @@ COPY src/server/package.json ./src/server/package.json
 COPY src/server/package-lock.json ./src/server/package-lock.json
 
 ENV NODE_ENV=development
+ENV IS_DOCKER=true
 
 WORKDIR /app/src/server
 RUN npm install

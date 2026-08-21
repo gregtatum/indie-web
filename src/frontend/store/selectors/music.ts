@@ -55,6 +55,13 @@ export function getFileManagerRevealLabel(state: State): string | null {
   return getMusic(state).fileManagerRevealLabel;
 }
 
+/**
+ * A non-null value implies the server is running in Docker.
+ */
+export function getFileStoreContainerName(state: State): string | null {
+  return getMusic(state).fileStoreContainerName;
+}
+
 function filterByPanel(
   filteredTracks: T.TrackMetadata[],
   panel: T.MusicPanelType,

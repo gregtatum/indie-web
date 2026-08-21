@@ -27,6 +27,7 @@ services:
   floppydisk:
     image: tatumcreative/floppydisk.link:latest
     container_name: floppydisk-docs
+    hostname: floppydisk
     restart: unless-stopped
 
     ports:

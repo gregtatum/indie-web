@@ -9,6 +9,7 @@ import type { T } from './index.ts';
 import { basename, dirname } from 'node:path';
 import { createReadStream, promises as fs, type Stats } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
+import { hostname } from 'node:os';
 import archiver from 'archiver';
 import { finished } from 'stream/promises';
 import { getFileManagerLauncher } from './file-manager-launcher.ts';
@@ -30,10 +31,15 @@ export function fileStoreRoute(mountPath: MountPath) {
 
   route.get(
     '/',
-    async (): Promise<{ routes: string[]; revealLabel: string | null }> => {
+    async (): Promise<{
+      routes: string[];
+      revealLabel: string | null;
+      containerName: string | null;
+    }> => {
       return {
         routes: route.routes.map((r) => r.toString()),
         revealLabel: getFileManagerLauncher()?.label ?? null,
+        containerName: process.env.IS_DOCKER === 'true' ? hostname() : null,
       };
     },
   );

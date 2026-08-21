@@ -16,6 +16,7 @@ services:
   floppydisk-docs:
     image: tatumcreative/floppydisk.link:latest
     container_name: floppydisk-docs
+    hostname: floppydisk-docs
     restart: unless-stopped
     ports:
       - "6543:6543"
@@ -25,6 +26,7 @@ services:
   floppydisk-music:
     image: tatumcreative/floppydisk.link:latest
     container_name: floppydisk-music
+    hostname: floppydisk-music
     restart: unless-stopped
     ports:
       - "6544:6543"

@@ -371,6 +371,13 @@ export function setFileManagerRevealLabel(label: string | null) {
   };
 }
 
+export function setFileStoreContainerName(containerName: string | null) {
+  return {
+    type: 'set-file-store-container-name' as const,
+    containerName,
+  };
+}
+
 export function musicPlaybackReady() {
   return { type: 'music-playback-ready' as const };
 }

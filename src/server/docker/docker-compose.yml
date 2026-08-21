@@ -3,6 +3,7 @@ services:
     build:
       context: ../../..
       dockerfile: src/server/docker/Dockerfile.dev
+    hostname: floppydisk-server
     volumes:
       # Live mount source code for development.
       - /app/src/server/node_modules

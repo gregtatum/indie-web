@@ -16,6 +16,7 @@ COPY src/shared ./src/shared
 
 WORKDIR /app/src/server
 ENV NODE_ENV=production
+ENV IS_DOCKER=true
 
 # Mirrors package.json's "start" script, invoked directly instead of via
 # `npm run start` so node is PID 1 and receives signals like SIGTERM

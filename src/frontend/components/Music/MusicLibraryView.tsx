@@ -80,6 +80,7 @@ export function MusicLibraryView({
       ).catch(() => null);
 
       let revealLabel: string | null = null;
+      let containerName: string | null = null;
       if (fileStoreInfoResponse?.ok) {
         const fileStoreInfo = await fileStoreInfoResponse
           .json()
@@ -87,8 +88,12 @@ export function MusicLibraryView({
         if (typeof fileStoreInfo?.revealLabel === 'string') {
           revealLabel = fileStoreInfo.revealLabel;
         }
+        if (typeof fileStoreInfo?.containerName === 'string') {
+          containerName = fileStoreInfo.containerName;
+        }
       }
       dispatch(A.setFileManagerRevealLabel(revealLabel));
+      dispatch(A.setFileStoreContainerName(containerName));
 
       try {
         const res = await fetch(`${currentServer.url}/music/music-index`, {
