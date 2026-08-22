@@ -676,16 +676,44 @@ export class IDBFS extends FileStoreCache {
       return newRoot + path.slice(oldRoot.length);
     }
 
-    // Update the containing folder listing.
-    const containingFolder = await folderListings.get(getDirName(oldPath));
-    if (containingFolder) {
-      for (const file of containingFolder.files) {
-        if (file.path === oldPath) {
-          file.name = metadata.name;
-          file.path = metadata.path;
-        }
+    const oldParentPath = getDirName(oldPath);
+    const newParentPath = getDirName(metadata.path);
+
+    if (oldParentPath !== newParentPath) {
+      // The folder moved into a different parent folder. Remove it from the
+      // old parent's listing, and add it to the new parent's listing.
+      const oldParent = await folderListings.get(oldParentPath);
+      if (oldParent) {
+        oldParent.files = oldParent.files.filter(
+          (file) => file.path !== oldPath,
+        );
+        await folderListings.put(oldParent);
       }
-      await folderListings.put(containingFolder);
+
+      const newParent = await folderListings.get(newParentPath);
+      if (newParent) {
+        newParent.files = newParent.files.filter(
+          (file) => file.path !== oldPath && file.path !== metadata.path,
+        );
+        newParent.files.push(metadata);
+        newParent.files = AppLogic.sortFiles(newParent.files);
+        await folderListings.put(newParent);
+      } else {
+        // Create the folder path if it does not exist.
+        await this.addFolderListing(newParentPath, [metadata], tx);
+      }
+    } else {
+      // Renamed in place. Update the entry in the containing folder listing.
+      const containingFolder = await folderListings.get(oldParentPath);
+      if (containingFolder) {
+        for (const file of containingFolder.files) {
+          if (file.path === oldPath) {
+            file.name = metadata.name;
+            file.path = metadata.path;
+          }
+        }
+        await folderListings.put(containingFolder);
+      }
     }
 
     let cursor = await folderListings.openCursor();
@@ -744,13 +772,33 @@ export class IDBFS extends FileStoreCache {
     fromPath: string,
     toPath: string,
   ): Promise<T.FileMetadata | T.FolderMetadata> {
-    const { metadata } = await this.loadBlob(fromPath);
-    await this.updateMetadata(fromPath, {
-      ...metadata,
-      name: getPathFileName(toPath),
-      path: toPath,
-    });
-    return metadata;
+    try {
+      const { metadata } = await this.loadBlob(fromPath);
+      const nextMetadata: T.FileMetadata = {
+        ...metadata,
+        name: getPathFileName(toPath),
+        path: toPath,
+      };
+      await this.updateMetadata(fromPath, nextMetadata);
+      return nextMetadata;
+    } catch {
+      // Not a file in the 'files' store, so this must be a folder.
+      const containingFolder = await this.#db.get(
+        'folderListings',
+        getDirName(fromPath),
+      );
+      const existing = containingFolder?.files.find(
+        (file) => file.path === fromPath,
+      );
+      const metadata: T.FolderMetadata = {
+        type: 'folder',
+        id: existing?.id ?? uuid.v4(),
+        name: getPathFileName(toPath),
+        path: toPath,
+      };
+      await this.updateMetadata(fromPath, metadata);
+      return metadata;
+    }
   }
 
   async updateMetadata(

@@ -477,4 +477,46 @@ describe('ListFiles', () => {
       "
     `);
   });
+
+  it('cuts and pastes a folder into another folder', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'Source/Song A.md',
+      'Source/Song B.md',
+      'Dest/',
+    ]);
+
+    await waitFor(() => getFileListing('/Source'));
+
+    // Select the Source folder.
+    await act(async () => {
+      await user.click(getFileLink('/Source'));
+    });
+    expect(getSelectedFilePaths()).toEqual(['/Source']);
+
+    // Cut the folder.
+    await act(() => user.keyboard('{Meta>}x{/Meta}'));
+
+    // Navigate into the Dest folder.
+    await act(async () => {
+      await user.dblClick(getFileLink('/Dest'));
+    });
+    await waitFor(() => screen.getByRole('listbox'));
+
+    // Paste the folder.
+    await act(() => user.keyboard('{Meta>}v{/Meta}'));
+
+    await waitFor(() => {
+      expect(getSelectedFilePaths()).toEqual(['/Dest/Source']);
+    });
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      └── Dest
+          └── Source
+              ├── Song A.md
+              └── Song B.md
+      "
+    `);
+  });
 });
