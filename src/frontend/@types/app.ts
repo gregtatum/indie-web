@@ -153,7 +153,7 @@ export interface ClickedFileStoreMenu {
 }
 
 export interface CopyFileState {
-  path: string;
+  paths: string[];
   isCut: boolean;
 }
 

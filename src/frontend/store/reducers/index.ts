@@ -717,7 +717,7 @@ function copyFile(
 ): T.CopyFileState | null {
   switch (action.type) {
     case 'set-copy-file':
-      return { path: action.path, isCut: action.isCut };
+      return { paths: action.paths, isCut: action.isCut };
     case 'clear-copy-file':
       return null;
     default:

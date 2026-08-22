@@ -379,4 +379,102 @@ describe('ListFiles', () => {
 
     expect(getSelectedFilePaths()).toEqual(['/B.md', '/D.md']);
   });
+
+  it('copies multiple selected files into a folder', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'C.md',
+      'Dest/',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Select A.md and C.md with a ctrl-click.
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    await act(async () => {
+      await user.keyboard('{Control>}');
+      await user.click(getFileLink('/C.md'));
+      await user.keyboard('{/Control}');
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md', '/C.md']);
+
+    // Copy the selection.
+    await act(() => user.keyboard('{Meta>}c{/Meta}'));
+
+    // Navigate into the Dest folder.
+    await act(async () => {
+      await user.dblClick(getFileLink('/Dest'));
+    });
+    await waitFor(() => screen.getByRole('listbox'));
+
+    // Paste the selection.
+    await act(() => user.keyboard('{Meta>}v{/Meta}'));
+
+    await waitFor(() => {
+      expect(getSelectedFilePaths()).toEqual(['/Dest/A.md', '/Dest/C.md']);
+    });
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── A.md
+      ├── B.md
+      ├── C.md
+      └── Dest
+          ├── A.md
+          └── C.md
+      "
+    `);
+  });
+
+  it('cuts multiple selected files into a folder', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'C.md',
+      'Dest/',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Select A.md through B.md with a shift-click range.
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    await act(async () => {
+      await user.keyboard('{Shift>}');
+      await user.click(getFileLink('/B.md'));
+      await user.keyboard('{/Shift}');
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md', '/B.md']);
+
+    // Cut the selection.
+    await act(() => user.keyboard('{Meta>}x{/Meta}'));
+
+    // Navigate into the Dest folder.
+    await act(async () => {
+      await user.dblClick(getFileLink('/Dest'));
+    });
+    await waitFor(() => screen.getByRole('listbox'));
+
+    // Paste the selection.
+    await act(() => user.keyboard('{Meta>}v{/Meta}'));
+
+    await waitFor(() => {
+      expect(getSelectedFilePaths()).toEqual(['/Dest/A.md', '/Dest/B.md']);
+    });
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── C.md
+      └── Dest
+          ├── A.md
+          └── B.md
+      "
+    `);
+  });
 });

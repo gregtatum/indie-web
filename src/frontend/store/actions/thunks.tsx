@@ -463,16 +463,17 @@ export function moveFile(
 }
 
 /**
- * Handle the pasting of files, with either copy or cut behavior. If there is a
- * duplicate file, then the file will automatically be renamed as a copy file.
+ * Handle the pasting of one or more files, with either copy or cut behavior.
  */
 export function pasteCopyFile(
   destinationFolder: string,
   clipboard: T.CopyFileState,
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    const { path: sourcePath, isCut } = clipboard;
-    const sourceFolder = getDirName(sourcePath);
+    const { paths: sourcePaths, isCut } = clipboard;
+    if (sourcePaths.length === 0) {
+      return;
+    }
 
     const ensureFolderListing = async (folder: string) => {
       let state = getState();
@@ -482,55 +483,6 @@ export function pasteCopyFile(
       }
       return $.getListFilesCache(getState()).get(folder)?.files ?? null;
     };
-
-    if (!(await ensureFolderListing(sourceFolder))) {
-      dispatch(
-        addMessage({
-          message: (
-            <>
-              Unable to locate <code>{sourcePath}</code> for pasting.
-            </>
-          ),
-          timeout: true,
-        }),
-      );
-      dispatch(Plain.clearCopyFile());
-      return;
-    }
-
-    let state = getState();
-    let metadata =
-      getMetadataFromCache(
-        $.getListFilesCache(state),
-        sourceFolder,
-        sourcePath,
-      ) ?? null;
-
-    if (!metadata) {
-      await dispatch(listFiles(sourceFolder));
-      state = getState();
-      metadata =
-        getMetadataFromCache(
-          $.getListFilesCache(state),
-          sourceFolder,
-          sourcePath,
-        ) ?? null;
-    }
-
-    if (!metadata) {
-      dispatch(
-        addMessage({
-          message: (
-            <>
-              Unable to locate <code>{sourcePath}</code> for pasting.
-            </>
-          ),
-          timeout: true,
-        }),
-      );
-      dispatch(Plain.clearCopyFile());
-      return;
-    }
 
     const targetFolder = canonicalizePath(destinationFolder);
     const targetListing = await ensureFolderListing(targetFolder);
@@ -548,42 +500,148 @@ export function pasteCopyFile(
       return;
     }
 
-    // Handle duplicate names.
+    // Handle duplicate names within the target folder, taking into account
+    // names claimed earlier in this same paste operation.
     // 1. "filename.jpg"
     // 2. "filename copy.jpg"
     // 3. "filename copy 2.jpg"
     const existingNames = new Set(targetListing.map((entry) => entry.name));
-    let targetName = metadata.name;
-    if (existingNames.has(metadata.name)) {
-      const { baseName, extension } = splitOutFileExtension(metadata.name);
-
-      let candidate = `${baseName} copy${extension}`;
-      let counter = 2;
-      while (existingNames.has(candidate)) {
-        candidate = `${baseName} copy ${counter}${extension}`;
-        counter += 1;
+    const claimName = (name: string) => {
+      let targetName = name;
+      if (existingNames.has(name)) {
+        const { baseName, extension } = splitOutFileExtension(name);
+        let candidate = `${baseName} copy${extension}`;
+        let counter = 2;
+        while (existingNames.has(candidate)) {
+          candidate = `${baseName} copy ${counter}${extension}`;
+          counter += 1;
+        }
+        targetName = candidate;
       }
-      targetName = candidate;
-    }
+      existingNames.add(targetName);
+      return targetName;
+    };
 
-    const targetPath = canonicalizePath(pathJoin(targetFolder, targetName));
+    const pastedNames: string[] = [];
+    let hadSkippedFolderCopy = false;
 
-    if (isCut) {
-      if (targetPath === metadata.path) {
-        dispatch(Plain.clearCopyFile());
-        return;
+    for (const sourcePath of sourcePaths) {
+      const sourceFolder = getDirName(sourcePath);
+
+      if (!(await ensureFolderListing(sourceFolder))) {
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Unable to locate <code>{sourcePath}</code> for pasting.
+              </>
+            ),
+            timeout: true,
+          }),
+        );
+        continue;
       }
+
+      let metadata =
+        getMetadataFromCache(
+          $.getListFilesCache(getState()),
+          sourceFolder,
+          sourcePath,
+        ) ?? null;
+
+      if (!metadata) {
+        await dispatch(listFiles(sourceFolder));
+        metadata =
+          getMetadataFromCache(
+            $.getListFilesCache(getState()),
+            sourceFolder,
+            sourcePath,
+          ) ?? null;
+      }
+
+      if (!metadata) {
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Unable to locate <code>{sourcePath}</code> for pasting.
+              </>
+            ),
+            timeout: true,
+          }),
+        );
+        continue;
+      }
+
+      const targetName = claimName(metadata.name);
+      const targetPath = canonicalizePath(pathJoin(targetFolder, targetName));
+
+      if (isCut) {
+        if (targetPath === metadata.path) {
+          continue;
+        }
+        try {
+          await dispatch(moveFile(sourcePath, targetPath));
+          pastedNames.push(targetName);
+        } catch (error) {
+          console.error(error);
+        }
+        continue;
+      }
+
+      if (metadata.type === 'folder') {
+        hadSkippedFolderCopy = true;
+        continue;
+      }
+
+      const fileStore = $.getCurrentFS(getState());
+      const fileStoreDisplayName = $.getFileStoreDisplayName(getState());
+      const messageGeneration = dispatch(
+        addMessage({
+          message: (
+            <>
+              Copying <code>{metadata.name}</code>
+            </>
+          ),
+        }),
+      );
+
       try {
-        await dispatch(moveFile(sourcePath, targetPath));
-        dispatch(Plain.clearCopyFile());
-        dispatch(Plain.changeFileFocus(targetFolder, targetName));
+        const { blob } = await fileStore.loadBlob(sourcePath);
+        const savedMetadata = await fileStore.saveBlob(
+          targetPath,
+          'overwrite',
+          blob,
+        );
+        pastedNames.push(savedMetadata.name);
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Pasted <code>{savedMetadata.path}</code>
+              </>
+            ),
+            generation: messageGeneration,
+            timeout: true,
+          }),
+        );
       } catch (error) {
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Unable to copy <code>{metadata.name}</code> with{' '}
+                {fileStoreDisplayName}.
+              </>
+            ),
+            generation: messageGeneration,
+          }),
+        );
         console.error(error);
       }
-      return;
     }
 
-    if (metadata.type === 'folder') {
+    if (hadSkippedFolderCopy) {
       dispatch(
         addMessage({
           message: (
@@ -592,54 +650,22 @@ export function pasteCopyFile(
           timeout: true,
         }),
       );
-      return;
     }
 
-    const fileStore = $.getCurrentFS(getState());
-    const fileStoreDisplayName = $.getFileStoreDisplayName(getState());
-    const messageGeneration = dispatch(
-      addMessage({
-        message: (
-          <>
-            Copying <code>{metadata.name}</code>
-          </>
-        ),
-      }),
-    );
-
-    try {
-      const { blob } = await fileStore.loadBlob(sourcePath);
-      const savedMetadata = await fileStore.saveBlob(
-        targetPath,
-        'overwrite',
-        blob,
-      );
+    if (!isCut && pastedNames.length) {
       await dispatch(listFiles(targetFolder));
-      dispatch(Plain.changeFileFocus(targetFolder, savedMetadata.name));
+    }
+
+    dispatch(Plain.clearCopyFile());
+
+    if (pastedNames.length) {
+      dispatch(Plain.setFileSelection(targetFolder, pastedNames));
       dispatch(
-        addMessage({
-          message: (
-            <>
-              Pasted <code>{savedMetadata.path}</code>
-            </>
-          ),
-          generation: messageGeneration,
-          timeout: true,
-        }),
+        Plain.changeFileFocus(
+          targetFolder,
+          pastedNames[pastedNames.length - 1],
+        ),
       );
-    } catch (error) {
-      dispatch(
-        addMessage({
-          message: (
-            <>
-              Unable to copy <code>{metadata.name}</code> with{' '}
-              {fileStoreDisplayName}.
-            </>
-          ),
-          generation: messageGeneration,
-        }),
-      );
-      console.error(error);
     }
   };
 }

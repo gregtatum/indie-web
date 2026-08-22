@@ -777,11 +777,6 @@ function useFileNavigation(
         }
       };
 
-      const focusedFile =
-        fileFocus && fileFocusIndex >= 0 && fileFocusIndex < files.length
-          ? files[fileFocusIndex]
-          : null;
-
       const openFile = () => {
         if (fileFocus) {
           const link: HTMLAnchorElement | undefined | null =
@@ -823,6 +818,16 @@ function useFileNavigation(
         if (fileSelection.length) {
           dispatch(A.setFileSelection(path, []));
         }
+      };
+
+      const getSelectedPaths = () => {
+        let selectionNames = fileSelection;
+        if (selectionNames.length === 0) {
+          selectionNames = fileFocus ? [fileFocus] : [];
+        }
+        return files
+          .filter((file) => selectionNames.includes(file.name))
+          .map((file) => file.path);
       };
 
       switch (key) {
@@ -896,17 +901,19 @@ function useFileNavigation(
         }
         case 'Meta+C':
         case 'Control+C': {
-          if (focusedFile) {
+          const selectedPaths = getSelectedPaths();
+          if (selectedPaths.length) {
             event.preventDefault();
-            dispatch(A.setCopyFile(focusedFile.path, false));
+            dispatch(A.setCopyFile(selectedPaths, false));
           }
           break;
         }
         case 'Meta+X':
         case 'Control+X': {
-          if (focusedFile) {
+          const selectedPaths = getSelectedPaths();
+          if (selectedPaths.length) {
             event.preventDefault();
-            dispatch(A.setCopyFile(focusedFile.path, true));
+            dispatch(A.setCopyFile(selectedPaths, true));
           }
           break;
         }
@@ -930,7 +937,7 @@ function useFileNavigation(
             event.preventDefault();
             ensureElementFocus();
             void dispatch(
-              A.pasteCopyFile(path, { path: clipboard.path, isCut: true }),
+              A.pasteCopyFile(path, { paths: clipboard.paths, isCut: true }),
             );
           }
           break;

@@ -208,8 +208,8 @@ export function setSearchString(search: string) {
   return { type: 'set-search-string' as const, search };
 }
 
-export function setCopyFile(path: string, isCut: boolean) {
-  return { type: 'set-copy-file' as const, path, isCut };
+export function setCopyFile(paths: string[], isCut: boolean) {
+  return { type: 'set-copy-file' as const, paths, isCut };
 }
 
 export function clearCopyFile() {
