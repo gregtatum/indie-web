@@ -417,6 +417,9 @@ describe('ListFiles', () => {
       expect(getSelectedFilePaths()).toEqual(['/Dest/A.md', '/Dest/C.md']);
     });
 
+    // A single consolidated toast is shown for the batch, not one per file.
+    expect(screen.getAllByText('Copied 2 files')).toHaveLength(1);
+
     expect(await renderTree()).toMatchInlineSnapshot(`
       "
       .
@@ -466,6 +469,9 @@ describe('ListFiles', () => {
     await waitFor(() => {
       expect(getSelectedFilePaths()).toEqual(['/Dest/A.md', '/Dest/B.md']);
     });
+
+    // A single consolidated toast is shown for the batch, not one per file.
+    expect(screen.getAllByText('Moved 2 files')).toHaveLength(1);
 
     expect(await renderTree()).toMatchInlineSnapshot(`
       "

@@ -408,6 +408,7 @@ export function saveTextFile(path: string, text: string): Thunk<Promise<void>> {
 export function moveFile(
   fromPath: string,
   toPath: string,
+  isBatch = false,
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     toPath = canonicalizePath(toPath);
@@ -416,46 +417,54 @@ export function moveFile(
     const name = getPathFileName(toPath);
 
     dispatch(PlainInternal.moveFileRequested(fromPath));
-    const messageGeneration = dispatch(
-      addMessage({
-        message: (
-          <>
-            Moving file <code>{name}</code>
-          </>
-        ),
-      }),
-    );
+
+    // Do not send update messages for batch moves.
+    const generation = isBatch
+      ? undefined
+      : dispatch(
+          addMessage({
+            message: (
+              <>
+                Moving file <code>{name}</code>
+              </>
+            ),
+          }),
+        );
 
     try {
       const metadata = await fileStore.move(fromPath, toPath);
 
       dispatch(PlainInternal.moveFileDone(fromPath, metadata));
 
-      dispatch(
-        addMessage({
-          message: (
-            <>
-              Moved <code>{toPath}</code>
-            </>
-          ),
-          generation: messageGeneration,
-          timeout: true,
-        }),
-      );
+      if (generation !== undefined) {
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Moved <code>{toPath}</code>
+              </>
+            ),
+            generation,
+            timeout: true,
+          }),
+        );
+      }
 
       void dispatch(listFiles(getDirName(fromPath)));
       void dispatch(listFiles(getDirName(toPath)));
     } catch (error) {
-      dispatch(
-        addMessage({
-          message: (
-            <>
-              Unable to move <code>{toPath}</code>
-            </>
-          ),
-          generation: messageGeneration,
-        }),
-      );
+      if (generation !== undefined) {
+        dispatch(
+          addMessage({
+            message: (
+              <>
+                Unable to move <code>{toPath}</code>
+              </>
+            ),
+            generation,
+          }),
+        );
+      }
       console.error(error);
       throw new Error(`Unable to save the file with ${fileStoreDisplayName}.`);
     }
@@ -522,23 +531,51 @@ export function pasteCopyFile(
       return targetName;
     };
 
+    // With more than one file, collapse per-file progress into a single
+    // message that's updated in place, rather than stacking a toast per
+    // file. Individual failures still go to the console either way.
+    const isBatch = sourcePaths.length > 1;
+    const verb = isCut ? 'Moving' : 'Copying';
+    const pastVerb = isCut ? 'Moved' : 'Copied';
+
     const pastedNames: string[] = [];
     let hadSkippedFolderCopy = false;
+    let failureCount = 0;
+    let batchGeneration: number | undefined;
 
-    for (const sourcePath of sourcePaths) {
-      const sourceFolder = getDirName(sourcePath);
+    for (let i = 0; i < sourcePaths.length; i++) {
+      const sourcePath = sourcePaths[i];
 
-      if (!(await ensureFolderListing(sourceFolder))) {
-        dispatch(
+      if (isBatch) {
+        batchGeneration = dispatch(
           addMessage({
             message: (
               <>
-                Unable to locate <code>{sourcePath}</code> for pasting.
+                {verb} {i + 1}/{sourcePaths.length} files
               </>
             ),
-            timeout: true,
+            generation: batchGeneration,
           }),
         );
+      }
+
+      const sourceFolder = getDirName(sourcePath);
+
+      if (!(await ensureFolderListing(sourceFolder))) {
+        failureCount += 1;
+        console.error(`Unable to locate ${sourcePath} for pasting.`);
+        if (!isBatch) {
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Unable to locate <code>{sourcePath}</code> for pasting.
+                </>
+              ),
+              timeout: true,
+            }),
+          );
+        }
         continue;
       }
 
@@ -560,16 +597,20 @@ export function pasteCopyFile(
       }
 
       if (!metadata) {
-        dispatch(
-          addMessage({
-            message: (
-              <>
-                Unable to locate <code>{sourcePath}</code> for pasting.
-              </>
-            ),
-            timeout: true,
-          }),
-        );
+        failureCount += 1;
+        console.error(`Unable to locate ${sourcePath} for pasting.`);
+        if (!isBatch) {
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Unable to locate <code>{sourcePath}</code> for pasting.
+                </>
+              ),
+              timeout: true,
+            }),
+          );
+        }
         continue;
       }
 
@@ -581,9 +622,10 @@ export function pasteCopyFile(
           continue;
         }
         try {
-          await dispatch(moveFile(sourcePath, targetPath));
+          await dispatch(moveFile(sourcePath, targetPath, isBatch));
           pastedNames.push(targetName);
         } catch (error) {
+          failureCount += 1;
           console.error(error);
         }
         continue;
@@ -596,15 +638,17 @@ export function pasteCopyFile(
 
       const fileStore = $.getCurrentFS(getState());
       const fileStoreDisplayName = $.getFileStoreDisplayName(getState());
-      const messageGeneration = dispatch(
-        addMessage({
-          message: (
-            <>
-              Copying <code>{metadata.name}</code>
-            </>
-          ),
-        }),
-      );
+      const singleGeneration = isBatch
+        ? undefined
+        : dispatch(
+            addMessage({
+              message: (
+                <>
+                  Copying <code>{metadata.name}</code>
+                </>
+              ),
+            }),
+          );
 
       try {
         const { blob } = await fileStore.loadBlob(sourcePath);
@@ -614,31 +658,57 @@ export function pasteCopyFile(
           blob,
         );
         pastedNames.push(savedMetadata.name);
-        dispatch(
-          addMessage({
-            message: (
-              <>
-                Pasted <code>{savedMetadata.path}</code>
-              </>
-            ),
-            generation: messageGeneration,
-            timeout: true,
-          }),
-        );
+        if (!isBatch) {
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Pasted <code>{savedMetadata.path}</code>
+                </>
+              ),
+              generation: singleGeneration,
+              timeout: true,
+            }),
+          );
+        }
       } catch (error) {
-        dispatch(
-          addMessage({
-            message: (
+        failureCount += 1;
+        console.error(error);
+        if (!isBatch) {
+          dispatch(
+            addMessage({
+              message: (
+                <>
+                  Unable to copy <code>{metadata.name}</code> with{' '}
+                  {fileStoreDisplayName}.
+                </>
+              ),
+              generation: singleGeneration,
+            }),
+          );
+        }
+      }
+    }
+
+    if (isBatch) {
+      const succeeded = pastedNames.length;
+      const total = sourcePaths.length;
+      batchGeneration = dispatch(
+        addMessage({
+          message:
+            failureCount > 0 ? (
               <>
-                Unable to copy <code>{metadata.name}</code> with{' '}
-                {fileStoreDisplayName}.
+                {pastVerb} {succeeded} of {total} files
+              </>
+            ) : (
+              <>
+                {pastVerb} {total} files
               </>
             ),
-            generation: messageGeneration,
-          }),
-        );
-        console.error(error);
-      }
+          generation: batchGeneration,
+          timeout: failureCount > 0 ? false : true,
+        }),
+      );
     }
 
     if (hadSkippedFolderCopy) {
