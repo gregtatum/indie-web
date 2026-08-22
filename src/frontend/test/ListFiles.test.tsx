@@ -245,6 +245,25 @@ describe('ListFiles', () => {
     expect(screen.queryByText(/Ideas/)).toBeNull();
   });
 
+  it('clears the selection when clicking empty space in the list', async () => {
+    const { user, getSelectedFilePaths } = await setupWithListing([
+      'README.md',
+      'Notes/Ideas.md',
+    ]);
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/README.md'));
+    });
+    expect(getSelectedFilePaths()).toEqual(['/README.md']);
+
+    await act(async () => {
+      await user.click(screen.getByRole('listbox'));
+    });
+    expect(getSelectedFilePaths()).toEqual([]);
+  });
+
   it('opens a folder with a desktop double-click', async () => {
     const { user } = await setupWithListing(['README.md', 'Notes/Ideas.md']);
 

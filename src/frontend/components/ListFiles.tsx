@@ -213,6 +213,22 @@ export function ListFiles() {
           onPointerDown={(event) => {
             pointerTypeRef.current = event.pointerType;
           }}
+          onClick={(event) => {
+            if (
+              event.target !== event.currentTarget ||
+              pointerTypeRef.current !== 'mouse'
+            ) {
+              return;
+            }
+            // Dismiss the file selection.
+            selectionAnchorRef.current = null;
+            if (fileSelection.length) {
+              dispatch(A.setFileSelection(path, []));
+            }
+            if (fileFocus) {
+              dispatch(A.changeFileFocus(path, ''));
+            }
+          }}
         >
           {files.map((file, fileIndex) => {
             const isSelected =
