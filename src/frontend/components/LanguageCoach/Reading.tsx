@@ -8,7 +8,11 @@ import {
   pathJoin,
 } from 'frontend/utils';
 import { File, ListFilesSkeleton } from '../ListFiles';
-import { overlayPortal, useRetainScroll } from 'frontend/hooks';
+import {
+  overlayPortal,
+  useExitToFolderShortcut,
+  useRetainScroll,
+} from 'frontend/hooks';
 import { NextPrevLinks, useNextPrevSwipe } from '../NextPrev';
 import { TextArea } from '../TextArea';
 import { Splitter } from '../Splitter';
@@ -172,6 +176,7 @@ function Add() {
 
 export function ViewReadingFile() {
   useRetainScroll();
+  useExitToFolderShortcut();
   const dispatch = Hooks.useDispatch();
   const path = $$.getPath();
   const textFile = $$.getDownloadFileCache().get(path);

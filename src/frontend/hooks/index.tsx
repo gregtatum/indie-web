@@ -4,6 +4,7 @@ import * as Router from 'react-router-dom';
 import { Selector } from 'frontend/@types';
 import {
   ensureExists,
+  getDirName,
   getKeyboardString,
   getPathFileName,
   getPathFileNameNoExt,
@@ -522,6 +523,37 @@ export function useEscape(dismiss: () => void, isOpen: boolean) {
       }
     };
   }, [isOpen]);
+}
+
+/**
+ * Handles "Cmd+Up" (or "Alt+Up") to navigate back out to the containing folder's
+ * file listing, only when nothing else (e.g. the CodeMirror editor) is focused.
+ */
+export function useExitToFolderShortcut() {
+  const navigate = Router.useNavigate();
+  const path = $$.getPath();
+  const fsSlug = $$.getCurrentFileStoreSlug();
+
+  React.useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const key = getKeyboardString(event);
+      if (key !== 'Meta+ArrowUp' && key !== 'Alt+ArrowUp') {
+        return;
+      }
+      if (document.activeElement !== document.body) {
+        // Something else has focus, e.g. an editor is being edited, so
+        // don't hijack the shortcut.
+        return;
+      }
+      event.preventDefault();
+      const parentPath = getDirName(path);
+      navigate(`/${fsSlug}/folder${parentPath}`);
+    }
+    document.body.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [path, fsSlug, navigate]);
 }
 
 const focusableSelector = [

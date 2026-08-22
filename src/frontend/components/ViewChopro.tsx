@@ -8,7 +8,11 @@ import {
   transposeSongKeyByHalfSteps,
   ultimateGuitarToChordPro,
 } from 'frontend/logic/parse-chords';
-import { overlayPortal, useRetainScroll } from 'frontend/hooks';
+import {
+  overlayPortal,
+  useExitToFolderShortcut,
+  useRetainScroll,
+} from 'frontend/hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { RenderedSong } from './RenderedSong';
 import { Splitter } from './Splitter';
@@ -19,6 +23,7 @@ import './ViewChopro.css';
 
 export function ViewChopro() {
   useRetainScroll();
+  useExitToFolderShortcut();
   const dispatch = Hooks.useDispatch();
   const path = $$.getPath();
   const textFile = $$.getDownloadFileCache().get(path);

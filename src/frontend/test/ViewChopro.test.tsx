@@ -770,6 +770,55 @@ describe('<ViewChopro>', () => {
     `);
   });
 
+  it('navigates back to the file listing with Cmd+Up', async () => {
+    const { store } = setupColdplay();
+    act(() => {
+      store.dispatch(A.setHasOnboarded(true));
+    });
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.keyboard('{Meta>}{ArrowUp}{/Meta}');
+    });
+
+    await waitFor(() => screen.getByTestId('list-files'));
+  });
+
+  it('does not navigate away on Cmd+Up while editing', async () => {
+    const { store } = setupColdplay();
+    act(() => {
+      store.dispatch(A.setHasOnboarded(true));
+    });
+    await screen.findByText(/Lights go out and/, {
+      selector: 'span.renderedSongLineText',
+    });
+
+    const editButton = screen.queryByRole('button', { name: 'Edit' });
+    if (editButton) {
+      await act(async () => {
+        await userEvent.setup().click(editButton);
+      });
+    }
+    const textAreaMount = await waitFor(() =>
+      screen.getByTestId('textAreaMount'),
+    );
+    const cmContent = textAreaMount.querySelector<HTMLElement>('.cm-content');
+    act(() => {
+      cmContent?.focus();
+    });
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.keyboard('{Meta>}{ArrowUp}{/Meta}');
+    });
+
+    expect(screen.queryByTestId('list-files')).toBeNull();
+    expect(screen.getByTestId('textAreaMount')).toBeTruthy();
+  });
+
   // I can't figure out why this test doesn't work.
   xit('can generate tabs', async () => {
     setupColdplay();
