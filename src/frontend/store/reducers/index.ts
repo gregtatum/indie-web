@@ -409,6 +409,29 @@ function modifiedTextByPath(
       newState.delete(action.path);
       return newState;
     }
+    case 'move-file-done': {
+      // Rather than rewriting the buffer to live at the new path, just drop
+      // it. It's keyed by the now-stale old path, and it's simpler to let it
+      // be re-derived than to keep it in sync with every kind of move.
+      const { oldPath, metadata } = action;
+      if (metadata.type === 'folder') {
+        let changed = false;
+        const newState = new Map(state);
+        for (const path of state.keys()) {
+          if (path === oldPath || path.startsWith(oldPath + '/')) {
+            newState.delete(path);
+            changed = true;
+          }
+        }
+        return changed ? newState : state;
+      }
+      if (!state.has(oldPath)) {
+        return state;
+      }
+      const newState = new Map(state);
+      newState.delete(oldPath);
+      return newState;
+    }
     default:
       return state;
   }
@@ -726,6 +749,26 @@ function copyFile(
 }
 
 /**
+ * Drops folder-keyed state made stale by a file move or rename.
+ */
+function dropStaleFolderKeys<Value>(
+  state: Record<string, Value>,
+  oldPath: string,
+  metadata: T.FileMetadata | T.FolderMetadata,
+): Record<string, Value> {
+  const newState = { ...state };
+  delete newState[getDirName(oldPath)];
+  if (metadata.type === 'folder') {
+    for (const key of Object.keys(newState)) {
+      if (key === oldPath || key.startsWith(oldPath + '/')) {
+        delete newState[key];
+      }
+    }
+  }
+  return newState;
+}
+
+/**
  * Record<string, string> is the map of the folder to the file name. This way
  * the file focus is retained when navigating between folders.
  */
@@ -745,6 +788,8 @@ function fileFocusByPath(
         ...state,
         [action.folder]: action.fileFocus,
       };
+    case 'move-file-done':
+      return dropStaleFolderKeys(state, action.oldPath, action.metadata);
     case 'change-file-system':
     case 'clear-api-cache':
     case 'remove-dropbox-oauth':
@@ -782,6 +827,8 @@ function fileSelectionByPath(
       delete newState[action.folder];
       return newState;
     }
+    case 'move-file-done':
+      return dropStaleFolderKeys(state, action.oldPath, action.metadata);
     case 'change-file-system':
     case 'clear-api-cache':
     case 'remove-dropbox-oauth':

@@ -835,15 +835,12 @@ function useFileNavigation(
         case 'Shift+ArrowUp': {
           event.preventDefault();
           ensureElementFocus();
-          let nextFocus: string;
-          if (!fileFocus) {
-            if (!files.length) {
-              break;
-            }
-            nextFocus = files[files.length - 1].name;
-          } else {
-            nextFocus = files[Math.max(0, fileFocusIndex - 1)].name;
+          if (!files.length) {
+            break;
           }
+          const nextFocus = fileFocus
+            ? files[Math.max(0, fileFocusIndex - 1)].name
+            : files[files.length - 1].name;
           changeFileFocus(nextFocus);
           if (key === 'Shift+ArrowUp') {
             setSelectionRange(nextFocus);
@@ -856,16 +853,12 @@ function useFileNavigation(
         case 'Shift+ArrowDown': {
           event.preventDefault();
           ensureElementFocus();
-          let nextFocus: string;
-          if (!fileFocus) {
-            if (!files.length) {
-              break;
-            }
-            nextFocus = files[0].name;
-          } else {
-            nextFocus =
-              files[Math.min(files.length - 1, fileFocusIndex + 1)].name;
+          if (!files.length) {
+            break;
           }
+          const nextFocus = fileFocus
+            ? files[Math.min(files.length - 1, fileFocusIndex + 1)].name
+            : files[0].name;
           changeFileFocus(nextFocus);
           if (key === 'Shift+ArrowDown') {
             setSelectionRange(nextFocus);

@@ -6,7 +6,7 @@ import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
-import { A } from 'frontend';
+import { A, $ } from 'frontend';
 import { ensureExists } from 'frontend/utils';
 import { getFileTree } from './utils/fixtures';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
@@ -524,5 +524,23 @@ describe('ListFiles', () => {
               └── Song B.md
       "
     `);
+  });
+
+  it('drops stale focus and selection state for a folder after its only file moves out', async () => {
+    const idbfs = getIDBFS();
+    const store = createStore();
+    store.dispatch(A.changeFileStore('browser'));
+    await connectBrowserFiles(store, idbfs, ['Source/Song.md', 'Dest/']);
+
+    // Simulate having Song.md focused and selected while browsing Source.
+    store.dispatch(A.changeFileFocus('/Source', 'Song.md'));
+    store.dispatch(A.setFileSelection('/Source', ['Song.md']));
+
+    // Move the only file out of Source, e.g. via cut/paste into Dest.
+    await store.dispatch(A.moveFile('/Source/Song.md', '/Dest/Song.md'));
+
+    const state = store.getState();
+    expect($.getFileFocusByPath(state)['/Source']).toBeUndefined();
+    expect($.getFileSelectionByPath(state)['/Source']).toBeUndefined();
   });
 });
