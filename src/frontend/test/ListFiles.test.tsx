@@ -360,4 +360,23 @@ describe('ListFiles', () => {
 
     await navigateByKeyboard('{ArrowDown}', '/B.md');
   });
+
+  it('adds an arrow-key focused file to a ctrl-click selection', async () => {
+    const { user, navigateByKeyboard, getSelectedFilePaths } =
+      await setupWithListing(['A.md', 'B.md', 'C.md', 'D.md']);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Arrow down to focus B.md, without a mouse click.
+    await navigateByKeyboard('{ArrowDown}', '/A.md');
+    await navigateByKeyboard('{ArrowDown}', '/B.md');
+
+    await act(async () => {
+      await user.keyboard('{Control>}');
+      await user.click(getFileLink('/D.md'));
+      await user.keyboard('{/Control}');
+    });
+
+    expect(getSelectedFilePaths()).toEqual(['/B.md', '/D.md']);
+  });
 });

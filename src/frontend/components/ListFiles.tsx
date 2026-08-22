@@ -97,10 +97,18 @@ export function ListFiles() {
     }
     listFilesListRef.current?.focus({ preventScroll: true });
     if (event.metaKey || event.ctrlKey) {
-      const isSelected = fileSelection.includes(name);
+      // A plain arrow-key move only updates fileFocus and leaves fileSelection
+      // empty (see the ArrowUp/ArrowDown cases below), so fall back to treating
+      // the focused file as the current selection, matching how it's rendered
+      // as selected (see the `isSelected` computation below).
+      let currentSelection = fileSelection;
+      if (currentSelection.length === 0 && fileFocus) {
+        currentSelection = [fileFocus];
+      }
+      const isSelected = currentSelection.includes(name);
       const next = isSelected
-        ? fileSelection.filter((selected) => selected !== name)
-        : [...fileSelection, name];
+        ? currentSelection.filter((selected) => selected !== name)
+        : [...currentSelection, name];
       if (!isSelected) {
         selectionAnchorRef.current = name;
       }
