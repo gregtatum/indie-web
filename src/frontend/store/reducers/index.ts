@@ -756,6 +756,43 @@ function fileFocusByPath(
   }
 }
 
+/**
+ * Record<string, string[]> is the map of the folder to the names of the
+ * files selected within it, e.g. { '/Artist': ['song.mp3', 'song2.mp3'] }.
+ * This tracks multi-select, alongside fileFocusByPath which tracks the
+ * single keyboard/menu cursor position (e.g. { '/Artist': 'song.mp3' }).
+ */
+function fileSelectionByPath(
+  state: Record<string, string[]> = {},
+  action: T.Action,
+): Record<string, string[]> {
+  switch (action.type) {
+    case 'set-file-selection':
+      if (action.paths.length === 0) {
+        const newState = { ...state };
+        delete newState[action.folder];
+        return newState;
+      }
+      return {
+        ...state,
+        [action.folder]: action.paths,
+      };
+    case 'delete-file-done': {
+      const newState = { ...state };
+      delete newState[action.folder];
+      return newState;
+    }
+    case 'change-file-system':
+    case 'clear-api-cache':
+    case 'remove-dropbox-oauth':
+    case 'remove-browser-files':
+    case 'remove-all-storage':
+      return {};
+    default:
+      return state;
+  }
+}
+
 export const reducers = combineReducers({
   currentFileStoreName,
   downloadBlobCache,
@@ -788,6 +825,7 @@ export const reducers = combineReducers({
   openAIApiKey,
   workerClient,
   fileFocusByPath,
+  fileSelectionByPath,
 });
 
 function wrapReducer<S>(

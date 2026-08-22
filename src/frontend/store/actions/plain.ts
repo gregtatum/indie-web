@@ -339,6 +339,14 @@ export function changeFileFocus(folder: string, fileFocus: string) {
   };
 }
 
+export function setFileSelection(folder: string, paths: string[]) {
+  return {
+    type: 'set-file-selection' as const,
+    folder,
+    paths,
+  };
+}
+
 export function setMusicPanelSelection(
   panel: T.MusicPanelType,
   values?: string[],

@@ -31,11 +31,14 @@ export function ListFiles() {
   const fsSlug = $$.getCurrentFileStoreSlug();
   const fileFocus = $$.getFileFocus();
   const focusIndex = $$.getFileFocusIndex();
+  const fileSelection = $$.getFileSelection();
+  const fileSelectionSet = $$.getFileSelectionSet();
 
   const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
   const listFilesRef = React.useRef<null | HTMLDivElement>(null);
   const listFilesListRef = React.useRef<null | HTMLDivElement>(null);
   const [isFileMenuFocused, setFileMenuFocused] = React.useState(false);
+  const selectionAnchorRef = React.useRef<string | null>(null);
 
   const parts = path.split('/');
   parts.pop();
@@ -86,11 +89,50 @@ export function ListFiles() {
 
   const isFocused = true;
 
+  function handleFileSelectClick(name: string, event: React.MouseEvent) {
+    if (!files) {
+      return;
+    }
+    if (event.metaKey || event.ctrlKey) {
+      const isSelected = fileSelection.includes(name);
+      const next = isSelected
+        ? fileSelection.filter((selected) => selected !== name)
+        : [...fileSelection, name];
+      if (!isSelected) {
+        selectionAnchorRef.current = name;
+      }
+      dispatch(A.setFileSelection(path, next));
+      return;
+    }
+    if (event.shiftKey) {
+      const anchor = selectionAnchorRef.current ?? fileFocus ?? name;
+      const anchorIndex = files.findIndex((file) => file.name === anchor);
+      const targetIndex = files.findIndex((file) => file.name === name);
+      if (anchorIndex === -1 || targetIndex === -1) {
+        selectionAnchorRef.current = name;
+        dispatch(A.setFileSelection(path, [name]));
+        return;
+      }
+      selectionAnchorRef.current = anchor;
+      const [start, end] =
+        anchorIndex <= targetIndex
+          ? [anchorIndex, targetIndex]
+          : [targetIndex, anchorIndex];
+      dispatch(
+        A.setFileSelection(
+          path,
+          files.slice(start, end + 1).map((file) => file.name),
+        ),
+      );
+    }
+  }
+
   useFileNavigation(
     isFocused,
     listFilesListRef,
     isFileMenuFocused,
     setFileMenuFocused,
+    selectionAnchorRef,
   );
 
   Hooks.useTypeAheadSearch(
@@ -156,11 +198,16 @@ export function ListFiles() {
         <div
           className={listFilesListClassName}
           role="listbox"
+          aria-multiselectable="true"
           tabIndex={0}
           aria-activedescendant={focusIndex === -1 ? '' : `file-${focusIndex}`}
           ref={listFilesListRef}
         >
           {files.map((file, fileIndex) => {
+            const isSelected =
+              fileSelectionSet.size > 0
+                ? fileSelectionSet.has(file.name)
+                : fileFocus === file.name;
             return (
               <File
                 key={file.id}
@@ -168,6 +215,8 @@ export function ListFiles() {
                 fileFocus={fileFocus}
                 isCached={cachedFolderListing.has(file.path)}
                 index={fileIndex}
+                isSelected={isSelected}
+                onSelectClick={handleFileSelectClick}
               />
             );
           })}
@@ -199,6 +248,8 @@ interface FileProps {
   isCached: boolean;
   hideExtension?: boolean;
   linkOverride?: string;
+  isSelected?: boolean;
+  onSelectClick?: (name: string, event: React.MouseEvent) => void;
 }
 
 /**
@@ -328,13 +379,22 @@ export function File(props: FileProps) {
   }
 
   let className = 'listFilesFile';
-  let ariaSelected = false;
-  if (props.fileFocus === name) {
+  const ariaSelected = props.isSelected ?? props.fileFocus === name;
+  if (ariaSelected) {
     className += ' selected';
-    ariaSelected = true;
   }
 
   const id = 'file-' + props.index;
+
+  const handleRowClick = (event: React.MouseEvent) => {
+    if (
+      props.onSelectClick &&
+      (event.shiftKey || event.metaKey || event.ctrlKey)
+    ) {
+      event.preventDefault();
+      props.onSelectClick(name, event);
+    }
+  };
 
   if (link) {
     return (
@@ -344,6 +404,7 @@ export function File(props: FileProps) {
         id={id}
         aria-selected={ariaSelected}
         role="option"
+        onClick={handleRowClick}
       >
         <Router.Link
           className="listFilesFileLink"
@@ -363,7 +424,7 @@ export function File(props: FileProps) {
   }
 
   return (
-    <div className={className} ref={divRef} id={id}>
+    <div className={className} ref={divRef} id={id} onClick={handleRowClick}>
       <a
         href=""
         className="listFilesFileEmpty"
@@ -584,6 +645,7 @@ function useFileNavigation(
   listFilesRef: React.MutableRefObject<HTMLDivElement | null>,
   isFileMenuFocused: boolean,
   setFileMenuFocused: React.Dispatch<React.SetStateAction<boolean>>,
+  selectionAnchorRef: React.MutableRefObject<string | null>,
 ) {
   const { getState, dispatch } = Hooks.useStore();
   const navigate = Router.useNavigate();
@@ -598,6 +660,7 @@ function useFileNavigation(
       const fileFocus: string | null = $.getFileFocus(state);
       const files = $.getSearchFilteredFiles(state);
       const fileFocusIndex = $.getFileFocusIndex(state);
+      const fileSelection = $.getFileSelection(state);
       const key = getKeyboardString(event);
 
       // The file is considered focused if the active element is the document body
@@ -663,33 +726,77 @@ function useFileNavigation(
         }
       };
 
+      const setSelectionRange = (targetName: string) => {
+        const anchor = selectionAnchorRef.current ?? fileFocus ?? targetName;
+        const anchorIndex = files.findIndex((file) => file.name === anchor);
+        const targetIndex = files.findIndex((file) => file.name === targetName);
+        if (anchorIndex === -1 || targetIndex === -1) {
+          selectionAnchorRef.current = targetName;
+          dispatch(A.setFileSelection(path, [targetName]));
+          return;
+        }
+        selectionAnchorRef.current = anchor;
+        const [start, end] =
+          anchorIndex <= targetIndex
+            ? [anchorIndex, targetIndex]
+            : [targetIndex, anchorIndex];
+        dispatch(
+          A.setFileSelection(
+            path,
+            files.slice(start, end + 1).map((file) => file.name),
+          ),
+        );
+      };
+
+      const clearSelection = () => {
+        selectionAnchorRef.current = null;
+        if (fileSelection.length) {
+          dispatch(A.setFileSelection(path, []));
+        }
+      };
+
       switch (key) {
-        case 'ArrowUp': {
+        case 'ArrowUp':
+        case 'Shift+ArrowUp': {
           event.preventDefault();
           ensureElementFocus();
+          let nextFocus: string;
           if (!fileFocus) {
             if (!files.length) {
               break;
             }
-            changeFileFocus(files[files.length - 1].name);
-            break;
+            nextFocus = files[files.length - 1].name;
+          } else {
+            nextFocus = files[Math.max(0, fileFocusIndex - 1)].name;
           }
-          changeFileFocus(files[Math.max(0, fileFocusIndex - 1)].name);
+          changeFileFocus(nextFocus);
+          if (key === 'Shift+ArrowUp') {
+            setSelectionRange(nextFocus);
+          } else {
+            clearSelection();
+          }
           break;
         }
-        case 'ArrowDown': {
+        case 'ArrowDown':
+        case 'Shift+ArrowDown': {
           event.preventDefault();
           ensureElementFocus();
+          let nextFocus: string;
           if (!fileFocus) {
             if (!files.length) {
               break;
             }
-            changeFileFocus(files[0].name);
-            break;
+            nextFocus = files[0].name;
+          } else {
+            nextFocus =
+              files[Math.min(files.length - 1, fileFocusIndex + 1)].name;
           }
-          changeFileFocus(
-            files[Math.min(files.length - 1, fileFocusIndex + 1)].name,
-          );
+          changeFileFocus(nextFocus);
+          if (key === 'Shift+ArrowDown') {
+            setSelectionRange(nextFocus);
+          } else {
+            clearSelection();
+          }
           break;
         }
         case 'ArrowLeft':
@@ -764,6 +871,7 @@ function useFileNavigation(
           ensureElementFocus();
           listFilesRef.current?.blur();
           setFileMenuFocused((value) => !value);
+          clearSelection();
           break;
         default:
           break;
@@ -773,5 +881,11 @@ function useFileNavigation(
     return () => {
       document.body.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isFocused, isFileMenuFocused, listFilesRef, navigate]);
+  }, [
+    isFocused,
+    isFileMenuFocused,
+    listFilesRef,
+    navigate,
+    selectionAnchorRef,
+  ]);
 }

@@ -114,6 +114,10 @@ export function getFileFocusByPath(state: State) {
   return state.fileFocusByPath;
 }
 
+export function getFileSelectionByPath(state: State) {
+  return state.fileSelectionByPath;
+}
+
 /**
  * The file store slug is either the server id or the current file store name, like
  * "dropbox".
@@ -808,4 +812,21 @@ export const getFileFocusIndex = createSelector(
     }
     return index;
   },
+);
+
+/**
+ * Get the multi-select set of file names for the current path. This is
+ * additive to getFileFocus, which tracks the single keyboard/menu cursor.
+ */
+export const getFileSelection = createSelector(
+  getFileSelectionByPath,
+  getPath,
+  (fileSelectionByPath, path): string[] => {
+    return fileSelectionByPath[path] ?? [];
+  },
+);
+
+export const getFileSelectionSet = createSelector(
+  getFileSelection,
+  (fileSelection): Set<string> => new Set(fileSelection),
 );
