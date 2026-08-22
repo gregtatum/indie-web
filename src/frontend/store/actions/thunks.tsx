@@ -472,6 +472,135 @@ export function moveFile(
 }
 
 /**
+ * Rename a file, optionally renaming other selected files at the same time.
+ * This follows the Windows Explorer convention for renaming multiple
+ * selected files at once: the edited file gets the exact typed name, and
+ * each other selected file gets the same base name with a counter appended,
+ * e.g. "Song (1).md", "Song (2).md".
+ */
+export function renameFiles(
+  file: T.FileMetadata | T.FolderMetadata,
+  newName: string,
+  siblingFiles: Array<T.FileMetadata | T.FolderMetadata>,
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const folder = getDirName(file.path);
+
+    if (newName === file.name && siblingFiles.length === 0) {
+      // Nothing to rename.
+      dispatch(Plain.stopRenameFile());
+      return;
+    }
+
+    let listing = $.getListFilesCache(getState()).get(folder)?.files;
+    if (!listing) {
+      await dispatch(listFiles(folder));
+      listing = $.getListFilesCache(getState()).get(folder)?.files;
+    }
+
+    // Files being renamed are freeing up their current name, so they
+    // shouldn't count as a collision against themselves.
+    const renamedPaths = new Set(
+      [file, ...siblingFiles].map((entry) => entry.path),
+    );
+    const existingNames = new Set(
+      (listing ?? [])
+        .filter((entry) => !renamedPaths.has(entry.path))
+        .map((entry) => entry.name),
+    );
+
+    if (existingNames.has(newName)) {
+      dispatch(
+        addMessage({
+          message: (
+            <>
+              A file named <code>{newName}</code> already exists in this folder.
+            </>
+          ),
+          timeout: true,
+        }),
+      );
+      return;
+    }
+
+    existingNames.add(newName);
+    const { baseName, extension } = splitOutFileExtension(newName);
+    const renames: Array<{ fromPath: string; toPath: string }> = [
+      { fromPath: file.path, toPath: pathJoin(folder, newName) },
+    ];
+
+    for (const sibling of siblingFiles) {
+      let counter = 1;
+      let candidate = `${baseName} (${counter})${extension}`;
+      while (existingNames.has(candidate)) {
+        counter += 1;
+        candidate = `${baseName} (${counter})${extension}`;
+      }
+      existingNames.add(candidate);
+      renames.push({
+        fromPath: sibling.path,
+        toPath: pathJoin(folder, candidate),
+      });
+    }
+
+    const isBatch = renames.length > 1;
+    let batchGeneration: number | undefined;
+    let failureCount = 0;
+    const renamedNames: string[] = [];
+
+    for (let i = 0; i < renames.length; i++) {
+      const { fromPath, toPath } = renames[i];
+
+      if (isBatch) {
+        batchGeneration = dispatch(
+          addMessage({
+            message: (
+              <>
+                Renaming {i + 1}/{renames.length} items
+              </>
+            ),
+            generation: batchGeneration,
+          }),
+        );
+      }
+
+      try {
+        await dispatch(moveFile(fromPath, toPath, isBatch));
+        renamedNames.push(getPathFileName(toPath));
+      } catch (error) {
+        failureCount += 1;
+        console.error(error);
+      }
+    }
+
+    if (isBatch) {
+      const succeeded = renames.length - failureCount;
+      dispatch(
+        addMessage({
+          message:
+            failureCount > 0 ? (
+              <>
+                Renamed {succeeded} of {renames.length} items
+              </>
+            ) : (
+              <>Renamed {renames.length} items</>
+            ),
+          generation: batchGeneration,
+          timeout: failureCount === 0,
+        }),
+      );
+    }
+
+    if (renamedNames.length) {
+      dispatch(Plain.setFileSelection(folder, renamedNames));
+      dispatch(
+        Plain.changeFileFocus(folder, renamedNames[renamedNames.length - 1]),
+      );
+    }
+  };
+}
+
+/**
  * Handle the pasting of one or more files, with either copy or cut behavior.
  */
 export function pasteCopyFile(

@@ -531,6 +531,8 @@ function RenameFile(props: {
   const dispatch = Hooks.useDispatch();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const name = props.file.name;
+  const fileSelection = $$.getFileSelection();
+  const files = $$.getSearchFilteredFiles();
   function input() {
     return ensureExists(inputRef.current, 'Could not find input from ref.');
   }
@@ -547,18 +549,25 @@ function RenameFile(props: {
 
   function rename() {
     const { value } = input();
-    if (!value.trim()) {
+    const newName = value.trim();
+    if (!newName) {
       // Only rename if there is a real value.
       return;
     }
-    const fromPath = props.file.path;
 
-    const pathParts = fromPath.split('/');
-    pathParts.pop();
-    pathParts.push(value);
-    const toPath = pathParts.join('/');
+    // If this file is part of a multi-selection, rename the other selected
+    // files at the same time, Windows Explorer-style (see A.renameFiles).
+    const isMultiSelected =
+      fileSelection.length > 1 && fileSelection.includes(name);
+    const siblingFiles = isMultiSelected
+      ? (files ?? []).filter(
+          (entry) =>
+            fileSelection.includes(entry.name) &&
+            entry.path !== props.file.path,
+        )
+      : [];
 
-    void dispatch(A.moveFile(fromPath, toPath));
+    void dispatch(A.renameFiles(props.file, newName, siblingFiles));
   }
 
   function cancel() {
@@ -629,7 +638,7 @@ const FileMenu = React.forwardRef<
 
   const isMultiSelected =
     fileSelection.length > 1 && fileSelection.includes(file.name);
-  const filesToDelete = isMultiSelected
+  const selectedFiles = isMultiSelected
     ? (files ?? []).filter((entry) => fileSelection.includes(entry.name))
     : [file];
 
@@ -672,7 +681,12 @@ const FileMenu = React.forwardRef<
           buttons={[
             {
               key: 'Rename',
-              children: (
+              children: isMultiSelected ? (
+                <>
+                  <span className="icon" data-icon="pencil-fill" /> Rename{' '}
+                  {selectedFiles.length} Items
+                </>
+              ) : (
                 <>
                   <span className="icon" data-icon="pencil-fill" /> Rename
                 </>
@@ -690,12 +704,12 @@ const FileMenu = React.forwardRef<
             {
               key: 'Delete',
               onClick() {
-                void dispatch(A.deleteFiles(filesToDelete));
+                void dispatch(A.deleteFiles(selectedFiles));
               },
               children: isMultiSelected ? (
                 <>
                   <span className="icon" data-icon="trash-fill" /> Delete{' '}
-                  {filesToDelete.length} Items
+                  {selectedFiles.length} Items
                 </>
               ) : (
                 <>

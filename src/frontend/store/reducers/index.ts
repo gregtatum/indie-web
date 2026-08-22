@@ -592,10 +592,19 @@ function renameFile(
     case 'start-rename-file':
       return { phase: 'editing', path: action.path };
     case 'move-file-requested':
-      return { phase: 'sending', path: action.path };
+      // Only transition into "sending" if this move is for the file
+      // currently being edited. `moveFile` is also used for batch renames of
+      // other selected files, drag-and-drop, and cut/paste, none of which
+      // should hijack the rename UI for an unrelated row.
+      return state.path === action.path
+        ? { phase: 'sending', path: action.path }
+        : state;
     case 'stop-rename-file':
-    case 'move-file-done':
       return { phase: 'none', path: null };
+    case 'move-file-done':
+      return state.path === action.oldPath
+        ? { phase: 'none', path: null }
+        : state;
     default:
       return state;
   }

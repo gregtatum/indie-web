@@ -1,5 +1,11 @@
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import * as React from 'react';
 import { act } from 'react';
 import { Provider } from 'react-redux';
@@ -226,6 +232,164 @@ describe('ListFiles', () => {
       └── Journal.md
       "
     `);
+  });
+
+  it('renames multiple selected files via the right-click context menu (Windows pattern)', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'C.md',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Select all three files with a shift-click range.
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    await act(async () => {
+      await user.keyboard('{Shift>}');
+      await user.click(getFileLink('/C.md'));
+      await user.keyboard('{/Shift}');
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md', '/B.md', '/C.md']);
+
+    // Right-click A.md to open its context menu. It's already part of the
+    // selection, so the right-click shouldn't collapse it down to just A.md.
+    await act(async () => {
+      fireEvent.contextMenu(getFileListing('/A.md'));
+    });
+
+    const renameButton = await screen.findByRole('button', {
+      name: /Rename 3 Items/i,
+    });
+    await act(async () => {
+      await user.click(renameButton);
+    });
+
+    const renameInput = await screen.findByDisplayValue('A.md');
+    await act(async () => {
+      await user.clear(renameInput);
+      await user.type(renameInput, 'Song.md{Enter}');
+    });
+
+    // A single consolidated toast is shown once the whole batch finishes,
+    // not one per file. Wait for it before inspecting the result, since the
+    // primary file's rename can land in the UI before its siblings finish.
+    await waitFor(() => {
+      expect(screen.getAllByText('Renamed 3 items')).toHaveLength(1);
+    });
+
+    // Windows Explorer convention: the file whose name was typed gets the
+    // exact name, and each other selected file gets the same base name with
+    // an incrementing counter appended before the extension.
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── Song (1).md
+      ├── Song (2).md
+      └── Song.md
+      "
+    `);
+
+    expect(getSelectedFilePaths()).toEqual([
+      '/Song (1).md',
+      '/Song (2).md',
+      '/Song.md',
+    ]);
+  });
+
+  it('skips a counter suffix already taken by an existing file when batch renaming', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'Song (1).md',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Select A.md and B.md with a ctrl-click.
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    await act(async () => {
+      await user.keyboard('{Control>}');
+      await user.click(getFileLink('/B.md'));
+      await user.keyboard('{/Control}');
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md', '/B.md']);
+
+    await act(async () => {
+      fireEvent.contextMenu(getFileListing('/A.md'));
+    });
+
+    const renameButton = await screen.findByRole('button', {
+      name: /Rename 2 Items/i,
+    });
+    await act(async () => {
+      await user.click(renameButton);
+    });
+
+    const renameInput = await screen.findByDisplayValue('A.md');
+    await act(async () => {
+      await user.clear(renameInput);
+      await user.type(renameInput, 'Song.md{Enter}');
+    });
+
+    // Wait for the whole batch to finish before inspecting the result.
+    await waitFor(() => {
+      expect(screen.getAllByText('Renamed 2 items')).toHaveLength(1);
+    });
+
+    // "Song (1).md" already existed, so B.md should skip straight to (2)
+    // rather than colliding with it.
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── Song (1).md
+      ├── Song (2).md
+      └── Song.md
+      "
+    `);
+
+    expect(getSelectedFilePaths()).toEqual(['/Song (2).md', '/Song.md']);
+  });
+
+  it('refuses to rename a file onto a name that already exists', async () => {
+    const { renderTree, user } = await setupWithListing(['A.md', 'B.md']);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Right-clicking a non-selected file selects just that file.
+    await act(async () => {
+      fireEvent.contextMenu(getFileListing('/A.md'));
+    });
+
+    const renameButton = await screen.findByRole('button', {
+      name: /^Rename$/i,
+    });
+    await act(async () => {
+      await user.click(renameButton);
+    });
+
+    const renameInput = await screen.findByDisplayValue('A.md');
+    await act(async () => {
+      await user.clear(renameInput);
+      await user.type(renameInput, 'B.md{Enter}');
+    });
+
+    await screen.findByText(/already exists in this folder/i);
+
+    // Neither file was touched, and the rename input is still open so the
+    // user can correct the name.
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── A.md
+      └── B.md
+      "
+    `);
+    expect(screen.getByDisplayValue('B.md')).toBeTruthy();
   });
 
   it('selects a folder with a plain desktop click, without opening it', async () => {
