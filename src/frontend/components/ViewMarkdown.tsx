@@ -1,10 +1,16 @@
 import * as React from 'react';
+import * as Router from 'react-router-dom';
 import { EditorView } from '@codemirror/view';
 import { markdown } from '@codemirror/lang-markdown';
 import { type default as TurndownService } from 'turndown';
 import { A, T, $, $$, Hooks } from 'frontend';
 import { downloadImage } from 'frontend/logic/download-image';
-import { getEnv, getDirName, htmlElementOrNull } from 'frontend/utils';
+import {
+  getEnv,
+  getDirName,
+  getKeyboardString,
+  htmlElementOrNull,
+} from 'frontend/utils';
 import { useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
@@ -14,7 +20,9 @@ import './ViewMarkdown.css';
 export function ViewMarkdown() {
   useRetainScroll();
   const dispatch = Hooks.useDispatch();
+  const navigate = Router.useNavigate();
   const path = $$.getPath();
+  const fsSlug = $$.getCurrentFileStoreSlug();
   const textFile = $$.getDownloadFileCache().get(path);
   const error = $$.getDownloadFileErrors().get(path);
   const hideEditor = $$.getHideEditor();
@@ -27,6 +35,28 @@ export function ViewMarkdown() {
     const file = parts[parts.length - 1];
     document.title = file.replace(/\.\w+$/, '');
   }, [path]);
+
+  // Keyboard shortcuts for navigating out of the file.
+  React.useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const key = getKeyboardString(event);
+      if (key !== 'Meta+ArrowUp' && key !== 'Alt+ArrowUp') {
+        return;
+      }
+      if (document.activeElement !== document.body) {
+        // Something else has focus, e.g. the CodeMirror editor is being
+        // edited, so don't hijack the shortcut.
+        return;
+      }
+      event.preventDefault();
+      const parentPath = getDirName(path);
+      navigate(`/${fsSlug}/folder${parentPath}`);
+    }
+    document.body.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [path, fsSlug, navigate]);
 
   React.useEffect(() => {
     if (textFile === undefined) {

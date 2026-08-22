@@ -168,4 +168,54 @@ describe('<ViewMarkdown>', () => {
       }
     `);
   });
+
+  fit('navigates back to the file listing with Cmd+Up', async () => {
+    const { store } = setup();
+    act(() => {
+      store.dispatch(A.setHasOnboarded(true));
+    });
+    await waitFor(() => screen.getByTestId('renderedMarkdown'));
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await Promise.all([
+        user.keyboard('{Meta>}{ArrowUp}{/Meta}'),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    await waitFor(() => screen.getByTestId('list-files'));
+    expect(screen.getByText(/Ideas/)).toBeTruthy();
+  });
+
+  it('does not navigate away on Cmd+Up while editing', async () => {
+    setup();
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId('textAreaMount') ?? screen.queryByText(/Edit/),
+      ).toBeTruthy(),
+    );
+    const edit = screen.queryByText(/Edit/);
+    if (edit) {
+      act(() => {
+        edit.click();
+      });
+    }
+    const textAreaMount = await waitFor(() =>
+      screen.getByTestId('textAreaMount'),
+    );
+    const line = getByText(textAreaMount, /Come up with some great ideas\./);
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await Promise.all([user.click(line), jest.runAllTimersAsync()]);
+      await Promise.all([
+        user.keyboard('{Meta>}{ArrowUp}{/Meta}'),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    expect(screen.queryByTestId('list-files')).toBeNull();
+    expect(screen.getByTestId('textAreaMount')).toBeTruthy();
+  });
 });
