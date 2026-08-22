@@ -320,6 +320,7 @@ export function File(props: FileProps) {
   const fsSlug = $$.getCurrentFileStoreSlug();
   const navigate = Router.useNavigate();
   const divRef = React.useRef<null | HTMLDivElement>(null);
+  const fileMenuRef = React.useRef<FileMenuHandle>(null);
   const isFolder = type === 'folder';
   const nameParts = name.split('.');
   const extension =
@@ -442,6 +443,18 @@ export function File(props: FileProps) {
     props.onSelectClick(name, event);
   };
 
+  const handleContextMenu = (event: React.MouseEvent) => {
+    if (renameFile.path === path) {
+      // Don't interfere with the in-progress rename input.
+      return;
+    }
+    event.preventDefault();
+    if (!props.isSelected && props.onSelectClick) {
+      props.onSelectClick(name, event);
+    }
+    fileMenuRef.current?.open({ x: event.clientX, y: event.clientY });
+  };
+
   const handleEmptyLinkClick = (event: React.MouseEvent) => {
     event.preventDefault();
     if (
@@ -466,6 +479,7 @@ export function File(props: FileProps) {
         id={id}
         aria-selected={ariaSelected}
         role="option"
+        onContextMenu={handleContextMenu}
       >
         <Router.Link
           className="listFilesFileLink"
@@ -480,13 +494,18 @@ export function File(props: FileProps) {
           </span>
           {fileDisplayName}
         </Router.Link>
-        <FileMenu tabIndex={-1} file={props.file} />
+        <FileMenu ref={fileMenuRef} tabIndex={-1} file={props.file} />
       </div>
     );
   }
 
   return (
-    <div className={className} ref={divRef} id={id}>
+    <div
+      className={className}
+      ref={divRef}
+      id={id}
+      onContextMenu={handleContextMenu}
+    >
       <a
         href=""
         className="listFilesFileEmpty"
@@ -500,7 +519,7 @@ export function File(props: FileProps) {
         </span>
         {fileDisplayName}
       </a>
-      <FileMenu tabIndex={-1} file={props.file} />
+      <FileMenu ref={fileMenuRef} tabIndex={-1} file={props.file} />
     </div>
   );
 }
@@ -585,14 +604,25 @@ function RenameFile(props: {
   );
 }
 
-function FileMenu(props: {
-  file: T.FileMetadata | T.FolderMetadata;
-  tabIndex?: number;
-}) {
+interface FileMenuHandle {
+  open(anchorPoint: { x: number; y: number }): void;
+}
+
+const FileMenu = React.forwardRef<
+  FileMenuHandle,
+  {
+    file: T.FileMetadata | T.FolderMetadata;
+    tabIndex?: number;
+  }
+>(function FileMenu(props, ref) {
   const dispatch = Hooks.useDispatch();
   const button = React.useRef<null | HTMLButtonElement>(null);
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+  const [anchorPoint, setAnchorPoint] = React.useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const file = props.file;
   const fileSelection = $$.getFileSelection();
   const files = $$.getSearchFilteredFiles();
@@ -602,6 +632,16 @@ function FileMenu(props: {
   const filesToDelete = isMultiSelected
     ? (files ?? []).filter((entry) => fileSelection.includes(entry.name))
     : [file];
+
+  React.useImperativeHandle(ref, () => ({
+    open(point) {
+      setAnchorPoint(point);
+      setOpenGeneration((generation) => generation + 1);
+      // Use a non-zero detail so the menu focuses itself like a mouse open,
+      // rather than moving focus to the first button as keyboard opens do.
+      setOpenEventDetail(1);
+    },
+  }));
 
   return (
     <>
@@ -616,6 +656,7 @@ function FileMenu(props: {
           button.current?.closest<HTMLElement>('.listFilesList')?.focus();
         }}
         onClick={(event) => {
+          setAnchorPoint(null);
           setOpenGeneration((generation) => generation + 1);
           setOpenEventDetail(event.detail);
         }}
@@ -627,6 +668,7 @@ function FileMenu(props: {
           clickedElement={button}
           openEventDetail={openEventDetail}
           openGeneration={openGeneration}
+          anchorPoint={anchorPoint}
           buttons={[
             {
               key: 'Rename',
@@ -691,7 +733,7 @@ function FileMenu(props: {
       )}
     </>
   );
-}
+});
 
 function Search() {
   const dispatch = Hooks.useDispatch();

@@ -12,6 +12,8 @@ const menuItemHeight = 41;
 const menuWidth = 200;
 const menuMargin = 10;
 
+const dismissEventTypes = ['click', 'contextmenu'] as const;
+
 /**
  * Logic for handling when a user clicks outside of the element.
  */
@@ -25,7 +27,9 @@ function useDismissOnOutsideClick(
 
   function removeHandler() {
     if (clickHandler.current) {
-      document.removeEventListener('click', clickHandler.current, true);
+      for (const type of dismissEventTypes) {
+        document.removeEventListener(type, clickHandler.current, true);
+      }
     }
   }
 
@@ -48,7 +52,9 @@ function useDismissOnOutsideClick(
         }
       }
     };
-    document.addEventListener('click', clickHandler.current, true);
+    for (const type of dismissEventTypes) {
+      document.addEventListener(type, clickHandler.current, true);
+    }
     return removeHandler;
   }, [elementRef, isOpen]);
 }
@@ -65,6 +71,8 @@ interface MenuProps {
   openEventDetail: React.MouseEvent['detail'];
   openGeneration: number;
   buttons: MenuButton[];
+  // Anchor via an explicit point rather than the measured element.
+  anchorPoint?: { x: number; y: number } | null;
 }
 
 export function Menu({
@@ -72,6 +80,7 @@ export function Menu({
   openEventDetail,
   openGeneration,
   buttons,
+  anchorPoint,
 }: MenuProps) {
   const [closeGeneration, setCloseGeneration] = React.useState(0);
   const isOpen = Boolean(openGeneration && openGeneration !== closeGeneration);
@@ -183,18 +192,28 @@ export function Menu({
     return null;
   }
 
-  const elementRect = ensureExists(
-    clickedElement.current,
-    'The clicked element did not exist in the menu',
-  ).getBoundingClientRect();
   const docBodyRect = document.body.getBoundingClientRect();
 
-  const elementY1 = elementRect.top + elementRect.height / 3 - docBodyRect.top;
-  const elementY2 =
-    elementRect.bottom - elementRect.height / 3 - docBodyRect.top;
-  const elementCenterX = elementRect.width / 2 + elementRect.left;
+  let elementY1: number;
+  let elementY2: number;
+  let left: number;
+  if (anchorPoint) {
+    // Anchor to the exact point the user clicked (e.g. a right-click),
+    // rather than to an element's bounding rect.
+    elementY1 = anchorPoint.y - docBodyRect.top;
+    elementY2 = elementY1;
+    left = anchorPoint.x;
+  } else {
+    const elementRect = ensureExists(
+      clickedElement.current,
+      'The clicked element did not exist in the menu',
+    ).getBoundingClientRect();
+    elementY1 = elementRect.top + elementRect.height / 3 - docBodyRect.top;
+    elementY2 = elementRect.bottom - elementRect.height / 3 - docBodyRect.top;
+    const elementCenterX = elementRect.width / 2 + elementRect.left;
+    left = elementCenterX - menuWidth / 2;
+  }
 
-  let left = elementCenterX - menuWidth / 2;
   if (left < menuMargin) {
     left = menuMargin;
   } else if (left + menuWidth > docBodyRect.width - menuMargin) {
