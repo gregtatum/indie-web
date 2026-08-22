@@ -77,6 +77,11 @@
 .listFilesIconCached.listFilesFolder {
   outline: 1px solid #2a6bdbcc;
 }
+[aria-selected="true"] {
+  & .listFilesIcon {
+    outline: 1px solid #ffffffba;
+  }
+}
 
 .listFilesFile {
   display: flex;
