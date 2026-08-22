@@ -980,6 +980,17 @@ function useFileNavigation(
           }
           break;
         }
+        case 'F2': {
+          const selectedFiles = getSelectedFiles();
+          if (selectedFiles.length) {
+            event.preventDefault();
+            const primary =
+              selectedFiles.find((file) => file.name === fileFocus) ??
+              selectedFiles[0];
+            dispatch(A.startRenameFile(primary.path));
+          }
+          break;
+        }
         case 'Meta+Backspace':
         case 'Meta+Delete':
         case 'Delete': {

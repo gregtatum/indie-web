@@ -55,6 +55,7 @@ describe('ListFiles', () => {
 
     const user = userEvent.setup(userOptions);
     return {
+      store,
       user,
       getSelectedFilePath,
       getSelectedFilePaths,
@@ -230,6 +231,75 @@ describe('ListFiles', () => {
       │   ├── NPCs.md
       │   └── Scenery.md
       └── Journal.md
+      "
+    `);
+  });
+
+  it('renames the focused file with the F2 shortcut', async () => {
+    const { renderTree, user } = await setupWithListing(['A.md', 'B.md']);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+
+    await act(() => user.keyboard('{F2}'));
+
+    const renameInput = await screen.findByDisplayValue('A.md');
+    await act(async () => {
+      await user.clear(renameInput);
+      await user.type(renameInput, 'Journal.md{Enter}');
+    });
+
+    await waitFor(() => getFileListing('/Journal.md'));
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── B.md
+      └── Journal.md
+      "
+    `);
+  });
+
+  it('renames multiple selected files with F2, starting on the focused file', async () => {
+    const { renderTree, user, store, getSelectedFilePaths } =
+      await setupWithListing(['A.md', 'B.md', 'C.md']);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Select all three, but focus B.md (the middle item) rather than the
+    // first item, to prove F2 opens the rename box on the focused file.
+    await act(async () => {
+      store.dispatch(A.setFileSelection('/', ['A.md', 'B.md', 'C.md']));
+      store.dispatch(A.changeFileFocus('/', 'B.md'));
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md', '/B.md', '/C.md']);
+
+    await act(async () => {
+      screen.getByRole('listbox').focus();
+    });
+    await act(() => user.keyboard('{F2}'));
+
+    // F2 opens the rename box on the focused file (B.md), not the first
+    // item in the selection.
+    const renameInput = await screen.findByDisplayValue('B.md');
+    await act(async () => {
+      await user.clear(renameInput);
+      await user.type(renameInput, 'Song.md{Enter}');
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Renamed 3 items')).toHaveLength(1);
+    });
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── Song (1).md
+      ├── Song (2).md
+      └── Song.md
       "
     `);
   });
