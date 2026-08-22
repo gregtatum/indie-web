@@ -39,6 +39,7 @@ export function ListFiles() {
   const listFilesListRef = React.useRef<null | HTMLDivElement>(null);
   const [isFileMenuFocused, setFileMenuFocused] = React.useState(false);
   const selectionAnchorRef = React.useRef<string | null>(null);
+  const pointerTypeRef = React.useRef<string | undefined>(undefined);
 
   const parts = path.split('/');
   parts.pop();
@@ -124,7 +125,12 @@ export function ListFiles() {
           files.slice(start, end + 1).map((file) => file.name),
         ),
       );
+      return;
     }
+    // A plain click selects just this file.
+    selectionAnchorRef.current = name;
+    dispatch(A.changeFileFocus(path, name));
+    dispatch(A.setFileSelection(path, [name]));
   }
 
   useFileNavigation(
@@ -133,6 +139,7 @@ export function ListFiles() {
     isFileMenuFocused,
     setFileMenuFocused,
     selectionAnchorRef,
+    pointerTypeRef,
   );
 
   Hooks.useTypeAheadSearch(
@@ -202,6 +209,9 @@ export function ListFiles() {
           tabIndex={0}
           aria-activedescendant={focusIndex === -1 ? '' : `file-${focusIndex}`}
           ref={listFilesListRef}
+          onPointerDown={(event) => {
+            pointerTypeRef.current = event.pointerType;
+          }}
         >
           {files.map((file, fileIndex) => {
             const isSelected =
@@ -217,6 +227,7 @@ export function ListFiles() {
                 index={fileIndex}
                 isSelected={isSelected}
                 onSelectClick={handleFileSelectClick}
+                pointerTypeRef={pointerTypeRef}
               />
             );
           })}
@@ -250,6 +261,7 @@ interface FileProps {
   linkOverride?: string;
   isSelected?: boolean;
   onSelectClick?: (name: string, event: React.MouseEvent) => void;
+  pointerTypeRef?: React.MutableRefObject<string | undefined>;
 }
 
 /**
@@ -280,6 +292,7 @@ export function File(props: FileProps) {
   const { name, path, type } = file;
   const renameFile = $$.getRenameFile();
   const fsSlug = $$.getCurrentFileStoreSlug();
+  const navigate = Router.useNavigate();
   const divRef = React.useRef<null | HTMLDivElement>(null);
   const isFolder = type === 'folder';
   const nameParts = name.split('.');
@@ -386,14 +399,30 @@ export function File(props: FileProps) {
 
   const id = 'file-' + props.index;
 
-  const handleRowClick = (event: React.MouseEvent) => {
-    if (
-      props.onSelectClick &&
-      (event.shiftKey || event.metaKey || event.ctrlKey)
-    ) {
-      event.preventDefault();
-      props.onSelectClick(name, event);
+  // Disambiguate Desktop-behavior for file navigation, and Tablet/touch navigation.
+  const isDesktopMouseClick = () => props.pointerTypeRef?.current === 'mouse';
+
+  const handleLinkClick = (event: React.MouseEvent) => {
+    if (!props.onSelectClick || !isDesktopMouseClick()) {
+      return;
     }
+    event.preventDefault();
+    if (event.detail >= 2) {
+      if (link) {
+        navigate(link);
+      }
+      return;
+    }
+    props.onSelectClick(name, event);
+  };
+
+  const handleEmptyLinkClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    if (!props.onSelectClick || !isDesktopMouseClick() || event.detail >= 2) {
+      // This is not a single desktop mouse click, so there's nothing to select.
+      return;
+    }
+    props.onSelectClick(name, event);
   };
 
   if (link) {
@@ -404,11 +433,11 @@ export function File(props: FileProps) {
         id={id}
         aria-selected={ariaSelected}
         role="option"
-        onClick={handleRowClick}
       >
         <Router.Link
           className="listFilesFileLink"
           to={link}
+          onClick={handleLinkClick}
           // Drag/drop events can read this:
           data-file-path={path}
           tabIndex={-1}
@@ -424,13 +453,13 @@ export function File(props: FileProps) {
   }
 
   return (
-    <div className={className} ref={divRef} id={id} onClick={handleRowClick}>
+    <div className={className} ref={divRef} id={id}>
       <a
         href=""
         className="listFilesFileEmpty"
         // Drag/drop events can read this:
         data-file-path={path}
-        onClick={(event) => void event.preventDefault()}
+        onClick={handleEmptyLinkClick}
         tabIndex={-1}
       >
         <span className={iconClassName}>
@@ -646,6 +675,7 @@ function useFileNavigation(
   isFileMenuFocused: boolean,
   setFileMenuFocused: React.Dispatch<React.SetStateAction<boolean>>,
   selectionAnchorRef: React.MutableRefObject<string | null>,
+  pointerTypeRef: React.MutableRefObject<string | undefined>,
 ) {
   const { getState, dispatch } = Hooks.useStore();
   const navigate = Router.useNavigate();
@@ -722,6 +752,10 @@ function useFileNavigation(
             listFilesRef.current?.querySelector(
               `#file-${fileFocusIndex} .listFilesFileLink`,
             );
+          // This click is programmatic, not from a real pointer, so clear
+          // the last pointer type to make sure it's treated as an open
+          // rather than a desktop mouse click (which would only select).
+          pointerTypeRef.current = undefined;
           link?.click();
         }
       };
@@ -887,5 +921,6 @@ function useFileNavigation(
     listFilesRef,
     navigate,
     selectionAnchorRef,
+    pointerTypeRef,
   ]);
 }

@@ -136,9 +136,6 @@ a.listFilesFileEmpty {
   color: #000;
   align-items: center;
   flex: 1;
-}
-
-a.listFilesFileEmpty {
   cursor: default;
 }
 

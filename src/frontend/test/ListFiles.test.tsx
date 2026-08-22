@@ -40,10 +40,18 @@ describe('ListFiles', () => {
       return getFilePath(element);
     }
 
+    function getSelectedFilePaths() {
+      return screen
+        .queryAllByRole('option', { selected: true })
+        .map((element) => getFilePath(element))
+        .sort();
+    }
+
     const user = userEvent.setup(userOptions);
     return {
       user,
       getSelectedFilePath,
+      getSelectedFilePaths,
       renderTree: () => getFileTree(idbfs),
       async navigateByKeyboard(key: string, path: string | null) {
         await act(() => user.keyboard(key));
@@ -73,6 +81,10 @@ describe('ListFiles', () => {
       .queryAllByRole('option')
       .find((element) => getFilePath(element) === path);
     return ensureExists(option, 'Could not find file option for path.');
+  }
+
+  function getFileLink(path: string) {
+    return within(getFileListing(path)).getByRole('link');
   }
 
   it('renders a folder listing', async () => {
@@ -214,5 +226,104 @@ describe('ListFiles', () => {
       └── Journal.md
       "
     `);
+  });
+
+  it('selects a folder with a plain desktop click, without opening it', async () => {
+    const { user, getSelectedFilePaths } = await setupWithListing([
+      'README.md',
+      'Notes/Ideas.md',
+    ]);
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/Notes'));
+    });
+
+    expect(getSelectedFilePaths()).toEqual(['/Notes']);
+    expect(getFileListing('/README.md')).toBeTruthy();
+    expect(screen.queryByText(/Ideas/)).toBeNull();
+  });
+
+  it('opens a folder with a desktop double-click', async () => {
+    const { user } = await setupWithListing(['README.md', 'Notes/Ideas.md']);
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    await act(async () => {
+      await user.dblClick(getFileLink('/Notes'));
+    });
+
+    await waitFor(() => screen.getByText(/Ideas/));
+  });
+
+  it('opens a folder immediately on a real touch tap', async () => {
+    const { user } = await setupWithListing(['README.md', 'Notes/Ideas.md']);
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    await act(async () => {
+      await user.pointer({ keys: '[TouchA]', target: getFileLink('/Notes') });
+    });
+
+    await waitFor(() => screen.getByText(/Ideas/));
+  });
+
+  it('toggles multi-selection with ctrl-click', async () => {
+    const { user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'C.md',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md']);
+
+    await act(async () => {
+      await user.keyboard('{Control>}');
+      await user.click(getFileLink('/C.md'));
+      await user.keyboard('{/Control}');
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md', '/C.md']);
+
+    // Ctrl-clicking the same file again removes it from the selection.
+    await act(async () => {
+      await user.keyboard('{Control>}');
+      await user.click(getFileLink('/C.md'));
+      await user.keyboard('{/Control}');
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md']);
+  });
+
+  it('selects a range with shift-click', async () => {
+    const { user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'C.md',
+      'D.md',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+
+    await act(async () => {
+      await user.keyboard('{Shift>}');
+      await user.click(getFileLink('/D.md'));
+      await user.keyboard('{/Shift}');
+    });
+
+    expect(getSelectedFilePaths()).toEqual([
+      '/A.md',
+      '/B.md',
+      '/C.md',
+      '/D.md',
+    ]);
   });
 });
