@@ -4,6 +4,7 @@ import { A, $, $$, Hooks } from 'frontend';
 import './ViewPDF.css';
 import { ensureExists, UnhandledCaseError } from 'frontend/utils';
 import {
+  useExitToFolderShortcut,
   usePromiseSelector,
   useInfalliblePromise,
   useRetainScroll,
@@ -13,6 +14,7 @@ import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 
 export function ViewPDF() {
   useRetainScroll();
+  useExitToFolderShortcut();
   const dispatch = Hooks.useDispatch();
   const path = $$.getPath();
   const blob = $$.getDownloadBlobCache().get(path);

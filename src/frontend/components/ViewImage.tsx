@@ -2,11 +2,12 @@ import * as React from 'react';
 import { A, $$, Hooks } from 'frontend';
 
 import './ViewImage.css';
-import { useRetainScroll } from '../hooks';
+import { useExitToFolderShortcut, useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 
 export function ViewImage() {
   useRetainScroll();
+  useExitToFolderShortcut();
   const dispatch = Hooks.useDispatch();
   const path = $$.getPath();
   const blob = $$.getDownloadBlobCache().get(path);

@@ -8,6 +8,7 @@ import {
   getDirName,
   getEnv,
   getKeyboardString,
+  getPathFileName,
   imageExtensions,
   isChordProExtension,
 } from 'frontend/utils';
@@ -738,7 +739,10 @@ function useFileNavigation(
             return;
           }
           const parentPath = getDirName(path);
+          const folderName = getPathFileName(path);
           const fsSlug = $.getCurrentFileStoreSlug(state);
+          dispatch(A.changeFileFocus(parentPath, folderName));
+          dispatch(A.setFileSelection(parentPath, [folderName]));
           navigate(`/${fsSlug}/folder${parentPath}`);
           return;
         }

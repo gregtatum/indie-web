@@ -531,6 +531,7 @@ export function useEscape(dismiss: () => void, isOpen: boolean) {
  */
 export function useExitToFolderShortcut() {
   const navigate = Router.useNavigate();
+  const dispatch = useDispatch();
   const path = $$.getPath();
   const fsSlug = $$.getCurrentFileStoreSlug();
 
@@ -547,13 +548,16 @@ export function useExitToFolderShortcut() {
       }
       event.preventDefault();
       const parentPath = getDirName(path);
+      const fileName = getPathFileName(path);
+      dispatch(A.changeFileFocus(parentPath, fileName));
+      dispatch(A.setFileSelection(parentPath, [fileName]));
       navigate(`/${fsSlug}/folder${parentPath}`);
     }
     document.body.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.removeEventListener('keydown', handleKeyDown);
     };
-  }, [path, fsSlug, navigate]);
+  }, [path, fsSlug, navigate, dispatch]);
 }
 
 const focusableSelector = [
