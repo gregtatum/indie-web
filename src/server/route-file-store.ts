@@ -187,6 +187,35 @@ export function fileStoreRoute(mountPath: MountPath) {
   });
 
   /**
+   * Delete a file or folder (recursively) within the mounted file store.
+   */
+  route.post('/delete', async (request): Promise<{ ok: true }> => {
+    const targetPath = request.body?.targetPath;
+    if (typeof targetPath !== 'string') {
+      throw new ClientError('The targetPath for the delete was not sent.');
+    }
+
+    const resolvedPath = mountPath.resolve(targetPath);
+    if (!resolvedPath || mountPath.isEqualToMountPath(resolvedPath)) {
+      console.error('Resolved path:', targetPath);
+      throw new ClientError('Invalid path.');
+    }
+
+    try {
+      await fs.stat(resolvedPath);
+    } catch {
+      throw mountPath.makeError(
+        RequestConflict,
+        'The requested path does not exist: %s',
+        resolvedPath,
+      );
+    }
+
+    await fs.rm(resolvedPath, { recursive: true });
+    return { ok: true };
+  });
+
+  /**
    * Reveal a file or folder in the server's native file manager (Finder, Explorer, ...).
    */
   route.post('/reveal', async (request): Promise<{ ok: true }> => {

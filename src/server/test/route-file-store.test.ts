@@ -418,6 +418,97 @@ describe('POST /file-store/move', () => {
   );
 });
 
+describe('POST /file-store/delete', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
+    });
+  });
+
+  after(() => server.close());
+
+  async function deleteFile(baseUrl: string, targetPath: string) {
+    return fetch(`${baseUrl}/file-store/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetPath }),
+    });
+  }
+
+  it(
+    'deletes a file',
+    withLogs([], async () => {
+      await writeFile(join(server.mountDir, 'delete-me.txt'), 'bye');
+
+      const res = await deleteFile(server.baseUrl, '/delete-me.txt');
+      assert.equal(res.status, 200);
+
+      await assert.rejects(
+        readFile(join(server.mountDir, 'delete-me.txt'), 'utf-8'),
+      );
+    }),
+  );
+
+  it(
+    'deletes a folder and its contents recursively',
+    withLogs([], async () => {
+      await mkdir(join(server.mountDir, 'delete-folder', 'nested'), {
+        recursive: true,
+      });
+      await writeFile(
+        join(server.mountDir, 'delete-folder', 'nested', 'file.txt'),
+        'contents',
+      );
+
+      const res = await deleteFile(server.baseUrl, '/delete-folder');
+      assert.equal(res.status, 200);
+
+      const res2 = await listFiles(server.baseUrl, '/');
+      const listing = await res2.json();
+      const names = listing.map((e: { name: string }) => e.name);
+      assert.ok(!names.includes('delete-folder'));
+    }),
+  );
+
+  it(
+    'returns 400 when targetPath is missing',
+    withLogs(['[400err ]'], async () => {
+      const res = await fetch(`${server.baseUrl}/file-store/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      assert.equal(res.status, 400);
+    }),
+  );
+
+  it(
+    'returns 409 for a path that does not exist',
+    withLogs(['[400err ]'], async () => {
+      const res = await deleteFile(server.baseUrl, '/nonexistent.txt');
+      assert.equal(res.status, 409);
+    }),
+  );
+
+  it(
+    'rejects path traversal attempts',
+    withLogs(['Resolved path:', '[400err ]'], async () => {
+      const res = await deleteFile(server.baseUrl, '/../../outside/mount');
+      assert.equal(res.status, 400);
+    }),
+  );
+
+  it(
+    'rejects deleting the mount root',
+    withLogs(['Resolved path:', '[400err ]'], async () => {
+      const res = await deleteFile(server.baseUrl, '/');
+      assert.equal(res.status, 400);
+    }),
+  );
+});
+
 describe('POST /file-store/reveal', () => {
   let server: TestServer;
 
