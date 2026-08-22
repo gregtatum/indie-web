@@ -956,58 +956,98 @@ export function downloadFolderForUser(
 export function deleteFile(
   file: T.FileMetadata | T.FolderMetadata,
 ): Thunk<Promise<void>> {
+  return deleteFiles([file]);
+}
+
+/**
+ * Delete one or more files/folders by looping over each file.
+ */
+export function deleteFiles(
+  files: Array<T.FileMetadata | T.FolderMetadata>,
+): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
-    if (
-      !confirm(
-        file.type === 'file'
-          ? `Are you sure you want to delete ${file.name}?`
-          : `Are you sure you want to delete the folder ${file.name} and all of its contents?`,
-      )
-    ) {
+    if (files.length === 0) {
       return;
     }
-    const messageGeneration = dispatch(
-      addMessage({
-        message: (
-          <>
-            Deleting <code>{file.name}</code>
-          </>
-        ),
-      }),
-    );
 
-    const fileFocusIndex = $.getFileFocusIndex(getState());
+    let confirmMessage: string;
+    if (files.length > 1) {
+      confirmMessage = `Are you sure you want to delete these ${files.length} items?`;
+    } else if (files[0].type === 'file') {
+      confirmMessage = `Are you sure you want to delete ${files[0].name}?`;
+    } else {
+      confirmMessage = `Are you sure you want to delete the folder ${files[0].name} and all of its contents?`;
+    }
 
-    await $.getCurrentFS(getState())
-      .delete(file.path)
-      .then(
-        () => {
-          // Adjust the file focus if needed.
-          let fileFocus = $.getFileFocus(getState());
-          if (fileFocus === file.name) {
-            // We deleted the focused file, go ahead and focus the next file.
-            const files = $.getSearchFilteredFiles(getState());
-            fileFocus = null;
-            if (files) {
-              const file = files[fileFocusIndex + 1];
-              if (file) {
-                fileFocus = file.name;
-              } else {
-                const file = files[fileFocusIndex - 1];
-                if (file) {
-                  fileFocus = file.name;
-                }
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const isBatch = files.length > 1;
+    const fileStore = $.getCurrentFS(getState());
+
+    let batchGeneration: number | undefined;
+    let failureCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      const singleGeneration = isBatch
+        ? undefined
+        : dispatch(
+            addMessage({
+              message: (
+                <>
+                  Deleting <code>{file.name}</code>
+                </>
+              ),
+            }),
+          );
+
+      if (isBatch) {
+        batchGeneration = dispatch(
+          addMessage({
+            message: (
+              <>
+                Deleting {i + 1}/{files.length} items
+              </>
+            ),
+            generation: batchGeneration,
+          }),
+        );
+      }
+
+      // Recomputed every iteration, since earlier deletes in this loop shift
+      // the indices of the remaining files.
+      const fileFocusIndex = $.getFileFocusIndex(getState());
+
+      try {
+        await fileStore.delete(file.path);
+
+        // Adjust the file focus if needed.
+        let fileFocus = $.getFileFocus(getState());
+        if (fileFocus === file.name) {
+          // We deleted the focused file, go ahead and focus the next file.
+          const remainingFiles = $.getSearchFilteredFiles(getState());
+          fileFocus = null;
+          if (remainingFiles) {
+            const nextFile = remainingFiles[fileFocusIndex + 1];
+            if (nextFile) {
+              fileFocus = nextFile.name;
+            } else {
+              const prevFile = remainingFiles[fileFocusIndex - 1];
+              if (prevFile) {
+                fileFocus = prevFile.name;
               }
             }
           }
-          dispatch(
-            PlainInternal.deleteFileDone(
-              file,
-              getDirName(file.path),
-              fileFocus,
-            ),
-          );
+        }
 
+        dispatch(
+          PlainInternal.deleteFileDone(file, getDirName(file.path), fileFocus),
+        );
+
+        if (!isBatch) {
           dispatch(
             addMessage({
               message: (
@@ -1015,13 +1055,15 @@ export function deleteFile(
                   Deleted <code>{file.name}</code>
                 </>
               ),
-              generation: messageGeneration,
+              generation: singleGeneration,
               timeout: true,
             }),
           );
-        },
-        (error) => {
-          console.error(error);
+        }
+      } catch (error) {
+        failureCount += 1;
+        console.error(error);
+        if (!isBatch) {
           dispatch(
             addMessage({
               message: (
@@ -1029,12 +1071,31 @@ export function deleteFile(
                   Failed to delete <code>{file.name}</code>
                 </>
               ),
-              generation: messageGeneration,
+              generation: singleGeneration,
               timeout: true,
             }),
           );
-        },
+        }
+      }
+    }
+
+    if (isBatch) {
+      const succeeded = files.length - failureCount;
+      dispatch(
+        addMessage({
+          message:
+            failureCount > 0 ? (
+              <>
+                Deleted {succeeded} of {files.length} items
+              </>
+            ) : (
+              <>Deleted {files.length} items</>
+            ),
+          generation: batchGeneration,
+          timeout: failureCount === 0,
+        }),
       );
+    }
   };
 }
 

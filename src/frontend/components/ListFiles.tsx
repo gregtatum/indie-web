@@ -594,6 +594,14 @@ function FileMenu(props: {
   const [openGeneration, setOpenGeneration] = React.useState(0);
   const [openEventDetail, setOpenEventDetail] = React.useState(-1);
   const file = props.file;
+  const fileSelection = $$.getFileSelection();
+  const files = $$.getSearchFilteredFiles();
+
+  const isMultiSelected =
+    fileSelection.length > 1 && fileSelection.includes(file.name);
+  const filesToDelete = isMultiSelected
+    ? (files ?? []).filter((entry) => fileSelection.includes(entry.name))
+    : [file];
 
   return (
     <>
@@ -640,9 +648,14 @@ function FileMenu(props: {
             {
               key: 'Delete',
               onClick() {
-                void dispatch(A.deleteFile(file));
+                void dispatch(A.deleteFiles(filesToDelete));
               },
-              children: (
+              children: isMultiSelected ? (
+                <>
+                  <span className="icon" data-icon="trash-fill" /> Delete{' '}
+                  {filesToDelete.length} Items
+                </>
+              ) : (
                 <>
                   <span className="icon" data-icon="trash-fill" /> Delete{' '}
                   {file.type === 'file' ? 'File' : 'Folder'}
@@ -820,15 +833,16 @@ function useFileNavigation(
         }
       };
 
-      const getSelectedPaths = () => {
+      const getSelectedFiles = () => {
         let selectionNames = fileSelection;
         if (selectionNames.length === 0) {
           selectionNames = fileFocus ? [fileFocus] : [];
         }
-        return files
-          .filter((file) => selectionNames.includes(file.name))
-          .map((file) => file.path);
+        return files.filter((file) => selectionNames.includes(file.name));
       };
+
+      const getSelectedPaths = () =>
+        getSelectedFiles().map((file) => file.path);
 
       switch (key) {
         case 'ArrowUp':
@@ -907,6 +921,16 @@ function useFileNavigation(
           if (selectedPaths.length) {
             event.preventDefault();
             dispatch(A.setCopyFile(selectedPaths, true));
+          }
+          break;
+        }
+        case 'Meta+Backspace':
+        case 'Meta+Delete':
+        case 'Delete': {
+          const selectedFiles = getSelectedFiles();
+          if (selectedFiles.length) {
+            event.preventDefault();
+            void dispatch(A.deleteFiles(selectedFiles));
           }
           break;
         }

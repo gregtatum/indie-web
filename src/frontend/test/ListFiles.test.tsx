@@ -484,6 +484,101 @@ describe('ListFiles', () => {
     `);
   });
 
+  it('deletes multiple selected files with the Delete key (Windows/Linux)', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      const { renderTree, user, getSelectedFilePaths } = await setupWithListing(
+        ['A.md', 'B.md', 'C.md'],
+      );
+
+      await waitFor(() => getFileListing('/A.md'));
+
+      // Select A.md and C.md with a ctrl-click.
+      await act(async () => {
+        await user.click(getFileLink('/A.md'));
+      });
+      await act(async () => {
+        await user.keyboard('{Control>}');
+        await user.click(getFileLink('/C.md'));
+        await user.keyboard('{/Control}');
+      });
+      expect(getSelectedFilePaths()).toEqual(['/A.md', '/C.md']);
+
+      // Delete the selection.
+      await act(() => user.keyboard('{Delete}'));
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete these 2 items?',
+      );
+
+      // A single consolidated toast is shown for the batch, not one per file.
+      await waitFor(() => {
+        expect(screen.getAllByText('Deleted 2 items')).toHaveLength(1);
+      });
+
+      expect(screen.queryAllByRole('option').map(getFilePath)).toEqual([
+        '/B.md',
+      ]);
+
+      expect(await renderTree()).toMatchInlineSnapshot(`
+        "
+        .
+        └── B.md
+        "
+      `);
+    } finally {
+      confirmSpy.mockRestore();
+    }
+  });
+
+  it('deletes multiple selected files with Cmd+Delete (macOS)', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      const { renderTree, user, getSelectedFilePaths } = await setupWithListing(
+        ['A.md', 'B.md', 'C.md'],
+      );
+
+      await waitFor(() => getFileListing('/A.md'));
+
+      // Select A.md and C.md with a ctrl-click.
+      await act(async () => {
+        await user.click(getFileLink('/A.md'));
+      });
+      await act(async () => {
+        await user.keyboard('{Control>}');
+        await user.click(getFileLink('/C.md'));
+        await user.keyboard('{/Control}');
+      });
+      expect(getSelectedFilePaths()).toEqual(['/A.md', '/C.md']);
+
+      // Delete the selection with the macOS Finder shortcut, Cmd+Delete
+      // (the physical key most Mac keyboards ship with reports as
+      // Backspace).
+      await act(() => user.keyboard('{Meta>}{Backspace}{/Meta}'));
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete these 2 items?',
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Deleted 2 items')).toHaveLength(1);
+      });
+
+      expect(screen.queryAllByRole('option').map(getFilePath)).toEqual([
+        '/B.md',
+      ]);
+
+      expect(await renderTree()).toMatchInlineSnapshot(`
+        "
+        .
+        └── B.md
+        "
+      `);
+    } finally {
+      confirmSpy.mockRestore();
+    }
+  });
+
   it('cuts and pastes a folder into another folder', async () => {
     const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
       'Source/Song A.md',
