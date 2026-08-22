@@ -90,6 +90,7 @@ describe('<ViewMarkdown>', () => {
       >
         <div
           class="viewMarkdown"
+          data-testid="renderedMarkdown"
         >
           <div
             class="viewMarkdownContainer"
@@ -119,12 +120,12 @@ describe('<ViewMarkdown>', () => {
                 <li>
                   Build something?
                 </li>
-
+                
 
                 <li>
                   Learn to paint?
                 </li>
-
+                
 
               </ul>
             </div>
@@ -134,7 +135,7 @@ describe('<ViewMarkdown>', () => {
     `);
   });
 
-  fit('can edit markdown files', async () => {
+  it('can edit markdown files', async () => {
     const { store } = setup();
     const edit = await waitFor(() => screen.getByText(/Edit/));
     act(() => {
@@ -169,7 +170,7 @@ describe('<ViewMarkdown>', () => {
     `);
   });
 
-  fit('navigates back to the file listing with Cmd+Up', async () => {
+  it('navigates back to the file listing with Cmd+Up', async () => {
     const { store } = setup();
     act(() => {
       store.dispatch(A.setHasOnboarded(true));
