@@ -5,6 +5,7 @@ import { noMountPathConcat } from './src/shared/lint/js/no-mount-path-concat.mjs
 import { multilineJsdocDeclarationComments } from './src/shared/lint/js/multiline-jsdoc-declaration-comments.mjs';
 import { preferPartialForOptionalObjectType } from './src/shared/lint/ts/prefer-partial-for-optional-object-type.mjs';
 import { preferKeyboardString } from './src/shared/lint/js/prefer-keyboard-string.mjs';
+import { noFocusedTests } from './src/shared/lint/js/no-focused-tests.mjs';
 
 const indieWebPlugin = {
   rules: {
@@ -14,6 +15,7 @@ const indieWebPlugin = {
     'prefer-partial-for-optional-object-type':
       preferPartialForOptionalObjectType,
     'prefer-keyboard-string': preferKeyboardString,
+    'no-focused-tests': noFocusedTests,
   },
 };
 
@@ -32,6 +34,7 @@ export default [
     plugins: { 'indie-web': indieWebPlugin },
     rules: {
       'indie-web/multiline-jsdoc-declaration-comments': 'error',
+      'indie-web/no-focused-tests': 'error',
     },
   },
 
