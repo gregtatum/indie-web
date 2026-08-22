@@ -326,4 +326,19 @@ describe('ListFiles', () => {
       '/D.md',
     ]);
   });
+
+  it('keeps arrow-key navigation working after a mouse click selects a file', async () => {
+    const { user, navigateByKeyboard } = await setupWithListing([
+      'A.md',
+      'B.md',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+
+    await navigateByKeyboard('{ArrowDown}', '/B.md');
+  });
 });

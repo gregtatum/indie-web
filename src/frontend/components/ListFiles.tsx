@@ -94,6 +94,7 @@ export function ListFiles() {
     if (!files) {
       return;
     }
+    listFilesListRef.current?.focus({ preventScroll: true });
     if (event.metaKey || event.ctrlKey) {
       const isSelected = fileSelection.includes(name);
       const next = isSelected
@@ -418,8 +419,15 @@ export function File(props: FileProps) {
 
   const handleEmptyLinkClick = (event: React.MouseEvent) => {
     event.preventDefault();
-    if (!props.onSelectClick || !isDesktopMouseClick() || event.detail >= 2) {
-      // This is not a single desktop mouse click, so there's nothing to select.
+    if (
+      renameFile.path === path ||
+      !props.onSelectClick ||
+      !isDesktopMouseClick() ||
+      event.detail >= 2
+    ) {
+      // Not a single desktop mouse click to select, or this row's rename
+      // input/buttons (rendered inside this same anchor) should handle
+      // their own clicks without our selection logic stealing focus.
       return;
     }
     props.onSelectClick(name, event);
