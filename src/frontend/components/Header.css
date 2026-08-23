@@ -141,15 +141,15 @@
 
 /* The down arrow */
 .headerFileStoreSelection::after {
-  content: "";
+content: "";
   border: solid var(---text-color);
-  border-width: 0 2px 2px 0;
+  border-width: 0 1.5px 1.5px 0;
   display: inline-block;
-  padding: 3px;
+  padding: 2.5px;
   transform: rotate(45deg);
   position: relative;
-  top: -0.1em;
-  right: -0.3em;
+  right: -5px;
+  top: -3px;
 }
 
 .headerFileStoreSelection:hover {
