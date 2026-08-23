@@ -32,6 +32,7 @@ function ListFilesRouter() {
   const path = '/' + (params['*'] ?? '');
   const { fs } = params;
   const dispatch = Hooks.useDispatch();
+  const navigate = Router.useNavigate();
   React.useEffect(() => {
     if (fs) {
       let fileStoreName = toFileStoreName(fs);
@@ -45,6 +46,17 @@ function ListFilesRouter() {
       if (!fileStoreName) {
         fileStoreName = currentFileStoreName;
         server = currentServer;
+      }
+      if (path === '/') {
+        // Canonicalize the URL as you can represent root URLs in the simplest form as
+        // "/browser/folder/" is a valid URL, but it more complicated.
+        if (server?.storeType === 'music') {
+          dispatch(A.viewMusic(server, path));
+        } else {
+          dispatch(A.viewListFiles(fileStoreName, server, path));
+        }
+        navigate('/', { replace: true });
+        return;
       }
       dispatch(A.viewListFiles(fileStoreName, server, path));
     } else {
