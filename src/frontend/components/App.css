@@ -49,6 +49,10 @@
 
   --success-color: #1e8e3e;
   --success-color-light: #1e8e3e1a;
+
+  /* Animate elements reordering themselves. */
+  --reorder-duration: 200ms;
+  --reorder-easing: ease-out;
 }
 
 /* animation: fadein 500ms; */

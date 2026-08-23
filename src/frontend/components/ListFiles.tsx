@@ -314,6 +314,46 @@ function keepFileInView(div: HTMLElement) {
   });
 }
 
+/**
+ * Animates a row sliding to its new position when the listing reorders around it.
+ */
+function useReorderAnimation(divRef: React.RefObject<HTMLDivElement | null>) {
+  const previousOffsetTopRef = React.useRef<number | null>(null);
+
+  // Intentionally do not use a dependency array as this needs to compare positions after
+  // ever commit, not just a specific prop changing.
+  React.useLayoutEffect(() => {
+    const div = divRef.current;
+    if (!div) {
+      return;
+    }
+    const previousOffsetTop = previousOffsetTopRef.current;
+    const offsetTop = div.offsetTop;
+    previousOffsetTopRef.current = offsetTop;
+
+    if (previousOffsetTop === null || previousOffsetTop === offsetTop) {
+      // First mount, or this row didn't move.
+      return;
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    const delta = previousOffsetTop - offsetTop;
+    div.style.transition = 'none';
+    div.style.transform = `translateY(${delta}px)`;
+    // Give the browser a full rAF cycle to paint the inverted position
+    // before transitioning it away.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        div.style.transition =
+          'transform var(--reorder-duration) var(--reorder-easing)';
+        div.style.transform = '';
+      });
+    });
+  });
+}
+
 export function File(props: FileProps) {
   const { fileFocus, file, isCached } = props;
   const { name, path, type } = file;
@@ -327,6 +367,8 @@ export function File(props: FileProps) {
   const extension =
     nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
   let displayName: React.ReactNode = name;
+
+  useReorderAnimation(divRef);
 
   // Ensure the element is in view when navigating by keyboard.
   React.useEffect(() => {
