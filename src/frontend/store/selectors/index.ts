@@ -86,6 +86,21 @@ export function getFileStoreCacheEnabled(state: State) {
   return state.fileStoreCacheEnabled;
 }
 
+export function getInputMode(state: State) {
+  return state.inputMode;
+}
+
+export function getDetectedPointerType(state: State) {
+  return state.detectedPointerType;
+}
+
+export function getResolvedInputMode(state: State): T.ResolvedInputMode {
+  if (state.inputMode === 'auto') {
+    return state.detectedPointerType;
+  }
+  return state.inputMode;
+}
+
 export function getEditorAutocompleteSettings(state: State) {
   return state.editorAutocompleteSettings;
 }

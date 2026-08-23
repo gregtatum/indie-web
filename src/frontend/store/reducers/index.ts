@@ -705,6 +705,49 @@ function experimentalFeatures(
   }
 }
 
+function getInputModeDefault(): T.InputMode {
+  const raw = persistedState.inputMode.read();
+  return raw === 'touch' || raw === 'mouse' ? raw : 'auto';
+}
+
+function inputMode(
+  state: T.InputMode = getInputModeDefault(),
+  action: T.Action,
+): T.InputMode {
+  switch (action.type) {
+    case 'set-input-mode':
+      persistedState.inputMode.write(action.value);
+      return action.value;
+    default:
+      return state;
+  }
+}
+
+function getDetectedPointerTypeDefault(): T.ResolvedInputMode {
+  const raw = persistedState.detectedPointerType.read();
+  if (raw === 'touch' || raw === 'mouse') {
+    return raw;
+  }
+  // jsdom (tests) has no matchMedia; fall back to "mouse" there.
+  if (typeof window.matchMedia !== 'function') {
+    return 'mouse';
+  }
+  return window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse';
+}
+
+function detectedPointerType(
+  state: T.ResolvedInputMode = getDetectedPointerTypeDefault(),
+  action: T.Action,
+): T.ResolvedInputMode {
+  switch (action.type) {
+    case 'set-detected-pointer-type':
+      persistedState.detectedPointerType.write(action.value);
+      return action.value;
+    default:
+      return state;
+  }
+}
+
 function fileStoreCacheEnabled(
   state: boolean = getFileStoreCacheEnabledDefault(),
   action: T.Action,
@@ -858,9 +901,11 @@ export const reducers = combineReducers({
   copyFile,
   editorAutocompleteSettings,
   editorOnly,
+  detectedPointerType,
   experimentalFeatures,
   fileStoreCacheEnabled,
   filesIndex,
+  inputMode,
   serverId,
   servers,
   hideEditor,

@@ -93,6 +93,21 @@
 .settingsSectionCard {
 }
 
+.settingsFieldset {
+  border: none;
+  margin: 12px 0 0;
+  padding: 0;
+
+  & legend {
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding: 0;
+  }
+  & input:not(:first-child) {
+    margin-inline-start: 15px;
+  }
+}
+
 .settingsProviderList {
   display: flex;
   flex-direction: column;

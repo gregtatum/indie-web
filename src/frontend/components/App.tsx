@@ -186,6 +186,7 @@ function ConnectFolderRouter() {
 
 export function App() {
   useFilesIndex();
+  Hooks.useDetectFirstPointerInteraction();
   return (
     <Router.BrowserRouter>
       <AppRoutes />

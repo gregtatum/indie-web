@@ -265,4 +265,23 @@ describe('Settings', () => {
     expectDropboxCacheDeleted(deleteDatabase);
     await expectOnboardingHomeScreen();
   });
+
+  it('changes the input mode setting via the radio group', async () => {
+    const store = createStore();
+    onboard(store);
+
+    renderSettings(store);
+
+    expect(store.getState().inputMode).toBe('auto');
+
+    await act(async () => {
+      await userEvent.click(screen.getByLabelText('Touch'));
+    });
+    expect(store.getState().inputMode).toBe('touch');
+
+    await act(async () => {
+      await userEvent.click(screen.getByLabelText('Mouse & Keyboard'));
+    });
+    expect(store.getState().inputMode).toBe('mouse');
+  });
 });

@@ -14,6 +14,7 @@ import {
 } from 'frontend/utils';
 import { T, $, A, $$ } from 'frontend';
 import { FileStoreError } from 'frontend/logic/file-store';
+import { persistedState } from 'frontend/logic/persisted-state';
 
 export function useStore(): T.Store {
   return Redux.useStore() as T.Store;
@@ -24,6 +25,35 @@ export function useDispatch(): T.Dispatch {
 }
 
 export { useSelector } from 'react-redux';
+
+/**
+ * Determine at the global app level if a user prefers touch or mouse for UI interaction.
+ */
+export function useDetectFirstPointerInteraction(): void {
+  const dispatch = useDispatch();
+  React.useEffect(() => {
+    if (persistedState.detectedPointerType.read() !== null) {
+      // Already resolved on an earlier visit.
+      return undefined;
+    }
+    function handlePointerDown(event: PointerEvent) {
+      dispatch(
+        A.setDetectedPointerType(
+          event.pointerType === 'touch' ? 'touch' : 'mouse',
+        ),
+      );
+    }
+    window.addEventListener('pointerdown', handlePointerDown, {
+      capture: true,
+      once: true,
+    });
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown, {
+        capture: true,
+      });
+    };
+  }, [dispatch]);
+}
 
 type PromiseState<T> =
   | { type: 'pending' }

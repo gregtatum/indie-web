@@ -182,6 +182,8 @@ export const persistedState = {
   openAIAPIKey: new StringStorage(),
   hasOnboarded: new BooleanStorage(),
   experimentalFeatures: new BooleanStorage(),
+  inputMode: new StringStorage(),
+  detectedPointerType: new StringStorage(),
   fileStoreCacheEnabled: new BooleanStorage(),
   dropboxCodeVerifier: new StringStorage(),
   dropboxRedirectURL: new StringStorage(),

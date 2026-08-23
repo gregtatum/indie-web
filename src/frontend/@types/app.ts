@@ -230,6 +230,18 @@ export type SongKeyLetters =
 
 export type FileStoreName = 'dropbox' | 'browser' | 'server';
 
+/**
+ * Controls whether the UI is optimized for touch or mouse interaction. "auto" resolves
+ * to the mode detected from the browser's first real pointer interaction.
+ */
+export type InputMode = 'auto' | 'touch' | 'mouse';
+
+/**
+ * The concrete input mode once "auto" has been resolved against the detected or
+ * user-overridden value.
+ */
+export type ResolvedInputMode = 'touch' | 'mouse';
+
 export interface LanguageDataV1 {
   description: string;
   lastSaved: number;

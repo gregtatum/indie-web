@@ -23,6 +23,7 @@ type CacheEstimate = {
 export function Settings() {
   const experimentalFeatures = $$.getExperimentalFeatures();
   const editorAutocomplete = $$.getEditorAutocompleteSettings();
+  const inputMode = $$.getInputMode();
   const fileStoreCacheEnabled = $$.getFileStoreCacheEnabled();
   const dropboxOauth = $$.getDropboxOauth();
   const idbfs = $$.getIDBFSOrNull();
@@ -334,6 +335,35 @@ export function Settings() {
                 Enable ChordPro autocompletion
               </label>
             </p>
+            <fieldset className="settingsFieldset">
+              <legend>Primary Input:</legend>
+              <div>
+                <input
+                  type="radio"
+                  id="input-mode-auto"
+                  name="input-mode"
+                  defaultChecked={inputMode === 'auto'}
+                  onChange={() => dispatch(A.setInputMode('auto'))}
+                />
+                <label htmlFor="input-mode-auto">Auto Detect</label>
+                <input
+                  type="radio"
+                  id="input-mode-touch"
+                  name="input-mode"
+                  defaultChecked={inputMode === 'touch'}
+                  onChange={() => dispatch(A.setInputMode('touch'))}
+                />
+                <label htmlFor="input-mode-touch">Touch</label>
+                <input
+                  type="radio"
+                  id="input-mode-mouse"
+                  name="input-mode"
+                  defaultChecked={inputMode === 'mouse'}
+                  onChange={() => dispatch(A.setInputMode('mouse'))}
+                />
+                <label htmlFor="input-mode-mouse">Mouse &amp; Keyboard</label>
+              </div>
+            </fieldset>
           </div>
           <div className="settingsCard settingsSectionCard">
             <div className="settingsSectionHeading">

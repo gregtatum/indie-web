@@ -320,6 +320,20 @@ export function setFileStoreCacheEnabled(value: boolean) {
   };
 }
 
+export function setInputMode(value: T.InputMode) {
+  return {
+    type: 'set-input-mode' as const,
+    value,
+  };
+}
+
+export function setDetectedPointerType(value: T.ResolvedInputMode) {
+  return {
+    type: 'set-detected-pointer-type' as const,
+    value,
+  };
+}
+
 export function setEditorAutocomplete(
   editor: 'markdown' | 'chordpro',
   value: boolean,
