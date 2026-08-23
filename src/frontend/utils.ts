@@ -35,7 +35,7 @@ export function resetGeneration() {
 }
 
 export function isMacPlatform() {
-  return window.navigator.platform.toLowerCase().includes('mac');
+  return window.navigator.platform.startsWith('Mac');
 }
 
 export function getPlatformCtrlModifier() {

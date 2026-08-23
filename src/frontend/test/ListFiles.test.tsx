@@ -17,6 +17,12 @@ import { ensureExists } from 'frontend/utils';
 import { getFileTree } from './utils/fixtures';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 
+function mockPlatform(platform: string) {
+  return jest
+    .spyOn(window.navigator, 'platform', 'get')
+    .mockReturnValue(platform);
+}
+
 describe('ListFiles', () => {
   const { getIDBFS } = useTestIDBFS();
 
@@ -300,6 +306,114 @@ describe('ListFiles', () => {
       ├── Song (1).md
       ├── Song (2).md
       └── Song.md
+      "
+    `);
+  });
+
+  it('renames the focused file with Enter on macOS, instead of opening it', async () => {
+    const platformSpy = mockPlatform('MacIntel');
+    try {
+      const { renderTree, user } = await setupWithListing(['A.md', 'B.md']);
+
+      await waitFor(() => getFileListing('/A.md'));
+
+      await act(async () => {
+        await user.click(getFileLink('/A.md'));
+      });
+
+      await act(() => user.keyboard('{Enter}'));
+
+      const renameInput = await screen.findByDisplayValue('A.md');
+      await act(async () => {
+        await user.clear(renameInput);
+        await user.type(renameInput, 'Journal.md{Enter}');
+      });
+
+      await waitFor(() => getFileListing('/Journal.md'));
+
+      expect(screen.queryByDisplayValue('Journal.md')).toBeNull();
+
+      expect(await renderTree()).toMatchInlineSnapshot(`
+        "
+        .
+        ├── B.md
+        └── Journal.md
+        "
+      `);
+    } finally {
+      platformSpy.mockRestore();
+    }
+  });
+
+  it('opens the focused folder with Enter on Windows/Linux, rather than renaming it', async () => {
+    const platformSpy = mockPlatform('Win32');
+    try {
+      const { user } = await setupWithListing(['Notes/Ideas.md']);
+
+      await waitFor(() => getFileListing('/Notes'));
+
+      await act(async () => {
+        await user.click(getFileLink('/Notes'));
+      });
+
+      await act(() => user.keyboard('{Enter}'));
+
+      await waitFor(() => screen.getByText(/Ideas/));
+      expect(screen.queryByDisplayValue('Notes')).toBeNull();
+    } finally {
+      platformSpy.mockRestore();
+    }
+  });
+
+  it('commits a rename and moves focus with Tab/Shift+Tab', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'C.md',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    await act(() => user.keyboard('{F2}'));
+
+    const firstInput = await screen.findByDisplayValue('A.md');
+    await act(async () => {
+      await user.clear(firstInput);
+      await user.type(firstInput, 'Alpha.md');
+    });
+    await act(() => user.keyboard('{Tab}'));
+
+    // Tab commits the rename and moves focus to the next file.
+    await waitFor(() => {
+      expect(getSelectedFilePaths()).toEqual(['/B.md']);
+    });
+    expect(screen.queryByDisplayValue('B.md')).toBeNull();
+
+    await act(() => user.keyboard('{F2}'));
+    const secondInput = await screen.findByDisplayValue('B.md');
+    await act(async () => {
+      await user.clear(secondInput);
+      await user.type(secondInput, 'Bravo.md');
+    });
+    await act(async () => {
+      await user.keyboard('{Shift>}{Tab}{/Shift}');
+    });
+
+    // Shift+Tab does the same thing in reverse.
+    await waitFor(() => {
+      expect(getSelectedFilePaths()).toEqual(['/Alpha.md']);
+    });
+    expect(screen.queryByDisplayValue('Alpha.md')).toBeNull();
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── Alpha.md
+      ├── Bravo.md
+      └── C.md
       "
     `);
   });

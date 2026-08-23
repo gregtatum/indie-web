@@ -11,6 +11,7 @@ import {
   getPathFileName,
   imageExtensions,
   isChordProExtension,
+  isMacPlatform,
 } from 'frontend/utils';
 import { getFileStoreDisplayName } from 'frontend/logic/app-logic';
 
@@ -552,7 +553,7 @@ function RenameFile(props: {
     const newName = value.trim();
     if (!newName) {
       // Only rename if there is a real value.
-      return;
+      return Promise.resolve();
     }
 
     // If this file is part of a multi-selection, rename the other selected
@@ -567,11 +568,27 @@ function RenameFile(props: {
         )
       : [];
 
-    void dispatch(A.renameFiles(props.file, newName, siblingFiles));
+    return dispatch(A.renameFiles(props.file, newName, siblingFiles));
   }
 
   function cancel() {
     dispatch(A.stopRenameFile());
+  }
+
+  async function tabbedRename(direction: 1 | -1) {
+    const currentIndex = (files ?? []).findIndex(
+      (entry) => entry.path === props.file.path,
+    );
+    const nextFile =
+      currentIndex === -1 ? undefined : (files ?? [])[currentIndex + direction];
+
+    await rename();
+
+    if (nextFile) {
+      const folder = getDirName(props.file.path);
+      dispatch(A.changeFileFocus(folder, nextFile.name));
+      dispatch(A.setFileSelection(folder, []));
+    }
   }
 
   const disabled = props.state.phase === 'sending';
@@ -584,11 +601,16 @@ function RenameFile(props: {
         ref={inputRef}
         disabled={disabled}
         onKeyDown={(event) => {
+          event.stopPropagation();
           if (event.key === 'Escape') {
             cancel();
           }
           if (event.key === 'Enter') {
             rename();
+          }
+          if (event.key === 'Tab') {
+            event.preventDefault();
+            void tabbedRename(event.shiftKey ? -1 : 1);
           }
         }}
         defaultValue={name}
@@ -900,6 +922,20 @@ function useFileNavigation(
       const getSelectedPaths = () =>
         getSelectedFiles().map((file) => file.path);
 
+      // Starts renaming the focused file within the current selection,
+      // falling back to the first selected file if focus isn't set. Shared
+      // by F2 (Windows/Linux) and Enter (macOS Finder convention).
+      const startRenameFocused = () => {
+        const selectedFiles = getSelectedFiles();
+        if (!selectedFiles.length) {
+          return;
+        }
+        const primary =
+          selectedFiles.find((file) => file.name === fileFocus) ??
+          selectedFiles[0];
+        dispatch(A.startRenameFile(primary.path));
+      };
+
       switch (key) {
         case 'ArrowUp':
         case 'Shift+ArrowUp': {
@@ -952,6 +988,8 @@ function useFileNavigation(
                 `#file-${fileFocusIndex} .listFilesFileMenu`,
               );
             link?.click();
+          } else if (isMacPlatform()) {
+            startRenameFocused();
           } else {
             openFile();
           }
@@ -981,14 +1019,8 @@ function useFileNavigation(
           break;
         }
         case 'F2': {
-          const selectedFiles = getSelectedFiles();
-          if (selectedFiles.length) {
-            event.preventDefault();
-            const primary =
-              selectedFiles.find((file) => file.name === fileFocus) ??
-              selectedFiles[0];
-            dispatch(A.startRenameFile(primary.path));
-          }
+          event.preventDefault();
+          startRenameFocused();
           break;
         }
         case 'Meta+Backspace':
