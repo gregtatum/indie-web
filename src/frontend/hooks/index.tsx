@@ -55,6 +55,16 @@ export function useDetectFirstPointerInteraction(): void {
   }, [dispatch]);
 }
 
+/**
+ * Apply <html data-input-mode="touch"> or <html data-input-mode="mouse"> for CSS rules.
+ */
+export function useDocumentElementInputMode(): void {
+  const resolvedInputMode = $$.getResolvedInputMode();
+  React.useEffect(() => {
+    document.documentElement.dataset.inputMode = resolvedInputMode;
+  }, [resolvedInputMode]);
+}
+
 type PromiseState<T> =
   | { type: 'pending' }
   | { type: 'fulfilled'; value: T }

@@ -55,6 +55,32 @@
   --reorder-easing: ease-out;
 }
 
+/**
+ * "touch" and "mouse" have different density preferences for UI. By default use
+ * the wider touch density. See :root[data-input-mode="mouse"]
+ */
+:root {
+  & {
+    --density-control-font-size: var(--font-size-normal);
+    --density-control-padding: 6px;
+    --density-font-size: var(--font-size-normal);
+    --density-icon-padding: 4px;
+    --density-icon-size: 20px;
+    --density-row-padding: 8px;
+    --density-touch-target: 44px;
+  }
+
+  &:root[data-input-mode="mouse"] {
+    --density-control-font-size: var(--font-size-small);
+    --density-control-padding: 4px;
+    --density-font-size: var(--font-size-small);
+    --density-icon-padding: 1px;
+    --density-icon-size: 16px;
+    --density-row-padding: 4px;
+    --density-touch-target: 28px;
+  }
+}
+
 /* animation: fadein 500ms; */
 @keyframes fadein {
   from {

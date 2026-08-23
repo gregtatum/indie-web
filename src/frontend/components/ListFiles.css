@@ -1,4 +1,10 @@
 .listFiles {
+  --list-files-row-padding: var(--density-row-padding);
+  --list-files-icon-size: var(--density-icon-size);
+  --list-files-icon-padding: var(--density-icon-padding);
+  --list-files-control-padding: var(--density-control-padding);
+  --list-files-font-size: var(--density-font-size);
+
   display: flex;
   flex-direction: column;
   /* For some reason there was still an overflow without the -1px */
@@ -54,8 +60,8 @@
 
 .listFilesIcon {
   margin-inline-end: 5px;
-  width: 20px;
-  height: 20px;
+  width: var(--list-files-icon-size);
+  height: var(--list-files-icon-size);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -63,11 +69,11 @@
   background: #0001;
   border-radius: 3px;
   text-align: center;
-  padding: 4px;
+  padding: var(--list-files-icon-padding);
 
   img {
-    width: 18px;
-    height: 18px;
+    width: calc(var(--list-files-icon-size) - 2px);
+    height: calc(var(--list-files-icon-size) - 2px);
   }
 }
 
@@ -135,7 +141,8 @@
 
 a.listFilesFileLink,
 a.listFilesFileEmpty {
-  padding: 8px;
+  padding: var(--list-files-row-padding);
+  font-size: var(--list-files-font-size);
   display: flex;
   text-decoration: none;
   color: #000;
@@ -248,8 +255,7 @@ a.listFilesFileEmpty {
 
 .listFileRenameInput {
   flex: 1;
-  font-size: 16px;
-  padding: 2px;
+  padding: var(--list-files-control-padding);
 }
 
 .listFilesFolder {
