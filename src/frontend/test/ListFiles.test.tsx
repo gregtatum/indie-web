@@ -624,8 +624,16 @@ describe('ListFiles', () => {
     await waitFor(() => screen.getByText(/Ideas/));
   });
 
-  it('opens a folder immediately on a real touch tap', async () => {
-    const { user } = await setupWithListing(['README.md', 'Notes/Ideas.md']);
+  it('opens a folder immediately on a tap once "auto" has detected touch', async () => {
+    // The touch/mouse mode is no longer inferred live from each click (see
+    // useDetectFirstPointerInteraction); "auto" instead follows whatever was
+    // detected from the browser's first real pointer interaction, which is
+    // simulated here via setDetectedPointerType.
+    const { store, user } = await setupWithListing([
+      'README.md',
+      'Notes/Ideas.md',
+    ]);
+    store.dispatch(A.setDetectedPointerType('touch'));
 
     await waitFor(() => getFileListing('/README.md'));
 
@@ -634,6 +642,51 @@ describe('ListFiles', () => {
     });
 
     await waitFor(() => screen.getByText(/Ideas/));
+
+    // The detected mode is persisted to localStorage; reset it so it doesn't
+    // leak into later tests in this file.
+    store.dispatch(A.setDetectedPointerType('mouse'));
+  });
+
+  it('forces desktop click-to-select behavior on a touch tap when inputMode is "mouse"', async () => {
+    const { store, user, getSelectedFilePaths } = await setupWithListing([
+      'README.md',
+      'Notes/Ideas.md',
+    ]);
+    store.dispatch(A.setInputMode('mouse'));
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    await act(async () => {
+      await user.pointer({ keys: '[TouchA]', target: getFileLink('/Notes') });
+    });
+
+    expect(getSelectedFilePaths()).toEqual(['/Notes']);
+    expect(screen.queryByText(/Ideas/)).toBeNull();
+
+    // The setting is persisted to localStorage; reset it so it doesn't leak
+    // into later tests in this file.
+    store.dispatch(A.setInputMode('auto'));
+  });
+
+  it('forces touch tap-to-open behavior on a mouse click when inputMode is "touch"', async () => {
+    const { store, user } = await setupWithListing([
+      'README.md',
+      'Notes/Ideas.md',
+    ]);
+    store.dispatch(A.setInputMode('touch'));
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/Notes'));
+    });
+
+    await waitFor(() => screen.getByText(/Ideas/));
+
+    // The setting is persisted to localStorage; reset it so it doesn't leak
+    // into later tests in this file.
+    store.dispatch(A.setInputMode('auto'));
   });
 
   it('toggles multi-selection with ctrl-click', async () => {

@@ -35,13 +35,13 @@ export function ListFiles() {
   const focusIndex = $$.getFileFocusIndex();
   const fileSelection = $$.getFileSelection();
   const fileSelectionSet = $$.getFileSelectionSet();
+  const resolvedInputMode = $$.getResolvedInputMode();
 
   const filesBackRef = React.useRef<null | HTMLAnchorElement>(null);
   const listFilesRef = React.useRef<null | HTMLDivElement>(null);
   const listFilesListRef = React.useRef<null | HTMLDivElement>(null);
   const [isFileMenuFocused, setFileMenuFocused] = React.useState(false);
   const selectionAnchorRef = React.useRef<string | null>(null);
-  const pointerTypeRef = React.useRef<string | undefined>(undefined);
 
   const parts = path.split('/');
   parts.pop();
@@ -150,7 +150,6 @@ export function ListFiles() {
     isFileMenuFocused,
     setFileMenuFocused,
     selectionAnchorRef,
-    pointerTypeRef,
   );
 
   Hooks.useTypeAheadSearch(
@@ -220,13 +219,10 @@ export function ListFiles() {
           tabIndex={0}
           aria-activedescendant={focusIndex === -1 ? '' : `file-${focusIndex}`}
           ref={listFilesListRef}
-          onPointerDown={(event) => {
-            pointerTypeRef.current = event.pointerType;
-          }}
           onClick={(event) => {
             if (
               event.target !== event.currentTarget ||
-              pointerTypeRef.current !== 'mouse'
+              resolvedInputMode !== 'mouse'
             ) {
               return;
             }
@@ -254,7 +250,7 @@ export function ListFiles() {
                 index={fileIndex}
                 isSelected={isSelected}
                 onSelectClick={handleFileSelectClick}
-                pointerTypeRef={pointerTypeRef}
+                resolvedInputMode={resolvedInputMode}
               />
             );
           })}
@@ -288,7 +284,7 @@ interface FileProps {
   linkOverride?: string;
   isSelected?: boolean;
   onSelectClick?: (name: string, event: React.MouseEvent) => void;
-  pointerTypeRef?: React.MutableRefObject<string | undefined>;
+  resolvedInputMode?: T.ResolvedInputMode;
 }
 
 /**
@@ -470,10 +466,12 @@ export function File(props: FileProps) {
   const id = 'file-' + props.index;
 
   // Disambiguate Desktop-behavior for file navigation, and Tablet/touch navigation.
-  const isDesktopMouseClick = () => props.pointerTypeRef?.current === 'mouse';
+  const resolvedInputMode =
+    props.resolvedInputMode ?? $$.getResolvedInputMode();
+  const isDesktopMouseMode = resolvedInputMode === 'mouse';
 
   const handleLinkClick = (event: React.MouseEvent) => {
-    if (!props.onSelectClick || !isDesktopMouseClick()) {
+    if (!props.onSelectClick || !isDesktopMouseMode) {
       return;
     }
     event.preventDefault();
@@ -503,7 +501,7 @@ export function File(props: FileProps) {
     if (
       renameFile.path === path ||
       !props.onSelectClick ||
-      !isDesktopMouseClick() ||
+      !isDesktopMouseMode ||
       event.detail >= 2
     ) {
       // Not a single desktop mouse click to select, or this row's rename
@@ -841,7 +839,6 @@ function useFileNavigation(
   isFileMenuFocused: boolean,
   setFileMenuFocused: React.Dispatch<React.SetStateAction<boolean>>,
   selectionAnchorRef: React.MutableRefObject<string | null>,
-  pointerTypeRef: React.MutableRefObject<string | undefined>,
 ) {
   const { getState, dispatch } = Hooks.useStore();
   const navigate = Router.useNavigate();
@@ -916,11 +913,12 @@ function useFileNavigation(
             listFilesRef.current?.querySelector(
               `#file-${fileFocusIndex} .listFilesFileLink`,
             );
-          // This click is programmatic, not from a real pointer, so clear
-          // the last pointer type to make sure it's treated as an open
-          // rather than a desktop mouse click (which would only select).
-          pointerTypeRef.current = undefined;
-          link?.click();
+          // Navigate directly, rather than calling link.click(), so this
+          // keyboard-triggered open doesn't re-enter the row's click
+          // handler and get treated as a desktop mouse click.
+          if (link) {
+            navigate(link.pathname + link.search);
+          }
         }
       };
 
@@ -1122,6 +1120,5 @@ function useFileNavigation(
     listFilesRef,
     navigate,
     selectionAnchorRef,
-    pointerTypeRef,
   ]);
 }
