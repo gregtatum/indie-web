@@ -39,15 +39,13 @@ function useDismissOnOutsideClick(
     }
     const element = elementRef.current;
     removeHandler();
-    if (!element) {
-      return () => {};
-    }
     clickHandler.current = (event) => {
       const div = ensureExists(divRef.current, 'There is no divRef');
       if (!div.contains(event.target as Node | null)) {
         // We clicked outside of the menu, dismiss it.
         dismiss();
-        if (element.contains(event.target as Node | null)) {
+        // `element` can be null when the menu is opened with a right click.
+        if (element?.contains(event.target as Node | null)) {
           event.stopImmediatePropagation();
         }
       }

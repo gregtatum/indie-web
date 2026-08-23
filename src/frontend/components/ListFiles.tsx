@@ -90,6 +90,13 @@ export function ListFiles() {
     setFileMenuFocused(false);
   }, [fileFocus]);
 
+  // The file menu button doesn't exist in mouse mode, so there's nothing to focus.
+  React.useEffect(() => {
+    if (resolvedInputMode === 'mouse') {
+      setFileMenuFocused(false);
+    }
+  }, [resolvedInputMode]);
+
   const isFocused = true;
 
   function handleFileSelectClick(name: string, event: React.MouseEvent) {
@@ -535,7 +542,12 @@ export function File(props: FileProps) {
           </span>
           {fileDisplayName}
         </Router.Link>
-        <FileMenu ref={fileMenuRef} tabIndex={-1} file={props.file} />
+        <FileMenu
+          ref={fileMenuRef}
+          tabIndex={-1}
+          file={props.file}
+          resolvedInputMode={resolvedInputMode}
+        />
       </div>
     );
   }
@@ -560,7 +572,12 @@ export function File(props: FileProps) {
         </span>
         {fileDisplayName}
       </a>
-      <FileMenu ref={fileMenuRef} tabIndex={-1} file={props.file} />
+      <FileMenu
+        ref={fileMenuRef}
+        tabIndex={-1}
+        file={props.file}
+        resolvedInputMode={resolvedInputMode}
+      />
     </div>
   );
 }
@@ -684,6 +701,7 @@ const FileMenu = React.forwardRef<
   {
     file: T.FileMetadata | T.FolderMetadata;
     tabIndex?: number;
+    resolvedInputMode: T.ResolvedInputMode;
   }
 >(function FileMenu(props, ref) {
   const dispatch = Hooks.useDispatch();
@@ -716,24 +734,27 @@ const FileMenu = React.forwardRef<
 
   return (
     <>
-      <button
-        type="button"
-        aria-label="File Menu"
-        className="listFilesFileMenu"
-        tabIndex={props.tabIndex}
-        ref={button}
-        onFocus={() => {
-          // If the button is manually focused, put it back on the list element.
-          button.current?.closest<HTMLElement>('.listFilesList')?.focus();
-        }}
-        onClick={(event) => {
-          setAnchorPoint(null);
-          setOpenGeneration((generation) => generation + 1);
-          setOpenEventDetail(event.detail);
-        }}
-      >
-        <span className="listFilesFileMenuIcon" />
-      </button>
+      {/* The file menu only shows up in touch mode, as mice can use right click. */}
+      {props.resolvedInputMode === 'mouse' ? null : (
+        <button
+          type="button"
+          aria-label="File Menu"
+          className="listFilesFileMenu"
+          tabIndex={props.tabIndex}
+          ref={button}
+          onFocus={() => {
+            // If the button is manually focused, put it back on the list element.
+            button.current?.closest<HTMLElement>('.listFilesList')?.focus();
+          }}
+          onClick={(event) => {
+            setAnchorPoint(null);
+            setOpenGeneration((generation) => generation + 1);
+            setOpenEventDetail(event.detail);
+          }}
+        >
+          <span className="listFilesFileMenuIcon" />
+        </button>
+      )}
       {Hooks.overlayPortal(
         <Menu
           clickedElement={button}
@@ -854,6 +875,7 @@ function useFileNavigation(
       const files = $.getSearchFilteredFiles(state);
       const fileFocusIndex = $.getFileFocusIndex(state);
       const fileSelection = $.getFileSelection(state);
+      const resolvedInputMode = $.getResolvedInputMode(state);
       const key = getKeyboardString(event);
 
       // The file is considered focused if the active element is the document body
@@ -1015,8 +1037,11 @@ function useFileNavigation(
         }
         case 'ArrowLeft':
         case 'ArrowRight':
-          ensureElementFocus();
-          setFileMenuFocused((value) => !value);
+          if (resolvedInputMode === 'touch') {
+            // The file menu is only present in touch mode.
+            ensureElementFocus();
+            setFileMenuFocused((value) => !value);
+          }
           break;
         case 'Enter': {
           event.preventDefault();
@@ -1103,7 +1128,10 @@ function useFileNavigation(
           event.preventDefault();
           ensureElementFocus();
           listFilesRef.current?.blur();
-          setFileMenuFocused((value) => !value);
+          if (resolvedInputMode === 'touch') {
+            // The file menu is only present in touch mode.
+            setFileMenuFocused((value) => !value);
+          }
           clearSelection();
           break;
         default:

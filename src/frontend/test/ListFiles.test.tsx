@@ -209,12 +209,8 @@ describe('ListFiles', () => {
     await navigateByKeyboard('{ArrowDown}', '/lyrics');
     await navigateByKeyboard('{ArrowDown}', '/README.md');
 
-    const fileOption = getFileListing('/README.md');
-    const menuButton = within(fileOption).getByRole('button', {
-      name: /File Menu/i,
-    });
     await act(async () => {
-      await user.click(menuButton);
+      fireEvent.contextMenu(getFileListing('/README.md'));
     });
 
     const renameButton = await screen.findByRole('button', { name: /Rename/i });
@@ -683,6 +679,52 @@ describe('ListFiles', () => {
     });
 
     await waitFor(() => screen.getByText(/Ideas/));
+
+    // The setting is persisted to localStorage; reset it so it doesn't leak
+    // into later tests in this file.
+    store.dispatch(A.setInputMode('auto'));
+  });
+
+  it('hides the file menu button in mouse mode, but right-click still opens the menu', async () => {
+    await setupWithListing(['README.md']);
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    const fileOption = getFileListing('/README.md');
+    expect(
+      within(fileOption).queryByRole('button', { name: /File Menu/i }),
+    ).toBeNull();
+
+    await act(async () => {
+      fireEvent.contextMenu(fileOption);
+    });
+
+    expect(await screen.findByRole('button', { name: /Rename/i })).toBeTruthy();
+  });
+
+  it('shows the file menu button in touch mode, with arrow-key focus and Enter to open it', async () => {
+    const { store, user, navigateByKeyboard } = await setupWithListing([
+      'README.md',
+    ]);
+    store.dispatch(A.setInputMode('touch'));
+
+    await waitFor(() => getFileListing('/README.md'));
+
+    await navigateByKeyboard('{ArrowDown}', '/README.md');
+
+    const fileOption = getFileListing('/README.md');
+    expect(
+      within(fileOption).getByRole('button', { name: /File Menu/i }),
+    ).toBeTruthy();
+
+    await act(async () => {
+      await user.keyboard('{ArrowRight}');
+    });
+    await act(async () => {
+      await user.keyboard('{Enter}');
+    });
+
+    expect(await screen.findByRole('button', { name: /Rename/i })).toBeTruthy();
 
     // The setting is persisted to localStorage; reset it so it doesn't leak
     // into later tests in this file.
