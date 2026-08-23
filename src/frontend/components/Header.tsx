@@ -82,28 +82,20 @@ export function Header() {
 
   let isOpen;
   let title;
+  let showFileStoreSelection = true;
   switch (view) {
     case 'connect':
       isOpen = true;
-      title = <Path path="/" key={key} title="Connect" hideSiteName={true} />;
+      title = <Path path="/" key={key} title="Connect" />;
       break;
     case 'settings':
       isOpen = true;
-      title = (
-        <Path path="/" key={key} title="⚙️ Settings" hideSiteName={true} />
-      );
+      title = <Path path="/" key={key} title="⚙️ Settings" />;
       break;
     case 'connect-folder':
       isOpen = true;
-      title = (
-        <Path
-          path="/"
-          key={key}
-          title="Connect Folder"
-          hideSiteName={true}
-          showFileStoreSelection={false}
-        />
-      );
+      showFileStoreSelection = false;
+      title = <Path path="/" key={key} title="Connect Folder" />;
       break;
     case 'view-file':
     case 'view-pdf':
@@ -125,17 +117,16 @@ export function Header() {
     default:
       isOpen = true;
       assertType<'list-files' | null>(view);
-      title = (
-        <div className="headerTitle" key={key}>
-          <FileStoreSelection />
-        </div>
-      );
+      title = null;
       break;
   }
 
   return (
     <div className="header" style={headerStyle}>
-      <SiteName isOpen={isOpen} />
+      <HeaderHome
+        isOpen={isOpen}
+        showFileStoreSelection={showFileStoreSelection}
+      />
       <div className="headerStart">{title}</div>
       <div className="headerEnd">
         <SaveFileButton />
@@ -352,17 +343,7 @@ function SaveFileButton() {
   );
 }
 
-function Path({
-  path,
-  title,
-  hideSiteName,
-  showFileStoreSelection = true,
-}: {
-  path: string;
-  title?: any;
-  hideSiteName?: boolean;
-  showFileStoreSelection?: boolean;
-}) {
+function Path({ path, title }: { path: string; title?: any }) {
   const songTitle = $$.getActiveFileSongTitleOrNull();
   const fsSlug = $$.getCurrentFileStoreSlug();
   const breadcrumbs = [];
@@ -409,8 +390,6 @@ function Path({
   return (
     <>
       <div className="headerPath headerPathFull" key={'full' + path}>
-        <SiteName isOpen={!hideSiteName && !(songTitle ?? fileName)} />
-        {showFileStoreSelection ? <FileStoreSelection key="fileStore" /> : null}
         <div className="headerPathBreadcrumbs">
           {breadcrumbs}
           <span>»</span>
@@ -431,24 +410,33 @@ function Path({
   );
 }
 
-interface SlideInProps {
+/**
+ * The site name/logo and the file store selector slide open and closed together
+ * as one unit, since both are only relevant when at the home/root view.
+ */
+function HeaderHome(props: {
   isOpen: boolean;
-  skipAnimation?: boolean;
-  children: any;
-}
-
-function SlideIn({ isOpen, skipAnimation, children }: SlideInProps) {
+  showFileStoreSelection: boolean;
+}) {
+  const { isOpen, showFileStoreSelection } = props;
   const contentsRef = React.useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = React.useState<number>(0);
+  const [skipAnimation, setSkipAnimation] = React.useState(true);
+
+  React.useLayoutEffect(() => {
+    const { current } = contentsRef;
+    if (current) {
+      setWidth(current.getBoundingClientRect().width);
+    }
+  }, [showFileStoreSelection]);
 
   React.useEffect(() => {
-    const { current } = contentsRef;
-    if (!current) {
-      return;
-    }
-    const rect = current.getBoundingClientRect();
-    setWidth(rect.width);
-  }, [contentsRef]);
+    // This component is mounted once for the life of the app, so only the very
+    // first paint needs to skip the transition (it would otherwise animate the
+    // logo growing in from 0 width on page load). Every navigation after that
+    // should animate.
+    setSkipAnimation(false);
+  }, []);
 
   const className = skipAnimation
     ? 'headerSlideIn'
@@ -457,49 +445,21 @@ function SlideIn({ isOpen, skipAnimation, children }: SlideInProps) {
   return (
     <div className={className} style={{ width: isOpen ? width : 0 }}>
       <div className="headerSlideInContents" ref={contentsRef}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-let wasAnimated = false;
-function SiteName(props: { isOpen: boolean }) {
-  const [skipAnimation, setSkipAnimation] = React.useState(!wasAnimated);
-
-  React.useEffect(() => {
-    if (wasAnimated) {
-      setSkipAnimation(false);
-    }
-    wasAnimated = true;
-  }, [props.isOpen]);
-
-  if (process.env.SITE === 'floppydisk') {
-    return (
-      <div className="headerSiteName">
-        <SlideIn isOpen={props.isOpen} skipAnimation={skipAnimation}>
-          <span>
-            <img
-              src="/favicon-48x48.png"
-              className="headerFloppyDiskImg"
-            />{' '}
+        {process.env.SITE === 'floppydisk' ? (
+          <span className="headerFloppyDiskLogo">
+            <img src="/favicon-48x48.png" className="headerFloppyDiskImg" />
+            <span className="headerSiteNameTitle">
+              FloppyDisk<span className="headerSiteNameSuffix">.link</span>
+            </span>
           </span>
-          <span className="headerSiteNameTitle">
-            FloppyDisk<span className="headerSiteNameSuffix">.link</span>
-          </span>
-        </SlideIn>
-      </div>
-    );
-  } else {
-    return (
-      <div className="headerSiteName">
-        <SlideIn isOpen={props.isOpen} skipAnimation={skipAnimation}>
+        ) : (
           <div className="headerTitleSlideIn">
             <span>🎵 </span>
             <span className="headerSiteNameTitle">Browser Chords</span>
           </div>
-        </SlideIn>
+        )}
+        {showFileStoreSelection ? <FileStoreSelection /> : null}
       </div>
-    );
-  }
+    </div>
+  );
 }
