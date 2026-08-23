@@ -8,7 +8,6 @@ import {
   getKeyboardString,
   getPathFileName,
   getPathFileNameNoExt,
-  htmlElementOrNull,
   pathJoin,
   setScrollTop,
 } from 'frontend/utils';
@@ -758,10 +757,23 @@ export function useUploadOnFileDrop(
   divRef: React.RefObject<HTMLElement | null>,
   folderPath: string,
 ) {
-  const dispatch = useDispatch();
+  const { getState, dispatch } = useStore();
   useFileDrop(divRef, (event) => {
     const { dataTransfer } = event;
     if (!dataTransfer) {
+      return;
+    }
+
+    const draggedPaths = $.getDraggedFiles(getState());
+    if (draggedPaths?.length) {
+      // A file listing selection was dragged from within the app, move the files instead.
+      dispatch(A.clearDraggedFiles());
+      if (draggedPaths.length > 1) {
+        void dispatch(A.moveFiles(draggedPaths, folderPath));
+      } else {
+        const toPath = pathJoin(folderPath, getPathFileName(draggedPaths[0]));
+        void dispatch(A.moveFile(draggedPaths[0], toPath));
+      }
       return;
     }
 
@@ -770,27 +782,7 @@ export function useUploadOnFileDrop(
     if (files?.length) {
       // This is infallible, as it reports errors with messages.
       void dispatch(A.uploadFilesWithMessages(folderPath, dataTransfer.files));
-      return;
     }
-
-    // A DOM element was dragged and dropped. Parse the DOM to see if it was a
-    // file link. If it was it will have a [data-file-path].
-    const html = dataTransfer.getData('text/html');
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const fileElement = htmlElementOrNull(
-      doc.querySelector('[data-file-path]'),
-    );
-
-    const fromPath = fileElement?.dataset.filePath;
-    if (!fromPath) {
-      return;
-    }
-
-    const toPath = pathJoin(folderPath, getPathFileName(fromPath));
-
-    // This is infallible, as it reports errors with messages.
-    void dispatch(A.moveFile(fromPath, toPath));
   });
 }
 

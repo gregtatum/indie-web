@@ -216,6 +216,14 @@ export function clearCopyFile() {
   return { type: 'clear-copy-file' as const };
 }
 
+export function setDraggedFiles(paths: string[]) {
+  return { type: 'set-dragged-files' as const, paths };
+}
+
+export function clearDraggedFiles() {
+  return { type: 'clear-dragged-files' as const };
+}
+
 export function changeFileStore(
   fileStoreName: T.FileStoreName,
   fileStoreServer?: T.FileStoreServer,

@@ -169,6 +169,10 @@ export function getCopyFile(state: State) {
   return state.copyFile;
 }
 
+export function getDraggedFiles(state: State) {
+  return state.draggedFiles;
+}
+
 export function getFileStoreDisplayName(state: State): string {
   return AppLogic.getFileStoreDisplayName(
     getCurrentFileStoreName(state),

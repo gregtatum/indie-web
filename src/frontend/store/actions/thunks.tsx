@@ -472,6 +472,90 @@ export function moveFile(
 }
 
 /**
+ * Move one or more files/folders into a destination folder.
+ */
+export function moveFiles(
+  fromPaths: string[],
+  destinationFolder: string,
+): Thunk<Promise<void>> {
+  return async (dispatch) => {
+    if (fromPaths.length === 0) {
+      return;
+    }
+
+    const targetFolder = canonicalizePath(destinationFolder);
+    const moves = fromPaths
+      .map((fromPath) => ({
+        fromPath,
+        toPath: canonicalizePath(
+          pathJoin(targetFolder, getPathFileName(fromPath)),
+        ),
+      }))
+      // Skip no-op moves, e.g. dropping a selection back into its own folder.
+      .filter(({ fromPath, toPath }) => toPath !== fromPath);
+
+    if (moves.length === 0) {
+      return;
+    }
+
+    const isBatch = moves.length > 1;
+    let batchGeneration: number | undefined;
+    let failureCount = 0;
+    const movedNames: string[] = [];
+
+    for (let i = 0; i < moves.length; i++) {
+      const { fromPath, toPath } = moves[i];
+
+      if (isBatch) {
+        batchGeneration = dispatch(
+          addMessage({
+            message: (
+              <>
+                Moving {i + 1}/{moves.length} items
+              </>
+            ),
+            generation: batchGeneration,
+          }),
+        );
+      }
+
+      try {
+        await dispatch(moveFile(fromPath, toPath, isBatch));
+        movedNames.push(getPathFileName(toPath));
+      } catch (error) {
+        failureCount += 1;
+        console.error(error);
+      }
+    }
+
+    if (isBatch) {
+      const succeeded = moves.length - failureCount;
+      dispatch(
+        addMessage({
+          message:
+            failureCount > 0 ? (
+              <>
+                Moved {succeeded} of {moves.length} items
+              </>
+            ) : (
+              <>Moved {moves.length} items</>
+            ),
+          generation: batchGeneration,
+          timeout: failureCount === 0,
+        }),
+      );
+    }
+
+    if (movedNames.length) {
+      dispatch(Plain.setFileSelection(targetFolder, movedNames));
+      dispatch(
+        Plain.changeFileFocus(targetFolder, movedNames[movedNames.length - 1]),
+      );
+    }
+  };
+}
+
+/**
  * Rename a file, optionally renaming other selected files at the same time.
  * This follows the Windows Explorer convention for renaming multiple
  * selected files at once: the edited file gets the exact typed name, and

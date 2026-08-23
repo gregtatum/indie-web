@@ -800,6 +800,20 @@ function copyFile(
   }
 }
 
+function draggedFiles(
+  state: string[] | null = null,
+  action: T.Action,
+): string[] | null {
+  switch (action.type) {
+    case 'set-dragged-files':
+      return action.paths;
+    case 'clear-dragged-files':
+      return null;
+    default:
+      return state;
+  }
+}
+
 /**
  * Drops folder-keyed state made stale by a file move or rename.
  */
@@ -899,6 +913,7 @@ export const reducers = combineReducers({
   downloadFileErrors,
   dropboxOauth,
   copyFile,
+  draggedFiles,
   editorAutocompleteSettings,
   editorOnly,
   detectedPointerType,

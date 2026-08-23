@@ -23,6 +23,22 @@ function mockPlatform(platform: string) {
     .mockReturnValue(platform);
 }
 
+function createMockedDataTransfer() {
+  const data = new Map<string, string>();
+  return {
+    setData: (format: string, value: string) => {
+      data.set(format, value);
+    },
+    getData: (format: string) => data.get(format) ?? '',
+    clearData: () => data.clear(),
+    dropEffect: 'move',
+    effectAllowed: 'uninitialized',
+    files: [],
+    items: [],
+    types: [],
+  } as unknown as DataTransfer;
+}
+
 describe('ListFiles', () => {
   const { getIDBFS } = useTestIDBFS();
 
@@ -925,6 +941,138 @@ describe('ListFiles', () => {
           └── B.md
       "
     `);
+  });
+
+  it('drags a single file into a folder', async () => {
+    const { renderTree } = await setupWithListing(['A.md', 'Dest/']);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    const dataTransfer = createMockedDataTransfer();
+    act(() => {
+      fireEvent.dragStart(getFileLink('/A.md'), { dataTransfer });
+      fireEvent.drop(getFileListing('/Dest'), { dataTransfer });
+    });
+
+    // A single file move shows the ordinary single-file toast, not a batch one.
+    await waitFor(() => {
+      expect(screen.getAllByText('Moved')).toHaveLength(1);
+    });
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      └── Dest
+          └── A.md
+      "
+    `);
+  });
+
+  it('drags multiple selected files into a folder', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'C.md',
+      'Dest/',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Select A.md through B.md with a shift-click range.
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    await act(async () => {
+      await user.keyboard('{Shift>}');
+      await user.click(getFileLink('/B.md'));
+      await user.keyboard('{/Shift}');
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md', '/B.md']);
+
+    // Drag the selection (starting the drag from A.md) onto the Dest folder.
+    const dataTransfer = createMockedDataTransfer();
+    act(() => {
+      fireEvent.dragStart(getFileLink('/A.md'), { dataTransfer });
+      fireEvent.drop(getFileListing('/Dest'), { dataTransfer });
+    });
+
+    // A single consolidated toast is shown for the batch, not one per file.
+    await waitFor(() => {
+      expect(screen.getAllByText('Moved 2 items')).toHaveLength(1);
+    });
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── C.md
+      └── Dest
+          ├── A.md
+          └── B.md
+      "
+    `);
+  });
+
+  it('drags an unselected file into a folder, ignoring an unrelated selection', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'A.md',
+      'B.md',
+      'C.md',
+      'Dest/',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Select A.md and B.md.
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    await act(async () => {
+      await user.keyboard('{Shift>}');
+      await user.click(getFileLink('/B.md'));
+      await user.keyboard('{/Shift}');
+    });
+    expect(getSelectedFilePaths()).toEqual(['/A.md', '/B.md']);
+
+    // Drag C.md, which is not part of the selection, onto the Dest folder.
+    // Only C.md should move; the unrelated A.md/B.md selection stays put.
+    const dataTransfer = createMockedDataTransfer();
+    act(() => {
+      fireEvent.dragStart(getFileLink('/C.md'), { dataTransfer });
+      fireEvent.drop(getFileListing('/Dest'), { dataTransfer });
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Moved')).toHaveLength(1);
+    });
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── A.md
+      ├── B.md
+      └── Dest
+          └── C.md
+      "
+    `);
+  });
+
+  it('clears the dragged-files state when a drag ends without a drop', async () => {
+    const { store } = await setupWithListing(['A.md', 'Dest/']);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    const dataTransfer = createMockedDataTransfer();
+    act(() => {
+      fireEvent.dragStart(getFileLink('/A.md'), { dataTransfer });
+    });
+    expect($.getDraggedFiles(store.getState())).toEqual(['/A.md']);
+
+    // Cancel the drag (e.g. Escape, or dropping outside a valid target)
+    // rather than dropping it on a folder.
+    act(() => {
+      fireEvent.dragEnd(getFileLink('/A.md'), { dataTransfer });
+    });
+    expect($.getDraggedFiles(store.getState())).toBeNull();
   });
 
   it('deletes multiple selected files with the Delete key (Windows/Linux)', async () => {

@@ -362,6 +362,9 @@ export function File(props: FileProps) {
   const { name, path, type } = file;
   const renameFile = $$.getRenameFile();
   const fsSlug = $$.getCurrentFileStoreSlug();
+  const fileSelection = $$.getFileSelection();
+  const files = $$.getSearchFilteredFiles();
+  const dispatch = Hooks.useDispatch();
   const navigate = Router.useNavigate();
   const divRef = React.useRef<null | HTMLDivElement>(null);
   const fileMenuRef = React.useRef<FileMenuHandle>(null);
@@ -503,6 +506,26 @@ export function File(props: FileProps) {
     fileMenuRef.current?.open({ x: event.clientX, y: event.clientY });
   };
 
+  // Drag this file, or the entire multi-selection if this file is part of one, so it
+  // can be dropped onto a folder to move it.
+  const handleDragStart = (event: React.DragEvent) => {
+    let dragPaths = [path];
+    if (fileSelection.length > 1 && fileSelection.includes(name)) {
+      // This is a multi-selection.
+      dragPaths = [];
+      for (const entry of files ?? []) {
+        if (fileSelection.includes(entry.name)) {
+          dragPaths.push(entry.path);
+        }
+      }
+    }
+    dispatch(A.setDraggedFiles(dragPaths));
+  };
+
+  const handleDragEnd = () => {
+    dispatch(A.clearDraggedFiles());
+  };
+
   const handleEmptyLinkClick = (event: React.MouseEvent) => {
     event.preventDefault();
     if (
@@ -533,7 +556,8 @@ export function File(props: FileProps) {
           className="listFilesFileLink"
           to={link}
           onClick={handleLinkClick}
-          // Drag/drop events can read this:
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
           data-file-path={path}
           tabIndex={-1}
         >
@@ -562,9 +586,10 @@ export function File(props: FileProps) {
       <a
         href=""
         className="listFilesFileEmpty"
-        // Drag/drop events can read this:
         data-file-path={path}
         onClick={handleEmptyLinkClick}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         tabIndex={-1}
       >
         <span className={iconClassName}>
