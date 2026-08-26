@@ -8,6 +8,7 @@ import {
   getKeyboardString,
   getPathFileName,
   getPathFileNameNoExt,
+  isPathOrDescendant,
   pathJoin,
   setScrollTop,
 } from 'frontend/utils';
@@ -133,6 +134,10 @@ export function useRetainScroll() {
 export function useFileDrop(
   targetRef: React.RefObject<HTMLElement | null>,
   onDropCallback: (event: DragEvent) => unknown,
+  // Checked on dragenter/dragover/drop. Returning false leaves the event
+  // un-prevented, so the browser shows a "not allowed" cursor and never
+  // fires `drop` at all, instead of just skipping the drop's side effects.
+  canAcceptDrop?: (event: DragEvent) => boolean,
 ): boolean {
   const [dragging, setDraggingState] = React.useState(false);
 
@@ -147,6 +152,9 @@ export function useFileDrop(
 
   React.useEffect(() => {
     const handleDragEnter = (event: DragEvent) => {
+      if (canAcceptDrop && !canAcceptDrop(event)) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       setDragging(true);
@@ -159,12 +167,18 @@ export function useFileDrop(
     };
 
     const handleDragOver = (event: DragEvent) => {
+      if (canAcceptDrop && !canAcceptDrop(event)) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       setDragging(true);
     };
 
     const handleDrop = (event: DragEvent) => {
+      if (canAcceptDrop && !canAcceptDrop(event)) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       setDragging(false);
@@ -187,7 +201,7 @@ export function useFileDrop(
       element.removeEventListener('dragleave', handleDragLeave);
       element.removeEventListener('drop', handleDrop);
     };
-  }, [targetRef, onDropCallback]);
+  }, [targetRef, onDropCallback, canAcceptDrop]);
 
   return dragging;
 }
@@ -758,32 +772,60 @@ export function useUploadOnFileDrop(
   folderPath: string,
 ) {
   const { getState, dispatch } = useStore();
-  useFileDrop(divRef, (event) => {
-    const { dataTransfer } = event;
-    if (!dataTransfer) {
-      return;
-    }
 
+  /**
+   * If a folder is in a multi-selection, don't allow dropping inside of it, as this
+   * would be non-sensical.
+   */
+  function canAcceptDrop() {
     const draggedPaths = $.getDraggedFiles(getState());
-    if (draggedPaths?.length) {
-      // A file listing selection was dragged from within the app, move the files instead.
-      dispatch(A.clearDraggedFiles());
-      if (draggedPaths.length > 1) {
-        void dispatch(A.moveFiles(draggedPaths, folderPath));
-      } else {
-        const toPath = pathJoin(folderPath, getPathFileName(draggedPaths[0]));
-        void dispatch(A.moveFile(draggedPaths[0], toPath));
+    if (!draggedPaths) {
+      return true;
+    }
+    return !draggedPaths.some((draggedPath) =>
+      isPathOrDescendant(folderPath, draggedPath),
+    );
+  }
+
+  useFileDrop(
+    divRef,
+    (event) => {
+      const { dataTransfer } = event;
+      if (!dataTransfer) {
+        return;
       }
-      return;
-    }
 
-    const { files } = dataTransfer;
+      const draggedPaths = $.getDraggedFiles(getState());
+      if (draggedPaths?.length) {
+        // A file listing selection was dragged from within the app, move the files instead.
+        dispatch(A.clearDraggedFiles());
+        if (
+          draggedPaths.some((draggedPath) =>
+            isPathOrDescendant(folderPath, draggedPath),
+          )
+        ) {
+          throw new Error('You cannot drag folders onto themselves.');
+        }
+        if (draggedPaths.length > 1) {
+          void dispatch(A.moveFiles(draggedPaths, folderPath));
+        } else {
+          const toPath = pathJoin(folderPath, getPathFileName(draggedPaths[0]));
+          void dispatch(A.moveFile(draggedPaths[0], toPath));
+        }
+        return;
+      }
 
-    if (files?.length) {
-      // This is infallible, as it reports errors with messages.
-      void dispatch(A.uploadFilesWithMessages(folderPath, dataTransfer.files));
-    }
-  });
+      const { files } = dataTransfer;
+
+      if (files?.length) {
+        // This is infallible, as it reports errors with messages.
+        void dispatch(
+          A.uploadFilesWithMessages(folderPath, dataTransfer.files),
+        );
+      }
+    },
+    canAcceptDrop,
+  );
 }
 
 /**

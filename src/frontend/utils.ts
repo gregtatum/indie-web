@@ -254,6 +254,14 @@ export function getPathFileNameNoExt(path: string) {
   const fileName = getPathFileName(path);
   return fileName.replace(/\.\w+$/, '');
 }
+
+/**
+ * Whether `path` is `ancestorPath` itself, or nested somewhere inside it.
+ * Used to prevent moving a folder into itself or one of its own descendants.
+ */
+export function isPathOrDescendant(path: string, ancestorPath: string) {
+  return path === ancestorPath || path.startsWith(`${ancestorPath}/`);
+}
 /**
  * Dropbox doesn't support relative paths, but a user may input them.
  * Canonicalize them so that Dropbox is happy.

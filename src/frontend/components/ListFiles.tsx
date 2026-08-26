@@ -508,7 +508,7 @@ export function File(props: FileProps) {
 
   // Drag this file, or the entire multi-selection if this file is part of one, so it
   // can be dropped onto a folder to move it.
-  const handleDragStart = (event: React.DragEvent) => {
+  const handleDragStart = () => {
     let dragPaths = [path];
     if (fileSelection.length > 1 && fileSelection.includes(name)) {
       // This is a multi-selection.

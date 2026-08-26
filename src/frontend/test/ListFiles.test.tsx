@@ -1056,6 +1056,68 @@ describe('ListFiles', () => {
     `);
   });
 
+  it('rejects dragging a multi-selection onto itself when the target folder is part of the selection', async () => {
+    const { renderTree, user, getSelectedFilePaths } = await setupWithListing([
+      'FolderA/',
+      'FolderB/',
+      'FileA.md',
+      'FileB.md',
+    ]);
+
+    await waitFor(() => getFileListing('/FolderB'));
+
+    // Select FolderB, FileA.md, and FileB.md.
+    await act(async () => {
+      await user.click(getFileLink('/FolderB'));
+    });
+    await act(async () => {
+      await user.keyboard('{Control>}');
+      await user.click(getFileLink('/FileA.md'));
+      await user.keyboard('{/Control}');
+    });
+    await act(async () => {
+      await user.keyboard('{Control>}');
+      await user.click(getFileLink('/FileB.md'));
+      await user.keyboard('{/Control}');
+    });
+    expect(getSelectedFilePaths()).toEqual([
+      '/FileA.md',
+      '/FileB.md',
+      '/FolderB',
+    ]);
+
+    // Drag the selection over FolderB, which is part of the selection being
+    // dragged. This should be a no-op: no hover feedback, and no drop.
+    const dataTransfer = createMockedDataTransfer();
+    act(() => {
+      fireEvent.dragStart(getFileLink('/FolderB'), { dataTransfer });
+      fireEvent.dragEnter(getFileListing('/FolderB'), { dataTransfer });
+    });
+    expect(getFileListing('/FolderB').classList.contains('dragging')).toBe(
+      false,
+    );
+
+    act(() => {
+      fireEvent.drop(getFileListing('/FolderB'), { dataTransfer });
+    });
+
+    // Give any errant async work a chance to run before asserting nothing happened.
+    await Promise.resolve();
+
+    expect(screen.queryByText(/Moving/)).toBeNull();
+    expect(screen.queryByText(/Moved/)).toBeNull();
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── FolderA
+      ├── FolderB
+      ├── FileA.md
+      └── FileB.md
+      "
+    `);
+  });
+
   it('clears the dragged-files state when a drag ends without a drop', async () => {
     const { store } = await setupWithListing(['A.md', 'Dest/']);
 
