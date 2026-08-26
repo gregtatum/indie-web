@@ -773,17 +773,15 @@ export function useUploadOnFileDrop(
 ) {
   const { getState, dispatch } = useStore();
 
-  /**
-   * If a folder is in a multi-selection, don't allow dropping inside of it, as this
-   * would be non-sensical.
-   */
   function canAcceptDrop() {
     const draggedPaths = $.getDraggedFiles(getState());
     if (!draggedPaths) {
       return true;
     }
-    return !draggedPaths.some((draggedPath) =>
-      isPathOrDescendant(folderPath, draggedPath),
+    return !draggedPaths.some(
+      (draggedPath) =>
+        isPathOrDescendant(folderPath, draggedPath) ||
+        getDirName(draggedPath) === folderPath,
     );
   }
 
@@ -800,11 +798,13 @@ export function useUploadOnFileDrop(
         // A file listing selection was dragged from within the app, move the files instead.
         dispatch(A.clearDraggedFiles());
         if (
-          draggedPaths.some((draggedPath) =>
-            isPathOrDescendant(folderPath, draggedPath),
+          draggedPaths.some(
+            (draggedPath) =>
+              isPathOrDescendant(folderPath, draggedPath) ||
+              getDirName(draggedPath) === folderPath,
           )
         ) {
-          throw new Error('You cannot drag folders onto themselves.');
+          throw new Error('You cannot drag files onto their own folder.');
         }
         if (draggedPaths.length > 1) {
           void dispatch(A.moveFiles(draggedPaths, folderPath));

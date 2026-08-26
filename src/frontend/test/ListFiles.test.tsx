@@ -1118,6 +1118,40 @@ describe('ListFiles', () => {
     `);
   });
 
+  it('rejects dragging a file onto the folder it is already in', async () => {
+    const { renderTree } = await setupWithListing(['Dest/', 'A.md']);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    // Drag A.md over the root listing itself, which is the folder it's already in.
+    // This should be a no-op: no hover feedback, and no drop.
+    const dataTransfer = createMockedDataTransfer();
+    const listFiles = screen.getByTestId('list-files');
+    act(() => {
+      fireEvent.dragStart(getFileLink('/A.md'), { dataTransfer });
+      fireEvent.dragEnter(listFiles, { dataTransfer });
+    });
+    expect(listFiles.classList.contains('dragging')).toBe(false);
+
+    act(() => {
+      fireEvent.drop(listFiles, { dataTransfer });
+    });
+
+    // Give any errant async work a chance to run before asserting nothing happened.
+    await Promise.resolve();
+
+    expect(screen.queryByText(/Moving/)).toBeNull();
+    expect(screen.queryByText(/Moved/)).toBeNull();
+
+    expect(await renderTree()).toMatchInlineSnapshot(`
+      "
+      .
+      ├── Dest
+      └── A.md
+      "
+    `);
+  });
+
   it('clears the dragged-files state when a drag ends without a drop', async () => {
     const { store } = await setupWithListing(['A.md', 'Dest/']);
 
