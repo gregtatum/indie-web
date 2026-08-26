@@ -151,6 +151,11 @@ export function useFileDrop(
   }
 
   React.useEffect(() => {
+    const element = targetRef.current;
+    if (!element) {
+      return () => {};
+    }
+
     const handleDragEnter = (event: DragEvent) => {
       if (canAcceptDrop && !canAcceptDrop(event)) {
         return;
@@ -185,21 +190,31 @@ export function useFileDrop(
       onDropCallback(event);
     };
 
-    const element = targetRef.current;
-    if (!element) {
-      return () => {};
-    }
+    const handleWindowDragEnd = () => {
+      // Ensure the dragging is ended.
+      setDragging(false);
+    };
+
+    const handleWindowDragOver = (event: DragEvent) => {
+      if (!(event.target instanceof Node && element.contains(event.target))) {
+        setDragging(false);
+      }
+    };
 
     element.addEventListener('dragenter', handleDragEnter);
     element.addEventListener('dragover', handleDragOver);
     element.addEventListener('dragleave', handleDragLeave);
     element.addEventListener('drop', handleDrop);
+    window.addEventListener('dragend', handleWindowDragEnd);
+    window.addEventListener('dragover', handleWindowDragOver, true);
 
     return () => {
       element.removeEventListener('dragenter', handleDragEnter);
       element.removeEventListener('dragover', handleDragOver);
       element.removeEventListener('dragleave', handleDragLeave);
       element.removeEventListener('drop', handleDrop);
+      window.removeEventListener('dragend', handleWindowDragEnd);
+      window.removeEventListener('dragover', handleWindowDragOver, true);
     };
   }, [targetRef, onDropCallback, canAcceptDrop]);
 
