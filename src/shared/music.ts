@@ -195,24 +195,26 @@ export const TAG_FORMAT_PRIORITY = [
   'ID3v2.4',
   'ID3v2.2',
   'ID3v1',
+  'iTunes',
 ] as const;
 
 /**
  * ID3v2.2 uses 3-character frame IDs. ID3v1 uses fixed fields instead of frame
- * IDs, which music-metadata exposes as plain words such as "genre". This maps
- * a canonical ID3v2.3 or ID3v2.4 frame ID to the frame ID used by formats
- * that name the same field differently.
+ * IDs, which music-metadata exposes as plain words such as "genre". iTunes
+ * (M4A/MP4) uses its own atom names, e.g. "©nam" for title. This maps a
+ * canonical ID3v2.3 or ID3v2.4 frame ID to the frame ID used by formats that
+ * name the same field differently.
  */
 const FRAME_ID_ALIASES: Record<string, Partial<Record<string, string>>> = {
-  TIT2: { 'ID3v2.2': 'TT2', ID3v1: 'title' },
-  TPE1: { 'ID3v2.2': 'TP1', ID3v1: 'artist' },
-  TPE2: { 'ID3v2.2': 'TP2' },
-  TALB: { 'ID3v2.2': 'TAL', ID3v1: 'album' },
-  TCOM: { 'ID3v2.2': 'TCM' },
-  TRCK: { 'ID3v2.2': 'TRK', ID3v1: 'track' },
-  TPOS: { 'ID3v2.2': 'TPA' },
+  TIT2: { 'ID3v2.2': 'TT2', ID3v1: 'title', iTunes: '©nam' },
+  TPE1: { 'ID3v2.2': 'TP1', ID3v1: 'artist', iTunes: '©ART' },
+  TPE2: { 'ID3v2.2': 'TP2', iTunes: 'aART' },
+  TALB: { 'ID3v2.2': 'TAL', ID3v1: 'album', iTunes: '©alb' },
+  TCOM: { 'ID3v2.2': 'TCM', iTunes: '©wrt' },
+  TRCK: { 'ID3v2.2': 'TRK', ID3v1: 'track', iTunes: 'trkn' },
+  TPOS: { 'ID3v2.2': 'TPA', iTunes: 'disk' },
   TYER: { 'ID3v2.2': 'TYE', ID3v1: 'year' },
-  TCON: { 'ID3v2.2': 'TCO', ID3v1: 'genre' },
+  TCON: { 'ID3v2.2': 'TCO', ID3v1: 'genre', iTunes: '©gen' },
   TBPM: { 'ID3v2.2': 'TBP' },
   COMM: { 'ID3v2.2': 'COM', ID3v1: 'comment' },
 };
