@@ -70,6 +70,18 @@ tasks:
       - '[ -d "node_modules" ] || npm install'
       - MOUNT_PATH=../../music PORT=6544 npm run start-dev
 
+  screenshots:
+    desc: |
+      Capture screenshots of the application through Playwright.
+      Output: artifacts/screenshots/.
+      Examples:
+        task screenshots
+        task screenshots -- --site floppydisk
+        task screenshots -- --only tapeplayer-library --headed
+        task screenshots -- --list
+    cmds:
+      - node src/shared/scripts/screenshots.mjs {{.CLI_ARGS}}
+
   lint-js:
     desc: Lint the JavaScript files.
     cmds:
