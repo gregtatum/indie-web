@@ -102,9 +102,17 @@ export function Header() {
     case 'view-image':
     case 'view-markdown':
     case 'language-coach':
-    case 'music':
       isOpen = false;
       title = <Path key={key} path={path} />;
+      break;
+    case 'music':
+      if (path !== '/') {
+        isOpen = false;
+        title = <Path key={key} path={path} />;
+        break;
+      }
+      isOpen = true;
+      title = null;
       break;
     case 'list-files':
       if (location.pathname !== '/folder' && location.pathname !== '/') {

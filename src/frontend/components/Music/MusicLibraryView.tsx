@@ -838,12 +838,9 @@ function Tracks() {
         setFocusedPath(track.path);
         dispatch(A.setMusicSelectedTracks(range));
       } else {
-        const isSoleSelected =
-          currentPaths.length === 1 && currentPaths[0] === track.path;
-        const next = isSoleSelected ? [] : [track.path];
-        anchorPathRef.current = isSoleSelected ? null : track.path;
-        setFocusedPath(isSoleSelected ? null : track.path);
-        dispatch(A.setMusicSelectedTracks(next));
+        anchorPathRef.current = track.path;
+        setFocusedPath(track.path);
+        dispatch(A.setMusicSelectedTracks([track.path]));
       }
     },
     [],
