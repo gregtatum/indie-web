@@ -7,6 +7,7 @@ interface Props {
   onClose: () => void;
   ariaLabelledBy?: string;
   children: React.ReactNode;
+  fillVertical?: boolean;
 }
 
 /**
@@ -25,7 +26,13 @@ interface Props {
  * index.html (DOM order), hooks/index.tsx (overlayPortal, modalPortal), Popup.tsx.
  * Update all of these if the stacking strategy changes.
  */
-export function Modal({ isOpen, onClose, ariaLabelledBy, children }: Props) {
+export function Modal({
+  isOpen,
+  onClose,
+  ariaLabelledBy,
+  children,
+  fillVertical,
+}: Props) {
   const boxRef = React.useRef<HTMLDivElement>(null);
 
   Hooks.useEscape(onClose, isOpen);
@@ -45,7 +52,7 @@ export function Modal({ isOpen, onClose, ariaLabelledBy, children }: Props) {
       }}
     >
       <div
-        className="modalBox"
+        className={`modalBox${fillVertical ? ' modalBoxFillVertical' : ''}`}
         ref={boxRef}
         role="dialog"
         aria-modal="true"

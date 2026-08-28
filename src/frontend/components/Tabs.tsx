@@ -19,9 +19,8 @@ interface Props {
 
 /**
  * Segmented tab strip with a managed panel area for switching between named views
- * within a panel or modal. All panels are kept in the DOM simultaneously and stacked
- * via CSS grid so the container height always equals the tallest panel — switching
- * tabs never causes layout thrash, and resize is handled entirely in CSS.
+ * within a panel or modal. Panels stay mounted (inactive ones are `display: none`)
+ * so switching tabs preserves each panel's state and scroll position independently.
  * The caller owns the active tab state and fires onChange when the user picks a tab.
  *
  * Keyboard: Tab enters/exits the strip; Left/Right arrows move between tabs.
@@ -82,7 +81,8 @@ export function Tabs({ tabs, activeTab, onChange }: Props) {
           <div
             key={tab.id}
             role="tabpanel"
-            className={`tabPanel${tab.id !== activeTab ? ' tabPanel-hidden' : ''}`}
+            aria-hidden={tab.id !== activeTab}
+            className={`tabPanel${tab.id === activeTab ? ' tabPanelActive' : ''}`}
           >
             {tab.panel}
           </div>

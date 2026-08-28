@@ -49,17 +49,16 @@
 }
 
 .tabPanels {
-  display: grid;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
 }
 
 .tabPanel {
-  grid-area: 1 / 1;
+  display: none;
 }
 
-.tabPanel-hidden {
-  visibility: hidden;
-  pointer-events: none;
+.tabPanelActive {
+  display: block;
+  height: 100%;
+  overflow-y: auto;
 }

@@ -6,6 +6,10 @@
   min-width: 460px;
 }
 
+.editTrackModal .tabPanels {
+  background: var(--modal-bg);
+}
+
 .editTrackModalHeader {
   padding: 20px 48px 20px 24px;
   background: var(--modal-bg);

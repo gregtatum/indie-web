@@ -1116,6 +1116,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       isOpen={!!trackPath}
       onClose={handleClose}
       ariaLabelledBy="edit-track-modal-title"
+      fillVertical
     >
       <div className="music editTrackModal">
         <div
