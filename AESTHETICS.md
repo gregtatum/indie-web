@@ -20,44 +20,61 @@ This is one codebase serving a family of indie-web apps that all sit on the same
 
 Each surface has a different job, so each spends its expressiveness in a different place (see *Utility vs. expressive* below). The philosophy above and the tokens below are shared across all three; the file browser, add-file flow, headers, and viewers are literally shared components and must read as one product.
 
+## Design direction
+
+The intended look is captured in `artifacts/design-direction.png` (FloppyDisk) and `artifacts/music-design-direction*.png` (TapePlayer). These are aspiration, not the current build. The notes below are reconciled against them; where the shipped CSS differs, the direction wins.
+
+## Shared frame
+
+- Every surface runs in the same shell: a top bar of `[brand mark] [context switcher ▾] … [Menu]`, with an optional secondary toolbar beneath it (e.g. TapePlayer's *Scan Library* plus the *Library / Files* toggle).
+- The *Library / Files* segmented toggle is the seam between a specialized view and the raw file browser, and the raw side is always the FloppyDisk browser. Every specialized surface keeps this escape hatch.
+- Detail views are dismissable panels that take over the primary content area with their own inline header (title, actions, close) — not separate routes. FloppyDisk's Markdown preview and TapePlayer's album detail are the same pattern.
+- Breadcrumbs are FloppyDisk's primary navigation: stable, path-shaped, one row.
+
 ## Tokens
 
-**Color.** The foreground palette stays near-neutral so artwork and content supply the color.
+**Color.** The foreground palette stays near-neutral so artwork and content supply the color. One accent — violet — carries every interaction across all three surfaces.
 
 - `--ink: #111` — headings
 - `--body: #000` on `--paper: #fff`
 - `--muted: #666` / `--faint: #888` — labels and secondary metadata
-- `--line: #ddd` — hairline rules and column borders
-- `--raised: #fafafa` — toolbars, section headers, playback bar
-- `--primary: #004eca` — selection and primary actions (existing)
-- `--accent: #ce1ebb` — one highlight per view at most, never structural (existing)
-- **Contextual color** — a heavily desaturated, lightened wash derived from the content in view: album art in TapePlayer, a chosen songbook or project accent in TuneBook and FloppyDisk. Permitted only on large background surfaces behind presentation moments. Foreground text and controls never take the derived color; they stay on the neutral palette above so legibility is constant.
+- `--line: #e6e6e6` — hairline rules, used sparingly (see Structure)
+- `--raised: #fafafa` — toolbars and the playback bar
+- `--accent: #7c3aed` — the only interactive accent: primary buttons, links, selection, progress and volume tracks, the folder and brand marks. Sampled from the direction; treat the hex as approximate.
+- `--accent-strong: #5b28d6` — solid fill for a selected filter facet (genre / artist / album)
+- `--accent-tint: #7c3aed14` — light wash for a selected or hovered row
+- *Legacy note:* the shipped CSS uses `--primary-color: #004eca` (blue) and `--accent-color: #ce1ebb` (magenta). The direction consolidates on violet; blue retires, and magenta survives only as the FloppyDisk brand mark.
+- **Contextual color** — a desaturated wash derived from album art. Not part of the current direction; kept only as a possible future treatment for a full-screen now-playing view. If revived: background surfaces only, never foreground text or controls.
 
 **Type.** Three roles:
 
 - *Utility / UI* — `system-ui` (keep). Native, fast, and invisible: correct for toolbars, filter columns, the track list, the file browser, the editor, and the viewers—i.e. most of every surface.
 - *Data* — `system-ui` with `font-variant-numeric: tabular-nums` for track numbers, durations, timestamps, and transpose / capo values. Make this a global rule, not a per-component choice.
-- *Display* — one characterful face used only in presentation moments: album titles and the now-playing title in TapePlayer, the song title on a rendered chart in TuneBook, empty- and first-run headlines everywhere. Pick a face with a real point of view (e.g. a text serif such as Fraunces or Source Serif, or a humanist sans such as Söhne or Hanken Grotesk)—not another neutral system sans. Large sizes, used sparingly.
+- *Display* — one characterful face for presentation moments, validated by the direction: the album title in TapePlayer's album detail, the document title in FloppyDisk's preview panel, the song title on a rendered chart in TuneBook, and empty- / first-run headlines everywhere. Set large in a tight bold. Pick a face with a real point of view (e.g. a text serif such as Fraunces or Source Serif, or a humanist sans such as Söhne or Hanken Grotesk)—not another neutral system sans. Used sparingly.
 
 **Structure.**
 
-- The uppercase 11px letterspaced label at reduced opacity is the house label style (already set in the filter and track headers). Reuse it wherever a column or section needs naming; do not introduce a second label style.
+- The uppercase ~11px letterspaced label at reduced opacity is the house label style (already set in the filter and track headers). Reuse it wherever a column or section needs naming; do not introduce a second label style.
+- Separate the filter columns with whitespace and that label alone — no vertical rules between them.
+- Hairline `--line` rules only for: track-list row separators (very faint), the toolbar's bottom edge, and row dividers inside rendered Markdown tables. Nowhere else.
+- Rounded corners (~8px) on cards, panels, album art, buttons, and filter pills; fully round on the transport play button. Full-bleed regions — the filter columns and the track list — run edge to edge with no card.
+- Metadata reads as middot-separated runs: `2014 • 12 songs • 45:29`, `Rock • Alternative`.
+- Two selection weights: a selected filter facet takes a solid `--accent-strong` fill; a selected track takes `--accent-tint` plus a play glyph in the number column. Never the solid fill on a track row.
 - Numbering appears only where order carries real information: track numbers within an album, verse / section order in a chart. Not on navigation, not on doc sections.
-- Hairline `--line` rules and square corners on structural containers; border-radius only on interactive chips and art thumbnails.
 
 ## Signature
 
-Content-derived expressiveness, spent once per surface:
+Content given room, once per surface:
 
-- **TapePlayer** — the contextual color wash behind a single piece of music. The library stays resolutely neutral and dense; selecting an album or entering now-playing lets that album's art bleed a quiet tone into the surrounding surface, then releases it the moment you return to browsing.
+- **TapePlayer** — the album hero. Selecting an album swaps the filter columns' space for a large panel: oversized rounded art, the album title in the display face, artist in violet caps, a middot meta line, Play / Shuffle, a short provenance paragraph, and genre chips. The dense library and this panel are the same screen — the columns compress to the side rather than disappearing.
 - **TuneBook** — the rendered chart itself as the hero. The performance view drops the chrome, sets the song in the display face, and makes transpose / capo feel like a physical control on the page rather than a settings field.
-- **FloppyDisk** — the plain folder of files as the interface. The workspace shows real files and folders with almost no adornment, so the format *is* the product; expressiveness is reserved for the reading and writing surface.
+- **FloppyDisk** — the rendered document. The file list and the Markdown source stay utilitarian; the preview panel is where images run large, tables breathe, and the document title takes the display face.
 
 ## Utility vs. expressive
 
-- **Utility — stay clean and efficient:** the file and folder browser, the add-file flow, the Markdown editor, TapePlayer's filter columns and virtualized track list, and the ChordPro / PDF / image viewers. Tight density, stable layout, no atmosphere. This is the majority of every surface.
-- **Expressive — allowed presence:** TapePlayer's album detail and now-playing; TuneBook's performance / rendered-chart view; and empty and first-run states everywhere. Larger artwork or type, the display face, the contextual wash, and a single orchestrated transition in.
+- **Utility — stay clean and efficient:** the file and folder browser, the add-file flow, the Markdown editor and source view, TapePlayer's filter columns and virtualized track list, and the ChordPro / PDF / image viewers. Tight density, stable layout, no atmosphere. This is the majority of every surface.
+- **Expressive — allowed presence:** TapePlayer's album detail; TuneBook's performance / rendered-chart view; FloppyDisk's preview panel; and empty and first-run states everywhere. Larger artwork or type, the display face, and a single orchestrated transition in. The filter columns compress toward the edge here — they do not vanish.
 
 ## Where the risk is
 
-The contextual color wash is the deliberate risk: it turns cheap if the derived tone is too saturated or the transition too eager. Keep the sample desaturated and light, confine it to background surfaces, and keep the motion short and singular. If it does not feel quietly premium in practice, cut it rather than tune it indefinitely.
+The expressive panels are the deliberate risk: the album hero and the preview panel can tip the product from a file tool toward a media center. Keep them earning their place with real context — provenance, structure, metadata — not just a bigger image. If a hero adds nothing a thumbnail wouldn't, cut it back. The art-derived background wash, if it is ever revived for now-playing, carries the same test: quietly premium or gone.
