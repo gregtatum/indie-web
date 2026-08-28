@@ -104,14 +104,18 @@ export function musicRoute(mountPath: MountPath) {
    *
    * Returns 409 if a scan is already in progress.
    */
-  route.post('/music-index/scan', async (): Promise<T.MusicIndex> => {
+  route.post('/music-index/scan', async (req): Promise<T.MusicIndex> => {
     if (scanInProgress) {
       throw new RequestConflict('A scan is already in progress.');
     }
     scanInProgress = true;
     const uninstallScanCrashGuard = installScanCrashGuard();
     try {
-      return await performScan(mountPath);
+      return await performScan(
+        mountPath,
+        undefined,
+        req.query.force === 'true',
+      );
     } finally {
       uninstallScanCrashGuard();
       scanInProgress = false;
@@ -122,7 +126,7 @@ export function musicRoute(mountPath: MountPath) {
    * SSE endpoint that streams scan progress in real time.
    * Events: total → progress × N → done (or error).
    */
-  route.addBlobRoute('GET', '/music-index/scan', async (_request, response) => {
+  route.addBlobRoute('GET', '/music-index/scan', async (request, response) => {
     response.setHeader('Content-Type', 'text/event-stream');
     response.setHeader('Cache-Control', 'no-cache');
     response.setHeader('Connection', 'keep-alive');
@@ -151,14 +155,18 @@ export function musicRoute(mountPath: MountPath) {
       500,
     );
     try {
-      const index = await performScan(mountPath, {
-        onTotalTracksCounted(count) {
-          sendData({ type: 'total', count });
+      const index = await performScan(
+        mountPath,
+        {
+          onTotalTracksCounted(count) {
+            sendData({ type: 'total', count });
+          },
+          onTrackScanned(scanCount, path) {
+            sendProgress(scanCount, path);
+          },
         },
-        onTrackScanned(scanCount, path) {
-          sendProgress(scanCount, path);
-        },
-      });
+        request.query.force === 'true',
+      );
       sendData({ type: 'done', tracks: index.tracks });
       response.end();
     } catch (err: any) {
@@ -442,6 +450,7 @@ function installScanCrashGuard(): () => void {
 async function performScan(
   mountPath: MountPath,
   callbacks?: ScanCallbacks,
+  force = false,
 ): Promise<T.MusicIndex> {
   const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
   const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.tmp');
@@ -459,17 +468,19 @@ async function performScan(
   // would produce an incomplete index (e.g. v1 entries have no genre field).
   // A full rescan is the simplest correct strategy.
   const existingTracks = new Map<string, T.TrackMetadata>();
-  try {
-    const contents = await fs.readFile(indexPath, 'utf-8');
-    const raw = JSON.parse(contents) as { version?: unknown };
-    if (raw.version === MUSIC_INDEX_VERSION) {
-      const existing = raw as T.MusicIndex;
-      for (const track of existing.tracks) {
-        existingTracks.set(track.path, track);
+  if (!force) {
+    try {
+      const contents = await fs.readFile(indexPath, 'utf-8');
+      const raw = JSON.parse(contents) as { version?: unknown };
+      if (raw.version === MUSIC_INDEX_VERSION) {
+        const existing = raw as T.MusicIndex;
+        for (const track of existing.tracks) {
+          existingTracks.set(track.path, track);
+        }
       }
+    } catch {
+      // No existing index — scan all files.
     }
-  } catch {
-    // No existing index — scan all files.
   }
 
   const audioFiles = await findAudioFiles(mountPath);

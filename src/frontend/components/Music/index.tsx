@@ -45,7 +45,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     };
   }, []);
 
-  function handleScan() {
+  function handleScan(force: boolean) {
     if (scanPhase === 'scanning') {
       return;
     }
@@ -53,7 +53,9 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     setScanProgress({ scanCount: 0, total: null });
     setStatusMessage(null);
 
-    const eventSource = new EventSource(`${server.url}/music/music-index/scan`);
+    const eventSource = new EventSource(
+      `${server.url}/music/music-index/scan${force ? '?force=true' : ''}`,
+    );
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
@@ -131,7 +133,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     <button
       type="button"
       className={`button${showRescanPrompt && scanPhase !== 'scanning' ? ' button-primary musicScanLibraryButton-rescan' : ''}`}
-      onClick={handleScan}
+      onClick={(event) => handleScan(event.shiftKey)}
       disabled={scanPhase === 'scanning'}
     >
       {scanLabel}
