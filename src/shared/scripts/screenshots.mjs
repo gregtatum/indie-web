@@ -122,6 +122,15 @@ const SHOTS = [
     settleMs: 1500,
     describe: 'FloppyDisk: Markdown source + rendered preview',
   },
+  {
+    name: 'floppydisk-markdown-rich',
+    surface: 'files',
+    route: '/files/md/Field Notes.md',
+    waitFor: '.viewMarkdownDiv img',
+    waitState: 'attached',
+    settleMs: 1500,
+    describe: 'FloppyDisk: Markdown preview with a title, image, and table',
+  },
 ];
 
 function parseArgs(argv) {

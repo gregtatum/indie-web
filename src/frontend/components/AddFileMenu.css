@@ -20,5 +20,20 @@
 }
 
 .button.addFileMenuButton {
-  margin: 8px;
+  margin: 12px;
+  padding: 8px 16px;
+  border-color: var(--accent);
+  background-color: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  opacity: 1;
+}
+
+.button.addFileMenuButton::before {
+  content: "+ ";
+}
+
+.button.addFileMenuButton:hover:not(:disabled) {
+  background-color: var(--primary-color-hover);
+  border-color: var(--primary-color-hover);
 }

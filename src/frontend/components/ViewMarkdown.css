@@ -10,7 +10,10 @@
 }
 
 .splitterSolo .viewMarkdownContainer {
-  border: 1px solid #ddd;
+  border: 1px solid var(--line);
+  box-shadow:
+    0 1px 3px #0000000f,
+    0 10px 30px #00000008;
   margin: var(--markdown-padding);
   width: calc(100vw - 4 * var(--markdown-padding));
   flex: 1;
@@ -33,7 +36,7 @@
   padding: var(--markdown-padding);
   max-width: 1000px;
   line-height: 1.5;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 16px;
 }
 
@@ -50,12 +53,30 @@
 .viewMarkdownDiv h1,
 .viewMarkdownDiv h2 {
   margin-top: 0;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--line);
 }
 
 .viewMarkdownDiv h1 {
   padding-bottom: .3em;
   font-size: 2em;
+}
+
+.viewMarkdownDiv h1,
+.viewMarkdownDiv h2,
+.viewMarkdownDiv h3,
+.viewMarkdownDiv h4,
+.viewMarkdownDiv h5,
+.viewMarkdownDiv h6 {
+  font-family: var(--font-display);
+}
+
+/* The document title is the one display-face moment in FloppyDisk. */
+.viewMarkdownDiv > h1:first-child {
+  font-weight: 600;
+  font-size: 2.5em;
+  line-height: 1.15;
+  letter-spacing: -0.005em;
+  padding-bottom: 0.25em;
 }
 
 .viewMarkdownDiv h2 {
@@ -77,6 +98,8 @@
 
 .viewMarkdownDiv img {
   max-width: 100%;
+  height: auto;
+  border-radius: 8px;
 }
 
 .viewMarkdownDiv table {
@@ -96,7 +119,7 @@
 .viewMarkdownDiv table th,
 .viewMarkdownDiv table td {
   padding: 6px 13px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--line);
 }
 
 .viewMarkdownDiv pre {

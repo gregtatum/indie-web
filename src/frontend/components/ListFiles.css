@@ -44,7 +44,7 @@
 
 .listFilesFilter {
   --gap: 8px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--line);
   display: flex;
   gap: var(--gap);
   padding: var(--gap);
@@ -52,22 +52,31 @@
 
 .listFilesFilterInput {
   font-size: var(--font-size-small);
-  padding: 4px 9px;
+  padding: 6px 9px 6px 30px;
   flex: 1;
-  border: 1px solid #bbb;
-  border-radius: 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  /* webpackIgnore: true */
+  background-image: url('/svg/search.svg');
+  background-repeat: no-repeat;
+  background-position: 9px center;
+  background-size: 14px;
+}
+
+.listFilesFilterInput:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
 }
 
 .listFilesIcon {
-  margin-inline-end: 5px;
+  margin-inline-end: 8px;
   width: var(--list-files-icon-size);
   height: var(--list-files-icon-size);
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #0001;
-  border-radius: 3px;
   text-align: center;
   padding: var(--list-files-icon-padding);
 
@@ -78,48 +87,22 @@
 }
 
 .listFilesIconCached {
-  outline: 1px solid #2a6bdb66;
+  outline: 1px solid var(--accent-tint);
 }
 .listFilesIconCached.listFilesFolder {
-  outline: 1px solid #2a6bdbcc;
-}
-[aria-selected="true"] {
-  & .listFilesIcon {
-    outline: 1px solid #ffffffba;
-  }
+  outline: none;
 }
 
 .listFilesFile {
   display: flex;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--line);
   position: relative;
 
   &.selected {
-    background: var(--primary-color-dim);
-
-    .listFilesList:focus-within & {
-      background: var(--primary-color);
-    }
+    background: var(--accent-tint);
 
     & a:hover {
       background: none;
-    }
-
-    & a.listFilesFileLink,
-    & a.listFilesFileEmpty {
-      color: #fff;
-    }
-
-    & .listFilesFolder {
-      background-color: var(--accent-color);
-    }
-
-    & .listFilesIcon img {
-      filter: invert(1);
-    }
-
-    & .listFilesFileMenuIcon {
-      filter: invert(1);
     }
   }
 
@@ -258,6 +241,21 @@ a.listFilesFileEmpty {
   padding: var(--list-files-control-padding);
 }
 
-.listFilesFolder {
-  background-color: var(--accent-color-light);
+/* The folder mark is the one violet glyph in the otherwise-neutral list.
+   The row only ever gets .listFilesFolder for real folders, so the mask URL
+   can be static. */
+.listFilesFolder img {
+  visibility: hidden;
+}
+
+.listFilesFolder::after {
+  content: "";
+  position: absolute;
+  inset: var(--list-files-icon-padding);
+  background-color: var(--accent);
+  mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  /* webpackIgnore: true */
+  mask-image: url('/svg/folder.svg');
 }

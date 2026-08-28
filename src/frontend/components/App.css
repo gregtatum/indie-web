@@ -24,19 +24,26 @@
   --modal-radius: 4px;
 
   /* active and focus rules for outside a div  (no layout is affected) */
-  --outline-active: 2px solid #0040ff;
-  --outline-focus: 2px solid #0040ffaa;
-  --outline-focus-dim: 2px solid #0040ff33;
+  --outline-active: 2px solid #7c3aed;
+  --outline-focus: 2px solid #7c3aedaa;
+  --outline-focus-dim: 2px solid #7c3aed33;
   /* active and focus rules for inside a div (no layout is affected) */
-  --box-shadow-active: 0 0 0 2px #0040ff inset;
-  --box-shadow-focus: 0 0 0 2px #0040ffaa inset;
+  --box-shadow-active: 0 0 0 2px #7c3aed inset;
+  --box-shadow-focus: 0 0 0 2px #7c3aedaa inset;
 
-  --accent-color: #ce1ebb;
-  --accent-color-light: #ce1ebb52;
+  /* One interactive accent — violet — across every surface. See AESTHETICS.md. */
+  --accent: #7c3aed;
+  --accent-strong: #5b28d6;
+  --accent-tint: #7c3aed14;
+  --line: #e6e6e6;
+  --font-display: 'Hanken Grotesk', system-ui, sans-serif;
 
-  --primary-color-dim: #2062cb;
-  --primary-color: #004eca;
-  --primary-color-hover: #0062ff;
+  --accent-color: var(--accent);
+  --accent-color-light: var(--accent-tint);
+
+  --primary-color-dim: var(--accent);
+  --primary-color: var(--accent);
+  --primary-color-hover: #6d28d9;
 
   --selection-hover: #eee;
   --selection-active: var(--primary-color);

@@ -4,8 +4,8 @@
   width: 100%;
   height: var(--header-height)s;
   display: flex;
-  border-bottom: 2px solid #ccc;
-  box-shadow: 0 0 7px #00000045;
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 2px #0000000a;
   background-color: #fff;
   align-items: center;
   line-height: 1;
@@ -137,12 +137,12 @@
 }
 
 .headerFileStoreSelection {
-  ---text-color: #004195;
+  ---text-color: var(--accent);
   border: 0;
   background: transparent;
   font: inherit;
   cursor: pointer;
-  color: #004195;
+  color: var(--accent);
   text-decoration: none;
   padding: 0px 11px 0px 4px;
   border-radius: 3px;
@@ -164,22 +164,22 @@ content: "";
 }
 
 .headerFileStoreSelection:hover {
-  outline: 2px solid #0040ff88;
-  background: #0040ff11;
+  outline: 2px solid var(--accent-tint);
+  background: var(--accent-tint);
 }
 
 .headerFileStoreSelection:active {
-  outline: 2px solid #0040ff;
+  outline: 2px solid var(--accent);
 }
 
 .headerFileStoreSelection:focus {
-  outline: 2px solid #0040ffaa;
+  outline: 2px solid #7c3aedaa;
 }
 
 .button.headerSaveFile {
   color: #fff;
-  background-color: #0070ff;
-  border: 1px solid #004195;
+  background-color: var(--accent);
+  border: 1px solid var(--accent-strong);
 }
 
 @media (max-width: 500px) {
