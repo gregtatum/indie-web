@@ -84,6 +84,7 @@
 }
 
 .headerSlideInContents {
+  width: max-content;
   padding: 4px 8px;
   display: inline-flex;
   overflow: hidden;

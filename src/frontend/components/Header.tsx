@@ -433,11 +433,17 @@ function HeaderHome(props: {
   const [skipAnimation, setSkipAnimation] = React.useState(true);
 
   React.useLayoutEffect(() => {
-    const { current } = contentsRef;
-    if (current) {
-      setWidth(current.getBoundingClientRect().width);
+    const el = contentsRef.current;
+    if (!el) {
+      return;
     }
-  }, [showFileStoreSelection]);
+    const observer = new ResizeObserver(() => {
+      setWidth(el.getBoundingClientRect().width);
+    });
+    observer.observe(el);
+    setWidth(el.getBoundingClientRect().width);
+    return () => observer.disconnect();
+  }, []);
 
   React.useEffect(() => {
     // This component is mounted once for the life of the app, so only the very
