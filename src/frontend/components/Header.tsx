@@ -361,7 +361,8 @@ function Path({ path, title }: { path: string; title?: any }) {
   for (const part of parts) {
     if (breadcrumbs.length === 0) {
       breadcrumbs.push(
-        <Router.Link key="/" to="/">
+        <Router.Link key="/" to="/" className="headerPathHome">
+          <span className="headerPathHomeIcon" aria-hidden="true" />
           Home
         </Router.Link>,
       );

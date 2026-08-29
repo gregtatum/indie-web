@@ -43,6 +43,24 @@
   padding-block: var(--header-gap);
 }
 
+.headerPathHome {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.headerPathHomeIcon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  background-color: var(--accent);
+  mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  /* webpackIgnore: true */
+  mask-image: url('/svg/folder.svg');
+}
+
 .headerSiteNameTitle {
   padding-inline-start: 5px;
   font-weight: bold;
