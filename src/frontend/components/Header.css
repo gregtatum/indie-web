@@ -67,12 +67,6 @@
   font-weight: 600;
 }
 
-.headerSiteNameSuffix {
-  opacity: 0.5;
-  font-weight: normal;
-
-}
-
 .headerSlideIn {
   display: inline-block;
   overflow: hidden;
@@ -87,20 +81,15 @@
   width: max-content;
   padding: 4px 8px;
   display: inline-flex;
+  align-items: center;
   overflow: hidden;
 }
 
-.headerFloppyDiskLogo {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0 10px;
-}
-
-.headerFloppyDiskImg {
-  width: 24px;
+.headerFloppyDiskLockup {
+  display: block;
   height: 24px;
-  margin-block: -5px;
+  width: auto;
+  margin: 0 5px;
 }
 
 .headerEnd {

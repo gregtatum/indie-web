@@ -461,12 +461,11 @@ function HeaderHome(props: {
     <div className={className} style={{ width: isOpen ? width : 0 }}>
       <div className="headerSlideInContents" ref={contentsRef}>
         {process.env.SITE === 'floppydisk' ? (
-          <span className="headerFloppyDiskLogo">
-            <img src="/favicon-48x48.png" className="headerFloppyDiskImg" />
-            <span className="headerSiteNameTitle">
-              FloppyDisk<span className="headerSiteNameSuffix">.link</span>
-            </span>
-          </span>
+          <img
+            src="/svg/floppydisk-lockup.svg"
+            className="headerFloppyDiskLockup"
+            alt="FloppyDisk.link"
+          />
         ) : (
           <div className="headerTitleSlideIn">
             <span>🎵 </span>
