@@ -1,3 +1,21 @@
+/* Self-hosted from data/common/fonts/. SIL Open Font License; see the
+   LICENSE-*.txt files next to the woff2s. */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/hanken-grotesk-latin-wght-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('/fonts/roboto-mono-latin-wght-normal.woff2') format('woff2');
+}
+
 :root {
   --header-padding: 41px;
   --header-gap: 9px;
