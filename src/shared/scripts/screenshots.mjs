@@ -131,7 +131,38 @@ const SHOTS = [
     settleMs: 1500,
     describe: 'FloppyDisk: Markdown preview with a title, image, and table',
   },
+  {
+    name: 'floppydisk-markdown-editor',
+    surface: 'files',
+    route: '/files/md/Field Notes.md',
+    waitFor: '.viewMarkdownDiv',
+    waitState: 'attached',
+    settleMs: 1200,
+    describe: 'FloppyDisk: split Markdown source editor + live preview',
+    prepare: openSplitEditor,
+  },
+  {
+    name: 'chordpro-editor',
+    surface: 'files',
+    route: '/files/file/Wayfaring Stranger.chopro',
+    waitFor: '.renderedSong',
+    settleMs: 1000,
+    describe: 'ChordPro: split source editor + rendered chart',
+    prepare: openSplitEditor,
+  },
 ];
+
+// The "hide editor" flag is persisted to localStorage, so once any editor shot
+// has run in the shared browser context the split view is already open and the
+// Edit button is gone. Click it only when it's actually there.
+async function openSplitEditor(page) {
+  const editButton = page.locator('button:has-text("Edit")');
+  if (await editButton.count()) {
+    await editButton.first().click();
+  }
+  await page.waitForSelector('.splitterSplit .cm-content', { timeout: 5000 });
+  await page.waitForTimeout(800);
+}
 
 function parseArgs(argv) {
   const opts = {

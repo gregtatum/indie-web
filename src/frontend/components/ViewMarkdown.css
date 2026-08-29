@@ -9,6 +9,22 @@
   min-height: 100%;
 }
 
+.splitterSplit .viewMarkdown {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px #0000000d;
+}
+
+.splitterSplit .viewMarkdownContainer {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 44px 48px;
+}
+
 .splitterSolo .viewMarkdownContainer {
   border: 1px solid var(--line);
   box-shadow:

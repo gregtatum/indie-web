@@ -1,7 +1,9 @@
 import {
   syntaxHighlighting,
   defaultHighlightStyle,
+  HighlightStyle,
 } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
@@ -24,6 +26,27 @@ import { ensureExists, throttle1 } from 'frontend/utils';
 import * as Hooks from 'frontend/hooks';
 
 import './TextArea.css';
+
+/**
+ * Prose-oriented syntax highlighting: the structural marks (#, **, >, -, links)
+ * carry the one violet accent, everything else stays near-neutral so the source
+ * reads like text rather than code.
+ */
+const proseHighlightStyle = HighlightStyle.define([
+  { tag: tags.heading, fontWeight: '700', color: '#111' },
+  { tag: tags.strong, fontWeight: '700', color: '#111' },
+  { tag: tags.emphasis, fontStyle: 'italic' },
+  { tag: tags.link, color: 'var(--accent)' },
+  { tag: tags.url, color: '#8a8a8a' },
+  { tag: tags.monospace, color: '#8250df' },
+  { tag: tags.quote, color: '#666' },
+  { tag: tags.comment, color: '#999', fontStyle: 'italic' },
+  { tag: tags.labelName, color: '#8a8a8a' },
+  {
+    tag: [tags.processingInstruction, tags.contentSeparator],
+    color: 'var(--accent)',
+  },
+]);
 
 export function TextAreaHeader(props: {
   onHideEditor?: () => void;
@@ -138,6 +161,7 @@ export function TextArea(props: {
         dropCursor(),
         ...(props.enableAutocomplete ? [autocompletion()] : []),
         EditorState.allowMultipleSelections.of(true),
+        syntaxHighlighting(proseHighlightStyle),
         syntaxHighlighting(defaultHighlightStyle, {
           fallback: true,
         }),

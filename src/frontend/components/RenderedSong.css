@@ -23,6 +23,28 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* In the split editor the rendered chart is a rounded card that scrolls
+   internally, matching the source card beside it. */
+.splitterSplit .renderedSong {
+  box-sizing: border-box;
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px #0000000d;
+  padding: 40px 44px 0;
+}
+
+.splitterSplit .renderedSongStickyHeader {
+  top: 12px;
+}
+
+.splitterSplit .renderedSongStickyHeaderRow {
+  border: 1px solid var(--line);
+}
+
 .renderedSongHeader {
   display: flex;
   /* Leave space for the sticky header */

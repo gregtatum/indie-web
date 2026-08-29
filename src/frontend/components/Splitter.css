@@ -15,6 +15,24 @@
   position: relative;
   overflow: hidden;
   animation: fadein 200ms;
+  background: #eeeef0;
+}
+
+/* The source and preview each float as a rounded card with a gutter between
+   them and the window edge. The splitter handle sits in that gutter. */
+.splitterSplitStart,
+.splitterSplitEnd {
+  box-sizing: border-box;
+  padding: 16px;
+}
+
+.splitterSplitStart {
+  padding-right: 8px;
+}
+
+.splitterSplitEnd {
+  padding-left: 8px;
+  overflow: hidden;
 }
 
 .splitterMiddle {
@@ -34,23 +52,14 @@
 
 .splitterMiddleVisible {
   flex: 1;
-  background: #bbb;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 120ms;
 }
 
-[data-direction="horizontal"] .splitterMiddle:hover {
-  background: linear-gradient(90deg, transparent 0%, #fff 50%, transparent 100%);
-}
-
-[data-direction="vertical"] .splitterMiddle:hover {
-  background: linear-gradient(180deg, transparent 0%, #fff 50%, transparent 100%);
-}
-
-.splitterMiddle:hover .splitterMiddleVisible {
-  background: #aaa;
-}
-
-.splitterSplitEnd {
-  overflow: auto;
+.splitterMiddle:hover .splitterMiddleVisible,
+.splitterMiddle.dragging .splitterMiddleVisible {
+  background: var(--accent);
 }
 
 @media print {

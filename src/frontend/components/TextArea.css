@@ -9,6 +9,14 @@
   flex-direction: column;
 }
 
+.splitterSplit .textArea {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 3px #0000000d;
+}
+
 .textAreaHeader {
   --text-area-header-height: 26px;
   display: flex;
@@ -17,6 +25,12 @@
   padding: 4px;
   background: #fff;
   height: var(--text-area-header-height)
+}
+
+.splitterSplit .textAreaHeader {
+  height: auto;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
 }
 
 .textAreaHeaderContent {
@@ -33,9 +47,9 @@
   height: var(--text-area-header-height);
   margin: 0;
   padding: 0;
-  border: 1px solid #bfb8b2;
-  border-radius: 6px;
-  background-color: #f7f4f2;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background-color: #fafafa;
   background-position: center;
   background-repeat: no-repeat;
   background-size: 16px 16px;
@@ -58,7 +72,8 @@
 
 .textAreaHeaderDismiss:hover,
 .textAreaHeaderToggle:hover {
-  background-color: #eee7e3;
+  background-color: var(--accent-tint);
+  border-color: var(--accent);
 }
 
 .textAreaMount {
@@ -88,6 +103,19 @@
 }
 .cm-line {
   padding: 0 20px !important;
+}
+
+.splitterSplit .cm-content {
+  padding-top: 18px !important;
+}
+
+.splitterSplit .cm-line {
+  padding: 0 28px !important;
+}
+
+/* No active-line band — it fights the card edges and the calm look. */
+.splitterSplit .cm-activeLine {
+  background: transparent;
 }
 
 /* Increase the selector specificity to get over the built-in codemirror rules. */
