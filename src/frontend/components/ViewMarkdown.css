@@ -180,12 +180,6 @@
   padding: 4px;
 }
 
-.dragging {
-  outline: 2px solid #00f;
-  border-radius: 4px;
-  background: #00f1;
-}
-
 @media print {
   .splitterSolo .viewMarkdownContainer {
     margin: 0;

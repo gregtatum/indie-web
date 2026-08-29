@@ -217,7 +217,12 @@ export function Splitter(props: SplitterProps) {
   }
 
   return (
-    <div className={className} data-direction={direction} ref={container}>
+    <div
+      className={className}
+      data-direction={direction}
+      data-dragging={isDragging || undefined}
+      ref={container}
+    >
       <div className={className + 'Start'} style={startStyle}>
         {start}
       </div>

@@ -39,6 +39,8 @@
   cursor: grab;
   z-index: 1;
   display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .splitterMiddle.dragging {
@@ -51,15 +53,24 @@
 }
 
 .splitterMiddleVisible {
-  flex: 1;
+  flex: none;
+  width: 5px;
+  height: clamp(48px, 40%, 140px);
   border-radius: 999px;
   background: transparent;
   transition: background 120ms;
 }
 
-.splitterMiddle:hover .splitterMiddleVisible,
+.splitterMiddle:hover .splitterMiddleVisible {
+  background: var(--muted);
+}
+
 .splitterMiddle.dragging .splitterMiddleVisible {
   background: var(--accent);
+}
+
+.splitterSplit[data-dragging] {
+  user-select: none;
 }
 
 @media print {
