@@ -49,6 +49,7 @@
   gap: 5px;
 }
 
+/* mask-image is set inline from process.env.SITE_HOME_ICON (see .env.<site>). */
 .headerPathHomeIcon {
   width: 1.15em;
   height: 1.15em;
@@ -57,8 +58,6 @@
   mask-position: center;
   mask-size: contain;
   mask-repeat: no-repeat;
-  /* webpackIgnore: true */
-  mask-image: url('/svg/folder.svg');
 }
 
 .headerSiteNameTitle {

@@ -362,7 +362,13 @@ function Path({ path, title }: { path: string; title?: any }) {
     if (breadcrumbs.length === 0) {
       breadcrumbs.push(
         <Router.Link key="/" to="/" className="headerPathHome">
-          <span className="headerPathHomeIcon" aria-hidden="true" />
+          <span
+            className="headerPathHomeIcon"
+            style={{
+              maskImage: `url("/svg/${process.env.SITE_HOME_ICON}.svg")`,
+            }}
+            aria-hidden="true"
+          />
           Home
         </Router.Link>,
       );
