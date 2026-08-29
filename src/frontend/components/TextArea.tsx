@@ -27,24 +27,19 @@ import * as Hooks from 'frontend/hooks';
 
 import './TextArea.css';
 
-/**
- * Prose-oriented syntax highlighting: the structural marks (#, **, >, -, links)
- * carry the one violet accent, everything else stays near-neutral so the source
- * reads like text rather than code.
- */
 const proseHighlightStyle = HighlightStyle.define([
-  { tag: tags.heading, fontWeight: '700', color: '#111' },
-  { tag: tags.strong, fontWeight: '700', color: '#111' },
+  { tag: tags.heading, fontWeight: '700', color: 'var(--ink)' },
+  { tag: tags.strong, fontWeight: '700', color: 'var(--ink)' },
   { tag: tags.emphasis, fontStyle: 'italic' },
-  { tag: tags.link, color: 'var(--accent)' },
-  { tag: tags.url, color: '#8a8a8a' },
-  { tag: tags.monospace, color: '#8250df' },
-  { tag: tags.quote, color: '#666' },
-  { tag: tags.comment, color: '#999', fontStyle: 'italic' },
-  { tag: tags.labelName, color: '#8a8a8a' },
+  { tag: tags.link, color: 'var(--accent-strong)' },
+  { tag: tags.url, color: 'var(--muted)' },
+  { tag: tags.monospace, color: 'var(--accent-strong)' },
+  { tag: tags.quote, color: 'var(--muted)' },
+  { tag: tags.comment, color: 'var(--muted)', fontStyle: 'italic' },
+  { tag: tags.labelName, color: 'var(--muted)' },
   {
     tag: [tags.processingInstruction, tags.contentSeparator],
-    color: 'var(--accent)',
+    color: 'var(--accent-strong)',
   },
 ]);
 

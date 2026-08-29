@@ -10,6 +10,19 @@ Interaction should feel immediate, spatial, and predictable. Keep primary naviga
 
 The guiding principle is **less visible complexity, not less capability**. Every element should earn its place by improving comprehension, hierarchy, interaction, state, or presentation. The result should feel like a carefully arranged stage: content receives the spotlight, the interface provides structure without competing for attention, and the product knows when to become visually expressive—and when to remain quiet.
 
+## Accessibility
+
+Legibility is a requirement. Visual polish is not. When the two conflict, legibility wins every time — ship the readable version and leave a note for the prettier idea; never the reverse. "It looks more refined faded back" is not a reason to drop below the floor.
+
+- **Contrast floors** — WCAG 2.1 AA, measured as a solid colour against the *actual* background the element sits on (the light page and every tinted card or raised surface it can appear on):
+  - Body text, labels, metadata, **syntax highlighting**, placeholder and de-emphasised text: **≥ 4.5:1**. De-emphasised text still carries meaning — "muted" means a *darker* neutral, not a lighter one.
+  - Large text (≥ 24px, or ≥ 18.66px bold) and information-bearing non-text marks (icons, focus rings, progress/volume tracks, the boundary of a control, chart strokes): **≥ 3:1**.
+  - On the primary reading surfaces — the editor, the rendered document, the track list — aim for **7:1** where it costs nothing.
+- **No alpha on a foreground.** Never use `opacity`, or an `rgba()`/`#rrggbbaa` with alpha, to soften text or icons. Composite it to a solid colour over its real background and check that number. A faded mark that lands below the floor is a bug, not a style.
+- **Colour is never the only signal.** Pair it with weight, size, an icon, or position. Never rely on hue alone, and never on a red/green distinction, to carry meaning.
+- **The violet accent is `--accent-strong` (~8:1 on paper) whenever it is text** — links, syntax marks, captions. `--accent` (`#7c3aed`, ~5.8:1) is for fills, large/bold marks, and control boundaries where size or a background makes up the difference. Never lighten either one for text.
+- **Tinted backgrounds are fine** (`--accent-tint` on a selected or hovered row) *because the text on them stays near-black*. Test that pairing in the running app, not the swatch.
+
 ## Subject
 
 This is one codebase serving a family of indie-web apps that all sit on the same foundation: your work lives in ordinary files and folders you own—kept in the browser, on a local or network drive, or in Dropbox—in open, portable formats, with no export step and no proprietary database.
@@ -37,12 +50,13 @@ The intended look is captured in `artifacts/design-direction.png` (FloppyDisk) a
 
 - `--ink: #111` — headings
 - `--body: #000` on `--paper: #fff`
-- `--muted: #666` / `--faint: #888` — labels and secondary metadata
-- `--line: #e6e6e6` — hairline rules, used sparingly (see Structure)
+- `--muted: #595959` — labels and secondary metadata; the darkest "quiet" grey that still clears 4.5:1 on `--paper`. There is no lighter `--faint`: anything lower fails the contrast floor (see *Accessibility*).
+- `--line: #e6e6e6` — hairline rules, used sparingly (see Structure). Decorative only — never the sole boundary of an interactive control (those need a 3:1 edge).
 - `--raised: #fafafa` — toolbars and the playback bar
-- `--accent: #7c3aed` — the only interactive accent: primary buttons, links, selection, progress and volume tracks, the folder and brand marks. Sampled from the direction; treat the hex as approximate.
-- `--accent-strong: #5b28d6` — solid fill for a selected filter facet (genre / artist / album)
+- `--accent: #7c3aed` — the interactive accent for fills, large/bold marks, and control boundaries: primary buttons, selection fills, progress and volume tracks, the folder and brand marks. ~5.8:1 on `--paper`. Sampled from the direction; treat the hex as approximate.
+- `--accent-strong: #5b28d6` — the accent whenever it is **text**: links, syntax-highlight marks, captions. Also the solid fill for a selected filter facet. ~8:1 on `--paper`.
 - `--accent-tint: #7c3aed14` — light wash for a selected or hovered row
+- `--syntax-string: #0f5132` — the one hue beyond violet/neutral: string-like values in a source editor (ChordPro directive values). Dark green, ~8:1 on `--paper`. Every colour used by syntax highlighting is a token — no literal hex in the highlight styles.
 - *Legacy note:* the shipped CSS uses `--primary-color: #004eca` (blue) and `--accent-color: #ce1ebb` (magenta). The direction consolidates on violet; blue retires, and magenta survives only as the FloppyDisk brand mark.
 - **Contextual color** — a desaturated wash derived from album art. Not part of the current direction; kept only as a possible future treatment for a full-screen now-playing view. If revived: background surfaces only, never foreground text or controls.
 

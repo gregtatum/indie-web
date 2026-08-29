@@ -1,4 +1,9 @@
-import { LRLanguage, LanguageSupport } from '@codemirror/language';
+import {
+  LRLanguage,
+  LanguageSupport,
+  HighlightStyle,
+  syntaxHighlighting,
+} from '@codemirror/language';
 import { styleTags, tags as t } from '@lezer/highlight';
 import { chordproCompletionSource } from './completion';
 import { parser } from './syntax.grammar.ts';
@@ -28,11 +33,30 @@ export const ChordProLanguage = LRLanguage.define({
     commentTokens: { line: '#' },
   },
 });
+const chordProHighlightStyle = HighlightStyle.define(
+  [
+    { tag: t.keyword, color: 'var(--accent-strong)', fontWeight: '700' },
+    { tag: t.squareBracket, color: 'var(--accent-strong)' },
+    { tag: t.tagName, color: 'var(--accent-strong)' },
+    { tag: t.attributeValue, color: 'var(--syntax-string)' },
+    { tag: [t.brace, t.punctuation, t.separator], color: 'var(--muted)' },
+    { tag: t.lineComment, color: 'var(--muted)', fontStyle: 'italic' },
+    {
+      tag: [t.heading1, t.heading2, t.name],
+      color: 'var(--ink)',
+      fontWeight: '700',
+    },
+    { tag: t.meta, color: 'var(--muted)' },
+  ],
+  { scope: ChordProLanguage },
+);
+
 export function ChordPro() {
   return new LanguageSupport(ChordProLanguage, [
     ChordProLanguage.data.of({
       autocomplete: chordproCompletionSource,
     }),
+    syntaxHighlighting(chordProHighlightStyle),
   ]);
 }
 
