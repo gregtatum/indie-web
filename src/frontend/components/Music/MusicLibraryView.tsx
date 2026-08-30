@@ -434,15 +434,26 @@ function AlbumHero() {
   const filteredTracks = $$.getFilteredMusicTracks();
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
   const playingTrackPath = $$.getMusicPlaybackTrackPath();
+  const selectedTrackPath = selectedTrackPaths[0] ?? null;
 
-  const lastPlayedPathRef = React.useRef<string | null>(
-    persistedState.musicLastPlayedTrackPath.read(),
+  // The hero follows whichever track you touched most recently: the one you
+  // last clicked (selected) or the one that's playing. Selecting a track always
+  // wins, since clicking it is the latest action. Seeded from any existing
+  // selection, then the last played track, so a fresh reload still shows an
+  // album.
+  const heroTrackPathRef = React.useRef<string | null>(
+    selectedTrackPath ?? persistedState.musicLastPlayedTrackPath.read(),
   );
-  React.useEffect(() => {
-    if (playingTrackPath) {
-      lastPlayedPathRef.current = playingTrackPath;
-    }
-  }, [playingTrackPath]);
+  const prevSelectedRef = React.useRef(selectedTrackPath);
+  const prevPlayingRef = React.useRef(playingTrackPath);
+  if (playingTrackPath && playingTrackPath !== prevPlayingRef.current) {
+    heroTrackPathRef.current = playingTrackPath;
+  }
+  if (selectedTrackPath && selectedTrackPath !== prevSelectedRef.current) {
+    heroTrackPathRef.current = selectedTrackPath;
+  }
+  prevSelectedRef.current = selectedTrackPath;
+  prevPlayingRef.current = playingTrackPath;
 
   const tracksByPath = React.useMemo(() => {
     const map = new Map<string, T.TrackMetadata>();
@@ -453,10 +464,9 @@ function AlbumHero() {
   }, [allTracks]);
 
   const contextTrack =
+    (heroTrackPathRef.current && tracksByPath.get(heroTrackPathRef.current)) ||
+    (selectedTrackPath && tracksByPath.get(selectedTrackPath)) ||
     (playingTrackPath && tracksByPath.get(playingTrackPath)) ||
-    (selectedTrackPaths[0] && tracksByPath.get(selectedTrackPaths[0])) ||
-    (lastPlayedPathRef.current &&
-      tracksByPath.get(lastPlayedPathRef.current)) ||
     filteredTracks[0] ||
     allTracks[0] ||
     null;
