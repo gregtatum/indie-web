@@ -435,25 +435,36 @@ function AlbumHero() {
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
   const playingTrackPath = $$.getMusicPlaybackTrackPath();
   const selectedTrackPath = selectedTrackPaths[0] ?? null;
+  const panelSelections = $$.getMusicPanelSelections();
 
-  // The hero follows whichever track you touched most recently: the one you
-  // last clicked (selected) or the one that's playing. Selecting a track always
-  // wins, since clicking it is the latest action. Seeded from any existing
+  // The hero follows the most recent thing you clicked: a track (selected or
+  // playing) or a filter panel. After a track click it shows that track's
+  // album; after a filter click it shows the first album in the filtered list.
+  // Selecting a track always wins over playback. Seeded from any existing
   // selection, then the last played track, so a fresh reload still shows an
   // album.
   const heroTrackPathRef = React.useRef<string | null>(
     selectedTrackPath ?? persistedState.musicLastPlayedTrackPath.read(),
   );
+  const heroSourceRef = React.useRef<'track' | 'filter'>('track');
   const prevSelectedRef = React.useRef(selectedTrackPath);
   const prevPlayingRef = React.useRef(playingTrackPath);
+  const prevPanelSelectionsRef = React.useRef(panelSelections);
+
+  if (panelSelections !== prevPanelSelectionsRef.current) {
+    heroSourceRef.current = 'filter';
+  }
   if (playingTrackPath && playingTrackPath !== prevPlayingRef.current) {
     heroTrackPathRef.current = playingTrackPath;
+    heroSourceRef.current = 'track';
   }
   if (selectedTrackPath && selectedTrackPath !== prevSelectedRef.current) {
     heroTrackPathRef.current = selectedTrackPath;
+    heroSourceRef.current = 'track';
   }
   prevSelectedRef.current = selectedTrackPath;
   prevPlayingRef.current = playingTrackPath;
+  prevPanelSelectionsRef.current = panelSelections;
 
   const tracksByPath = React.useMemo(() => {
     const map = new Map<string, T.TrackMetadata>();
@@ -464,12 +475,19 @@ function AlbumHero() {
   }, [allTracks]);
 
   const contextTrack =
-    (heroTrackPathRef.current && tracksByPath.get(heroTrackPathRef.current)) ||
-    (selectedTrackPath && tracksByPath.get(selectedTrackPath)) ||
-    (playingTrackPath && tracksByPath.get(playingTrackPath)) ||
-    filteredTracks[0] ||
-    allTracks[0] ||
-    null;
+    heroSourceRef.current === 'filter'
+      ? (selectedTrackPath &&
+          filteredTracks.find((track) => track.path === selectedTrackPath)) ||
+        filteredTracks[0] ||
+        allTracks[0] ||
+        null
+      : (heroTrackPathRef.current &&
+          tracksByPath.get(heroTrackPathRef.current)) ||
+        (selectedTrackPath && tracksByPath.get(selectedTrackPath)) ||
+        (playingTrackPath && tracksByPath.get(playingTrackPath)) ||
+        filteredTracks[0] ||
+        allTracks[0] ||
+        null;
 
   const albumName = contextTrack?.album ?? null;
 

@@ -113,6 +113,13 @@ async function clickTrack(title: string) {
   });
 }
 
+async function clickArtistFilter(name: string) {
+  const artistPanel = screen.getByRole('listbox', { name: 'artist' });
+  await act(async () => {
+    await userEvent.click(within(artistPanel).getByRole('option', { name }));
+  });
+}
+
 describe('album hero selection', () => {
   it('falls back to the first track before anything is clicked or played', async () => {
     setup();
@@ -147,5 +154,43 @@ describe('album hero selection', () => {
       store.dispatch(A.musicPlaybackLoad('/jazz/1.mp3'));
     });
     expect(heroAlbum()).toBe('Jazz Album');
+  });
+
+  it("clicking an artist filter moves the hero to that artist's album", async () => {
+    const tracks = [
+      makeTrack({
+        path: '/naked/sun.mp3',
+        title: 'The Sun',
+        artist: 'The Naked and Famous',
+        album: 'Passive Me Aggressive You',
+        genre: 'Indie',
+      }),
+      makeTrack({
+        path: '/killers/brightside.mp3',
+        title: 'Mr Brightside',
+        artist: 'The Killers',
+        album: 'Hot Fuss',
+        genre: 'Rock',
+      }),
+      makeTrack({
+        path: '/killers/somebody.mp3',
+        title: 'Somebody Told Me',
+        artist: 'The Killers',
+        album: 'Hot Fuss',
+        genre: 'Rock',
+        track: 2,
+      }),
+    ];
+    setup(tracks);
+    await screen.findByRole('option', { name: 'The Killers' });
+
+    // A track by another artist is the current hero context.
+    await clickTrack('The Sun');
+    expect(heroAlbum()).toBe('Passive Me Aggressive You');
+
+    // Filtering by artist is now the most recent action: the hero follows the
+    // filtered list rather than staying on the selected track's album.
+    await clickArtistFilter('The Killers');
+    expect(heroAlbum()).toBe('Hot Fuss');
   });
 });
