@@ -187,6 +187,7 @@ export const persistedState = {
   fileStoreCacheEnabled: new BooleanStorage(),
   dropboxCodeVerifier: new StringStorage(),
   dropboxRedirectURL: new StringStorage(),
+  musicLastPlayedTrackPath: new StringStorage(),
 
   dropboxOauth: new JsonStorage({
     defaultValue: null,

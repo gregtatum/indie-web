@@ -315,8 +315,9 @@ describe('music URL serialization', () => {
   it('cmd+clicking a second genre adds it to the URL', async () => {
     const { getLocation } = setup();
 
-    fireEvent.click(await screen.findByText('Indie'));
-    fireEvent.click(screen.getByText('Jazz'), { metaKey: true });
+    const genreList = await screen.findByRole('listbox', { name: 'genre' });
+    fireEvent.click(within(genreList).getByText('Indie'));
+    fireEvent.click(within(genreList).getByText('Jazz'), { metaKey: true });
 
     await waitFor(() => {
       expect(getParams(getLocation().search).getAll('genre')).toEqual([

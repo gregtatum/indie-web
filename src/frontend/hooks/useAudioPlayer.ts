@@ -170,6 +170,12 @@ export function useAudioPlayer(): AudioPlayerState {
 
   const status = $.getMusicPlaybackStatus(getState());
 
+  React.useEffect(() => {
+    if (trackPath) {
+      persistedState.musicLastPlayedTrackPath.write(trackPath);
+    }
+  }, [trackPath]);
+
   // Handle persisting of the audio playback on refresh.
   React.useEffect(() => {
     if ((status !== 'loading' && status !== 'playing') || !trackPath) {

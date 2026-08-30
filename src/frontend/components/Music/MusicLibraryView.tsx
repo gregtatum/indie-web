@@ -140,7 +140,7 @@ export function MusicLibraryView({
       <Splitter
         direction="vertical"
         className="musicLibrarySplitter"
-        start={<FilterPanels />}
+        start={<LibraryTopPane />}
         end={<TracksView />}
         persistLocalStorage="musicLibrarySplitterOffset"
       />
@@ -373,6 +373,184 @@ function FilterPanels() {
       <FilterPanel panel="genre" tracks={panelTracks.genre} />
       <FilterPanel panel="artist" tracks={panelTracks.artist} />
       <FilterPanel panel="album" tracks={panelTracks.album} />
+    </div>
+  );
+}
+
+function LibraryTopPane() {
+  return (
+    <div className="musicLibraryTopPane">
+      <AlbumHero />
+      <FilterPanels />
+    </div>
+  );
+}
+
+function formatAlbumDuration(totalSeconds: number): string {
+  const secs = Math.round(totalSeconds);
+  const hours = Math.floor(secs / 3600);
+  const minutes = Math.floor((secs % 3600) / 60);
+  const seconds = secs % 60;
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return hours > 0
+    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+    : `${minutes}:${pad(seconds)}`;
+}
+
+function pickMostCommon(values: (string | null)[]): string | null {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    if (value) {
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+  }
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [value, count] of counts) {
+    if (count > bestCount) {
+      best = value;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+function shuffleTracks(tracks: T.TrackMetadata[]): T.TrackMetadata[] {
+  const result = tracks.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function AlbumHero() {
+  const dispatch = Hooks.useDispatch();
+  const server = $$.getCurrentServer();
+  const allTracks = $$.getMusicTracks();
+  const filteredTracks = $$.getFilteredMusicTracks();
+  const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
+  const playingTrackPath = $$.getMusicPlaybackTrackPath();
+
+  const lastPlayedPathRef = React.useRef<string | null>(
+    persistedState.musicLastPlayedTrackPath.read(),
+  );
+  React.useEffect(() => {
+    if (playingTrackPath) {
+      lastPlayedPathRef.current = playingTrackPath;
+    }
+  }, [playingTrackPath]);
+
+  const tracksByPath = React.useMemo(() => {
+    const map = new Map<string, T.TrackMetadata>();
+    for (const track of allTracks) {
+      map.set(track.path, track);
+    }
+    return map;
+  }, [allTracks]);
+
+  const contextTrack =
+    (playingTrackPath && tracksByPath.get(playingTrackPath)) ||
+    (selectedTrackPaths[0] && tracksByPath.get(selectedTrackPaths[0])) ||
+    (lastPlayedPathRef.current &&
+      tracksByPath.get(lastPlayedPathRef.current)) ||
+    filteredTracks[0] ||
+    allTracks[0] ||
+    null;
+
+  const albumName = contextTrack?.album ?? null;
+
+  const orderedTracks = React.useMemo(() => {
+    if (!contextTrack) {
+      return [];
+    }
+    const albumTracks = albumName
+      ? allTracks.filter((track) => track.album === albumName)
+      : [contextTrack];
+    return albumTracks.sort((a, b) => {
+      const aTrack = a.track ?? Number.MAX_SAFE_INTEGER;
+      const bTrack = b.track ?? Number.MAX_SAFE_INTEGER;
+      if (aTrack !== bTrack) {
+        return aTrack - bTrack;
+      }
+      return (a.title ?? a.path).localeCompare(b.title ?? b.path);
+    });
+  }, [allTracks, albumName, contextTrack]);
+
+  if (!contextTrack || orderedTracks.length === 0) {
+    return null;
+  }
+
+  const title = albumName ?? contextTrack.title ?? contextTrack.path;
+  const artist = pickMostCommon(
+    orderedTracks.map((track) => track.albumArtist ?? track.artist),
+  );
+  const genres = [
+    ...new Set(
+      orderedTracks.flatMap((track) => (track.genre ? [track.genre] : [])),
+    ),
+  ];
+  const totalDuration = orderedTracks.reduce(
+    (sum, track) => sum + (track.duration ?? 0),
+    0,
+  );
+  const artTrack = orderedTracks.find((track) => track.coverArt);
+  const artUrl = artTrack?.coverArt
+    ? `${server.url}/music/cover-art?path=${encodeURIComponent(artTrack.coverArt)}`
+    : null;
+
+  const meta = [
+    `${orderedTracks.length} ${orderedTracks.length === 1 ? 'song' : 'songs'}`,
+    totalDuration > 0 ? formatAlbumDuration(totalDuration) : null,
+  ].filter(Boolean) as string[];
+
+  function playTracks(tracks: T.TrackMetadata[]) {
+    if (tracks.length === 0) {
+      return;
+    }
+    dispatch(A.setMusicPlaybackQueue(tracks));
+    dispatch(A.musicPlaybackLoad(tracks[0].path));
+  }
+
+  return (
+    <div className="musicAlbumHero">
+      <div className="musicAlbumHeroArt">
+        {artUrl ? (
+          <img src={artUrl} alt="" />
+        ) : (
+          <span className="musicAlbumHeroArtPlaceholder" aria-hidden="true" />
+        )}
+      </div>
+      <div className="musicAlbumHeroBody">
+        <h2 className="musicAlbumHeroTitle">{title}</h2>
+        {artist ? <div className="musicAlbumHeroArtist">{artist}</div> : null}
+        {meta.length > 0 ? (
+          <div className="musicAlbumHeroMeta">{meta.join(' • ')}</div>
+        ) : null}
+        <div className="musicAlbumHeroActions">
+          <button
+            type="button"
+            className="musicAlbumHeroButton musicAlbumHeroButton-primary"
+            aria-label={`Play ${title}`}
+            onClick={() => playTracks(orderedTracks)}
+          >
+            <img src="/svg/play.svg" alt="" />
+            Play
+          </button>
+          <button
+            type="button"
+            className="musicAlbumHeroButton"
+            aria-label={`Shuffle ${title}`}
+            onClick={() => playTracks(shuffleTracks(orderedTracks))}
+          >
+            <img src="/svg/shuffle.svg" alt="" />
+            Shuffle
+          </button>
+        </div>
+        {genres.length > 0 ? (
+          <div className="musicAlbumHeroGenres">{genres.join(' • ')}</div>
+        ) : null}
+      </div>
     </div>
   );
 }
