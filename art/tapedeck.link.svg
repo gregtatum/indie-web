@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 24.1 19.75"
+   fill="none"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="tapedeck-mark.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="namedview4"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="19.443038"
+     inkscape:cx="13.115234"
+     inkscape:cy="3.6259766"
+     inkscape:window-width="1650"
+     inkscape:window-height="1056"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg4" />
+  <title
+     id="title1">TapeDeck</title>
+  <path
+     style="display:inline;fill:#ce1ebb;fill-opacity:1;stroke:none;stroke-width:30;stroke-opacity:0"
+     d="m 7.5862631,16.252605 c 0,0 -0.077148,-1.645834 0.4628906,-2.031576 0.5400391,-0.385742 0.9000651,-0.385742 0.9000651,-0.385742 l -0.2571615,2.674479 z"
+     id="path5"
+     inkscape:label="pink left"
+     sodipodi:nodetypes="csccc"
+     sodipodi:insensitive="true" />
+  <path
+     style="display:inline;fill:#ce1ebb;fill-opacity:1;stroke:none;stroke-width:30;stroke-opacity:0"
+     d="m 13.963867,13.655273 c 0,0 1.234375,0.05143 1.517253,0.874349 0.282877,0.822917 0.308594,1.388672 0.308594,1.388672 l 1.054362,-0.05143 c 0,0 0.411458,-1.774414 -0.565756,-2.46875 -0.977213,-0.694336 -2.417317,-0.540039 -2.417317,-0.540039 z"
+     id="path6"
+     inkscape:label="pink right"
+     sodipodi:insensitive="true" />
+  <path
+     class="cassetteMarkBack0"
+     fill="none"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     stroke="#ce1ebb"
+     stroke-width="0.9"
+     d="m 8.6,10.3 c -1.1,0 -2,-1.4 -2,-2.5 0,-1.1 0.9,-2.6 2,-2.6 m 0,5.1 h 8 m -8,-5.1 h 8 m 0,5.1 c 1.1,0 2,-1.4 2,-2.5 0,-1.1 -0.790896,-2.6727362 -2,-2.6 M 7.6056641,16.474284 v -1.2 c 0,-0.9 0.1,-1.2 0.3,-1.5 0.2,-0.3 0.5,-0.6 0.8,-0.7 0.4,-0.2 0.8000218,-0.206265 1.6999999,-0.2 L 14.1,12.9 c 0.899978,0.0063 1.3,0 1.7,0.2 0.318184,0.172736 0.563632,0.409092 0.75454,0.672736 C 16.690896,14.018172 16.9,14.4 16.9,15.3 v 1.1"
+     id="path1"
+     style="display:inline"
+     inkscape:label="pink thin"
+     sodipodi:nodetypes="csccccccsccsscssccsc" />
+  <path
+     class="cassetteMarkBack1"
+     fill="none"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     stroke="#ce1ebb"
+     stroke-width="2"
+     d="M 8.6,9.8 C 10.342904,10.288607 10.831445,9.2600261 10.831445,8.1600261 10.831445,7.0600261 9.7,5.8 8.6,5.8 m 0,4 c -1.1,0 -2,-0.9 -2,-2 0,-1.1 0.9,-2 2,-2 m 8,4 c 1.1,0 2,-0.9 2,-2 0,-1.1 -0.9,-2 -2,-2 m 0,4 c -1.1,0 -2,-0.9 -2,-2 0,-1.1 0.9,-2 2,-2 M 6.8,16.5 h 10.7 c 1.1,0 2.6,0 3,-0.2 0.4,-0.2 0.7,-0.5 0.9,-0.9 0.2,-0.4 0.2,-1 0.2,-2.1 V 5.9727609 c 0,-1.1 -0.236397,-1.6090797 -0.472761,-1.9363434 -0.261844,-0.3625432 -0.881865,-0.9000247 -1.281865,-1.1000247 -0.4,-0.2 -0.881805,-0.4562057 -1.881791,-0.4545769 L 6.8,2.5 C 5.7000015,2.5017918 5.1,2.5 4.7,2.7 4.3,2.9 4,3.2 3.8,3.6 3.6,4 3.6,4.6 3.6,5.7 v 7.6 c 0,1.1 0,1.7 0.2,2.1 0.2,0.4 0.5,0.7 0.9,0.9 0.4,0.2 1,0.2 2.1,0.2"
+     id="path2"
+     style="display:inline"
+     inkscape:label="pink thick"
+     sodipodi:nodetypes="csccsccsccsccsssssssssssssssc" />
+  <path
+     class="cassetteMarkFront0"
+     fill="none"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     stroke="#111111"
+     stroke-width="0.9"
+     d="m 7.3999877,11.045448 8.1545643,0.0091 M 7.4984401,5.9501277 15.54546,5.9454478 M 7.2,17.2 V 16.1 C 7.2,15.2 7.3,14.8 7.5,14.5 7.7,14.2 8.0181841,13.95454 8.3545522,13.836368 8.7545522,13.736368 9.1,13.7 10,13.7 h 3 c 0.9,0 1.318184,0.01818 1.690908,0.14546 C 15.04546,13.972724 15.3,14.2 15.5,14.5 c 0.2,0.3 0.3,0.6 0.3,1.5 v 1.2"
+     id="path3"
+     style="display:inline"
+     inkscape:label="black thin"
+     sodipodi:nodetypes="cccccsscsscssc"
+     sodipodi:insensitive="true" />
+  <path
+     class="cassetteMarkFront1"
+     fill="none"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     stroke="#111111"
+     stroke-width="2"
+     d="m 7.5,10.5 c 1.1,0 2,-0.9 2,-2 0,-1.1 -0.9,-2 -2,-2 m 0,4 c -1.1,0 -2,-0.9 -2,-2 0,-1.1 0.9,-2 2,-2 m 8,4 c 1.1,0 2,-0.9 2,-2 0,-1.1 -0.9,-2 -2,-2 m 0,4 c -1.1,0 -2,-0.9 -2,-2 0,-1.1 0.9,-2 2,-2 M 5.7,17.2 h 10.7 c 1.1,0 2.6,0 3,-0.2 0.4,-0.2 0.7,-0.5 0.9,-0.8 0.2,-0.5 0.2,-1 0.2,-2.1 V 6.4 C 20.5,5.3 20.209055,4.9545645 20.018147,4.609129 19.845423,4.300037 19.272663,3.8909326 18.999951,3.6909326 18.690871,3.481853 17.945398,3.2 16.845398,3.2 H 5.7 C 4.6,3.2 4,3.2 3.6,3.5 3.2,3.7 2.9,4 2.7,4.3 2.5,4.8 2.5,5.3 2.5,6.4 V 14 c 0,1.2 0,1.7 0.2,2.2 0.2,0.3 0.5,0.6 0.9,0.8 0.4,0.2 1,0.2 2.1,0.2"
+     id="path4"
+     style="display:inline"
+     inkscape:label="black thick"
+     sodipodi:nodetypes="csccsccsccsccsscssccssccsscsc" />
+</svg>
