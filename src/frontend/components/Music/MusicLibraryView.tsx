@@ -156,6 +156,7 @@ export function MusicLibraryView({
           persistLocalStorage="musicLibrarySidebarSplitterOffset"
         />
       </div>
+      <PlaybackBar />
     </div>
   );
 }
@@ -224,7 +225,6 @@ function TracksView() {
     >
       <TracksHeader setColumnWidths={setColumnWidths} />
       <Tracks />
-      <PlaybackBar />
     </div>
   );
 }
