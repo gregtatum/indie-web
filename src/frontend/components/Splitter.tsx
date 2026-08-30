@@ -82,6 +82,7 @@ export function Splitter(props: SplitterProps) {
     maxEndSize,
   } = props;
   const container = React.useRef<HTMLDivElement>(null);
+  const middleVisible = React.useRef<HTMLDivElement>(null);
   const isDragging = $$.getIsDraggingSplitter();
   // Whether *this* splitter is the one being dragged. The global `isDragging`
   // above is shared by every splitter (TextArea relies on it), so it can't
@@ -172,7 +173,10 @@ export function Splitter(props: SplitterProps) {
 
     function onMouseMove(event: MouseEvent) {
       event.preventDefault();
-      handleMove(isVertical ? event.pageY : event.pageX);
+      handleMove(
+        isVertical ? event.pageY : event.pageX,
+        isVertical ? event.pageX : event.pageY,
+      );
     }
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('mousemove', onMouseMove);
@@ -185,7 +189,16 @@ export function Splitter(props: SplitterProps) {
     event.preventDefault();
     dispatch(A.draggingSplitter(true));
     setIsDraggingThis(true);
-    touchId.current = event.changedTouches[0].identifier;
+    const startTouch = event.changedTouches[0];
+    touchId.current = startTouch.identifier;
+    if (container.current) {
+      // Land the indicator on the touch point immediately, no glide-in.
+      slideVisibleIndicator(
+        container.current.getBoundingClientRect(),
+        isVertical ? startTouch.pageX : startTouch.pageY,
+        true,
+      );
+    }
 
     function onTouchEnd() {
       touchId.current = null;
@@ -207,7 +220,10 @@ export function Splitter(props: SplitterProps) {
         throw new Error('Expected to find a touch from the identifier');
       }
       event.preventDefault();
-      handleMove(isVertical ? touch.pageY : touch.pageX);
+      handleMove(
+        isVertical ? touch.pageY : touch.pageX,
+        isVertical ? touch.pageX : touch.pageY,
+      );
     }
     function preventDocScroll(event: TouchEvent) {
       event.preventDefault();
@@ -219,7 +235,7 @@ export function Splitter(props: SplitterProps) {
     });
   };
 
-  function handleMove(pos: number) {
+  function handleMove(pos: number, crossPos?: number) {
     const { current } = container;
     if (!current) {
       return;
@@ -229,6 +245,9 @@ export function Splitter(props: SplitterProps) {
     const origin = isVertical ? rect.y : rect.x;
     const off = size / 2 + origin - pos;
     setOffset(keepOffsetInBounds(rect, off));
+    if (crossPos !== undefined) {
+      slideVisibleIndicator(rect, crossPos);
+    }
   }
 
   function handleUp() {
@@ -236,6 +255,51 @@ export function Splitter(props: SplitterProps) {
     setIsDraggingThis(false);
     window.document.body.style.cursor = '';
   }
+
+  function slideVisibleIndicator(rect: DOMRect, pointer: number, snap = false) {
+    const pill = middleVisible.current;
+    if (!pill) {
+      return;
+    }
+    const crossSize = isVertical ? rect.width : rect.height;
+    const crossOrigin = isVertical ? rect.x : rect.y;
+    const pillLength = isVertical ? pill.offsetWidth : pill.offsetHeight;
+    const limit = Math.max(0, (crossSize - pillLength) / 2);
+    const fromCenter = pointer - crossOrigin - crossSize / 2;
+    const clamped = Math.max(-limit, Math.min(limit, fromCenter));
+    if (snap) {
+      pill.style.transition = 'none';
+    }
+    pill.style.transform = isVertical
+      ? `translateX(${clamped}px)`
+      : `translateY(${clamped}px)`;
+    if (snap) {
+      pill.getBoundingClientRect(); // Force the jump to commit transition-free.
+      pill.style.transition = '';
+    }
+  }
+
+  // `snap` on the first event of a hover so the pill lands on the pointer
+  // instantly; later moves glide via the CSS transition.
+  function hoverTrack(event: React.MouseEvent<HTMLDivElement>, snap: boolean) {
+    if (isDraggingThis) {
+      // The window-level drag listener is already driving the indicator.
+      return;
+    }
+    const { current } = container;
+    if (current) {
+      slideVisibleIndicator(
+        current.getBoundingClientRect(),
+        isVertical ? event.pageX : event.pageY,
+        snap,
+      );
+    }
+  }
+
+  const onMiddleHoverEnter: React.MouseEventHandler<HTMLDivElement> = (event) =>
+    hoverTrack(event, true);
+  const onMiddleHoverMove: React.MouseEventHandler<HTMLDivElement> = (event) =>
+    hoverTrack(event, false);
 
   let startStyle: React.CSSProperties;
   let endStyle: React.CSSProperties;
@@ -267,8 +331,13 @@ export function Splitter(props: SplitterProps) {
         style={middleStyle}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
+        onMouseEnter={onMiddleHoverEnter}
+        onMouseMove={onMiddleHoverMove}
       >
-        <div className={`${className}MiddleVisible splitterMiddleVisible`} />
+        <div
+          ref={middleVisible}
+          className={`${className}MiddleVisible splitterMiddleVisible`}
+        />
       </div>
       <div className={className + 'End'} style={endStyle}>
         {end}

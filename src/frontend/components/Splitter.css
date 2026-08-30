@@ -58,7 +58,7 @@
   height: clamp(48px, 40%, 140px);
   border-radius: 999px;
   background: transparent;
-  transition: background 120ms;
+  transition: background 150ms;
 }
 
 [data-direction="vertical"] .splitterMiddleVisible {
