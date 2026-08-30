@@ -19,6 +19,7 @@
 
 .listFilesList {
   position: relative;
+  padding-block: 4px;
 
   &:focus-visible {
     outline: none;
@@ -95,8 +96,20 @@
 
 .listFilesFile {
   display: flex;
-  border-bottom: 1px solid var(--line);
   position: relative;
+  margin-inline: 8px;
+  border-radius: 6px;
+  border-bottom: 1px solid var(--line);
+
+  &:hover {
+    background: var(--selection-hover);
+  }
+
+  /* Drop the hairline inside a selected run and the one directly above it. */
+  &.selected,
+  &:has(+ .listFilesFile.selected) {
+    border-bottom-color: transparent;
+  }
 
   &.selected {
     background: var(--selection-inactive);
@@ -129,10 +142,6 @@
         filter: invert(1);
       }
     }
-
-    & a:hover {
-      background: none;
-    }
   }
 
   /* Create an inset pseudo element so the outline isn't cut off. */
@@ -163,8 +172,15 @@ a.listFilesFileEmpty {
   cursor: default;
 }
 
-.listFilesFile a:hover {
-  background: #eee;
+/* Square the joins between consecutive selected rows so a run reads as one block. */
+.listFilesFile.selected + .listFilesFile.selected {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.listFilesFile.selected:has(+ .listFilesFile.selected) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .listFilesBlocks {
