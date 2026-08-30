@@ -170,13 +170,13 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
         <div className="musicViewToggle">
           <Link
             to={{ search: '' }}
-            className={`button musicViewToggleButton${!isFilesView ? ' musicViewToggleButton-active' : ''}`}
+            className={`musicViewToggleButton${!isFilesView ? ' musicViewToggleButton-active' : ''}`}
           >
             Library
           </Link>
           <Link
             to={{ search: 'view=files' }}
-            className={`button musicViewToggleButton${isFilesView ? ' musicViewToggleButton-active' : ''}`}
+            className={`musicViewToggleButton${isFilesView ? ' musicViewToggleButton-active' : ''}`}
           >
             Files
           </Link>

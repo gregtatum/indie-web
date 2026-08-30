@@ -36,6 +36,7 @@
   --accent-strong: #5b28d6;
   --accent-tint: #7c3aed14;
   --line: #e6e6e6;
+  --line-strong: #bbb;
   --font-display: 'Hanken Grotesk', system-ui, sans-serif;
 
   --ink: #111;
@@ -191,6 +192,7 @@ button.icon-mask {
 .button:active:not(:disabled),
 .ͼ2 .cm-button:active:not(:disabled) {
   outline: var(--outline-active);
+  z-index: 1;
 }
 
 .button:focus,

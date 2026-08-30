@@ -73,23 +73,51 @@
 .musicViewToggle {
   display: flex;
   margin-left: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--selection-hover);
 }
 
 .musicViewToggleButton {
-  border-radius: 0;
+  position: relative;
+  padding: 5px 14px;
+  color: var(--ink);
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .musicViewToggleButton:first-child {
-  border-radius: 4px 0 0 4px;
+  border-radius: 7px 0 0 7px;
 }
 
 .musicViewToggleButton:last-child {
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 7px 7px 0;
+}
+
+.musicViewToggleButton + .musicViewToggleButton {
+  border-left: 1px solid var(--line-strong);
+}
+
+.musicViewToggleButton:hover {
+  color: var(--accent-strong);
+}
+
+.musicViewToggleButton:focus-visible {
+  z-index: 1;
+  outline: var(--outline-focus);
+}
+
+.musicViewToggleButton:active {
+  z-index: 1;
+  outline: var(--outline-active);
 }
 
 .musicViewToggleButton-active {
-  background: var(--primary-color);
-  color: #fff;
+  background: #ece6fb;
+  color: var(--accent-strong);
+  box-shadow: 0 1px 2px #00000024;
 }
 
 .musicLibraryView {
