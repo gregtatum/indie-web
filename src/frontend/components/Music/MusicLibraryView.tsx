@@ -137,13 +137,16 @@ export function MusicLibraryView({
 
   return (
     <div className="musicLibraryView">
-      <Splitter
-        direction="vertical"
-        className="musicLibrarySplitter"
-        start={<LibraryTopPane />}
-        end={<TracksView />}
-        persistLocalStorage="musicLibrarySplitterOffset"
-      />
+      <div className="musicLibraryBody">
+        <AlbumHero />
+        <Splitter
+          direction="vertical"
+          className="musicLibrarySplitter"
+          start={<FilterPanels />}
+          end={<TracksView />}
+          persistLocalStorage="musicLibrarySplitterOffset"
+        />
+      </div>
     </div>
   );
 }
@@ -373,15 +376,6 @@ function FilterPanels() {
       <FilterPanel panel="genre" tracks={panelTracks.genre} />
       <FilterPanel panel="artist" tracks={panelTracks.artist} />
       <FilterPanel panel="album" tracks={panelTracks.album} />
-    </div>
-  );
-}
-
-function LibraryTopPane() {
-  return (
-    <div className="musicLibraryTopPane">
-      <AlbumHero />
-      <FilterPanels />
     </div>
   );
 }

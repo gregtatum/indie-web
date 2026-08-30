@@ -102,6 +102,7 @@
 
 .musicLibrarySplitter {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   position: relative;
 }
@@ -114,18 +115,17 @@
   flex: 1;
 }
 
-.musicLibraryTopPane {
+.musicLibraryBody {
   display: flex;
   flex-direction: row;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 .musicFilterPanels {
   display: flex;
   flex-direction: row;
-  flex: 1;
-  min-width: 0;
   height: 100%;
   border-bottom: 1px solid var(--border-color);
   user-select: none;
@@ -134,13 +134,14 @@
 .musicAlbumHero {
   flex: 0 1 clamp(220px, 26%, 340px);
   min-width: 180px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 20px;
   overflow-y: auto;
+  background: var(--surface-raised);
   border-right: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
   animation: fadein 200ms ease-out;
 }
 
