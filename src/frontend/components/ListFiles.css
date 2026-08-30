@@ -99,7 +99,36 @@
   position: relative;
 
   &.selected {
-    background: var(--accent-tint);
+    background: var(--selection-inactive);
+
+    &:hover {
+      background: var(--selection-inactive-hover);
+    }
+
+    .listFilesList:focus-within & {
+      background: var(--selection-active);
+
+      &:hover {
+        background: var(--selection-active-hover);
+      }
+
+      & a.listFilesFileLink,
+      & a.listFilesFileEmpty {
+        color: #fff;
+      }
+
+      & .listFilesFolder::after {
+        background-color: #fff;
+      }
+
+      & .listFilesIcon img {
+        filter: invert(1);
+      }
+
+      & .listFilesFileMenuIcon {
+        filter: invert(1);
+      }
+    }
 
     & a:hover {
       background: none;
