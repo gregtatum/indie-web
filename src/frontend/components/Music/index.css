@@ -157,7 +157,6 @@
 
 .musicAlbumHeroArt {
   width: 100%;
-  max-width: 260px;
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
   border-radius: 8px;
