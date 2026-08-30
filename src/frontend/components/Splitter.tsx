@@ -11,6 +11,16 @@ interface SplitterProps {
   direction?: 'horizontal' | 'vertical';
   /** Initial offset from center (px) used when nothing is persisted yet. */
   defaultOffset?: number;
+  /**
+   * Clamp the start pane (px) so it never grows past this, even when dragged.
+   * Mutually exclusive with `maxEndSize`.
+   */
+  maxStartSize?: number;
+  /**
+   * Clamp the end pane (px) so it never grows past this, even when dragged.
+   * Mutually exclusive with `maxStartSize`.
+   */
+  maxEndSize?: number;
 }
 
 const splitterWidth = 3;
@@ -68,6 +78,8 @@ export function Splitter(props: SplitterProps) {
     persistLocalStorage,
     direction = 'horizontal',
     defaultOffset = 0,
+    maxStartSize,
+    maxEndSize,
   } = props;
   const container = React.useRef<HTMLDivElement>(null);
   const isDragging = $$.getIsDraggingSplitter();
@@ -101,6 +113,10 @@ export function Splitter(props: SplitterProps) {
     throw new Error('Splitter only allows class names with no spaces.');
   }
 
+  if (maxStartSize !== undefined && maxEndSize !== undefined) {
+    throw new Error('Splitter accepts maxStartSize or maxEndSize, not both.');
+  }
+
   function keepOffsetInBounds(
     rect: DOMRect | { width: number; height: number },
     off: number,
@@ -108,6 +124,16 @@ export function Splitter(props: SplitterProps) {
     const size = isVertical ? rect.height : rect.width;
     off = Math.max(-(size / 2) + minSpace, off);
     off = Math.min(size / 2 - minSpace, off);
+    if (maxStartSize !== undefined) {
+      // The start pane spans `size / 2 - off`; cap it by not letting `off`
+      // drop below the offset that produces `maxStartSize`.
+      off = Math.max(size / 2 - maxStartSize, off);
+    }
+    if (maxEndSize !== undefined) {
+      // The end pane spans `size / 2 + off`; cap it by not letting `off`
+      // rise above the offset that produces `maxEndSize`.
+      off = Math.min(maxEndSize - size / 2, off);
+    }
     return off;
   }
 
