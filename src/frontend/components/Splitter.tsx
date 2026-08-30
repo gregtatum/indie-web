@@ -3,7 +3,7 @@ import { A, $$, Hooks } from 'frontend';
 import { persistedState } from 'frontend/logic/persisted-state';
 import './Splitter.css';
 
-interface SplitterProps {
+interface SplitterBaseProps {
   className: string;
   start: React.ReactNode;
   end: React.ReactNode;
@@ -11,16 +11,23 @@ interface SplitterProps {
   direction?: 'horizontal' | 'vertical';
   /** Initial offset from center (px) used when nothing is persisted yet. */
   defaultOffset?: number;
+}
+
+interface SplitterConstraint {
+  /** Which pane `minSize` / `maxSize` bound. */
+  pane: 'start' | 'end';
+  /** Smallest size (px) the named pane may shrink to when dragged. */
+  minSize?: number;
+  /** Largest size (px) the named pane may grow to when dragged. */
+  maxSize?: number;
+}
+
+interface SplitterProps extends SplitterBaseProps {
   /**
-   * Clamp the start pane (px) so it never grows past this, even when dragged.
-   * Mutually exclusive with `maxEndSize`.
+   * Optionally bound one pane's size. Naming a single `pane` means the limits
+   * can't contradict each other, so there's no wrong way to pass them.
    */
-  maxStartSize?: number;
-  /**
-   * Clamp the end pane (px) so it never grows past this, even when dragged.
-   * Mutually exclusive with `maxStartSize`.
-   */
-  maxEndSize?: number;
+  constrain?: SplitterConstraint;
 }
 
 const splitterWidth = 3;
@@ -78,8 +85,7 @@ export function Splitter(props: SplitterProps) {
     persistLocalStorage,
     direction = 'horizontal',
     defaultOffset = 0,
-    maxStartSize,
-    maxEndSize,
+    constrain,
   } = props;
   const container = React.useRef<HTMLDivElement>(null);
   const middleVisible = React.useRef<HTMLDivElement>(null);
@@ -114,10 +120,6 @@ export function Splitter(props: SplitterProps) {
     throw new Error('Splitter only allows class names with no spaces.');
   }
 
-  if (maxStartSize !== undefined && maxEndSize !== undefined) {
-    throw new Error('Splitter accepts maxStartSize or maxEndSize, not both.');
-  }
-
   function keepOffsetInBounds(
     rect: DOMRect | { width: number; height: number },
     off: number,
@@ -125,15 +127,25 @@ export function Splitter(props: SplitterProps) {
     const size = isVertical ? rect.height : rect.width;
     off = Math.max(-(size / 2) + minSpace, off);
     off = Math.min(size / 2 - minSpace, off);
-    if (maxStartSize !== undefined) {
-      // The start pane spans `size / 2 - off`; cap it by not letting `off`
-      // drop below the offset that produces `maxStartSize`.
-      off = Math.max(size / 2 - maxStartSize, off);
-    }
-    if (maxEndSize !== undefined) {
-      // The end pane spans `size / 2 + off`; cap it by not letting `off`
-      // rise above the offset that produces `maxEndSize`.
-      off = Math.min(maxEndSize - size / 2, off);
+    // The start pane spans `size / 2 - off` and the end pane `size / 2 + off`,
+    // so each size limit on the constrained pane becomes an offset limit.
+    if (constrain) {
+      const { pane, minSize, maxSize } = constrain;
+      if (pane === 'start') {
+        if (maxSize !== undefined) {
+          off = Math.max(size / 2 - maxSize, off);
+        }
+        if (minSize !== undefined) {
+          off = Math.min(size / 2 - minSize, off);
+        }
+      } else {
+        if (maxSize !== undefined) {
+          off = Math.min(maxSize - size / 2, off);
+        }
+        if (minSize !== undefined) {
+          off = Math.max(minSize - size / 2, off);
+        }
+      }
     }
     return off;
   }

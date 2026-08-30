@@ -142,7 +142,7 @@ export function MusicLibraryView({
           direction="horizontal"
           className="musicLibrarySidebarSplitter"
           defaultOffset={400}
-          maxStartSize={400}
+          constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
           start={<AlbumHero />}
           end={
             <Splitter
