@@ -138,13 +138,21 @@ export function MusicLibraryView({
   return (
     <div className="musicLibraryView">
       <div className="musicLibraryBody">
-        <AlbumHero />
         <Splitter
-          direction="vertical"
-          className="musicLibrarySplitter"
-          start={<FilterPanels />}
-          end={<TracksView />}
-          persistLocalStorage="musicLibrarySplitterOffset"
+          direction="horizontal"
+          className="musicLibrarySidebarSplitter"
+          defaultOffset={400}
+          start={<AlbumHero />}
+          end={
+            <Splitter
+              direction="vertical"
+              className="musicLibrarySplitter"
+              start={<FilterPanels />}
+              end={<TracksView />}
+              persistLocalStorage="musicLibrarySplitterOffset"
+            />
+          }
+          persistLocalStorage="musicLibrarySidebarSplitterOffset"
         />
       </div>
     </div>

@@ -61,6 +61,11 @@
   transition: background 120ms;
 }
 
+[data-direction="vertical"] .splitterMiddleVisible {
+  width: clamp(48px, 40%, 140px);
+  height: 5px;
+}
+
 .splitterMiddle:hover .splitterMiddleVisible {
   background: var(--muted);
 }

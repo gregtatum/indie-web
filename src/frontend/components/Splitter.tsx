@@ -9,6 +9,8 @@ interface SplitterProps {
   end: React.ReactNode;
   persistLocalStorage?: string;
   direction?: 'horizontal' | 'vertical';
+  /** Initial offset from center (px) used when nothing is persisted yet. */
+  defaultOffset?: number;
 }
 
 const splitterWidth = 3;
@@ -65,14 +67,19 @@ export function Splitter(props: SplitterProps) {
     className,
     persistLocalStorage,
     direction = 'horizontal',
+    defaultOffset = 0,
   } = props;
   const container = React.useRef<HTMLDivElement>(null);
   const isDragging = $$.getIsDraggingSplitter();
+  // Whether *this* splitter is the one being dragged. The global `isDragging`
+  // above is shared by every splitter (TextArea relies on it), so it can't
+  // drive this instance's hover/drag indicator.
+  const [isDraggingThis, setIsDraggingThis] = React.useState(false);
   const dispatch = Hooks.useDispatch();
   const touchId = React.useRef<null | number>(null);
   const isVertical = direction === 'vertical';
 
-  let initialOffset = 0;
+  let initialOffset = defaultOffset;
   if (persistLocalStorage) {
     const number = persistedState.splitterOffset(persistLocalStorage).read();
     if (number !== null) {
@@ -129,6 +136,7 @@ export function Splitter(props: SplitterProps) {
   const onMouseDown: React.MouseEventHandler<HTMLDivElement> = (event) => {
     event.preventDefault();
     dispatch(A.draggingSplitter(true));
+    setIsDraggingThis(true);
 
     function onMouseUp() {
       handleUp();
@@ -150,6 +158,7 @@ export function Splitter(props: SplitterProps) {
     }
     event.preventDefault();
     dispatch(A.draggingSplitter(true));
+    setIsDraggingThis(true);
     touchId.current = event.changedTouches[0].identifier;
 
     function onTouchEnd() {
@@ -198,6 +207,7 @@ export function Splitter(props: SplitterProps) {
 
   function handleUp() {
     dispatch(A.draggingSplitter(false));
+    setIsDraggingThis(false);
     window.document.body.style.cursor = '';
   }
 
@@ -227,7 +237,7 @@ export function Splitter(props: SplitterProps) {
         {start}
       </div>
       <div
-        className={`${className}Middle splitterMiddle${isDragging ? ' dragging' : ''}`}
+        className={`${className}Middle splitterMiddle${isDraggingThis ? ' dragging' : ''}`}
         style={middleStyle}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
