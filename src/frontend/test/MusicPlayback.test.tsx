@@ -647,23 +647,6 @@ describe('PlaybackBar', () => {
     );
   });
 
-  it('stays mounted and keeps playing when switching to the Files view', async () => {
-    const { store } = await setupPlaying();
-    const loadIdBefore = $.getMusicPlaybackLoadId(store.getState());
-
-    await act(async () => {
-      await userEvent.click(screen.getByRole('link', { name: 'Files' }));
-    });
-
-    // The playback bar survives the Library -> Files sub-view toggle
-    // (getByRole throws if it has unmounted)...
-    screen.getByRole('region', { name: 'Playback controls' });
-    // ...on the same track, still playing, with no fresh load dispatched.
-    expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/a.mp3');
-    expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
-    expect($.getMusicPlaybackLoadId(store.getState())).toBe(loadIdBefore);
-  });
-
   it('does not reload or replay the track when returning from the Files view', async () => {
     const { store } = await setupPlaying();
     const loadIdBefore = $.getMusicPlaybackLoadId(store.getState());
@@ -684,7 +667,7 @@ describe('PlaybackBar', () => {
     expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/a.mp3');
   });
 
-  it('keeps playing and stays mounted when navigating out into the file tree', async () => {
+  it('keeps playing across navigating out to the file tree and back to the music root', async () => {
     const { store } = await setupPlaying();
     const loadIdBefore = $.getMusicPlaybackLoadId(store.getState());
     const server = $.getCurrentServerOrNull(store.getState());
@@ -698,8 +681,19 @@ describe('PlaybackBar', () => {
     expect($.getView(store.getState())).toBe('list-files');
     // The music view (and its toolbar) is gone...
     expect(screen.queryByRole('link', { name: 'Files' })).toBeNull();
-    // ...but the playback bar and audio engine live at the app level and
-    // carry on untouched.
+    // ...but the app-level playback bar carries on untouched.
+    screen.getByRole('region', { name: 'Playback controls' });
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
+
+    // Do not reset music playback.
+    await act(async () => {
+      if (!server) {
+        throw new Error('Expected a current server.');
+      }
+      store.dispatch(A.viewMusic(server, '/'));
+    });
+
+    expect($.getView(store.getState())).toBe('music');
     screen.getByRole('region', { name: 'Playback controls' });
     expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
     expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/a.mp3');

@@ -34,6 +34,100 @@ function track(
   };
 }
 
+function musicServer(id: string): T.FileStoreServer {
+  return {
+    id,
+    url: `https://${id}.example`,
+    name: id,
+    storeType: 'music',
+  };
+}
+
+describe('playback across music view navigation', () => {
+  it('keeps playback when re-entering the same music store', () => {
+    const store = createStore();
+    const server = musicServer('alpha');
+
+    store.dispatch(A.viewMusic(server, '/'));
+    store.dispatch(
+      A.setMusicTracks([track('/a.mp3', 'Rock', 'A', 'A')], false),
+    );
+    store.dispatch(A.musicPlaybackLoad('/a.mp3'));
+    store.dispatch(A.musicPlaybackReady());
+
+    // Browsing back to a folder root of a music store re-dispatches view-music.
+    store.dispatch(A.viewMusic(server, '/'));
+
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/a.mp3');
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
+  });
+
+  it('stops playback when switching to a different music store', () => {
+    const store = createStore();
+
+    store.dispatch(A.viewMusic(musicServer('alpha'), '/'));
+    store.dispatch(A.musicPlaybackLoad('/a.mp3'));
+    store.dispatch(A.musicPlaybackReady());
+
+    store.dispatch(A.viewMusic(musicServer('beta'), '/'));
+
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBeNull();
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('idle');
+  });
+
+  it('still stops playback on an explicit stop', () => {
+    const store = createStore();
+
+    store.dispatch(A.viewMusic(musicServer('alpha'), '/'));
+    store.dispatch(A.musicPlaybackLoad('/a.mp3'));
+    store.dispatch(A.musicPlaybackReady());
+    store.dispatch(A.musicPlaybackStop());
+
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBeNull();
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('idle');
+  });
+
+  it('stops playback when the playing store is removed', () => {
+    const store = createStore();
+    const server = musicServer('alpha');
+
+    store.dispatch(A.viewMusic(server, '/'));
+    store.dispatch(A.musicPlaybackLoad('/a.mp3'));
+    store.dispatch(A.musicPlaybackReady());
+
+    store.dispatch(A.removeFileStoreServer(server));
+
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBeNull();
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('idle');
+  });
+
+  it('leaves playback alone when a different store is removed', () => {
+    const store = createStore();
+
+    store.dispatch(A.viewMusic(musicServer('alpha'), '/'));
+    store.dispatch(A.musicPlaybackLoad('/a.mp3'));
+    store.dispatch(A.musicPlaybackReady());
+
+    store.dispatch(A.removeFileStoreServer(musicServer('beta')));
+
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/a.mp3');
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
+  });
+
+  it('stops playback when all storage is removed', () => {
+    const store = createStore();
+
+    store.dispatch(A.viewMusic(musicServer('alpha'), '/'));
+    store.dispatch(A.musicPlaybackLoad('/a.mp3'));
+    store.dispatch(A.musicPlaybackReady());
+
+    store.dispatch(A.removeAllStorage());
+
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBeNull();
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('idle');
+  });
+});
+
 describe('music filter derived selections', () => {
   it('preserves a selected genre and ignores it when it is no longer valid', () => {
     const store = createStore();

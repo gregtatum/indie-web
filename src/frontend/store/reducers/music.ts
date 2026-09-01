@@ -59,7 +59,6 @@ function playingTrackPath(
     case 'music-playback-load':
       return action.path;
     case 'music-playback-stop':
-    case 'view-music':
       return null;
     default:
       return state;
@@ -75,8 +74,6 @@ function playbackLoadId(state = 0, action: T.Action): number {
   switch (action.type) {
     case 'music-playback-load':
       return state + 1;
-    case 'view-music':
-      return 0;
     default:
       return state;
   }
@@ -97,7 +94,6 @@ function playbackStatus(
     case 'music-playback-error':
       return 'error';
     case 'music-playback-stop':
-    case 'view-music':
       return 'idle';
     default:
       return state;
@@ -272,8 +268,22 @@ function playbackQueue(
         tracks: action.tracks,
         panelSelections: action.panelSelections,
       };
+    default:
+      return state;
+  }
+}
+
+function playbackServerId(
+  state: string | null = null,
+  action: T.Action,
+): string | null {
+  switch (action.type) {
     case 'view-music':
-      return emptyPlaybackQueue;
+      return action.fileStoreServer.id;
+    case 'remove-all-storage':
+      return null;
+    case 'remove-server':
+      return action.server.id === state ? null : state;
     default:
       return state;
   }
@@ -295,6 +305,7 @@ const combinedMusicReducer = combineReducers({
   playbackLoadId,
   playbackStatus,
   playbackQueue,
+  playbackServerId,
   folderArtSaveStatus,
   folderArtVersion,
 });
@@ -305,5 +316,20 @@ export function musicReducer(
   state: MusicState | undefined,
   action: T.Action,
 ): MusicState {
-  return combinedMusicReducer(state, action);
+  const next = combinedMusicReducer(state, action);
+  if (
+    state &&
+    state.playbackServerId !== null &&
+    next.playbackServerId !== state.playbackServerId
+  ) {
+    // Invalidate the currenet music playback when the server changes.
+    return {
+      ...next,
+      playingTrackPath: null,
+      playbackLoadId: 0,
+      playbackStatus: 'idle',
+      playbackQueue: emptyPlaybackQueue,
+    };
+  }
+  return next;
 }
