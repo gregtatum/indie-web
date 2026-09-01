@@ -10,6 +10,7 @@
   --page-max-width: 900px;
   --page-padding: 50px;
   --icon-size: 16px;
+  --playback-bar-height: 77px;
 
   --button-border: #888;
   --button-background: #eee;
@@ -273,6 +274,16 @@ code {
 
 .appView {
   padding-top: var(--header-padding);
+}
+
+/*
+ * The music playback bar is position: fixed to the bottom of the viewport.
+ * Reserving space here keeps it from covering the bottom of a view; views
+ * sized off the viewport rather than .appView reserve their own (see
+ * .listFiles). Only applied while something is playing.
+ */
+.appView-withPlaybackBar {
+  padding-bottom: var(--playback-bar-height);
 }
 
 .appViewContents {

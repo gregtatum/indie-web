@@ -20,6 +20,7 @@ import { toFileStoreName } from 'frontend/logic/app-logic';
 import { LanguageCoach } from './LanguageCoach';
 import { ConnectFolder } from './ConnectFolder';
 import { Music } from './Music';
+import { PlaybackBar } from './Music/PlaybackBar';
 
 import './App.css';
 import { Onboarding } from './Onboarding';
@@ -259,10 +260,17 @@ export function AppRoutes() {
  * The main view of the app with a header and view area.
  */
 export function MainView(props: { children: any }) {
+  // Mounted here, above the route switch, so music playback and its controls
+  // survive navigating anywhere in the app (e.g. into the file tree).
+  // PlaybackBar renders nothing while playback is idle.
+  const showPlaybackBar = $$.getMusicPlaybackStatus() !== 'idle';
   return (
-    <div className="appView">
+    <div
+      className={`appView${showPlaybackBar ? ' appView-withPlaybackBar' : ''}`}
+    >
       <Header />
       {props.children}
+      <PlaybackBar />
     </div>
   );
 }

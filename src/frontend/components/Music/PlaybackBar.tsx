@@ -18,7 +18,9 @@ export function PlaybackBar() {
   const playbackQueue = $$.getMusicPlaybackQueue();
   const playbackQueuePanelSelections =
     $$.getMusicPlaybackQueuePanelSelections();
-  const server = $$.getCurrentServer();
+  // OrNull: this bar is mounted at the app level so playback survives leaving
+  // the music view, and the current server can be a non-music store (or none).
+  const server = $$.getCurrentServerOrNull();
   const { currentTime, duration, volume, play, pause, seek, setVolume } =
     useAudioPlayer();
 
@@ -26,9 +28,10 @@ export function PlaybackBar() {
     ? (allTracks.find((t) => t.path === trackPath) ?? null)
     : null;
 
-  const artUrl = trackMetadata?.coverArt
-    ? `${server.url}/music/cover-art?path=${encodeURIComponent(trackMetadata.coverArt)}`
-    : null;
+  const artUrl =
+    server && trackMetadata?.coverArt
+      ? `${server.url}/music/cover-art?path=${encodeURIComponent(trackMetadata.coverArt)}`
+      : null;
   const isPlaying = musicPlaybackStatus === 'playing';
 
   const idx = playbackQueue.findIndex((t) => t.path === trackPath);
@@ -101,8 +104,10 @@ export function PlaybackBar() {
   }
 
   return (
+    // The `music` class carries the scoped CSS custom properties the bar and
+    // its children rely on; it renders outside the music view now.
     <div
-      className="musicPlaybackBar"
+      className="music musicPlaybackBar"
       role="region"
       aria-label="Playback controls"
     >

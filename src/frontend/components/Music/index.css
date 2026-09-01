@@ -538,14 +538,21 @@
 }
 
 .musicPlaybackBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Match modals/menus (z-index: 1, later-in-DOM wins) so a modal opened over
+     the music view still sits above the bar. */
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 8px 16px;
   border-top: 1px solid var(--border-color);
-  flex-shrink: 0;
-  height: 77px;
+  height: var(--playback-bar-height);
   box-sizing: border-box;
+  background: var(--modal-bg);
 }
 
 .musicPlaybackAlbumArt {

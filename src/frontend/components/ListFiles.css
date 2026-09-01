@@ -11,6 +11,13 @@
   min-height: calc(100vh - var(--header-height) - 1px);
 }
 
+/* Leave room for the fixed music playback bar when it is showing. */
+.appView-withPlaybackBar .listFiles {
+  min-height: calc(
+    100vh - var(--header-height) - 1px - var(--playback-bar-height)
+  );
+}
+
 .listFilesList,
 .listFilesBlocks {
   flex: 1;

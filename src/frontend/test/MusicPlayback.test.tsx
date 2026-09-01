@@ -646,6 +646,65 @@ describe('PlaybackBar', () => {
       expect.any(String),
     );
   });
+
+  it('stays mounted and keeps playing when switching to the Files view', async () => {
+    const { store } = await setupPlaying();
+    const loadIdBefore = $.getMusicPlaybackLoadId(store.getState());
+
+    await act(async () => {
+      await userEvent.click(screen.getByRole('link', { name: 'Files' }));
+    });
+
+    // The playback bar survives the Library -> Files sub-view toggle
+    // (getByRole throws if it has unmounted)...
+    screen.getByRole('region', { name: 'Playback controls' });
+    // ...on the same track, still playing, with no fresh load dispatched.
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/a.mp3');
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
+    expect($.getMusicPlaybackLoadId(store.getState())).toBe(loadIdBefore);
+  });
+
+  it('does not reload or replay the track when returning from the Files view', async () => {
+    const { store } = await setupPlaying();
+    const loadIdBefore = $.getMusicPlaybackLoadId(store.getState());
+
+    await act(async () => {
+      await userEvent.click(screen.getByRole('link', { name: 'Files' }));
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('link', { name: 'Library' }));
+    });
+
+    // Returning to the Library used to remount the audio player, which
+    // re-dispatched musicPlaybackLoad from the persisted resume snapshot —
+    // bumping the load id and knocking playback back to 'loading' (the
+    // "randomly plays a file" symptom). It should be a no-op now.
+    expect($.getMusicPlaybackLoadId(store.getState())).toBe(loadIdBefore);
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/a.mp3');
+  });
+
+  it('keeps playing and stays mounted when navigating out into the file tree', async () => {
+    const { store } = await setupPlaying();
+    const loadIdBefore = $.getMusicPlaybackLoadId(store.getState());
+    const server = $.getCurrentServerOrNull(store.getState());
+
+    // Opening a folder from the Files view leaves the music route for the
+    // generic file browser, unmounting <Music> entirely.
+    await act(async () => {
+      store.dispatch(A.viewListFiles('server', server, '/some/folder'));
+    });
+
+    expect($.getView(store.getState())).toBe('list-files');
+    // The music view (and its toolbar) is gone...
+    expect(screen.queryByRole('link', { name: 'Files' })).toBeNull();
+    // ...but the playback bar and audio engine live at the app level and
+    // carry on untouched.
+    screen.getByRole('region', { name: 'Playback controls' });
+    expect($.getMusicPlaybackStatus(store.getState())).toBe('playing');
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/a.mp3');
+    expect($.getMusicPlaybackLoadId(store.getState())).toBe(loadIdBefore);
+  });
 });
 
 describe('filter panels', () => {

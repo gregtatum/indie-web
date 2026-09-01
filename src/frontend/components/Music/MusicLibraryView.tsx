@@ -6,7 +6,6 @@ import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import { persistedState } from 'frontend/logic/persisted-state';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { PlaybackBar } from './PlaybackBar';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
 
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
@@ -156,7 +155,6 @@ export function MusicLibraryView({
           persistLocalStorage="musicLibrarySidebarSplitterOffset"
         />
       </div>
-      <PlaybackBar />
     </div>
   );
 }
