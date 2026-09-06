@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { writeFile, readFile, mkdir, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
-import { musicRoute } from '../route-music.ts';
+import { musicRoute } from '../music/route.ts';
 import type { T } from '../index.ts';
 import {
   createTestServer,

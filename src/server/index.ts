@@ -5,9 +5,9 @@ import Express, {
   type Response,
   type NextFunction,
 } from 'express';
-import { colors, MountPath } from './utils.ts';
-import { fileStoreRoute } from './route-file-store.ts';
-import { musicRoute } from './route-music.ts';
+import { colors, MountPath } from './route-utils.ts';
+import { fileStoreRoute } from './file-store/route.ts';
+import { musicRoute } from './music/route.ts';
 import cors from 'cors';
 import * as url from 'url';
 import path from 'path';

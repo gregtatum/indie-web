@@ -4,7 +4,7 @@ import { writeFile, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import type { IAudioMetadata, ITag } from 'music-metadata';
-import { musicRoute } from '../route-music.ts';
+import { musicRoute } from '../music/route.ts';
 import { ID3V1_TAG_SIZE } from '../../shared/music.ts';
 import type { T } from '../index.ts';
 import {

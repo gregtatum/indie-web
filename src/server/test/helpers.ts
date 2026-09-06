@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
 import Express from 'express';
-import { MountPath } from '../utils.ts';
+import { MountPath } from '../route-utils.ts';
 
 export const AUDIO_PAYLOAD = Buffer.concat([
   // The mpeg audio frame header.

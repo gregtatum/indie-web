@@ -2,17 +2,24 @@ import {
   ApiRoute,
   ClientError,
   RequestConflict,
-  MountPath,
+  type MountPath,
   ServerError,
-} from './utils.ts';
-import type { T } from './index.ts';
-import { basename, dirname } from 'node:path';
-import { createReadStream, promises as fs, type Stats } from 'node:fs';
+} from '../route-utils.ts';
+import type { T } from '../index.ts';
+import { dirname } from 'node:path';
+import { createReadStream, promises as fs } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import archiver from 'archiver';
 import { finished } from 'stream/promises';
-import { getFileManagerLauncher } from './file-manager-launcher.ts';
+import {
+  doesFolderExist,
+  getFileManagerLauncher,
+  getFileMetadata,
+  getFolderMetadata,
+  getMetadata,
+  parseHeaderRequest,
+} from './logic.ts';
 
 const ignoredFiles = new Set(['.DS_Store']);
 
@@ -305,80 +312,4 @@ export function fileStoreRoute(mountPath: MountPath) {
   });
 
   return route.router;
-}
-
-/**
- * Checks that a folder exists and it is a directory, not a file.
- */
-async function doesFolderExist(path: string): Promise<boolean> {
-  try {
-    const stats = await fs.stat(path);
-    return stats.isDirectory();
-  } catch (error: any) {
-    // Error NO ENTry
-    if (error?.code === 'ENOENT') {
-      return false;
-    }
-    throw error;
-  }
-}
-
-function getMetadata(
-  clientPath: string,
-  stats: Stats,
-): T.FolderMetadata | T.FileMetadata {
-  return stats.isDirectory()
-    ? getFolderMetadata(clientPath)
-    : getFileMetadata(clientPath, stats);
-}
-
-function getFolderMetadata(clientPath: string): T.FolderMetadata {
-  return {
-    type: 'folder',
-    name: basename(clientPath),
-    path: clientPath,
-    id: `id:${clientPath}`,
-  };
-}
-
-function getFileMetadata(clientPath: string, stats: Stats): T.FileMetadata {
-  return {
-    type: 'file',
-    name: basename(clientPath),
-    path: clientPath,
-    // The ID is used by Dropbox for some smarter tracking of individual files
-    // as they are moved. We don't have this, so just set it to the path.
-    id: `id:${clientPath}`,
-    clientModified: stats.mtime.toISOString(),
-    serverModified: stats.ctime.toISOString(),
-    // Dropbox has revision tracking. Instead for our case, just do the last
-    // modified time to simulate this feature.
-    rev: `rev:${stats.mtime.getTime()}`,
-    size: stats.size,
-    isDownloadable: true,
-    hash: '',
-  };
-}
-
-function parseHeaderRequest(metaHeader?: string): Record<string, string> {
-  if (!metaHeader) {
-    throw new ClientError('No File-Store-Request was provided.');
-  }
-  let metadata: unknown;
-  try {
-    metadata = JSON.parse(metaHeader);
-  } catch {
-    throw new ClientError('Invalid JSON in the File-Store-Request.');
-  }
-  if (!metadata || typeof metadata !== 'object') {
-    throw new ClientError('Expected the File-Store-Request to be an object.');
-  }
-  for (const [key, value] of Object.entries(metadata)) {
-    if (typeof key !== 'string' || typeof value !== 'string') {
-      throw new ClientError(
-        'Expected all keys and values of the File-Store-Request to be strings.',
-      );
-    }
-  }
-  return metadata as Record<string, string>;
 }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MUSIC_INDEX_VERSION } from '../../shared/music.ts';
-import { musicRoute } from '../route-music.ts';
+import { musicRoute } from '../music/route.ts';
 import {
   createTestServer,
   buildMp3WithTags,

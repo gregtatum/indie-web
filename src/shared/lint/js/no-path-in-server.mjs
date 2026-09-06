@@ -7,7 +7,7 @@ export const noPathInServer = {
     },
     messages: {
       noPathImport:
-        'Risky use of "{{ name }}" from node:path. Prefer MountPath from server/utils.ts ' +
+        'Risky use of "{{ name }}" from node:path. Prefer MountPath from server/route-utils.ts ' +
         'to avoid security issues from file mount escapes.',
     },
   },

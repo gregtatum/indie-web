@@ -108,7 +108,7 @@ export default [
     },
   },
   {
-    files: ['src/server/utils.ts', 'src/server/test/**/*.ts'],
+    files: ['src/server/route-utils.ts', 'src/server/test/**/*.ts'],
     rules: {
       'indie-web/no-path-in-server': 'off',
       'indie-web/no-mount-path-concat': 'off',

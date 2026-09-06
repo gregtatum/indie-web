@@ -2,7 +2,7 @@ import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { musicRoute, MUSIC_INDEX_FILENAME } from '../route-music.ts';
+import { musicRoute, MUSIC_INDEX_FILENAME } from '../music/route.ts';
 import { ID3V1_TAG_SIZE } from '../../shared/music.ts';
 import type { T } from '../index.ts';
 import {

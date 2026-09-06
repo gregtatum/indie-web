@@ -2,7 +2,7 @@ import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { musicRoute } from '../route-music.ts';
+import { musicRoute } from '../music/route.ts';
 import { createTestServer, withLogs } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
 

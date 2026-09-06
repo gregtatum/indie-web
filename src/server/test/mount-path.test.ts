@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { MountPath, ClientError } from '../utils.ts';
+import { MountPath, ClientError } from '../route-utils.ts';
 
 const mountPath = new MountPath('/fake/mount');
 
