@@ -778,6 +778,23 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       .filter((t) => t.hasEmbeddedArtwork && getDirName(t.path) === folderDir)
       .map((t) => t.path);
   }, [isBulkEdit, sharedFolderArtworkPath, tracks]);
+  // The folder artwork write does not touch the music index, so point every
+  // track in that folder at the new file to keep the tab (and library) current.
+  const handleFolderArtworkWritten = React.useCallback(
+    (folderArtworkPath: string) => {
+      const folderDir = getDirName(folderArtworkPath);
+      dispatch(
+        A.setMusicTracks(
+          tracks.map((t) =>
+            getDirName(t.path) === folderDir ? { ...t, folderArtworkPath } : t,
+          ),
+          needsRescan,
+          servedIndexVersion,
+        ),
+      );
+    },
+    [dispatch, tracks, needsRescan, servedIndexVersion],
+  );
   let sharedAlbumHeader: { album: string; artist: string } | null = null;
   if (isBulkEdit && editTracks.length > 0) {
     const firstAlbum = editTracks[0].album;
@@ -1091,6 +1108,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             }
             trackPath={editTracks[0].path}
             syncableTrackPaths={syncableTrackPaths}
+            onFolderArtworkWritten={handleFolderArtworkWritten}
             serverUrl={server.url}
           />
         ) : (

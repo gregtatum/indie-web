@@ -253,8 +253,10 @@
 .editTrackModalArtwork {
   padding: 24px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 16px;
   background: var(--modal-bg);
   min-height: 200px;
 }

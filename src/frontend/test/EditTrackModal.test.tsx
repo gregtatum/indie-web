@@ -904,7 +904,12 @@ describe('edit track modal', () => {
       ({ options }: any) => {
         uploadCount++;
         lastHadBody = Boolean(options.body);
-        return { status: 200, body: '{}' };
+        return {
+          status: 200,
+          body: JSON.stringify({
+            folderArtworkPath: '/music/Album A/Folder.jpg',
+          }),
+        };
       },
     );
 
@@ -934,6 +939,49 @@ describe('edit track modal', () => {
     expect(
       await within(dialog).findByRole('button', { name: 'Saved ✓' }),
     ).toBeTruthy();
+  });
+
+  it('adds artwork from the empty state and shows it', async () => {
+    const noArtTracks: T.TrackMetadata[] = [
+      {
+        ...TRACKS[0],
+        path: '/music/Guero/01.mp3',
+        title: 'Que Onda Guero',
+        folderArtworkPath: null,
+        hasEmbeddedArtwork: false,
+      },
+    ];
+    setup(noArtTracks);
+
+    fetchMock.post(new RegExp(`${FAKE_SERVER.url}/music/artwork`), {
+      status: 200,
+      body: JSON.stringify({
+        folderArtworkPath: '/music/Guero/Folder.jpg',
+      }),
+    });
+
+    await openEditModal('Que Onda Guero');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    const dialog = getDialog('Que Onda Guero');
+    expect(within(dialog).getByText('No artwork found')).toBeTruthy();
+
+    const input = dialog.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    expect(
+      within(dialog).getByRole('button', { name: /Add album artwork/ }),
+    ).toBeTruthy();
+
+    const file = new File(['bytes'], 'cover.jpg', { type: 'image/jpeg' });
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    expect(await within(dialog).findByText('/music/Guero/')).toBeTruthy();
+    expect(within(dialog).queryByText('No artwork found')).toBeNull();
   });
 
   it('offers to sync the folder image into the album tracks', async () => {

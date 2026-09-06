@@ -17,6 +17,8 @@ interface Props {
   trackPath: string;
   /** Album tracks carrying their own embedded art that "Sync" would rewrite. */
   syncableTrackPaths: string[];
+  /** Patches the store after the folder artwork file is written or replaced. */
+  onFolderArtworkWritten: (folderArtworkPath: string) => void;
   serverUrl: string;
 }
 
@@ -172,9 +174,14 @@ function RefreshIcon() {
 interface ArtworkButtonProps {
   trackPath: string;
   serverUrl: string;
+  /** Called with the written folder artwork path once a save succeeds. */
+  onSaved: (folderArtworkPath: string) => void;
 }
 
-function useFolderArtworkSave(serverUrl: string) {
+function useFolderArtworkSave(
+  serverUrl: string,
+  onSaved: (folderArtworkPath: string) => void,
+) {
   const dispatch = Hooks.useDispatch();
   const saveStatus = $$.getMusicFolderArtworkSaveStatus();
   const [active, setActive] = React.useState(false);
@@ -216,10 +223,15 @@ function useFolderArtworkSave(serverUrl: string) {
           }
           return res.json() as Promise<WriteFolderArtworkResponse>;
         })
-        .then(() => dispatch(A.musicFolderArtworkSaveSuccess()))
+        .then((data) => {
+          if (data.folderArtworkPath) {
+            onSaved(data.folderArtworkPath);
+          }
+          dispatch(A.musicFolderArtworkSaveSuccess());
+        })
         .catch(() => dispatch(A.musicFolderArtworkSaveError()));
     },
-    [dispatch, serverUrl],
+    [dispatch, serverUrl, onSaved],
   );
 
   return { saveStatus, active, save };
@@ -244,8 +256,13 @@ function artworkButtonStatus(
   return null;
 }
 
-function ChangeArtworkButton({ trackPath, serverUrl }: ArtworkButtonProps) {
-  const { saveStatus, active, save } = useFolderArtworkSave(serverUrl);
+function ChangeArtworkButton({
+  trackPath,
+  serverUrl,
+  onSaved,
+  label = 'Change album artwork',
+}: ArtworkButtonProps & { label?: string }) {
+  const { saveStatus, active, save } = useFolderArtworkSave(serverUrl, onSaved);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const status = artworkButtonStatus(active, saveStatus);
 
@@ -276,7 +293,7 @@ function ChangeArtworkButton({ trackPath, serverUrl }: ArtworkButtonProps) {
         {status ?? (
           <>
             <PictureIcon />
-            Change album artwork
+            {label}
           </>
         )}
       </button>
@@ -287,8 +304,9 @@ function ChangeArtworkButton({ trackPath, serverUrl }: ArtworkButtonProps) {
 function UseEmbeddedArtworkButton({
   trackPath,
   serverUrl,
+  onSaved,
 }: ArtworkButtonProps) {
-  const { saveStatus, active, save } = useFolderArtworkSave(serverUrl);
+  const { saveStatus, active, save } = useFolderArtworkSave(serverUrl, onSaved);
   const status = artworkButtonStatus(active, saveStatus);
 
   return (
@@ -542,6 +560,7 @@ export function ArtworkTab({
   tagsState,
   trackPath,
   syncableTrackPaths,
+  onFolderArtworkWritten,
   serverUrl,
 }: Props) {
   const dispatch = Hooks.useDispatch();
@@ -597,6 +616,14 @@ export function ArtworkTab({
     return (
       <div className="editTrackModalArtwork">
         <div className="editTrackModalArtworkEmpty">{emptyMessage}</div>
+        {!hideEmbeddedArtwork && (
+          <ChangeArtworkButton
+            trackPath={trackPath}
+            serverUrl={serverUrl}
+            onSaved={onFolderArtworkWritten}
+            label="Add album artwork"
+          />
+        )}
       </div>
     );
   }
@@ -620,11 +647,13 @@ export function ArtworkTab({
                 <ChangeArtworkButton
                   trackPath={trackPath}
                   serverUrl={serverUrl}
+                  onSaved={onFolderArtworkWritten}
                 />
                 {embeddedArtwork.length > 0 && (
                   <UseEmbeddedArtworkButton
                     trackPath={trackPath}
                     serverUrl={serverUrl}
+                    onSaved={onFolderArtworkWritten}
                   />
                 )}
               </>
