@@ -812,14 +812,71 @@ describe('edit track modal', () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
     });
 
-    expect(await screen.findByText('Folder')).toBeTruthy();
-    expect(screen.getByText('/music/Album A/Folder.jpg')).toBeTruthy();
-    expect(screen.queryByText('Embedded')).toBeNull();
+    expect(
+      (await screen.findAllByText('Album artwork')).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText('/music/Album A/')).toBeTruthy();
+    expect(screen.queryByText('Embedded in this file')).toBeNull();
     expect(
       screen.queryByRole('button', {
         name: 'Overwrite with embedded artwork',
       }),
     ).toBeNull();
+  });
+
+  it('shows album artwork and a collapsible embedded row for a single track', async () => {
+    const tracksWithArt: T.TrackMetadata[] = [
+      {
+        ...TRACKS[0],
+        folderArtworkPath: '/music/Album A/Folder.jpg',
+        hasEmbeddedArtwork: true,
+      },
+      ...TRACKS.slice(1),
+    ];
+    setup(tracksWithArt, {
+      trackTagsResponse: {
+        body: JSON.stringify({
+          blocks: [
+            {
+              format: 'ID3v2.3',
+              tags: [
+                {
+                  id: 'APIC',
+                  value: 'image/jpeg — Cover (front)',
+                  binary: 'abc123',
+                },
+              ],
+            },
+          ],
+          resolved: {},
+        }),
+        status: 200,
+      },
+    });
+
+    await openEditModal('Song A');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    const dialog = getDialog('Song A');
+    expect(within(dialog).getAllByText('Album artwork').length).toBeGreaterThan(
+      0,
+    );
+    expect(within(dialog).getByText('/music/Album A/')).toBeTruthy();
+
+    expect(
+      await within(dialog).findByText('Embedded in this file'),
+    ).toBeTruthy();
+    expect(within(dialog).getByText(/image\/jpeg/)).toBeTruthy();
+    expect(within(dialog).getByText('Embedded in ID3 (APIC)')).toBeTruthy();
+
+    const toggle = within(dialog).getByRole('button', { expanded: false });
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+    expect(within(dialog).getByRole('button', { expanded: true })).toBeTruthy();
+    expect(within(dialog).getByText('Cover (front)')).toBeTruthy();
   });
 
   it('skips live tag loading above the bulk cutoff', async () => {

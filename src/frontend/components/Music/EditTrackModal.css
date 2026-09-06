@@ -325,13 +325,6 @@
   gap: 10px;
 }
 
-.artworkBlockHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .artworkBlockLabel {
   font-size: var(--font-size-small);
   font-weight: 600;
@@ -361,14 +354,7 @@
   cursor: default;
 }
 
-.artworkSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .artworkSectionImage {
-  /* max-width capped to naturalWidth via inline style after onLoad */
   width: 100%;
   max-width: 100%;
   display: block;
@@ -378,46 +364,167 @@
 
 .artworkSectionError {
   font-size: var(--font-size-small);
-  color: var(--text-muted);
+  color: var(--text-label);
   font-style: italic;
   padding: 8px 0;
 }
 
-.artworkSectionDetails {
+/* Album artwork: image on the left, metadata and actions on the right. */
+.artworkAlbumLayout {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.artworkAlbumImageWrap {
+  flex: 0 0 auto;
+  width: 300px;
+  max-width: 45%;
+}
+
+.artworkAlbumInfo {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
-.artworkSectionDetailsRow {
-  display: flex;
-  gap: 12px;
+.artworkAlbumHeading {
   font-size: var(--font-size-small);
-  color: var(--text-muted);
+  font-weight: 600;
+  color: var(--text-heading);
 }
 
-.artworkSectionDetailsKey {
-  color: var(--text-muted);
-  min-width: 72px;
+.artworkMetaLine {
+  font-size: var(--font-size-small);
+  color: var(--text-label);
 }
 
-.artworkSectionDetailsLink {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  font-size: inherit;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
+.artworkPathLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  max-width: 100%;
+  gap: 5px;
+  font-size: var(--font-size-small);
+  color: var(--accent-strong);
   text-decoration: underline;
-  text-decoration-color: var(--text-muted);
-  word-break: break-all;
 }
 
-.artworkSectionDetailsLink:hover {
-  color: var(--text-interactive);
-  text-decoration-color: var(--text-muted);
+.artworkPathLinkText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artworkPathLinkIcon {
+  flex: 0 0 auto;
+  display: block;
+}
+
+.artworkAlbumActions {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.artworkDivider {
+  height: 1px;
+  background: var(--light-border);
+}
+
+.artworkEmbeddedList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.artworkEmbeddedRow {
+  border: 1px solid var(--light-border);
+  border-radius: var(--button-border-radius);
+  overflow: hidden;
+}
+
+.artworkEmbeddedRowToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  text-align: left;
+  background: var(--surface-raised);
+  border: none;
+  cursor: pointer;
+}
+
+.artworkEmbeddedRowToggle:hover {
+  background: var(--modal-bg);
+}
+
+.artworkEmbeddedChevron {
+  flex: 0 0 auto;
+  display: block;
+  color: var(--text-label);
+  transition: transform 120ms ease;
+}
+
+.artworkEmbeddedChevron-open {
+  transform: rotate(90deg);
+}
+
+.artworkEmbeddedThumb {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--artwork-bg);
+}
+
+.artworkEmbeddedThumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.artworkEmbeddedInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.artworkEmbeddedInfo .artworkMetaLine {
+  color: var(--text-body);
+}
+
+.artworkEmbeddedSub {
+  font-size: var(--font-size-small);
+  color: var(--text-label);
+}
+
+.artworkEmbeddedExpanded {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--modal-bg);
+  border-top: 1px solid var(--light-border);
+}
+
+@media (max-width: 520px) {
+  .artworkAlbumLayout {
+    flex-direction: column;
+  }
+
+  .artworkAlbumImageWrap {
+    width: 100%;
+    max-width: 260px;
+  }
 }
 
 .editTrackModalFooter {

@@ -15,11 +15,85 @@ interface Props {
   serverUrl: string;
 }
 
-interface DetailItem {
-  key: string;
-  value: string;
-  href?: string;
-  onClick?: () => void;
+/**
+ * Human-readable byte size, e.g. 240 KB.
+ */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Decoded byte length of a base64 string, ignoring padding.
+ */
+function base64ByteLength(b64: string): number {
+  let length = Math.floor((b64.length * 3) / 4);
+  if (b64.endsWith('==')) {
+    length -= 2;
+  } else if (b64.endsWith('=')) {
+    length -= 1;
+  }
+  return length;
+}
+
+/**
+ * Join the non-empty parts of a middot-separated metadata run.
+ */
+function metaLine(parts: Array<string | null | undefined>): string {
+  return parts.filter(Boolean).join(' · ');
+}
+
+/**
+ * Inline SVG icons. Kept inline (rather than /svg/*.svg files) so they inherit
+ * the surrounding text colour via `currentColor`.
+ */
+function OpenExternalIcon() {
+  return (
+    <svg
+      className="artworkPathLinkIcon"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M14 4h6v6" />
+      <path d="M20 4 10 14" />
+      <path d="M18 13v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h4" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={
+        open
+          ? 'artworkEmbeddedChevron artworkEmbeddedChevron-open'
+          : 'artworkEmbeddedChevron'
+      }
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  );
 }
 
 interface OverwriteButtonProps {
@@ -63,70 +137,124 @@ function OverwriteButton({ trackPath, serverUrl }: OverwriteButtonProps) {
   );
 }
 
-function ArtworkSection({
+function AlbumArtwork({
   src,
-  details,
+  fileName,
+  dirName,
+  dirHref,
+  onOpenDir,
   children,
-  reloading = false,
 }: {
   src: string;
-  details: DetailItem[];
+  fileName: string;
+  dirName: string;
+  dirHref: string | null;
+  onOpenDir: () => void;
   children?: React.ReactNode;
-  reloading?: boolean;
 }) {
-  const [naturalWidth, setNaturalWidth] = React.useState<number | null>(null);
-  // The resolution of the underlying image's pixels
-  const [resolution, setResolution] = React.useState<string>('');
+  const [dimensions, setDimensions] = React.useState<string | null>(null);
   const [imgError, setImgError] = React.useState(false);
 
   return (
-    <div className="artworkSection">
-      {imgError ? (
-        <div className="artworkSectionError">Unable to load image</div>
-      ) : (
-        <img
-          className="artworkSectionImage"
-          src={src}
-          style={naturalWidth ? { maxWidth: naturalWidth } : undefined}
-          onLoad={(event) => {
-            const img: HTMLImageElement = event.currentTarget;
-            setNaturalWidth(img.naturalWidth);
-            setResolution(`${img.width} × ${img.height}`);
-          }}
-          onError={() => setImgError(true)}
-        />
-      )}
-      <div className="artworkSectionDetails">
-        {details.map(({ key, value, href, onClick }) => (
-          <div key={key} className="artworkSectionDetailsRow">
-            <span className="artworkSectionDetailsKey">{key}</span>
-            {href ? (
-              <a
-                className="artworkSectionDetailsLink"
-                href={href}
-                onClick={(e) => {
-                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-                    return;
-                  }
-                  e.preventDefault();
-                  onClick?.();
-                }}
-              >
-                {value}
-              </a>
-            ) : (
-              <span>{value}</span>
-            )}
-          </div>
-        ))}
-        {resolution && !reloading && (
-          <div className="artworkSectionDetailsRow">
-            <span className="artworkSectionDetailsKey">Resolution</span>
-            <span>{resolution}</span>
-          </div>
+    <div className="artworkAlbumLayout">
+      <div className="artworkAlbumImageWrap">
+        {imgError ? (
+          <div className="artworkSectionError">Unable to load image</div>
+        ) : (
+          <img
+            className="artworkSectionImage"
+            src={src}
+            onLoad={(event) => {
+              const img = event.currentTarget;
+              setDimensions(`${img.naturalWidth} × ${img.naturalHeight}`);
+            }}
+            onError={() => setImgError(true)}
+          />
         )}
-        {children && <div className="artworkSectionDetailsRow">{children}</div>}
       </div>
+      <div className="artworkAlbumInfo">
+        <div className="artworkAlbumHeading">Album artwork</div>
+        <div className="artworkMetaLine">
+          {metaLine([fileName, dimensions])}
+        </div>
+        {dirHref && (
+          <a
+            className="artworkPathLink"
+            href={dirHref}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+                return;
+              }
+              e.preventDefault();
+              onOpenDir();
+            }}
+          >
+            <span className="artworkPathLinkText">{dirName}</span>
+            <OpenExternalIcon />
+          </a>
+        )}
+        {children && <div className="artworkAlbumActions">{children}</div>}
+      </div>
+    </div>
+  );
+}
+
+function EmbeddedArtworkRow({
+  src,
+  format,
+  pictureType,
+  sizeBytes,
+}: {
+  src: string;
+  format: string;
+  pictureType: string;
+  sizeBytes: number;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const [dimensions, setDimensions] = React.useState<string | null>(null);
+  const [imgError, setImgError] = React.useState(false);
+
+  return (
+    <div className="artworkEmbeddedRow">
+      <button
+        type="button"
+        className="artworkEmbeddedRowToggle"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((value) => !value)}
+      >
+        <ChevronIcon open={expanded} />
+        <span className="artworkEmbeddedThumb">
+          {!imgError && (
+            <img
+              src={src}
+              alt=""
+              onLoad={(event) => {
+                const img = event.currentTarget;
+                setDimensions(`${img.naturalWidth} × ${img.naturalHeight}`);
+              }}
+              onError={() => setImgError(true)}
+            />
+          )}
+        </span>
+        <span className="artworkEmbeddedInfo">
+          <span className="artworkMetaLine">
+            {metaLine([
+              format || 'image',
+              dimensions,
+              sizeBytes > 0 ? formatBytes(sizeBytes) : null,
+            ])}
+          </span>
+          <span className="artworkEmbeddedSub">Embedded in ID3 (APIC)</span>
+        </span>
+      </button>
+      {expanded && !imgError && (
+        <div className="artworkEmbeddedExpanded">
+          <img className="artworkSectionImage" src={src} alt="" />
+          {pictureType && (
+            <div className="artworkEmbeddedSub">{pictureType}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -144,7 +272,6 @@ export function ArtworkTab({
   const { getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
   const version = $$.getMusicFolderArtworkVersion();
-  const saveStatus = $$.getMusicFolderArtworkSaveStatus();
 
   const embeddedArtwork = React.useMemo(() => {
     if (hideEmbeddedArtwork) {
@@ -202,48 +329,49 @@ export function ArtworkTab({
     <div className="editTrackModalArtworkSections">
       {folderArtworkUrl && folderArtworkPath && (
         <div className="artworkBlock">
-          <div className="artworkBlockLabel">Folder</div>
-          <ArtworkSection
+          <div className="artworkBlockLabel">Album artwork</div>
+          <AlbumArtwork
             key={version}
             src={folderArtworkUrl}
-            reloading={saveStatus === 'saving'}
-            details={[
-              {
-                key: 'File',
-                value: folderArtworkPath,
-                href: folderArtworkHref ?? undefined,
-                onClick: () => navigateToFile(folderArtworkPath),
-              },
-            ]}
+            fileName={getPathFileName(folderArtworkPath)}
+            dirName={`${getDirName(folderArtworkPath)}/`}
+            dirHref={folderArtworkHref}
+            onOpenDir={() => navigateToFile(folderArtworkPath)}
           >
             {!hideEmbeddedArtwork && embeddedArtwork.length > 0 && (
               <OverwriteButton trackPath={trackPath} serverUrl={serverUrl} />
             )}
-          </ArtworkSection>
+          </AlbumArtwork>
         </div>
       )}
-      {embeddedArtwork.map((entry, i) => {
-        const parts = entry.value.split(' — ');
-        const rawMime = parts[0] ?? '';
-        const pictureType = parts[1] ?? '';
-        const mimeType = rawMime.startsWith('image/') ? rawMime : 'image/jpeg';
-        const src = `data:${mimeType};base64,${entry.binary}`;
-        const details: DetailItem[] = [];
-        if (rawMime) {
-          details.push({ key: 'Format', value: rawMime });
-        }
-        if (pictureType) {
-          details.push({ key: 'Type', value: pictureType });
-        }
-        return (
-          <div key={i} className="artworkBlock">
-            <div className="artworkBlockLabel">
-              {embeddedArtwork.length > 1 ? `Embedded ${i + 1}` : 'Embedded'}
+      {!hideEmbeddedArtwork && embeddedArtwork.length > 0 && (
+        <>
+          <div className="artworkDivider" />
+          <div className="artworkBlock">
+            <div className="artworkBlockLabel">Embedded in this file</div>
+            <div className="artworkEmbeddedList">
+              {embeddedArtwork.map((entry, i) => {
+                const parts = entry.value.split(' — ');
+                const rawMime = parts[0] ?? '';
+                const pictureType = parts[1] ?? '';
+                const mimeType = rawMime.startsWith('image/')
+                  ? rawMime
+                  : 'image/jpeg';
+                const src = `data:${mimeType};base64,${entry.binary}`;
+                return (
+                  <EmbeddedArtworkRow
+                    key={i}
+                    src={src}
+                    format={rawMime}
+                    pictureType={pictureType}
+                    sizeBytes={base64ByteLength(entry.binary)}
+                  />
+                );
+              })}
             </div>
-            <ArtworkSection src={src} details={details} />
           </div>
-        );
-      })}
+        </>
+      )}
     </div>
   );
 }
