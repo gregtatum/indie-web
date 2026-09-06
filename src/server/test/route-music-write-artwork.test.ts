@@ -494,10 +494,10 @@ describe('POST /music/artwork/embed — sync an existing folder image', () => {
       const json = (await res.json()) as T.EmbedFolderArtworkResponse;
       assert.deepEqual(json.updated, ['/Sync/Partial/ok.mp3']);
       assert.equal(json.errors.length, 2);
-      assert.deepEqual(
-        json.errors.map((e) => e.path).sort(),
-        ['/Sync/Partial/missing.mp3', '/Sync/Partial/notes.txt'],
-      );
+      assert.deepEqual(json.errors.map((e) => e.path).sort(), [
+        '/Sync/Partial/missing.mp3',
+        '/Sync/Partial/notes.txt',
+      ]);
 
       const meta = await parseFile(join(dir, 'ok.mp3'));
       assert.equal(meta.common.picture?.length, 1);
@@ -574,6 +574,44 @@ describe('POST /music/artwork — end to end with a library scan', () => {
       assert.equal(artRes.status, 200);
       const servedBytes = Buffer.from(await artRes.arrayBuffer());
       assert.equal(Buffer.compare(servedBytes, LARGE_JPEG), 0);
+    }),
+  );
+
+  it(
+    'patches the durable index so the artwork survives without a rescan',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Persist', 'Album');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, '01.mp3'), buildMp3WithTags({ title: 'One' }));
+      await writeFile(join(dir, '02.mp3'), buildMp3WithTags({ title: 'Two' }));
+
+      await scan(server);
+
+      const post = await postFolderArtwork(server, {
+        path: '/Persist/Album/01.mp3',
+        embedInTracks: ['/Persist/Album/01.mp3'],
+        body: LARGE_JPEG,
+      });
+      assert.equal(post.status, 200);
+      const json = (await post.json()) as T.WriteFolderArtworkResponse;
+      assert.equal(json.index.status, 'updated');
+
+      // Read the on-disk index directly — no rescan.
+      const index = JSON.parse(
+        await readFile(join(server.mountDir, '.music-index.json'), 'utf-8'),
+      ) as { tracks: Array<Record<string, unknown>> };
+      const persisted = index.tracks.filter((t) =>
+        String(t.path).startsWith('/Persist/Album/'),
+      );
+      assert.equal(persisted.length, 2);
+      for (const track of persisted) {
+        assert.equal(track.folderArtworkPath, '/Persist/Album/Folder.jpg');
+      }
+      assert.equal(
+        persisted.find((t) => t.path === '/Persist/Album/01.mp3')
+          ?.hasEmbeddedArtwork,
+        true,
+      );
     }),
   );
 });

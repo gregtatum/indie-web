@@ -25,6 +25,7 @@ import {
   removeOutdatedFolderArtwork,
   serializeTagBlocks,
   sniffImageMimeType,
+  updateIndexAfterFolderArtworkWrite,
   updateIndexAfterTrackTagWrites,
   writeTrackTagsForPath,
 } from './logic.ts';
@@ -377,6 +378,7 @@ export function musicRoute(mountPath: MountPath) {
 
     const response: T.WriteFolderArtworkResponse = {
       folderArtworkPath: dirClientPath + '/' + filename,
+      index: { status: 'skipped', message: 'Index update not attempted.' },
     };
 
     // An uploaded image is authoritative: clear the other recognized folder
@@ -416,6 +418,12 @@ export function musicRoute(mountPath: MountPath) {
       }
       response.tracksEmbedded = { updatedTracks, errors };
     }
+
+    response.index = await updateIndexAfterFolderArtworkWrite(
+      mountPath,
+      response.folderArtworkPath,
+      response.tracksEmbedded?.updatedTracks ?? [],
+    );
 
     return response;
   });
