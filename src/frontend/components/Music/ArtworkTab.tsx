@@ -96,43 +96,148 @@ function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
-interface OverwriteButtonProps {
+function PictureIcon() {
+  return (
+    <svg
+      className="artworkChangeBtnIcon"
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="m21 15-4.5-4.5L7 21" />
+    </svg>
+  );
+}
+
+interface ArtworkButtonProps {
   trackPath: string;
   serverUrl: string;
 }
 
-function OverwriteButton({ trackPath, serverUrl }: OverwriteButtonProps) {
+function useFolderArtworkSave(serverUrl: string) {
   const dispatch = Hooks.useDispatch();
   const saveStatus = $$.getMusicFolderArtworkSaveStatus();
+  const [active, setActive] = React.useState(false);
 
-  function saveFolderArtwork() {
-    dispatch(A.musicFolderArtworkSaveStart());
-    fetch(`${serverUrl}/music/artwork?path=${encodeURIComponent(trackPath)}`, {
-      method: 'POST',
-    })
-      .then((res) => {
-        if (!res.ok) {
-          return res.text().then((t) => {
-            throw new Error(t || `${res.status}`);
-          });
-        }
-        return res.json() as Promise<WriteFolderArtworkResponse>;
-      })
-      .then(() => dispatch(A.musicFolderArtworkSaveSuccess()))
-      .catch(() => dispatch(A.musicFolderArtworkSaveError()));
+  React.useEffect(() => {
+    if (saveStatus === 'idle') {
+      setActive(false);
+    }
+  }, [saveStatus]);
+
+  const save = React.useCallback(
+    (trackPath: string, body?: { data: Blob; contentType: string }) => {
+      setActive(true);
+      dispatch(A.musicFolderArtworkSaveStart());
+      fetch(
+        `${serverUrl}/music/artwork?path=${encodeURIComponent(trackPath)}`,
+        body
+          ? {
+              method: 'POST',
+              headers: { 'Content-Type': body.contentType },
+              body: body.data,
+            }
+          : { method: 'POST' },
+      )
+        .then((res) => {
+          if (!res.ok) {
+            return res.text().then((t) => {
+              throw new Error(t || `${res.status}`);
+            });
+          }
+          return res.json() as Promise<WriteFolderArtworkResponse>;
+        })
+        .then(() => dispatch(A.musicFolderArtworkSaveSuccess()))
+        .catch(() => dispatch(A.musicFolderArtworkSaveError()));
+    },
+    [dispatch, serverUrl],
+  );
+
+  return { saveStatus, active, save };
+}
+
+function artworkButtonStatus(
+  active: boolean,
+  saveStatus: ReturnType<typeof $$.getMusicFolderArtworkSaveStatus>,
+): string | null {
+  if (!active) {
+    return null;
   }
+  if (saveStatus === 'saving') {
+    return 'Saving…';
+  }
+  if (saveStatus === 'saved') {
+    return 'Saved ✓';
+  }
+  if (saveStatus === 'error') {
+    return 'Error — retry';
+  }
+  return null;
+}
+
+function ChangeArtworkButton({ trackPath, serverUrl }: ArtworkButtonProps) {
+  const { saveStatus, active, save } = useFolderArtworkSave(serverUrl);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const status = artworkButtonStatus(active, saveStatus);
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          if (file) {
+            save(trackPath, {
+              data: file,
+              contentType: file.type || 'image/jpeg',
+            });
+          }
+        }}
+      />
+      <button
+        type="button"
+        className="artworkChangeBtn"
+        disabled={saveStatus === 'saving' || (active && saveStatus === 'saved')}
+        onClick={() => inputRef.current?.click()}
+      >
+        {status ?? (
+          <>
+            <PictureIcon />
+            Change album artwork
+          </>
+        )}
+      </button>
+    </>
+  );
+}
+
+function UseEmbeddedArtworkButton({
+  trackPath,
+  serverUrl,
+}: ArtworkButtonProps) {
+  const { saveStatus, active, save } = useFolderArtworkSave(serverUrl);
+  const status = artworkButtonStatus(active, saveStatus);
 
   return (
     <button
       type="button"
       className="artworkSaveFolderBtn"
-      disabled={saveStatus === 'saving' || saveStatus === 'saved'}
-      onClick={saveFolderArtwork}
+      disabled={saveStatus === 'saving' || (active && saveStatus === 'saved')}
+      onClick={() => save(trackPath)}
     >
-      {saveStatus === 'saving' && 'Saving…'}
-      {saveStatus === 'saved' && 'Saved ✓'}
-      {saveStatus === 'error' && 'Error — retry'}
-      {saveStatus === 'idle' && 'Overwrite with embedded artwork'}
+      {status ?? 'Use embedded artwork'}
     </button>
   );
 }
@@ -355,15 +460,27 @@ export function ArtworkTab({
         <div className="artworkBlock">
           <div className="artworkBlockLabel">Album artwork</div>
           <AlbumArtwork
-            key={version}
-            src={folderArtworkUrl}
+            src={
+              version ? `${folderArtworkUrl}&v=${version}` : folderArtworkUrl
+            }
             fileName={getPathFileName(folderArtworkPath)}
             dirName={`${getDirName(folderArtworkPath)}/`}
             dirHref={folderArtworkHref}
             onOpenDir={() => navigateToFile(folderArtworkPath)}
           >
-            {!hideEmbeddedArtwork && embeddedArtwork.length > 0 && (
-              <OverwriteButton trackPath={trackPath} serverUrl={serverUrl} />
+            {!hideEmbeddedArtwork && (
+              <>
+                <ChangeArtworkButton
+                  trackPath={trackPath}
+                  serverUrl={serverUrl}
+                />
+                {embeddedArtwork.length > 0 && (
+                  <UseEmbeddedArtworkButton
+                    trackPath={trackPath}
+                    serverUrl={serverUrl}
+                  />
+                )}
+              </>
             )}
           </AlbumArtwork>
         </div>

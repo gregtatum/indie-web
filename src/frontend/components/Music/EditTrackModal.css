@@ -333,19 +333,49 @@
   color: var(--text-muted);
 }
 
+.artworkChangeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--font-size-small);
+  font-family: inherit;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: var(--button-border-radius);
+  border: none;
+  background: var(--primary-color);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.artworkChangeBtn:hover:not(:disabled) {
+  background: var(--primary-color-hover);
+}
+
+.artworkChangeBtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.artworkChangeBtnIcon {
+  display: block;
+}
+
 .artworkSaveFolderBtn {
   font-size: var(--font-size-small);
-  padding: 2px 8px;
+  font-family: inherit;
+  padding: 6px 10px;
   border-radius: var(--button-border-radius);
   border: 1px solid var(--light-border);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-label);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .artworkSaveFolderBtn:hover:not(:disabled) {
-  border-color: var(--text-muted);
+  border-color: var(--text-label);
   color: var(--text-interactive);
 }
 

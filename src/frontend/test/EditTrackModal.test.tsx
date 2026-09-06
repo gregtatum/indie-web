@@ -823,9 +823,10 @@ describe('edit track modal', () => {
     expect(screen.getByText('/music/Album A/')).toBeTruthy();
     expect(screen.queryByText('Embedded in this file')).toBeNull();
     expect(
-      screen.queryByRole('button', {
-        name: 'Overwrite with embedded artwork',
-      }),
+      screen.queryByRole('button', { name: 'Use embedded artwork' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /Change album artwork/ }),
     ).toBeNull();
   });
 
@@ -883,6 +884,56 @@ describe('edit track modal', () => {
     });
     expect(within(dialog).getByRole('button', { expanded: true })).toBeTruthy();
     expect(within(dialog).getByText('Cover (front)')).toBeTruthy();
+  });
+
+  it('uploads a picked file as the album artwork', async () => {
+    const tracksWithArt: T.TrackMetadata[] = [
+      {
+        ...TRACKS[0],
+        folderArtworkPath: '/music/Album A/Folder.jpg',
+        hasEmbeddedArtwork: false,
+      },
+      ...TRACKS.slice(1),
+    ];
+    setup(tracksWithArt);
+
+    let uploadCount = 0;
+    let lastHadBody = false;
+    fetchMock.post(
+      new RegExp(`${FAKE_SERVER.url}/music/artwork`),
+      ({ options }: any) => {
+        uploadCount++;
+        lastHadBody = Boolean(options.body);
+        return { status: 200, body: '{}' };
+      },
+    );
+
+    await openEditModal('Song A');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    const dialog = getDialog('Song A');
+    const changeButton = within(dialog).getByRole('button', {
+      name: /Change album artwork/,
+    });
+    expect(changeButton).toBeTruthy();
+
+    const input = dialog.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    const file = new File(['fake-bytes'], 'cover.png', { type: 'image/png' });
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(uploadCount).toBe(1);
+    });
+    expect(lastHadBody).toBe(true);
+    expect(
+      await within(dialog).findByRole('button', { name: 'Saved ✓' }),
+    ).toBeTruthy();
   });
 
   it('skips live tag loading above the bulk cutoff', async () => {
