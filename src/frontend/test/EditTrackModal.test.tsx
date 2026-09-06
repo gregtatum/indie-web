@@ -985,20 +985,21 @@ describe('edit track modal', () => {
   });
 
   it('offers to sync the folder image into the album tracks', async () => {
+    // Folder art present, but no track has embedded art yet.
     const albumTracks: T.TrackMetadata[] = [
       {
         ...TRACKS[0],
         path: '/music/Album A/1.mp3',
         title: 'Nested One',
         folderArtworkPath: '/music/Album A/Folder.jpg',
-        hasEmbeddedArtwork: true,
+        hasEmbeddedArtwork: false,
       },
       {
         ...TRACKS[1],
         path: '/music/Album A/2.mp3',
         title: 'Nested Two',
         folderArtworkPath: '/music/Album A/Folder.jpg',
-        hasEmbeddedArtwork: true,
+        hasEmbeddedArtwork: false,
       },
     ];
     setup(albumTracks);
@@ -1025,7 +1026,9 @@ describe('edit track modal', () => {
 
     const dialog = getDialog('Nested One');
     expect(
-      await within(dialog).findByText('2 tracks can be updated to match.'),
+      await within(dialog).findByText(
+        '2 tracks can be updated to match the folder image.',
+      ),
     ).toBeTruthy();
 
     await act(async () => {

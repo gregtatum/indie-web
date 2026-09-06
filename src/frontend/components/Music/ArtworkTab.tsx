@@ -391,8 +391,8 @@ function SyncEmbeddedBanner({
     <div className="artworkSyncBanner">
       <WarningIcon />
       <div className="artworkSyncBannerText">
-        <strong>Embedded track art may not match the folder image.</strong>
-        <span>{tracksLabel} can be updated to match.</span>
+        <strong>Embedded track art may be missing or out of date.</strong>
+        <span>{tracksLabel} can be updated to match the folder image.</span>
       </div>
       <button
         type="button"

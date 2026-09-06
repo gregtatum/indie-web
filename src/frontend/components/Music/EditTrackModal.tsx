@@ -767,15 +767,19 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const folderArtworkUrl = sharedFolderArtworkPath
     ? `${server.url}/music/artwork?path=${encodeURIComponent(sharedFolderArtworkPath)}`
     : null;
-  // Tracks sharing this album folder that carry their own embedded APIC art, so
-  // the artwork tab can offer to sync them to the folder image.
+  // MP3 tracks sharing this album folder, so the artwork tab can offer to embed
+  // the folder image into them (whether or not they already have embedded art).
   const syncableTrackPaths = React.useMemo(() => {
     if (isBulkEdit || !sharedFolderArtworkPath) {
       return [];
     }
     const folderDir = getDirName(sharedFolderArtworkPath);
     return tracks
-      .filter((t) => t.hasEmbeddedArtwork && getDirName(t.path) === folderDir)
+      .filter(
+        (t) =>
+          getDirName(t.path) === folderDir &&
+          t.path.toLowerCase().endsWith('.mp3'),
+      )
       .map((t) => t.path);
   }, [isBulkEdit, sharedFolderArtworkPath, tracks]);
   // The folder artwork write does not touch the music index, so point every
