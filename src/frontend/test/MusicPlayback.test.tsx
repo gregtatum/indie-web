@@ -206,7 +206,7 @@ describe('track interactions', () => {
     ]);
   });
 
-  it('clicking the sole selected track deselects it', async () => {
+  it('clicking the sole selected track keeps it selected', async () => {
     const { store } = setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
@@ -214,7 +214,9 @@ describe('track interactions', () => {
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
-    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+    ]);
   });
 
   it('cmd+click adds a track to the selection', async () => {

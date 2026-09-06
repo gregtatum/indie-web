@@ -441,7 +441,7 @@ function HeaderHome(props: {
   React.useLayoutEffect(() => {
     const el = contentsRef.current;
     if (!el) {
-      return;
+      return undefined;
     }
     const observer = new ResizeObserver(() => {
       setWidth(el.getBoundingClientRect().width);
