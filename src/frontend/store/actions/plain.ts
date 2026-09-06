@@ -440,6 +440,18 @@ export function musicFolderArtworkSaveError() {
   return { type: 'music-folder-artwork-save-error' as const };
 }
 
+export function musicFolderArtworkEmbedStart() {
+  return { type: 'music-folder-artwork-embed-start' as const };
+}
+
+export function musicFolderArtworkEmbedSuccess() {
+  return { type: 'music-folder-artwork-embed-success' as const };
+}
+
+export function musicFolderArtworkEmbedError() {
+  return { type: 'music-folder-artwork-embed-error' as const };
+}
+
 export function setMusicEditTrackPath(path: string | null) {
   return { type: 'set-music-edit-track-path' as const, path };
 }

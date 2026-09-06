@@ -39,6 +39,25 @@ function folderArtworkSaveStatus(
   }
 }
 
+function folderArtworkEmbedStatus(
+  state: FolderArtworkSaveStatus = 'idle',
+  action: T.Action,
+): FolderArtworkSaveStatus {
+  switch (action.type) {
+    case 'music-folder-artwork-embed-start':
+      return 'saving';
+    case 'music-folder-artwork-embed-success':
+      return 'saved';
+    case 'music-folder-artwork-embed-error':
+      return 'error';
+    case 'set-music-selected-tracks':
+    case 'view-music':
+      return 'idle';
+    default:
+      return state;
+  }
+}
+
 function folderArtworkVersion(state = 0, action: T.Action): number {
   switch (action.type) {
     case 'music-folder-artwork-save-success':
@@ -307,6 +326,7 @@ const combinedMusicReducer = combineReducers({
   playbackQueue,
   playbackServerId,
   folderArtworkSaveStatus,
+  folderArtworkEmbedStatus,
   folderArtworkVersion,
 });
 

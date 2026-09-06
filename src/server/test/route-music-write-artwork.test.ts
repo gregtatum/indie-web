@@ -413,6 +413,124 @@ describe('POST /music/artwork — embed into tracks', () => {
   );
 });
 
+describe('POST /music/artwork/embed — sync an existing folder image', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  async function embed(body: unknown) {
+    return fetch(`${server.baseUrl}/music/artwork/embed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it(
+    'writes the folder image into every listed track',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Sync', 'Album');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, 'Folder.jpg'), LARGE_JPEG);
+      const seeded = buildMp3WithTags({ title: 'Song', album: 'Album' });
+      await writeFile(join(dir, '01.mp3'), seeded);
+      await writeFile(join(dir, '02.mp3'), seeded);
+      const audioBefore = getBytesAfterId3(seeded);
+
+      const res = await embed({
+        folderArtworkPath: '/Sync/Album/Folder.jpg',
+        trackPaths: ['/Sync/Album/01.mp3', '/Sync/Album/02.mp3'],
+      });
+      assert.equal(res.status, 200);
+      const json = (await res.json()) as T.EmbedFolderArtworkResponse;
+      assert.deepEqual(json, {
+        updated: ['/Sync/Album/01.mp3', '/Sync/Album/02.mp3'],
+        errors: [],
+      });
+
+      for (const name of ['01.mp3', '02.mp3']) {
+        const bytes = await readFile(join(dir, name));
+        const meta = await parseFile(join(dir, name));
+        assert.equal(
+          Buffer.compare(
+            Buffer.from(meta.common.picture?.[0].data ?? []),
+            LARGE_JPEG,
+          ),
+          0,
+          `${name} embedded bytes match the folder image`,
+        );
+        assert.equal(meta.common.title, 'Song', `${name} kept its title`);
+        assert.equal(
+          Buffer.compare(getBytesAfterId3(bytes), audioBefore),
+          0,
+          `${name} audio payload is untouched`,
+        );
+      }
+    }),
+  );
+
+  it(
+    'reports per-track failures without skipping the good tracks',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Sync', 'Partial');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, 'Folder.jpg'), MINIMAL_JPEG);
+      await writeFile(join(dir, 'ok.mp3'), buildMp3WithTags({ title: 'OK' }));
+      await writeFile(join(dir, 'notes.txt'), Buffer.from('not audio'));
+
+      const res = await embed({
+        folderArtworkPath: '/Sync/Partial/Folder.jpg',
+        trackPaths: [
+          '/Sync/Partial/ok.mp3',
+          '/Sync/Partial/notes.txt',
+          '/Sync/Partial/missing.mp3',
+        ],
+      });
+      assert.equal(res.status, 200);
+      const json = (await res.json()) as T.EmbedFolderArtworkResponse;
+      assert.deepEqual(json.updated, ['/Sync/Partial/ok.mp3']);
+      assert.equal(json.errors.length, 2);
+      assert.deepEqual(
+        json.errors.map((e) => e.path).sort(),
+        ['/Sync/Partial/missing.mp3', '/Sync/Partial/notes.txt'],
+      );
+
+      const meta = await parseFile(join(dir, 'ok.mp3'));
+      assert.equal(meta.common.picture?.length, 1);
+    }),
+  );
+
+  it(
+    'returns 404 when the folder artwork file is missing',
+    withLogs(['Folder artwork file not found.'], async () => {
+      const res = await embed({
+        folderArtworkPath: '/Sync/Nope/Folder.jpg',
+        trackPaths: ['/Sync/Nope/01.mp3'],
+      });
+      assert.equal(res.status, 404);
+    }),
+  );
+
+  it(
+    'returns 400 for an empty trackPaths array',
+    withLogs(['Missing or empty trackPaths array.'], async () => {
+      const dir = join(server.mountDir, 'Sync', 'Empty');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, 'Folder.jpg'), MINIMAL_JPEG);
+
+      const res = await embed({
+        folderArtworkPath: '/Sync/Empty/Folder.jpg',
+        trackPaths: [],
+      });
+      assert.equal(res.status, 400);
+    }),
+  );
+});
+
 describe('POST /music/artwork — end to end with a library scan', () => {
   let server: TestServer;
   before(async () => {

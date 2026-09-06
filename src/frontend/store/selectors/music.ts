@@ -190,6 +190,12 @@ export function getMusicFolderArtworkVersion(state: State): number {
   return getMusic(state).folderArtworkVersion;
 }
 
+export function getMusicFolderArtworkEmbedStatus(
+  state: State,
+): FolderArtworkSaveStatus {
+  return getMusic(state).folderArtworkEmbedStatus;
+}
+
 /**
  * All panel filters applied in order — the final track list for the tracks view.
  */

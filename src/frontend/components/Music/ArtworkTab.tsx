@@ -3,7 +3,10 @@ import * as Router from 'react-router-dom';
 import { A, Hooks, $, $$ } from 'frontend';
 import { getDirName, getPathFileName } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
-import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
+import type {
+  EmbedFolderArtworkResponse,
+  WriteFolderArtworkResponse,
+} from 'shared/@types/shared';
 
 interface Props {
   folderArtworkUrl: string | null;
@@ -12,6 +15,8 @@ interface Props {
   hideEmbeddedArtwork?: boolean;
   tagsState: TrackTagsLoadState;
   trackPath: string;
+  /** Album tracks carrying their own embedded art that "Sync" would rewrite. */
+  syncableTrackPaths: string[];
   serverUrl: string;
 }
 
@@ -113,6 +118,47 @@ function PictureIcon() {
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <circle cx="8.5" cy="8.5" r="1.5" />
       <path d="m21 15-4.5-4.5L7 21" />
+    </svg>
+  );
+}
+
+function WarningIcon() {
+  return (
+    <svg
+      className="artworkSyncBannerIcon"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+function RefreshIcon() {
+  return (
+    <svg
+      className="artworkSyncBannerButtonIcon"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 4v5h-5" />
     </svg>
   );
 }
@@ -239,6 +285,78 @@ function UseEmbeddedArtworkButton({
     >
       {status ?? 'Use embedded artwork'}
     </button>
+  );
+}
+
+function SyncEmbeddedBanner({
+  folderArtworkPath,
+  trackPaths,
+  serverUrl,
+}: {
+  folderArtworkPath: string;
+  trackPaths: string[];
+  serverUrl: string;
+}) {
+  const dispatch = Hooks.useDispatch();
+  const status = $$.getMusicFolderArtworkEmbedStatus();
+  const count = trackPaths.length;
+  const tracksLabel = `${count} track${count === 1 ? '' : 's'}`;
+
+  function sync() {
+    dispatch(A.musicFolderArtworkEmbedStart());
+    fetch(`${serverUrl}/music/artwork/embed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderArtworkPath, trackPaths }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          return res.text().then((t) => {
+            throw new Error(t || `${res.status}`);
+          });
+        }
+        return res.json() as Promise<EmbedFolderArtworkResponse>;
+      })
+      .then((data) => {
+        if (data.updated.length === 0 && data.errors.length > 0) {
+          dispatch(A.musicFolderArtworkEmbedError());
+        } else {
+          dispatch(A.musicFolderArtworkEmbedSuccess());
+        }
+      })
+      .catch(() => dispatch(A.musicFolderArtworkEmbedError()));
+  }
+
+  let buttonLabel: React.ReactNode = (
+    <>
+      <RefreshIcon />
+      Sync {tracksLabel}
+    </>
+  );
+  if (status === 'saving') {
+    buttonLabel = 'Syncing…';
+  } else if (status === 'saved') {
+    buttonLabel = `Synced ${tracksLabel} ✓`;
+  } else if (status === 'error') {
+    buttonLabel = 'Error — retry';
+  }
+
+  return (
+    <div className="artworkSyncBanner">
+      <WarningIcon />
+      <div className="artworkSyncBannerText">
+        <strong>Embedded track art may not match the folder image.</strong>
+        <span>{tracksLabel} can be updated to match.</span>
+      </div>
+      <button
+        type="button"
+        className="artworkSyncBannerButton"
+        disabled={status === 'saving' || status === 'saved'}
+        onClick={sync}
+      >
+        {buttonLabel}
+      </button>
+    </div>
   );
 }
 
@@ -395,6 +513,7 @@ export function ArtworkTab({
   hideEmbeddedArtwork = false,
   tagsState,
   trackPath,
+  syncableTrackPaths,
   serverUrl,
 }: Props) {
   const dispatch = Hooks.useDispatch();
@@ -485,6 +604,16 @@ export function ArtworkTab({
           </AlbumArtwork>
         </div>
       )}
+      {folderArtworkUrl &&
+        folderArtworkPath &&
+        !hideEmbeddedArtwork &&
+        syncableTrackPaths.length > 0 && (
+          <SyncEmbeddedBanner
+            folderArtworkPath={folderArtworkPath}
+            trackPaths={syncableTrackPaths}
+            serverUrl={serverUrl}
+          />
+        )}
       {!hideEmbeddedArtwork && embeddedArtwork.length > 0 && (
         <>
           <div className="artworkDivider" />

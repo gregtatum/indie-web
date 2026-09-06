@@ -465,6 +465,66 @@
   background: var(--light-border);
 }
 
+.artworkSyncBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--light-border);
+  border-radius: var(--button-border-radius);
+  background: var(--surface-raised);
+}
+
+.artworkSyncBannerIcon {
+  flex: 0 0 auto;
+  display: block;
+  color: var(--text-label);
+}
+
+.artworkSyncBannerText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-size-small);
+  color: var(--text-body);
+}
+
+.artworkSyncBannerText span {
+  color: var(--text-label);
+}
+
+.artworkSyncBannerButton {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--primary-color);
+  background: transparent;
+  color: var(--accent-strong);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.artworkSyncBannerButton:hover:not(:disabled) {
+  background: var(--accent-tint);
+}
+
+.artworkSyncBannerButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.artworkSyncBannerButtonIcon {
+  display: block;
+}
+
 .artworkEmbeddedList {
   display: flex;
   flex-direction: column;

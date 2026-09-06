@@ -936,6 +936,68 @@ describe('edit track modal', () => {
     ).toBeTruthy();
   });
 
+  it('offers to sync the folder image into the album tracks', async () => {
+    const albumTracks: T.TrackMetadata[] = [
+      {
+        ...TRACKS[0],
+        path: '/music/Album A/1.mp3',
+        title: 'Nested One',
+        folderArtworkPath: '/music/Album A/Folder.jpg',
+        hasEmbeddedArtwork: true,
+      },
+      {
+        ...TRACKS[1],
+        path: '/music/Album A/2.mp3',
+        title: 'Nested Two',
+        folderArtworkPath: '/music/Album A/Folder.jpg',
+        hasEmbeddedArtwork: true,
+      },
+    ];
+    setup(albumTracks);
+
+    let embedBody: unknown = null;
+    fetchMock.post(
+      new RegExp(`${FAKE_SERVER.url}/music/artwork/embed`),
+      ({ options }: any) => {
+        embedBody = JSON.parse(options.body);
+        return {
+          status: 200,
+          body: JSON.stringify({
+            updated: ['/music/Album A/1.mp3', '/music/Album A/2.mp3'],
+            errors: [],
+          }),
+        };
+      },
+    );
+
+    await openEditModal('Nested One');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    const dialog = getDialog('Nested One');
+    expect(
+      await within(dialog).findByText('2 tracks can be updated to match.'),
+    ).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Sync 2 tracks' }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(embedBody).not.toBeNull();
+    });
+    expect(embedBody).toEqual({
+      folderArtworkPath: '/music/Album A/Folder.jpg',
+      trackPaths: ['/music/Album A/1.mp3', '/music/Album A/2.mp3'],
+    });
+    expect(
+      await within(dialog).findByRole('button', { name: 'Synced 2 tracks ✓' }),
+    ).toBeTruthy();
+  });
+
   it('skips live tag loading above the bulk cutoff', async () => {
     const manyTracks: T.TrackMetadata[] = Array.from(
       { length: 201 },

@@ -167,6 +167,23 @@ export interface WriteFolderArtworkResponse {
   removedFolderArtwork?: string[];
 }
 
+export interface EmbedFolderArtworkRequest {
+  /** Client path of the folder artwork image to embed (e.g. /Artist/Album/Folder.jpg). */
+  folderArtworkPath: string;
+  /** Track files to write the folder image into. */
+  trackPaths: string[];
+}
+
+export interface EmbedFolderArtworkResponse {
+  /** Track paths whose embedded artwork was rewritten. */
+  updated: string[];
+  /**
+   * Per-track failures. Every requested track is attempted; a failure here does
+   * not stop the rest.
+   */
+  errors: Array<{ path: string; message: string }>;
+}
+
 export interface TrackTagsResponse {
   blocks: Array<{
     format: string;

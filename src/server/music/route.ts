@@ -421,6 +421,55 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /**
+   * Embeds an already-written folder artwork image into a list of track files,
+   * so the album's per-track APIC art matches the folder image. Every track is
+   * attempted. Per-file failures are reported without stopping the rest.
+   */
+  route.post(
+    '/artwork/embed',
+    async (req): Promise<T.EmbedFolderArtworkResponse> => {
+      const { folderArtworkPath, trackPaths } =
+        req.body as T.EmbedFolderArtworkRequest;
+      if (typeof folderArtworkPath !== 'string' || !folderArtworkPath) {
+        throw new ClientError('Missing folderArtworkPath.');
+      }
+      if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
+        throw new ClientError('Missing or empty trackPaths array.');
+      }
+
+      const resolvedArtwork = mountPath.resolve(folderArtworkPath);
+      if (!resolvedArtwork) {
+        throw new ClientError('Invalid folderArtworkPath.');
+      }
+      let imageData: Buffer;
+      try {
+        imageData = await fs.readFile(resolvedArtwork);
+      } catch {
+        throw new NotFoundError('Folder artwork file not found.');
+      }
+      if (!sniffImageMimeType(imageData)) {
+        throw new ClientError('Folder artwork is not a JPEG or PNG image.');
+      }
+
+      const updated: string[] = [];
+      const errors: EmbedArtworkFailure[] = [];
+      for (const trackClientPath of trackPaths) {
+        const result = await embedArtworkIntoTrack(
+          mountPath,
+          trackClientPath,
+          imageData,
+        );
+        if ('message' in result) {
+          errors.push(result);
+        } else {
+          updated.push(result.clientPath);
+        }
+      }
+      return { updated, errors };
+    },
+  );
+
+  /**
    * Writes one or more ID3 tag frames to MP3 files in-place.
    * Accepts { paths, changes: [{ frameId, value }] }. Uses a diff approach —
    * only the specified frames are rewritten; all others are preserved.

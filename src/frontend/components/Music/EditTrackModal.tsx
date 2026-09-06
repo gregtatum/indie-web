@@ -3,6 +3,7 @@ import { $$, A, Hooks, T } from 'frontend';
 import { Modal } from 'frontend/components/Modal';
 import { Tabs } from 'frontend/components/Tabs';
 import { throttle } from 'shared/utils';
+import { getDirName } from 'frontend/utils';
 import { ArtworkTab } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
 import {
@@ -766,6 +767,17 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const folderArtworkUrl = sharedFolderArtworkPath
     ? `${server.url}/music/artwork?path=${encodeURIComponent(sharedFolderArtworkPath)}`
     : null;
+  // Tracks sharing this album folder that carry their own embedded APIC art, so
+  // the artwork tab can offer to sync them to the folder image.
+  const syncableTrackPaths = React.useMemo(() => {
+    if (isBulkEdit || !sharedFolderArtworkPath) {
+      return [];
+    }
+    const folderDir = getDirName(sharedFolderArtworkPath);
+    return tracks
+      .filter((t) => t.hasEmbeddedArtwork && getDirName(t.path) === folderDir)
+      .map((t) => t.path);
+  }, [isBulkEdit, sharedFolderArtworkPath, tracks]);
   let sharedAlbumHeader: { album: string; artist: string } | null = null;
   if (isBulkEdit && editTracks.length > 0) {
     const firstAlbum = editTracks[0].album;
@@ -1078,6 +1090,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
                 : tagsState
             }
             trackPath={editTracks[0].path}
+            syncableTrackPaths={syncableTrackPaths}
             serverUrl={server.url}
           />
         ) : (
