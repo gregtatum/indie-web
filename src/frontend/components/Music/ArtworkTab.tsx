@@ -21,6 +21,12 @@ interface Props {
 }
 
 /**
+ * How long a button lingers on its "Saved ✓" / "Synced ✓" state before it
+ * returns to the actionable label.
+ */
+const STATUS_RESET_MS = 2500;
+
+/**
  * Human-readable byte size, e.g. 240 KB.
  */
 function formatBytes(bytes: number): string {
@@ -179,6 +185,15 @@ function useFolderArtworkSave(serverUrl: string) {
     }
   }, [saveStatus]);
 
+  // Drop back to the actionable label a beat after a success.
+  React.useEffect(() => {
+    if (!active || saveStatus !== 'saved') {
+      return undefined;
+    }
+    const id = window.setTimeout(() => setActive(false), STATUS_RESET_MS);
+    return () => window.clearTimeout(id);
+  }, [active, saveStatus]);
+
   const save = React.useCallback(
     (trackPath: string, body?: { data: Blob; contentType: string }) => {
       setActive(true);
@@ -298,9 +313,22 @@ function SyncEmbeddedBanner({
   serverUrl: string;
 }) {
   const dispatch = Hooks.useDispatch();
-  const status = $$.getMusicFolderArtworkEmbedStatus();
+  const embedStatus = $$.getMusicFolderArtworkEmbedStatus();
+  const [statusHidden, setStatusHidden] = React.useState(false);
   const count = trackPaths.length;
   const tracksLabel = `${count} track${count === 1 ? '' : 's'}`;
+
+  // Drop back to the actionable label a beat after a success.
+  React.useEffect(() => {
+    if (embedStatus !== 'saved') {
+      setStatusHidden(false);
+      return undefined;
+    }
+    const id = window.setTimeout(() => setStatusHidden(true), STATUS_RESET_MS);
+    return () => window.clearTimeout(id);
+  }, [embedStatus]);
+
+  const status = statusHidden ? 'idle' : embedStatus;
 
   function sync() {
     dispatch(A.musicFolderArtworkEmbedStart());

@@ -156,7 +156,7 @@
 }
 
 .editTrackModalIndexNoticeButton:hover {
-  filter: brightness(1.1);
+  background: var(--primary-color-hover);
 }
 
 .editTrackModalRow {
@@ -653,5 +653,5 @@
 }
 
 .editTrackModalSaveBtn:hover:not(:disabled) {
-  filter: brightness(1.1);
+  background: var(--primary-color-hover);
 }
