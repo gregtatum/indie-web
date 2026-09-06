@@ -105,6 +105,18 @@ const SHOTS = [
     describe: 'TapePlayer: filter columns, track list, playback bar',
   },
   {
+    name: 'tapeplayer-artwork-modal',
+    surface: 'music',
+    route:
+      '/music/music/?genre=Soundtrack&album=Akira' +
+      '&track=%2FSoundtrack%2FAnime+-+1987+-+Akira%2FKaneda.mp3' +
+      '&edit=%2FSoundtrack%2FAnime+-+1987+-+Akira%2FKaneda.mp3' +
+      '&tab=artwork',
+    waitFor: '.artworkSectionImage',
+    settleMs: 1500,
+    describe: 'TapePlayer: Edit Track modal, Artwork tab (folder + embedded)',
+  },
+  {
     name: 'floppydisk-files',
     surface: 'files',
     route: '/files/folder/',
