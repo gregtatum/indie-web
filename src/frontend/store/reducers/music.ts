@@ -4,7 +4,7 @@ import { combineReducers } from 'redux';
 export type MusicPlaybackStatus =
   'idle' | 'loading' | 'playing' | 'paused' | 'error';
 
-export type FolderArtSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+export type FolderArtworkSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface MusicPlaybackQueue {
   tracks: T.TrackMetadata[];
@@ -20,16 +20,16 @@ function panelOrder(
   return state;
 }
 
-function folderArtSaveStatus(
-  state: FolderArtSaveStatus = 'idle',
+function folderArtworkSaveStatus(
+  state: FolderArtworkSaveStatus = 'idle',
   action: T.Action,
-): FolderArtSaveStatus {
+): FolderArtworkSaveStatus {
   switch (action.type) {
-    case 'music-folder-art-save-start':
+    case 'music-folder-artwork-save-start':
       return 'saving';
-    case 'music-folder-art-save-success':
+    case 'music-folder-artwork-save-success':
       return 'saved';
-    case 'music-folder-art-save-error':
+    case 'music-folder-artwork-save-error':
       return 'error';
     case 'set-music-selected-tracks':
     case 'view-music':
@@ -39,9 +39,9 @@ function folderArtSaveStatus(
   }
 }
 
-function folderArtVersion(state = 0, action: T.Action): number {
+function folderArtworkVersion(state = 0, action: T.Action): number {
   switch (action.type) {
-    case 'music-folder-art-save-success':
+    case 'music-folder-artwork-save-success':
       return state + 1;
     case 'set-music-selected-tracks':
     case 'view-music':
@@ -306,8 +306,8 @@ const combinedMusicReducer = combineReducers({
   playbackStatus,
   playbackQueue,
   playbackServerId,
-  folderArtSaveStatus,
-  folderArtVersion,
+  folderArtworkSaveStatus,
+  folderArtworkVersion,
 });
 
 type MusicState = ReturnType<typeof combinedMusicReducer>;

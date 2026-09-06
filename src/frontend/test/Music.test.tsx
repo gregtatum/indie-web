@@ -11,6 +11,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { A } from 'frontend';
+import { MUSIC_INDEX_VERSION } from 'shared/music';
 import {
   buildMinimalMp3,
   buildMp3WithTags,
@@ -209,7 +210,7 @@ describe('<Music> with real server', () => {
 
     fireEvent.mouseOver(button);
     expect(screen.getByRole('tooltip').textContent).toBe(
-      'Your library scan can be updated from version 1 to 8.',
+      `Your library scan can be updated from version 1 to ${MUSIC_INDEX_VERSION}.`,
     );
   });
 

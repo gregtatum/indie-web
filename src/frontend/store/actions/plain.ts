@@ -428,16 +428,16 @@ export function musicPlaybackStop() {
   return { type: 'music-playback-stop' as const };
 }
 
-export function musicFolderArtSaveStart() {
-  return { type: 'music-folder-art-save-start' as const };
+export function musicFolderArtworkSaveStart() {
+  return { type: 'music-folder-artwork-save-start' as const };
 }
 
-export function musicFolderArtSaveSuccess() {
-  return { type: 'music-folder-art-save-success' as const };
+export function musicFolderArtworkSaveSuccess() {
+  return { type: 'music-folder-artwork-save-success' as const };
 }
 
-export function musicFolderArtSaveError() {
-  return { type: 'music-folder-art-save-error' as const };
+export function musicFolderArtworkSaveError() {
+  return { type: 'music-folder-artwork-save-error' as const };
 }
 
 export function setMusicEditTrackPath(path: string | null) {

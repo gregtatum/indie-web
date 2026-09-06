@@ -14,8 +14,8 @@ const BASE_TRACK: T.TrackMetadata = {
   duration: 180,
   size: 1024,
   mtime: '2024-01-01T00:00:00Z',
-  coverArt: null,
-  hasEmbeddedArt: false,
+  folderArtworkPath: null,
+  hasEmbeddedArtwork: false,
 };
 
 function track(

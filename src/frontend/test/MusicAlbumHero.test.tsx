@@ -33,8 +33,8 @@ function makeTrack(overrides: Partial<T.TrackMetadata>): T.TrackMetadata {
     duration: 100,
     size: 1000,
     mtime: '2024-01-01T00:00:00Z',
-    coverArt: null,
-    hasEmbeddedArt: false,
+    folderArtworkPath: null,
+    hasEmbeddedArtwork: false,
     ...overrides,
   };
 }

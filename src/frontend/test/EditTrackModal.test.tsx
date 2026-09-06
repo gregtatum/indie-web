@@ -42,8 +42,8 @@ const TRACKS: T.TrackMetadata[] = [
     duration: 180,
     size: 1024,
     mtime: '2024-01-01T00:00:00Z',
-    coverArt: null,
-    hasEmbeddedArt: false,
+    folderArtworkPath: null,
+    hasEmbeddedArtwork: false,
   },
   {
     path: '/music/b.mp3',
@@ -58,8 +58,8 @@ const TRACKS: T.TrackMetadata[] = [
     duration: 200,
     size: 2048,
     mtime: '2024-01-01T00:00:00Z',
-    coverArt: null,
-    hasEmbeddedArt: false,
+    folderArtworkPath: null,
+    hasEmbeddedArtwork: false,
   },
   {
     path: '/music/c.mp3',
@@ -74,8 +74,8 @@ const TRACKS: T.TrackMetadata[] = [
     duration: 240,
     size: 3072,
     mtime: '2024-01-01T00:00:00Z',
-    coverArt: null,
-    hasEmbeddedArt: false,
+    folderArtworkPath: null,
+    hasEmbeddedArtwork: false,
   },
 ];
 
@@ -776,9 +776,9 @@ describe('edit track modal', () => {
   it('shows shared folder artwork only in the bulk editor', async () => {
     const tracksWithArt: T.TrackMetadata[] = TRACKS.map((track, index) => ({
       ...track,
-      coverArt:
+      folderArtworkPath:
         index < 2 ? '/music/Album A/Folder.jpg' : '/music/Album B/Folder.jpg',
-      hasEmbeddedArt: true,
+      hasEmbeddedArtwork: true,
     }));
     const { store } = setup(tracksWithArt, {
       trackTagsResponse: {
@@ -806,7 +806,7 @@ describe('edit track modal', () => {
       name: 'Album A artwork',
     });
     expect(headerArtwork.getAttribute('src')).toBe(
-      'http://fake-music/music/cover-art?path=%2Fmusic%2FAlbum%20A%2FFolder.jpg',
+      'http://fake-music/music/artwork?path=%2Fmusic%2FAlbum%20A%2FFolder.jpg',
     );
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));

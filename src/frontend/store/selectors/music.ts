@@ -5,9 +5,9 @@ import { UnhandledCaseError } from 'frontend/utils';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import type {
   MusicPlaybackStatus,
-  FolderArtSaveStatus,
+  FolderArtworkSaveStatus,
 } from 'frontend/store/reducers/music';
-export type { FolderArtSaveStatus } from 'frontend/store/reducers/music';
+export type { FolderArtworkSaveStatus } from 'frontend/store/reducers/music';
 
 export function getMusic(state: State) {
   return state.music;
@@ -180,12 +180,14 @@ export function getMusicPlaybackQueuePanelSelections(
   return getMusic(state).playbackQueue.panelSelections;
 }
 
-export function getMusicFolderArtSaveStatus(state: State): FolderArtSaveStatus {
-  return getMusic(state).folderArtSaveStatus;
+export function getMusicFolderArtworkSaveStatus(
+  state: State,
+): FolderArtworkSaveStatus {
+  return getMusic(state).folderArtworkSaveStatus;
 }
 
-export function getMusicFolderArtVersion(state: State): number {
-  return getMusic(state).folderArtVersion;
+export function getMusicFolderArtworkVersion(state: State): number {
+  return getMusic(state).folderArtworkVersion;
 }
 
 /**

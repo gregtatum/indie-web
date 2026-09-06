@@ -663,8 +663,8 @@ describe('the incremental scan cache is invalidated by a MUSIC_INDEX_VERSION bum
             duration: null,
             size: stats.size,
             mtime: stats.mtime.toISOString(),
-            coverArt: null,
-            hasEmbeddedArt: false,
+            folderArtworkPath: null,
+            hasEmbeddedArtwork: false,
           },
         ],
       };

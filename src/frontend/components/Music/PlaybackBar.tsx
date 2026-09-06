@@ -28,9 +28,9 @@ export function PlaybackBar() {
     ? (allTracks.find((t) => t.path === trackPath) ?? null)
     : null;
 
-  const artUrl =
-    server && trackMetadata?.coverArt
-      ? `${server.url}/music/cover-art?path=${encodeURIComponent(trackMetadata.coverArt)}`
+  const folderArtworkUrl =
+    server && trackMetadata?.folderArtworkPath
+      ? `${server.url}/music/artwork?path=${encodeURIComponent(trackMetadata.folderArtworkPath)}`
       : null;
   const isPlaying = musicPlaybackStatus === 'playing';
 
@@ -113,12 +113,12 @@ export function PlaybackBar() {
     >
       <button
         type="button"
-        className="musicPlaybackAlbumArt musicPlaybackAlbumArtButton"
+        className="musicPlaybackArtwork musicPlaybackArtworkButton"
         aria-label="Show album"
         onClick={handleAlbumClick}
         disabled={!trackMetadata}
       >
-        {artUrl ? <img src={artUrl} alt="" /> : null}
+        {folderArtworkUrl ? <img src={folderArtworkUrl} alt="" /> : null}
       </button>
 
       <div className="musicPlaybackTrackInfo">

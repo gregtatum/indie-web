@@ -109,10 +109,10 @@ export interface TrackMetadata {
   size: number;
   /** ISO timestamp — used for incremental re-scan. */
   mtime: string;
-  /** Client path to a cover image file in the album directory, or null if none found. */
-  coverArt: string | null;
-  /** True if the audio file contains at least one embedded APIC picture frame. */
-  hasEmbeddedArt: boolean;
+  /** Client path to an artwork image file in the album directory, or null if none found. */
+  folderArtworkPath: string | null;
+  /** True if the audio file contains at least one embedded APIC artwork frame. */
+  hasEmbeddedArtwork: boolean;
 }
 
 /**
@@ -151,20 +151,20 @@ export interface RawTagEntry {
   binary?: string;
 }
 
-export interface WriteFolderArtResponse {
-  /** Client path of the written cover art file (e.g. /Artist/Album/Folder.jpg). */
-  coverArtPath: string;
+export interface WriteFolderArtworkResponse {
+  /** Client path of the written folder artwork file (e.g. /Artist/Album/Folder.jpg). */
+  folderArtworkPath: string;
   /**
    * Result of embedding the same image into individual track files. Present
-   * only when the request supplied an image body and an `embed` list. Every
-   * requested track is attempted; per-file failures land in `errors` without
-   * stopping the rest.
+   * only when the request supplied an image body and an `embedInTracks` list.
+   * Every requested track is attempted; per-file failures land in `errors`
+   * without stopping the rest.
    */
   tracksEmbedded?: {
     updatedTracks: string[];
     errors: Array<{ path: string; message: string }>;
   };
-  removedCoverArt?: string[];
+  removedFolderArtwork?: string[];
 }
 
 export interface TrackTagsResponse {

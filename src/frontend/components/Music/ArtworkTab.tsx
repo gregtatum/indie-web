@@ -3,13 +3,13 @@ import * as Router from 'react-router-dom';
 import { A, Hooks, $, $$ } from 'frontend';
 import { getDirName, getPathFileName } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
-import type { WriteFolderArtResponse } from 'shared/@types/shared';
+import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
 
 interface Props {
-  artUrl: string | null;
-  coverArtPath: string | null;
+  folderArtworkUrl: string | null;
+  folderArtworkPath: string | null;
   emptyMessage?: string;
-  hideEmbeddedArt?: boolean;
+  hideEmbeddedArtwork?: boolean;
   tagsState: TrackTagsLoadState;
   trackPath: string;
   serverUrl: string;
@@ -29,24 +29,23 @@ interface OverwriteButtonProps {
 
 function OverwriteButton({ trackPath, serverUrl }: OverwriteButtonProps) {
   const dispatch = Hooks.useDispatch();
-  const saveStatus = $$.getMusicFolderArtSaveStatus();
+  const saveStatus = $$.getMusicFolderArtworkSaveStatus();
 
-  function saveFolderArt() {
-    dispatch(A.musicFolderArtSaveStart());
-    fetch(
-      `${serverUrl}/music/write-folder-art?path=${encodeURIComponent(trackPath)}`,
-      { method: 'POST' },
-    )
+  function saveFolderArtwork() {
+    dispatch(A.musicFolderArtworkSaveStart());
+    fetch(`${serverUrl}/music/artwork?path=${encodeURIComponent(trackPath)}`, {
+      method: 'POST',
+    })
       .then((res) => {
         if (!res.ok) {
           return res.text().then((t) => {
             throw new Error(t || `${res.status}`);
           });
         }
-        return res.json() as Promise<WriteFolderArtResponse>;
+        return res.json() as Promise<WriteFolderArtworkResponse>;
       })
-      .then(() => dispatch(A.musicFolderArtSaveSuccess()))
-      .catch(() => dispatch(A.musicFolderArtSaveError()));
+      .then(() => dispatch(A.musicFolderArtworkSaveSuccess()))
+      .catch(() => dispatch(A.musicFolderArtworkSaveError()));
   }
 
   return (
@@ -54,7 +53,7 @@ function OverwriteButton({ trackPath, serverUrl }: OverwriteButtonProps) {
       type="button"
       className="artworkSaveFolderBtn"
       disabled={saveStatus === 'saving' || saveStatus === 'saved'}
-      onClick={saveFolderArt}
+      onClick={saveFolderArtwork}
     >
       {saveStatus === 'saving' && 'Saving…'}
       {saveStatus === 'saved' && 'Saved ✓'}
@@ -133,10 +132,10 @@ function ArtworkSection({
 }
 
 export function ArtworkTab({
-  artUrl,
-  coverArtPath,
+  folderArtworkUrl,
+  folderArtworkPath,
   emptyMessage = 'No artwork found',
-  hideEmbeddedArt = false,
+  hideEmbeddedArtwork = false,
   tagsState,
   trackPath,
   serverUrl,
@@ -144,11 +143,11 @@ export function ArtworkTab({
   const dispatch = Hooks.useDispatch();
   const { getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
-  const version = $$.getMusicFolderArtVersion();
-  const saveStatus = $$.getMusicFolderArtSaveStatus();
+  const version = $$.getMusicFolderArtworkVersion();
+  const saveStatus = $$.getMusicFolderArtworkSaveStatus();
 
-  const apics = React.useMemo(() => {
-    if (hideEmbeddedArt) {
+  const embeddedArtwork = React.useMemo(() => {
+    if (hideEmbeddedArtwork) {
       return [];
     }
     if (tagsState.status !== 'loaded') {
@@ -158,8 +157,8 @@ export function ArtworkTab({
       .flatMap((block) => block.tags)
       .filter((tag) => tag.id === 'APIC' && tag.binary !== undefined)
       .map((tag) => ({ value: tag.value, binary: tag.binary! }))
-      .filter((apic) => !apic.value.startsWith('-->'));
-  }, [hideEmbeddedArt, tagsState]);
+      .filter((entry) => !entry.value.startsWith('-->'));
+  }, [hideEmbeddedArtwork, tagsState]);
 
   const navigateToFile = React.useCallback(
     (filePath: string) => {
@@ -172,15 +171,15 @@ export function ArtworkTab({
     [dispatch, getState, navigate],
   );
 
-  const folderArtHref = React.useMemo(() => {
-    if (!coverArtPath) {
+  const folderArtworkHref = React.useMemo(() => {
+    if (!folderArtworkPath) {
       return null;
     }
     const fsSlug = $.getCurrentFileStoreSlug(getState());
-    return `/${fsSlug}/folder${getDirName(coverArtPath)}`;
-  }, [coverArtPath, getState]);
+    return `/${fsSlug}/folder${getDirName(folderArtworkPath)}`;
+  }, [folderArtworkPath, getState]);
 
-  if (!artUrl && tagsState.status === 'loading') {
+  if (!folderArtworkUrl && tagsState.status === 'loading') {
     return (
       <div className="editTrackModalArtwork">
         <div className="editTrackModalArtworkEmpty">Loading…</div>
@@ -188,7 +187,10 @@ export function ArtworkTab({
     );
   }
 
-  if (!artUrl && (apics.length === 0 || tagsState.status === 'error')) {
+  if (
+    !folderArtworkUrl &&
+    (embeddedArtwork.length === 0 || tagsState.status === 'error')
+  ) {
     return (
       <div className="editTrackModalArtwork">
         <div className="editTrackModalArtworkEmpty">{emptyMessage}</div>
@@ -198,34 +200,34 @@ export function ArtworkTab({
 
   return (
     <div className="editTrackModalArtworkSections">
-      {artUrl && coverArtPath && (
+      {folderArtworkUrl && folderArtworkPath && (
         <div className="artworkBlock">
           <div className="artworkBlockLabel">Folder</div>
           <ArtworkSection
             key={version}
-            src={artUrl}
+            src={folderArtworkUrl}
             reloading={saveStatus === 'saving'}
             details={[
               {
                 key: 'File',
-                value: coverArtPath,
-                href: folderArtHref ?? undefined,
-                onClick: () => navigateToFile(coverArtPath),
+                value: folderArtworkPath,
+                href: folderArtworkHref ?? undefined,
+                onClick: () => navigateToFile(folderArtworkPath),
               },
             ]}
           >
-            {!hideEmbeddedArt && apics.length > 0 && (
+            {!hideEmbeddedArtwork && embeddedArtwork.length > 0 && (
               <OverwriteButton trackPath={trackPath} serverUrl={serverUrl} />
             )}
           </ArtworkSection>
         </div>
       )}
-      {apics.map((apic, i) => {
-        const parts = apic.value.split(' — ');
+      {embeddedArtwork.map((entry, i) => {
+        const parts = entry.value.split(' — ');
         const rawMime = parts[0] ?? '';
         const pictureType = parts[1] ?? '';
         const mimeType = rawMime.startsWith('image/') ? rawMime : 'image/jpeg';
-        const src = `data:${mimeType};base64,${apic.binary}`;
+        const src = `data:${mimeType};base64,${entry.binary}`;
         const details: DetailItem[] = [];
         if (rawMime) {
           details.push({ key: 'Format', value: rawMime });
@@ -236,7 +238,7 @@ export function ArtworkTab({
         return (
           <div key={i} className="artworkBlock">
             <div className="artworkBlockLabel">
-              {apics.length > 1 ? `Embedded ${i + 1}` : 'Embedded'}
+              {embeddedArtwork.length > 1 ? `Embedded ${i + 1}` : 'Embedded'}
             </div>
             <ArtworkSection src={src} details={details} />
           </div>

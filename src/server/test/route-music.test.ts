@@ -601,7 +601,7 @@ describe('POST /music/music-index/scan APIC backfill', () => {
   after(() => server.close());
 
   it(
-    'sets hasEmbeddedArt: false for a track with no embedded picture',
+    'sets hasEmbeddedArtwork: false for a track with no embedded picture',
     withLogs([], async () => {
       await writeFile(
         join(server.mountDir, 'no-art.mp3'),
@@ -616,12 +616,12 @@ describe('POST /music/music-index/scan APIC backfill', () => {
         (t: { path: string }) => t.path === '/no-art.mp3',
       );
       assert.ok(track, 'no-art.mp3 should appear in the index');
-      assert.equal(track.hasEmbeddedArt, false);
+      assert.equal(track.hasEmbeddedArtwork, false);
     }),
   );
 
   it(
-    'sets hasEmbeddedArt: true for a track with an embedded APIC frame',
+    'sets hasEmbeddedArtwork: true for a track with an embedded APIC frame',
     withLogs([], async () => {
       await writeFile(
         join(server.mountDir, 'has-art.mp3'),
@@ -636,12 +636,12 @@ describe('POST /music/music-index/scan APIC backfill', () => {
         (t: { path: string }) => t.path === '/has-art.mp3',
       );
       assert.ok(track, 'has-art.mp3 should appear in the index');
-      assert.equal(track.hasEmbeddedArt, true);
+      assert.equal(track.hasEmbeddedArtwork, true);
     }),
   );
 
   it(
-    'writes Folder.jpg from APIC when no folder art exists, and sets coverArt',
+    'writes Folder.jpg from APIC when no folder artwork exists, and sets folderArtworkPath',
     withLogs([], async () => {
       await mkdir(join(server.mountDir, 'ApicArtist', 'ApicAlbum'), {
         recursive: true,
@@ -659,7 +659,7 @@ describe('POST /music/music-index/scan APIC backfill', () => {
         (t: { path: string }) => t.path === '/ApicArtist/ApicAlbum/track.mp3',
       );
       assert.ok(track, 'track should appear in the index');
-      assert.equal(track.coverArt, '/ApicArtist/ApicAlbum/Folder.jpg');
+      assert.equal(track.folderArtworkPath, '/ApicArtist/ApicAlbum/Folder.jpg');
 
       // Verify the file was actually written with the correct bytes
       const { readFile } = await import('node:fs/promises');

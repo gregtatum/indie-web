@@ -38,8 +38,8 @@ const TRACKS: T.TrackMetadata[] = [
     duration: 180,
     size: 1024,
     mtime: '2024-01-01T00:00:00Z',
-    coverArt: null,
-    hasEmbeddedArt: false,
+    folderArtworkPath: null,
+    hasEmbeddedArtwork: false,
   },
   {
     path: '/Jazz/Miles Davis/Kind of Blue/All Blues.mp3',
@@ -54,8 +54,8 @@ const TRACKS: T.TrackMetadata[] = [
     duration: 200,
     size: 2048,
     mtime: '2024-01-01T00:00:00Z',
-    coverArt: null,
-    hasEmbeddedArt: false,
+    folderArtworkPath: null,
+    hasEmbeddedArtwork: false,
   },
 ];
 

@@ -189,10 +189,31 @@ function upgradeV6ToV7(blob: IndexVersion<6>): IndexVersion<7> {
  * resolves text fields across a file's tag blocks, so a v7 index may hold
  * stale values. This bump exists purely to force a rescan.
  */
-function upgradeV7ToV8(blob: IndexVersion<7>): T.MusicIndex {
+function upgradeV7ToV8(blob: IndexVersion<7>): IndexVersion<8> {
   return {
     ...blob,
     version: 8 as const,
+  } as unknown as IndexVersion<8>;
+}
+
+/**
+ * v8 → v9: pure rename of the two artwork fields, consolidating the vocabulary
+ * on "artwork". `coverArt` → `folderArtworkPath` and `hasEmbeddedArt` →
+ * `hasEmbeddedArtwork`. No values change.
+ */
+function upgradeV8ToV9(blob: IndexVersion<8>): T.MusicIndex {
+  const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => {
+    const { coverArt, hasEmbeddedArt, ...rest } = t;
+    return {
+      ...rest,
+      folderArtworkPath: (coverArt as string | null) ?? null,
+      hasEmbeddedArtwork: (hasEmbeddedArt as boolean | null) ?? false,
+    };
+  });
+  return {
+    version: 9 as const,
+    scannedAt: blob.scannedAt as string,
+    tracks,
   } as unknown as T.MusicIndex;
 }
 
@@ -241,6 +262,10 @@ export function upgradeMusicIndex(blob: unknown): {
   }
   if (raw.version === 7) {
     raw = upgradeV7ToV8(raw as IndexVersion<7>) as unknown as typeof raw;
+    wasUpgraded = true;
+  }
+  if (raw.version === 8) {
+    raw = upgradeV8ToV9(raw as IndexVersion<8>) as unknown as typeof raw;
     wasUpgraded = true;
   }
   return { index: raw as unknown as T.MusicIndex, wasUpgraded, servedVersion };

@@ -32,28 +32,28 @@ const LARGE_PNG = Buffer.concat([
   randomBytes(300_000),
 ]);
 
-interface FolderArtRequest {
+interface FolderArtworkRequest {
   path: string;
-  embed?: string[];
+  embedInTracks?: string[];
   body?: Buffer;
   contentType?: 'image/jpeg' | 'image/png';
 }
 
-async function postFolderArt(
+async function postFolderArtwork(
   server: TestServer,
-  { path, embed, body, contentType }: FolderArtRequest,
+  { path, embedInTracks, body, contentType }: FolderArtworkRequest,
 ) {
   const params = new URLSearchParams({ path });
-  if (embed) {
+  if (embedInTracks) {
     // URLSearchParams handles percent-encoding; join the raw paths with a
     // comma the handler splits on.
-    params.set('embed', embed.join(','));
+    params.set('embedInTracks', embedInTracks.join(','));
   }
   const headers: Record<string, string> = {};
   if (body) {
     headers['Content-Type'] = contentType ?? 'image/jpeg';
   }
-  return fetch(`${server.baseUrl}/music/write-folder-art?${params}`, {
+  return fetch(`${server.baseUrl}/music/artwork?${params}`, {
     method: 'POST',
     headers,
     body: body ? new Uint8Array(body) : undefined,
@@ -65,11 +65,11 @@ async function scan(server: TestServer) {
     method: 'POST',
   });
   return (await res.json()) as {
-    tracks: Array<{ path: string; coverArt: string | null }>;
+    tracks: Array<{ path: string; folderArtworkPath: string | null }>;
   };
 }
 
-describe('POST /music/write-folder-art — extract from embedded APIC (no body)', () => {
+describe('POST /music/artwork — extract from embedded APIC (no body)', () => {
   let server: TestServer;
   before(async () => {
     server = await createTestServer((app, mountPath) => {
@@ -87,12 +87,14 @@ describe('POST /music/write-folder-art — extract from embedded APIC (no body)'
         buildMp3WithTags({ title: 'One', apic: MINIMAL_JPEG }),
       );
 
-      const res = await postFolderArt(server, { path: '/A/JpgAlbum/01.mp3' });
+      const res = await postFolderArtwork(server, {
+        path: '/A/JpgAlbum/01.mp3',
+      });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.WriteFolderArtResponse;
-      assert.equal(json.coverArtPath, '/A/JpgAlbum/Folder.jpg');
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
+      assert.equal(json.folderArtworkPath, '/A/JpgAlbum/Folder.jpg');
       assert.equal(json.tracksEmbedded, undefined);
-      assert.equal(json.removedCoverArt, undefined);
+      assert.equal(json.removedFolderArtwork, undefined);
 
       const written = await readFile(
         join(server.mountDir, 'A', 'JpgAlbum', 'Folder.jpg'),
@@ -108,7 +110,7 @@ describe('POST /music/write-folder-art — extract from embedded APIC (no body)'
         join(server.mountDir, 'bare.mp3'),
         buildMp3WithTags({ title: 'Bare' }),
       );
-      const res = await postFolderArt(server, { path: '/bare.mp3' });
+      const res = await postFolderArtwork(server, { path: '/bare.mp3' });
       assert.equal(res.status, 400);
     }),
   );
@@ -116,7 +118,7 @@ describe('POST /music/write-folder-art — extract from embedded APIC (no body)'
   it(
     'returns 400 when the path query parameter is missing',
     withLogs(['Missing path query parameter.'], async () => {
-      const res = await fetch(`${server.baseUrl}/music/write-folder-art`, {
+      const res = await fetch(`${server.baseUrl}/music/artwork`, {
         method: 'POST',
       });
       assert.equal(res.status, 400);
@@ -126,13 +128,13 @@ describe('POST /music/write-folder-art — extract from embedded APIC (no body)'
   it(
     'returns 400 for a path that escapes the mount',
     withLogs(['Invalid path.'], async () => {
-      const res = await postFolderArt(server, { path: '/../escape.mp3' });
+      const res = await postFolderArtwork(server, { path: '/../escape.mp3' });
       assert.equal(res.status, 400);
     }),
   );
 });
 
-describe('POST /music/write-folder-art — upload an image body', () => {
+describe('POST /music/artwork — upload an image body', () => {
   let server: TestServer;
   before(async () => {
     server = await createTestServer((app, mountPath) => {
@@ -150,13 +152,13 @@ describe('POST /music/write-folder-art — upload an image body', () => {
         buildMp3WithTags({ title: 'One' }),
       );
 
-      const res = await postFolderArt(server, {
+      const res = await postFolderArtwork(server, {
         path: '/Up/Jpg/01.mp3',
         body: LARGE_JPEG,
       });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.WriteFolderArtResponse;
-      assert.equal(json.coverArtPath, '/Up/Jpg/Folder.jpg');
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
+      assert.equal(json.folderArtworkPath, '/Up/Jpg/Folder.jpg');
       assert.equal(json.tracksEmbedded, undefined);
 
       const written = await readFile(
@@ -179,14 +181,14 @@ describe('POST /music/write-folder-art — upload an image body', () => {
         buildMp3WithTags({ title: 'One' }),
       );
 
-      const res = await postFolderArt(server, {
+      const res = await postFolderArtwork(server, {
         path: '/Up/Png/01.mp3',
         body: LARGE_PNG,
         contentType: 'image/png',
       });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.WriteFolderArtResponse;
-      assert.equal(json.coverArtPath, '/Up/Png/Folder.png');
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
+      assert.equal(json.folderArtworkPath, '/Up/Png/Folder.png');
 
       const written = await readFile(
         join(server.mountDir, 'Up', 'Png', 'Folder.png'),
@@ -195,7 +197,7 @@ describe('POST /music/write-folder-art — upload an image body', () => {
 
       const index = await scan(server);
       const track = index.tracks.find((t) => t.path === '/Up/Png/01.mp3');
-      assert.equal(track?.coverArt, '/Up/Png/Folder.png');
+      assert.equal(track?.folderArtworkPath, '/Up/Png/Folder.png');
     }),
   );
 
@@ -208,7 +210,7 @@ describe('POST /music/write-folder-art — upload an image body', () => {
         buildMp3WithTags({ title: 'One' }),
       );
 
-      const res = await postFolderArt(server, {
+      const res = await postFolderArtwork(server, {
         path: '/Up/Bad/01.mp3',
         body: Buffer.from('GIF89a not really though'),
         contentType: 'image/png',
@@ -230,13 +232,13 @@ describe('POST /music/write-folder-art — upload an image body', () => {
       await writeFile(join(dir, 'front.png'), Buffer.from('OLD front.png'));
       await writeFile(join(dir, 'liner-notes.txt'), Buffer.from('keep me'));
 
-      const res = await postFolderArt(server, {
+      const res = await postFolderArtwork(server, {
         path: '/Up/Variants/01.mp3',
         body: MINIMAL_JPEG,
       });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.WriteFolderArtResponse;
-      assert.deepEqual([...(json.removedCoverArt ?? [])].sort(), [
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
+      assert.deepEqual([...(json.removedFolderArtwork ?? [])].sort(), [
         '/Up/Variants/cover.jpg',
         '/Up/Variants/front.png',
       ]);
@@ -250,7 +252,7 @@ describe('POST /music/write-folder-art — upload an image body', () => {
   );
 });
 
-describe('POST /music/write-folder-art — embed into tracks', () => {
+describe('POST /music/artwork — embed into tracks', () => {
   let server: TestServer;
   before(async () => {
     server = await createTestServer((app, mountPath) => {
@@ -273,13 +275,13 @@ describe('POST /music/write-folder-art — embed into tracks', () => {
       await writeFile(join(dir, '02.mp3'), seeded);
       const audioBefore = getBytesAfterId3(seeded);
 
-      const res = await postFolderArt(server, {
+      const res = await postFolderArtwork(server, {
         path: '/Embed/Album/01.mp3',
-        embed: ['/Embed/Album/01.mp3', '/Embed/Album/02.mp3'],
+        embedInTracks: ['/Embed/Album/01.mp3', '/Embed/Album/02.mp3'],
         body: LARGE_JPEG,
       });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.WriteFolderArtResponse;
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
       assert.deepEqual(json.tracksEmbedded, {
         updatedTracks: ['/Embed/Album/01.mp3', '/Embed/Album/02.mp3'],
         errors: [],
@@ -317,9 +319,9 @@ describe('POST /music/write-folder-art — embed into tracks', () => {
       await writeFile(join(dir, 'ok.mp3'), buildMp3WithTags({ title: 'OK' }));
       await writeFile(join(dir, 'note.txt'), Buffer.from('not an mp3'));
 
-      const res = await postFolderArt(server, {
+      const res = await postFolderArtwork(server, {
         path: '/Embed/Partial/ok.mp3',
-        embed: [
+        embedInTracks: [
           '/Embed/Partial/ok.mp3',
           '/Embed/Partial/note.txt',
           '/Embed/Partial/missing.mp3',
@@ -327,7 +329,7 @@ describe('POST /music/write-folder-art — embed into tracks', () => {
         body: MINIMAL_JPEG,
       });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.WriteFolderArtResponse;
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
       assert.deepEqual(json.tracksEmbedded?.updatedTracks, [
         '/Embed/Partial/ok.mp3',
       ]);
@@ -353,19 +355,19 @@ describe('POST /music/write-folder-art — embed into tracks', () => {
         buildMp3WithTags({ title: 'One', apic: MINIMAL_JPEG }),
       );
 
-      const res = await postFolderArt(server, {
+      const res = await postFolderArtwork(server, {
         path: '/Embed/NoBody/01.mp3',
-        embed: ['/Embed/NoBody/01.mp3'],
+        embedInTracks: ['/Embed/NoBody/01.mp3'],
       });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.WriteFolderArtResponse;
-      assert.equal(json.coverArtPath, '/Embed/NoBody/Folder.jpg');
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
+      assert.equal(json.folderArtworkPath, '/Embed/NoBody/Folder.jpg');
       assert.equal(json.tracksEmbedded, undefined);
     }),
   );
 });
 
-describe('POST /music/write-folder-art — end to end with a library scan', () => {
+describe('POST /music/artwork — end to end with a library scan', () => {
   let server: TestServer;
   before(async () => {
     server = await createTestServer((app, mountPath) => {
@@ -375,7 +377,7 @@ describe('POST /music/write-folder-art — end to end with a library scan', () =
   after(() => server.close());
 
   it(
-    'a fresh scan resolves coverArt to the upload and serves its exact bytes',
+    'a fresh scan resolves folderArtworkPath to the upload and serves its exact bytes',
     withLogs([], async () => {
       const dir = join(server.mountDir, 'Scan', 'Album');
       await mkdir(dir, { recursive: true });
@@ -384,9 +386,9 @@ describe('POST /music/write-folder-art — end to end with a library scan', () =
       // Stale art the scanner would otherwise prefer over Folder.jpg.
       await writeFile(join(dir, 'cover.jpg'), Buffer.from('STALE ART'));
 
-      const post = await postFolderArt(server, {
+      const post = await postFolderArtwork(server, {
         path: '/Scan/Album/01.mp3',
-        embed: ['/Scan/Album/01.mp3', '/Scan/Album/02.mp3'],
+        embedInTracks: ['/Scan/Album/01.mp3', '/Scan/Album/02.mp3'],
         body: LARGE_JPEG,
       });
       assert.equal(post.status, 200);
@@ -397,11 +399,11 @@ describe('POST /music/write-folder-art — end to end with a library scan', () =
       );
       assert.equal(albumTracks.length, 2);
       for (const track of albumTracks) {
-        assert.equal(track.coverArt, '/Scan/Album/Folder.jpg');
+        assert.equal(track.folderArtworkPath, '/Scan/Album/Folder.jpg');
       }
 
       const artRes = await fetch(
-        `${server.baseUrl}/music/cover-art?path=${encodeURIComponent(
+        `${server.baseUrl}/music/artwork?path=${encodeURIComponent(
           '/Scan/Album/Folder.jpg',
         )}`,
       );

@@ -523,9 +523,11 @@ function AlbumHero() {
     (sum, track) => sum + (track.duration ?? 0),
     0,
   );
-  const artTrack = orderedTracks.find((track) => track.coverArt);
-  const artUrl = artTrack?.coverArt
-    ? `${server.url}/music/cover-art?path=${encodeURIComponent(artTrack.coverArt)}`
+  const folderArtworkTrack = orderedTracks.find(
+    (track) => track.folderArtworkPath,
+  );
+  const folderArtworkUrl = folderArtworkTrack?.folderArtworkPath
+    ? `${server.url}/music/artwork?path=${encodeURIComponent(folderArtworkTrack.folderArtworkPath)}`
     : null;
 
   const meta = [
@@ -543,11 +545,14 @@ function AlbumHero() {
 
   return (
     <div className="musicAlbumHero">
-      <div className="musicAlbumHeroArt">
-        {artUrl ? (
-          <img src={artUrl} alt="" />
+      <div className="musicAlbumHeroArtwork">
+        {folderArtworkUrl ? (
+          <img src={folderArtworkUrl} alt="" />
         ) : (
-          <span className="musicAlbumHeroArtPlaceholder" aria-hidden="true" />
+          <span
+            className="musicAlbumHeroArtworkPlaceholder"
+            aria-hidden="true"
+          />
         )}
       </div>
       <div className="musicAlbumHeroBody">

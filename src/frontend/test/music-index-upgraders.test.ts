@@ -143,10 +143,10 @@ describe('upgradeMusicIndex v4 → current', () => {
     expect(index.version).toBe(CURRENT_MUSIC_INDEX_VERSION);
   });
 
-  it('backfills hasEmbeddedArt as false on all tracks', () => {
+  it('backfills hasEmbeddedArtwork as false on all tracks', () => {
     const { index } = upgradeMusicIndex(v4Fixture);
     for (const track of index.tracks) {
-      expect(track.hasEmbeddedArt).toBe(false);
+      expect(track.hasEmbeddedArtwork).toBe(false);
     }
   });
 
@@ -161,7 +161,7 @@ describe('upgradeMusicIndex v4 → current', () => {
     expect(track.track).toBe(1);
     expect(track.duration).toBe(180.5);
     expect(track.size).toBe(3145728);
-    expect(track.coverArt).toBe('/Artist/Album/Folder.jpg');
+    expect(track.folderArtworkPath).toBe('/Artist/Album/Folder.jpg');
   });
 
   it('preserves null fields', () => {
@@ -173,7 +173,7 @@ describe('upgradeMusicIndex v4 → current', () => {
     expect(track.genre).toBeNull();
     expect(track.track).toBeNull();
     expect(track.duration).toBeNull();
-    expect(track.coverArt).toBeNull();
+    expect(track.folderArtworkPath).toBeNull();
   });
 });
 
@@ -212,8 +212,8 @@ describe('upgradeMusicIndex v5 → current', () => {
     expect(track.track).toBe(1);
     expect(track.duration).toBe(180.5);
     expect(track.size).toBe(3145728);
-    expect(track.coverArt).toBe('/Artist/Album/Folder.jpg');
-    expect(track.hasEmbeddedArt).toBe(false);
+    expect(track.folderArtworkPath).toBe('/Artist/Album/Folder.jpg');
+    expect(track.hasEmbeddedArtwork).toBe(false);
   });
 });
 
@@ -254,8 +254,8 @@ describe('upgradeMusicIndex v6 → current', () => {
     expect(track.track).toBe(1);
     expect(track.duration).toBe(180.5);
     expect(track.size).toBe(3145728);
-    expect(track.coverArt).toBe('/Artist/Album/Folder.jpg');
-    expect(track.hasEmbeddedArt).toBe(false);
+    expect(track.folderArtworkPath).toBe('/Artist/Album/Folder.jpg');
+    expect(track.hasEmbeddedArtwork).toBe(false);
   });
 });
 
@@ -276,10 +276,10 @@ describe('upgradeMusicIndex v3 → current', () => {
     expect(index.version).toBe(CURRENT_MUSIC_INDEX_VERSION);
   });
 
-  it('backfills coverArt as null on all tracks', () => {
+  it('backfills folderArtworkPath as null on all tracks', () => {
     const { index } = upgradeMusicIndex(v3Fixture);
     for (const track of index.tracks) {
-      expect(track.coverArt).toBeNull();
+      expect(track.folderArtworkPath).toBeNull();
     }
   });
 
@@ -342,8 +342,8 @@ describe('upgradeMusicIndex v7 → current', () => {
     expect(track.track).toBe(1);
     expect(track.duration).toBe(180.5);
     expect(track.size).toBe(3145728);
-    expect(track.coverArt).toBe('/Artist/Album/Folder.jpg');
-    expect(track.hasEmbeddedArt).toBe(false);
+    expect(track.folderArtworkPath).toBe('/Artist/Album/Folder.jpg');
+    expect(track.hasEmbeddedArtwork).toBe(false);
   });
 
   it('preserves null fields', () => {
@@ -358,5 +358,58 @@ describe('upgradeMusicIndex v7 → current', () => {
     expect(track.preferComposerGrouping).toBeNull();
     expect(track.track).toBeNull();
     expect(track.duration).toBeNull();
+  });
+});
+
+// v8 → current: pure rename of the artwork fields — coverArt →
+// folderArtworkPath and hasEmbeddedArt → hasEmbeddedArtwork. No values change.
+describe('upgradeMusicIndex v8 → current', () => {
+  const v8Fixture = JSON.parse(
+    readFileSync(join(__dirname, 'fixtures/music-index-v8.json'), 'utf-8'),
+  );
+
+  it('upgrades a v8 index to current', () => {
+    const { index, wasUpgraded } = upgradeMusicIndex(v8Fixture);
+    expect(wasUpgraded).toBe(true);
+    expect(index).toMatchSnapshot();
+  });
+
+  it('sets version to current', () => {
+    const { index } = upgradeMusicIndex(v8Fixture);
+    expect(index.version).toBe(CURRENT_MUSIC_INDEX_VERSION);
+  });
+
+  it('renames coverArt to folderArtworkPath, preserving the value', () => {
+    const { index } = upgradeMusicIndex(v8Fixture);
+    expect(index.tracks[0].folderArtworkPath).toBe('/Artist/Album/Folder.jpg');
+    expect(index.tracks[1].folderArtworkPath).toBeNull();
+    for (const track of index.tracks) {
+      expect('coverArt' in track).toBe(false);
+    }
+  });
+
+  it('renames hasEmbeddedArt to hasEmbeddedArtwork, preserving the value', () => {
+    const { index } = upgradeMusicIndex(v8Fixture);
+    expect(index.tracks[0].hasEmbeddedArtwork).toBe(true);
+    expect(index.tracks[1].hasEmbeddedArtwork).toBe(false);
+    for (const track of index.tracks) {
+      expect('hasEmbeddedArt' in track).toBe(false);
+    }
+  });
+
+  it('preserves every other track field unchanged', () => {
+    const { index } = upgradeMusicIndex(v8Fixture);
+    const track = index.tracks[0];
+    expect(track.path).toBe('/Artist/Album/track.mp3');
+    expect(track.title).toBe('Test Track');
+    expect(track.artist).toBe('Test Artist');
+    expect(track.albumArtist).toBe('Test Album Artist');
+    expect(track.composer).toBe('Test Composer');
+    expect(track.album).toBe('Test Album');
+    expect(track.genre).toBe('Rock');
+    expect(track.preferComposerGrouping).toBeNull();
+    expect(track.track).toBe(1);
+    expect(track.duration).toBe(180.5);
+    expect(track.size).toBe(3145728);
   });
 });

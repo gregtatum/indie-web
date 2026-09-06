@@ -19,16 +19,16 @@ import {
 import {
   MUSIC_INDEX_FILENAME,
   buildNodeId3Tags,
-  embedImageIntoMp3,
+  embedArtworkIntoTrack,
   installScanCrashGuard,
   performScan,
-  removeOutdatedCoverArt,
+  removeOutdatedFolderArtwork,
   serializeTagBlocks,
   sniffImageMimeType,
   updateIndexAfterTrackTagWrites,
   writeTrackTagsForPath,
 } from './logic.ts';
-import type { WriteTrackArtworkFailure } from './logic.ts';
+import type { EmbedArtworkFailure } from './logic.ts';
 
 export { MUSIC_INDEX_FILENAME };
 
@@ -256,11 +256,11 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /**
-   * Serves a cover art image stored in an album directory.
+   * Serves a folder artwork image stored in an album directory.
    * Accepts a ?path= query parameter using the same client-path convention as
    * stream-audio (e.g. /Artist/Album/Folder.jpg).
    */
-  route.addBlobRoute('GET', '/cover-art', async (req, res) => {
+  route.addBlobRoute('GET', '/artwork', async (req, res) => {
     const clientPath = req.query.path;
     if (typeof clientPath !== 'string' || !clientPath) {
       throw new ClientError('Missing path query parameter.');
@@ -296,102 +296,98 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /**
-   * Writes the album folder's primary cover image, and optionally embeds the
+   * Writes the album folder's primary artwork image, and optionally embeds the
    * same image into individual track files.
    */
-  route.post(
-    '/write-folder-art',
-    async (req): Promise<T.WriteFolderArtResponse> => {
-      const clientPath = req.query.path;
-      if (typeof clientPath !== 'string' || !clientPath) {
-        throw new ClientError('Missing path query parameter.');
+  route.post('/artwork', async (req): Promise<T.WriteFolderArtworkResponse> => {
+    const clientPath = req.query.path;
+    if (typeof clientPath !== 'string' || !clientPath) {
+      throw new ClientError('Missing path query parameter.');
+    }
+    const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      throw new ClientError('Invalid path.');
+    }
+    const dirFullPath = dirname(resolvedPath);
+    const dirClientPath = dirname(
+      clientPath.startsWith('/') ? clientPath : '/' + clientPath,
+    );
+
+    const uploaded =
+      Buffer.isBuffer(req.body) && req.body.length > 0
+        ? (req.body as Buffer)
+        : null;
+
+    let imageData: Buffer;
+    let mimeType: 'image/jpeg' | 'image/png';
+    if (uploaded) {
+      const sniffed = sniffImageMimeType(uploaded);
+      if (!sniffed) {
+        throw new ClientError('Uploaded artwork must be a JPEG or PNG image.');
       }
-      const resolvedPath = mountPath.resolve(clientPath);
-      if (!resolvedPath) {
-        throw new ClientError('Invalid path.');
+      imageData = uploaded;
+      mimeType = sniffed;
+    } else {
+      const meta = await parseFile(resolvedPath);
+      const picture = meta.common.picture?.[0];
+      if (!picture) {
+        throw new ClientError('No embedded picture found in this file.');
       }
-      const dirFullPath = dirname(resolvedPath);
-      const dirClientPath = dirname(
-        clientPath.startsWith('/') ? clientPath : '/' + clientPath,
+      imageData = Buffer.from(picture.data);
+      mimeType = picture.format === 'image/png' ? 'image/png' : 'image/jpeg';
+    }
+
+    const filename = mimeType === 'image/png' ? 'Folder.png' : 'Folder.jpg';
+    const artworkFullPath = mountPath.joinWithinMount(dirFullPath, filename);
+    if (!artworkFullPath) {
+      throw new Error('Unexpected: folder artwork path escaped the mount.');
+    }
+    await fs.writeFile(artworkFullPath, imageData);
+
+    const response: T.WriteFolderArtworkResponse = {
+      folderArtworkPath: dirClientPath + '/' + filename,
+    };
+
+    // An uploaded image is authoritative: clear the other recognized folder
+    // artwork files so a higher-priority leftover (e.g. cover.jpg) can't
+    // shadow it.
+    if (uploaded) {
+      const removedFolderArtwork = await removeOutdatedFolderArtwork(
+        mountPath,
+        dirFullPath,
+        dirClientPath,
+        filename,
       );
-
-      const uploaded =
-        Buffer.isBuffer(req.body) && req.body.length > 0
-          ? (req.body as Buffer)
-          : null;
-
-      let imageData: Buffer;
-      let mimeType: 'image/jpeg' | 'image/png';
-      if (uploaded) {
-        const sniffed = sniffImageMimeType(uploaded);
-        if (!sniffed) {
-          throw new ClientError(
-            'Uploaded artwork must be a JPEG or PNG image.',
-          );
-        }
-        imageData = uploaded;
-        mimeType = sniffed;
-      } else {
-        const meta = await parseFile(resolvedPath);
-        const picture = meta.common.picture?.[0];
-        if (!picture) {
-          throw new ClientError('No embedded picture found in this file.');
-        }
-        imageData = Buffer.from(picture.data);
-        mimeType = picture.format === 'image/png' ? 'image/png' : 'image/jpeg';
+      if (removedFolderArtwork.length > 0) {
+        response.removedFolderArtwork = removedFolderArtwork;
       }
+    }
 
-      const filename = mimeType === 'image/png' ? 'Folder.png' : 'Folder.jpg';
-      const artPath = mountPath.joinWithinMount(dirFullPath, filename);
-      if (!artPath) {
-        throw new Error('Unexpected: art path escaped the mount.');
-      }
-      await fs.writeFile(artPath, imageData);
-
-      const response: T.WriteFolderArtResponse = {
-        coverArtPath: dirClientPath + '/' + filename,
-      };
-
-      // An uploaded image is authoritative: clear the other recognized cover
-      // files so a higher-priority leftover (e.g. cover.jpg) can't shadow it.
-      if (uploaded) {
-        const removedCoverArt = await removeOutdatedCoverArt(
+    const embedParam = req.query.embedInTracks;
+    if (uploaded && typeof embedParam === 'string' && embedParam) {
+      const trackPaths = embedParam
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean);
+      const updatedTracks: string[] = [];
+      const errors: EmbedArtworkFailure[] = [];
+      for (const trackClientPath of trackPaths) {
+        const result = await embedArtworkIntoTrack(
           mountPath,
-          dirFullPath,
-          dirClientPath,
-          filename,
+          trackClientPath,
+          imageData,
         );
-        if (removedCoverArt.length > 0) {
-          response.removedCoverArt = removedCoverArt;
+        if ('message' in result) {
+          errors.push(result);
+        } else {
+          updatedTracks.push(result.clientPath);
         }
       }
+      response.tracksEmbedded = { updatedTracks, errors };
+    }
 
-      const embedParam = req.query.embed;
-      if (uploaded && typeof embedParam === 'string' && embedParam) {
-        const trackPaths = embedParam
-          .split(',')
-          .map((part) => part.trim())
-          .filter(Boolean);
-        const updatedTracks: string[] = [];
-        const errors: WriteTrackArtworkFailure[] = [];
-        for (const trackClientPath of trackPaths) {
-          const result = await embedImageIntoMp3(
-            mountPath,
-            trackClientPath,
-            imageData,
-          );
-          if ('message' in result) {
-            errors.push(result);
-          } else {
-            updatedTracks.push(result.clientPath);
-          }
-        }
-        response.tracksEmbedded = { updatedTracks, errors };
-      }
-
-      return response;
-    },
-  );
+    return response;
+  });
 
   /**
    * Writes one or more ID3 tag frames to MP3 files in-place.

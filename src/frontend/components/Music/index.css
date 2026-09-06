@@ -12,7 +12,7 @@
   /* Surfaces */
   --modal-bg: #fff;
   --surface-raised: #fafafa;
-  --album-art-bg: #ccc;
+  --artwork-bg: #ccc;
 
   /* Text hierarchy */
   --text-heading: #111;
@@ -183,23 +183,23 @@
   animation: fadein 200ms ease-out;
 }
 
-.musicAlbumHeroArt {
+.musicAlbumHeroArtwork {
   width: 100%;
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--album-art-bg);
+  background: var(--artwork-bg);
 }
 
-.musicAlbumHeroArt img {
+.musicAlbumHeroArtwork img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.musicAlbumHeroArtPlaceholder {
+.musicAlbumHeroArtworkPlaceholder {
   display: block;
   width: 100%;
   height: 100%;
@@ -555,26 +555,26 @@
   background: var(--modal-bg);
 }
 
-.musicPlaybackAlbumArt {
+.musicPlaybackArtwork {
   width: 48px;
   height: 48px;
   border-radius: 4px;
-  background: var(--album-art-bg);
+  background: var(--artwork-bg);
   flex-shrink: 0;
   overflow: hidden;
 }
 
-.musicPlaybackAlbumArtButton {
+.musicPlaybackArtworkButton {
   padding: 0;
   border: none;
   cursor: pointer;
 }
 
-.musicPlaybackAlbumArtButton:disabled {
+.musicPlaybackArtworkButton:disabled {
   cursor: default;
 }
 
-.musicPlaybackAlbumArt img {
+.musicPlaybackArtwork img {
   width: 100%;
   height: 100%;
   object-fit: cover;

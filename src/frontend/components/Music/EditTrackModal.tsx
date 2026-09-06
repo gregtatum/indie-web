@@ -748,19 +748,23 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     }
   }
 
-  let sharedCoverArt: string | null = null;
+  let sharedFolderArtworkPath: string | null = null;
   if (
     editTracks.length > 0 &&
-    editTracks.every((t) => t.coverArt === editTracks[0].coverArt)
+    editTracks.every(
+      (t) => t.folderArtworkPath === editTracks[0].folderArtworkPath,
+    )
   ) {
-    sharedCoverArt = editTracks[0].coverArt;
+    sharedFolderArtworkPath = editTracks[0].folderArtworkPath;
   }
-  const hasMixedCoverArt =
+  const hasMixedFolderArtwork =
     isBulkEdit &&
     editTracks.length > 0 &&
-    !editTracks.every((t) => t.coverArt === editTracks[0].coverArt);
-  const artUrl = sharedCoverArt
-    ? `${server.url}/music/cover-art?path=${encodeURIComponent(sharedCoverArt)}`
+    !editTracks.every(
+      (t) => t.folderArtworkPath === editTracks[0].folderArtworkPath,
+    );
+  const folderArtworkUrl = sharedFolderArtworkPath
+    ? `${server.url}/music/artwork?path=${encodeURIComponent(sharedFolderArtworkPath)}`
     : null;
   let sharedAlbumHeader: { album: string; artist: string } | null = null;
   if (isBulkEdit && editTracks.length > 0) {
@@ -1062,10 +1066,12 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
       panel:
         editTracks.length > 0 ? (
           <ArtworkTab
-            artUrl={artUrl}
-            coverArtPath={sharedCoverArt}
-            emptyMessage={hasMixedCoverArt ? 'Mixed folder artwork' : undefined}
-            hideEmbeddedArt={isBulkEdit}
+            folderArtworkUrl={folderArtworkUrl}
+            folderArtworkPath={sharedFolderArtworkPath}
+            emptyMessage={
+              hasMixedFolderArtwork ? 'Mixed folder artwork' : undefined
+            }
+            hideEmbeddedArtwork={isBulkEdit}
             tagsState={
               isBulkEdit
                 ? { status: 'loaded', data: { blocks: [], resolved: {} } }
@@ -1129,9 +1135,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           {sharedAlbumHeader ? (
             <>
               <div className="editTrackModalHeaderArtwork">
-                {artUrl ? (
+                {folderArtworkUrl ? (
                   <img
-                    src={artUrl}
+                    src={folderArtworkUrl}
                     alt={`${sharedAlbumHeader.album} artwork`}
                   />
                 ) : null}
