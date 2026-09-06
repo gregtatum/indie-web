@@ -557,6 +557,128 @@ describe('POST /music/artwork/embed — embed an existing folder image', () => {
   );
 });
 
+describe('POST /music/artwork/embedded/remove — strip embedded pictures', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  async function removeEmbedded(path: string) {
+    return fetch(
+      `${server.baseUrl}/music/artwork/embedded/remove?path=${encodeURIComponent(
+        path,
+      )}`,
+      { method: 'POST' },
+    );
+  }
+
+  it(
+    'removes the APIC frame while keeping other tags and audio intact',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Strip', 'Album');
+      await mkdir(dir, { recursive: true });
+      const seeded = buildMp3WithTags({
+        title: 'Song',
+        artist: 'Band',
+        album: 'Album',
+        apic: LARGE_JPEG,
+      });
+      await writeFile(join(dir, '01.mp3'), seeded);
+      const audioBefore = getBytesAfterId3(seeded);
+
+      const before = await parseFile(join(dir, '01.mp3'));
+      assert.equal(before.common.picture?.length, 1);
+
+      const res = await removeEmbedded('/Strip/Album/01.mp3');
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { ok: true });
+
+      const bytes = await readFile(join(dir, '01.mp3'));
+      const meta = await parseFile(join(dir, '01.mp3'));
+      assert.equal(meta.common.picture?.length ?? 0, 0, 'picture is gone');
+      assert.equal(meta.common.title, 'Song', 'kept its title');
+      assert.equal(meta.common.artist, 'Band', 'kept its artist');
+      assert.equal(meta.common.album, 'Album', 'kept its album');
+      assert.equal(
+        Buffer.compare(getBytesAfterId3(bytes), audioBefore),
+        0,
+        'audio payload is untouched',
+      );
+    }),
+  );
+
+  it(
+    'clears hasEmbeddedArtwork in the durable index without a rescan',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Strip', 'Indexed');
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        join(dir, '01.mp3'),
+        buildMp3WithTags({ title: 'One', apic: MINIMAL_JPEG }),
+      );
+      await scan(server);
+
+      const res = await removeEmbedded('/Strip/Indexed/01.mp3');
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { ok: true });
+
+      const index = JSON.parse(
+        await readFile(join(server.mountDir, '.music-index.json'), 'utf-8'),
+      ) as { tracks: Array<Record<string, unknown>> };
+      const track = index.tracks.find(
+        (t) => t.path === '/Strip/Indexed/01.mp3',
+      );
+      assert.equal(track?.hasEmbeddedArtwork, false);
+    }),
+  );
+
+  it(
+    'succeeds as a no-op when the track carries no embedded picture',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Strip', 'Bare');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, '01.mp3'), buildMp3WithTags({ title: 'Bare' }));
+
+      const res = await removeEmbedded('/Strip/Bare/01.mp3');
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { ok: true });
+
+      const meta = await parseFile(join(dir, '01.mp3'));
+      assert.equal(meta.common.picture?.length ?? 0, 0);
+      assert.equal(meta.common.title, 'Bare', 'kept its title');
+    }),
+  );
+
+  it(
+    'returns 400 when the path query parameter is missing',
+    withLogs(['Missing path query parameter.'], async () => {
+      const res = await fetch(
+        `${server.baseUrl}/music/artwork/embedded/remove`,
+        { method: 'POST' },
+      );
+      assert.equal(res.status, 400);
+    }),
+  );
+
+  it(
+    'returns 400 for a non-MP3 path',
+    withLogs(
+      ['Only MP3 files are supported for artwork removal.'],
+      async () => {
+        const dir = join(server.mountDir, 'Strip', 'NotAudio');
+        await mkdir(dir, { recursive: true });
+        await writeFile(join(dir, 'notes.txt'), Buffer.from('not audio'));
+
+        const res = await removeEmbedded('/Strip/NotAudio/notes.txt');
+        assert.equal(res.status, 400);
+      },
+    ),
+  );
+});
+
 describe('POST /music/artwork — end to end with a library scan', () => {
   let server: TestServer;
   before(async () => {

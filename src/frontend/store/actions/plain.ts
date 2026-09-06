@@ -452,6 +452,18 @@ export function musicFolderArtworkEmbedError() {
   return { type: 'music-folder-artwork-embed-error' as const };
 }
 
+export function musicEmbeddedArtworkRemoveStart() {
+  return { type: 'music-embedded-artwork-remove-start' as const };
+}
+
+export function musicEmbeddedArtworkRemoveSuccess() {
+  return { type: 'music-embedded-artwork-remove-success' as const };
+}
+
+export function musicEmbeddedArtworkRemoveError() {
+  return { type: 'music-embedded-artwork-remove-error' as const };
+}
+
 export function setMusicEditTrackPath(path: string | null) {
   return { type: 'set-music-edit-track-path' as const, path };
 }

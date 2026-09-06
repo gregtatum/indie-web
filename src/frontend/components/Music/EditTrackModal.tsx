@@ -815,6 +815,21 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     },
     [dispatch, tracks, needsRescan, servedIndexVersion],
   );
+  const handleEmbeddedArtworkRemoved = React.useCallback(
+    (removedPath: string) => {
+      dispatch(
+        A.setMusicTracks(
+          tracks.map((t) =>
+            t.path === removedPath ? { ...t, hasEmbeddedArtwork: false } : t,
+          ),
+          needsRescan,
+          servedIndexVersion,
+        ),
+      );
+      void loadTrackTags();
+    },
+    [dispatch, tracks, needsRescan, servedIndexVersion, loadTrackTags],
+  );
   let sharedAlbumHeader: { album: string; artist: string } | null = null;
   if (isBulkEdit && editTracks.length > 0) {
     const firstAlbum = editTracks[0].album;
@@ -1130,6 +1145,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
             embeddableTrackPaths={embeddableTrackPaths}
             onFolderArtworkWritten={handleFolderArtworkWritten}
             onTracksEmbedded={handleTracksEmbedded}
+            onEmbeddedArtworkRemoved={handleEmbeddedArtworkRemoved}
             serverUrl={server.url}
           />
         ) : (

@@ -982,6 +982,13 @@ export interface EmbedArtworkFailure {
   message: string;
 }
 
+export interface RemoveEmbeddedArtworkSuccess {
+  clientPath: string;
+  resolvedPath: string;
+  /** Count of APIC picture frames stripped from the leading tag. */
+  removed: number;
+}
+
 export async function embedArtworkIntoTrack(
   mountPath: MountPath,
   clientPath: string,
@@ -1055,5 +1062,175 @@ export async function embedArtworkIntoTrack(
       message:
         error instanceof Error ? error.message : 'Unable to embed artwork.',
     };
+  }
+}
+
+/**
+ * Strips every APIC frame from an MP3's leading ID3 tag.
+ */
+export async function removeEmbeddedArtworkFromTrack(
+  mountPath: MountPath,
+  clientPath: string,
+): Promise<RemoveEmbeddedArtworkSuccess | EmbedArtworkFailure> {
+  let errorPath = clientPath;
+  try {
+    const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      return { path: clientPath, message: 'Invalid path.' };
+    }
+    const normalizedClientPath = mountPath.toClientPath(resolvedPath);
+    if (normalizedClientPath === null) {
+      return { path: clientPath, message: 'Invalid path.' };
+    }
+    errorPath = normalizedClientPath;
+
+    if (extname(resolvedPath).toLowerCase() !== '.mp3') {
+      return {
+        path: normalizedClientPath,
+        message: 'Only MP3 files are supported for artwork removal.',
+      };
+    }
+
+    try {
+      await fs.stat(resolvedPath);
+    } catch (err: any) {
+      if (err?.code === 'ENOENT') {
+        return { path: normalizedClientPath, message: 'File not found.' };
+      }
+      return {
+        path: normalizedClientPath,
+        message: err instanceof Error ? err.message : 'Unable to read file.',
+      };
+    }
+
+    const current = NodeID3.read(resolvedPath) as {
+      raw?: Record<string, unknown>;
+    };
+    const raw = current.raw ?? {};
+    const apic = raw.APIC;
+    let removed = 0;
+    if (Array.isArray(apic)) {
+      removed = apic.length;
+    } else if (apic) {
+      removed = 1;
+    }
+    if (removed === 0) {
+      return { clientPath: normalizedClientPath, resolvedPath, removed: 0 };
+    }
+
+    delete raw.APIC;
+    const result = NodeID3.write(raw, resolvedPath);
+    if (result instanceof Error) {
+      return { path: normalizedClientPath, message: result.message };
+    }
+
+    return { clientPath: normalizedClientPath, resolvedPath, removed };
+  } catch (error) {
+    return {
+      path: errorPath,
+      message:
+        error instanceof Error ? error.message : 'Unable to remove artwork.',
+    };
+  }
+}
+
+export async function updateMusicIndexAfterEmbeddedArtworkRemoval(
+  mountPath: MountPath,
+  track: { clientPath: string; resolvedPath: string },
+): Promise<{
+  status: 'updated' | 'skipped' | 'error';
+  message: string | null;
+}> {
+  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
+  const tmpPath = mountPath.joinOnMount(
+    MUSIC_INDEX_FILENAME + '.artwork-remove.tmp',
+  );
+  if (!indexPath || !tmpPath) {
+    return {
+      status: 'error',
+      message: 'Unexpected: music index path escaped the mount.',
+    };
+  }
+
+  let index: T.MusicIndex;
+  try {
+    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      return { status: 'skipped', message: 'Music index not found.' };
+    }
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to read music index after removing embedded artwork.',
+    };
+  }
+  if (index.version !== MUSIC_INDEX_VERSION) {
+    return {
+      status: 'skipped',
+      message: 'Music index version does not match the server version.',
+    };
+  }
+
+  let stats: Awaited<ReturnType<typeof fs.stat>> | null = null;
+  try {
+    stats = await fs.stat(track.resolvedPath);
+  } catch {
+    // Fall through: the flag is still worth clearing even without fresh stats.
+  }
+
+  let changed = false;
+  const tracks = index.tracks.map((entry) => {
+    if (entry.path !== track.clientPath) {
+      return entry;
+    }
+    let next = entry;
+    if (next.hasEmbeddedArtwork) {
+      next = { ...next, hasEmbeddedArtwork: false };
+      changed = true;
+    }
+    if (stats) {
+      const mtime = stats.mtime.toISOString();
+      if (next.size !== stats.size || next.mtime !== mtime) {
+        next = { ...next, size: stats.size, mtime };
+        changed = true;
+      }
+    }
+    return next;
+  });
+
+  if (!changed) {
+    return { status: 'skipped', message: 'Index already matched the file.' };
+  }
+
+  const updatedIndex: T.MusicIndex = {
+    ...index,
+    scannedAt: new Date().toISOString(),
+    tracks,
+  };
+  let renamed = false;
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
+    await fs.rename(tmpPath, indexPath);
+    renamed = true;
+    return { status: 'updated', message: null };
+  } catch (error) {
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to write music index after removing embedded artwork.',
+    };
+  } finally {
+    if (!renamed) {
+      await fs.unlink(tmpPath).catch((error: any) => {
+        if (error?.code !== 'ENOENT') {
+          console.error('Failed to clean up temporary music index.', error);
+        }
+      });
+    }
   }
 }

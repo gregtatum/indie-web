@@ -15,17 +15,15 @@ interface Props {
   hideEmbeddedArtwork?: boolean;
   tagsState: TrackTagsLoadState;
   trackPath: string;
-  /** Album MP3s the folder image can be embedded into (those lacking it). */
   embeddableTrackPaths: string[];
-  /** Patches the store after the folder artwork file is written or replaced. */
   onFolderArtworkWritten: (folderArtworkPath: string) => void;
-  /** Patches the store after the folder image is embedded into tracks. */
   onTracksEmbedded: (trackPaths: string[]) => void;
+  onEmbeddedArtworkRemoved: (trackPath: string) => void;
   serverUrl: string;
 }
 
 /**
- * How long a button lingers on its "done" state ("Saved ✓", "Embedded ✓")
+ * How long a button lingers on its "done" state ("Saved", "Embedded")
  * before it returns to the actionable label.
  */
 const STATUS_RESET_MS = 2500;
@@ -251,7 +249,7 @@ function artworkButtonStatus(
     return 'Saving…';
   }
   if (saveStatus === 'saved') {
-    return 'Saved ✓';
+    return 'Saved';
   }
   if (saveStatus === 'error') {
     return 'Error — retry';
@@ -304,13 +302,15 @@ function ChangeArtworkButton({
   );
 }
 
-function UseEmbeddedArtworkButton({
+function SetAsAlbumArtworkButton({
   trackPath,
   serverUrl,
   onSaved,
-}: ArtworkButtonProps) {
+  format,
+}: ArtworkButtonProps & { format: string }) {
   const { saveStatus, active, save } = useFolderArtworkSave(serverUrl, onSaved);
   const status = artworkButtonStatus(active, saveStatus);
+  const targetFile = format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
 
   return (
     <button
@@ -319,7 +319,109 @@ function UseEmbeddedArtworkButton({
       disabled={saveStatus === 'saving' || (active && saveStatus === 'saved')}
       onClick={() => save(trackPath)}
     >
-      {status ?? 'Use embedded artwork'}
+      {status ?? `Set as ${targetFile} artwork`}
+    </button>
+  );
+}
+
+function useRemoveEmbeddedArtwork(
+  serverUrl: string,
+  onRemoved: (trackPath: string) => void,
+) {
+  const dispatch = Hooks.useDispatch();
+  const removeStatus = $$.getMusicEmbeddedArtworkRemoveStatus();
+  const [active, setActive] = React.useState(false);
+
+  React.useEffect(() => {
+    if (removeStatus === 'idle') {
+      setActive(false);
+    }
+  }, [removeStatus]);
+
+  const remove = React.useCallback(
+    (path: string) => {
+      setActive(true);
+      dispatch(A.musicEmbeddedArtworkRemoveStart());
+      fetch(
+        `${serverUrl}/music/artwork/embedded/remove?path=${encodeURIComponent(path)}`,
+        { method: 'POST' },
+      )
+        .then((res) => {
+          if (!res.ok) {
+            return res.text().then((t) => {
+              throw new Error(t || `${res.status}`);
+            });
+          }
+          return res.json();
+        })
+        .then(() => {
+          onRemoved(path);
+          dispatch(A.musicEmbeddedArtworkRemoveSuccess());
+        })
+        .catch(() => dispatch(A.musicEmbeddedArtworkRemoveError()));
+    },
+    [dispatch, serverUrl, onRemoved],
+  );
+
+  return { removeStatus, active, remove };
+}
+
+function RemoveEmbeddedArtworkButton({
+  trackPath,
+  serverUrl,
+  onRemoved,
+}: {
+  trackPath: string;
+  serverUrl: string;
+  onRemoved: (trackPath: string) => void;
+}) {
+  const { removeStatus, active, remove } = useRemoveEmbeddedArtwork(
+    serverUrl,
+    onRemoved,
+  );
+  const [confirming, setConfirming] = React.useState(false);
+  const busy =
+    active && (removeStatus === 'saving' || removeStatus === 'saved');
+
+  let label: React.ReactNode = (
+    <>
+      <span className="artworkEmbeddedRemoveBtnIcon" aria-hidden="true" />
+      Remove
+    </>
+  );
+  if (active && removeStatus === 'saving') {
+    label = 'Removing…';
+  } else if (active && removeStatus === 'saved') {
+    label = 'Removed';
+  } else if (active && removeStatus === 'error') {
+    label = 'Error — retry';
+  } else if (confirming) {
+    label = 'Click to confirm';
+  }
+
+  return (
+    <button
+      type="button"
+      className={
+        confirming
+          ? 'artworkEmbeddedRemoveBtn artworkEmbeddedRemoveBtnConfirm'
+          : 'artworkEmbeddedRemoveBtn'
+      }
+      disabled={busy}
+      onClick={() => {
+        if (busy) {
+          return;
+        }
+        if (confirming || (active && removeStatus === 'error')) {
+          setConfirming(false);
+          remove(trackPath);
+        } else {
+          setConfirming(true);
+        }
+      }}
+      onBlur={() => setConfirming(false)}
+    >
+      {label}
     </button>
   );
 }
@@ -390,7 +492,7 @@ function EmbedArtworkBanner({
   if (status === 'saving') {
     buttonLabel = 'Embedding…';
   } else if (status === 'saved') {
-    buttonLabel = 'Embedded ✓';
+    buttonLabel = 'Embedded';
   } else if (status === 'error') {
     buttonLabel = 'Error — retry';
   }
@@ -508,11 +610,19 @@ function EmbeddedArtworkRow({
   format,
   pictureType,
   sizeBytes,
+  trackPath,
+  serverUrl,
+  onSetAsAlbumArtwork,
+  onRemoved,
 }: {
   src: string;
   format: string;
   pictureType: string;
   sizeBytes: number;
+  trackPath: string;
+  serverUrl: string;
+  onSetAsAlbumArtwork: (folderArtworkPath: string) => void;
+  onRemoved: (trackPath: string) => void;
 }) {
   const [expanded, setExpanded] = React.useState(false);
   const [dimensions, setDimensions] = React.useState<string | null>(null);
@@ -551,12 +661,27 @@ function EmbeddedArtworkRow({
           <span className="artworkEmbeddedSub">Embedded in ID3 (APIC)</span>
         </span>
       </button>
-      {expanded && !imgError && (
+      {expanded && (
         <div className="artworkEmbeddedExpanded">
-          <img className="artworkSectionImage" src={src} alt="" />
+          {!imgError && (
+            <img className="artworkSectionImage" src={src} alt="" />
+          )}
           {pictureType && (
             <div className="artworkEmbeddedSub">{pictureType}</div>
           )}
+          <div className="artworkEmbeddedExpandedActions">
+            <SetAsAlbumArtworkButton
+              trackPath={trackPath}
+              serverUrl={serverUrl}
+              format={format}
+              onSaved={onSetAsAlbumArtwork}
+            />
+            <RemoveEmbeddedArtworkButton
+              trackPath={trackPath}
+              serverUrl={serverUrl}
+              onRemoved={onRemoved}
+            />
+          </div>
         </div>
       )}
     </div>
@@ -573,6 +698,7 @@ export function ArtworkTab({
   embeddableTrackPaths,
   onFolderArtworkWritten,
   onTracksEmbedded,
+  onEmbeddedArtworkRemoved,
   serverUrl,
 }: Props) {
   const dispatch = Hooks.useDispatch();
@@ -655,20 +781,11 @@ export function ArtworkTab({
             onOpenDir={() => navigateToFile(folderArtworkPath)}
           >
             {!hideEmbeddedArtwork && (
-              <>
-                <ChangeArtworkButton
-                  trackPath={trackPath}
-                  serverUrl={serverUrl}
-                  onSaved={onFolderArtworkWritten}
-                />
-                {embeddedArtwork.length > 0 && (
-                  <UseEmbeddedArtworkButton
-                    trackPath={trackPath}
-                    serverUrl={serverUrl}
-                    onSaved={onFolderArtworkWritten}
-                  />
-                )}
-              </>
+              <ChangeArtworkButton
+                trackPath={trackPath}
+                serverUrl={serverUrl}
+                onSaved={onFolderArtworkWritten}
+              />
             )}
           </AlbumArtwork>
         </div>
@@ -705,6 +822,10 @@ export function ArtworkTab({
                     format={rawMime}
                     pictureType={pictureType}
                     sizeBytes={base64ByteLength(entry.binary)}
+                    trackPath={trackPath}
+                    serverUrl={serverUrl}
+                    onSetAsAlbumArtwork={onFolderArtworkWritten}
+                    onRemoved={onEmbeddedArtworkRemoved}
                   />
                 );
               })}

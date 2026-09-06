@@ -22,9 +22,11 @@ import {
   embedArtworkIntoTrack,
   installScanCrashGuard,
   performScan,
+  removeEmbeddedArtworkFromTrack,
   removeOutdatedFolderArtwork,
   serializeTagBlocks,
   sniffImageMimeType,
+  updateMusicIndexAfterEmbeddedArtworkRemoval,
   updateIndexAfterFolderArtworkWrite,
   updateIndexAfterTrackTagWrites,
   writeTrackTagsForPath,
@@ -482,6 +484,31 @@ export function musicRoute(mountPath: MountPath) {
       return { updated, errors, index };
     },
   );
+
+  /**
+   * Strips every embedded picture (APIC) frame from a single MP3, leaving the
+   * album's folder artwork file untouched.
+   */
+  route.post('/artwork/embedded/remove', async (req): Promise<{ ok: true }> => {
+    const clientPath = req.query.path;
+    if (typeof clientPath !== 'string' || !clientPath) {
+      throw new ClientError('Missing path query parameter.');
+    }
+    const result = await removeEmbeddedArtworkFromTrack(mountPath, clientPath);
+    if ('message' in result) {
+      if (result.message === 'File not found.') {
+        throw new NotFoundError(result.message);
+      }
+      throw new ClientError(result.message);
+    }
+    // Best-effort: flip hasEmbeddedArtwork in the durable index so it does
+    // not go stale until the next scan.
+    await updateMusicIndexAfterEmbeddedArtworkRemoval(mountPath, {
+      clientPath: result.clientPath,
+      resolvedPath: result.resolvedPath,
+    });
+    return { ok: true };
+  });
 
   /**
    * Writes one or more ID3 tag frames to MP3 files in-place.

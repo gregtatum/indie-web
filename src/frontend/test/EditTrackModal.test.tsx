@@ -823,7 +823,9 @@ describe('edit track modal', () => {
     expect(screen.getByText('/music/Album A/')).toBeTruthy();
     expect(screen.queryByText('Embedded in this file')).toBeNull();
     expect(
-      screen.queryByRole('button', { name: 'Use embedded artwork' }),
+      screen.queryByRole('button', {
+        name: /Set as Folder\.(jpg|png) artwork/,
+      }),
     ).toBeNull();
     expect(
       screen.queryByRole('button', { name: /Change album artwork/ }),
@@ -886,6 +888,98 @@ describe('edit track modal', () => {
     expect(within(dialog).getByText('Cover (front)')).toBeTruthy();
   });
 
+  it('removes a track’s embedded artwork after a confirm click', async () => {
+    const tracksWithArt: T.TrackMetadata[] = [
+      {
+        ...TRACKS[0],
+        folderArtworkPath: '/music/Album A/Folder.jpg',
+        hasEmbeddedArtwork: true,
+      },
+      ...TRACKS.slice(1),
+    ];
+    let tagsCall = 0;
+    setup(tracksWithArt, {
+      trackTagsResponse: () => {
+        tagsCall += 1;
+        return Promise.resolve({
+          status: 200,
+          body: JSON.stringify({
+            blocks:
+              tagsCall === 1
+                ? [
+                    {
+                      format: 'ID3v2.3',
+                      tags: [
+                        {
+                          id: 'APIC',
+                          value: 'image/jpeg — Cover (front)',
+                          binary: 'abc123',
+                        },
+                      ],
+                    },
+                  ]
+                : [],
+            resolved: {},
+          }),
+        });
+      },
+    });
+
+    let removeCalls = 0;
+    fetchMock.post(
+      new RegExp(`${FAKE_SERVER.url}/music/artwork/embedded/remove`),
+      () => {
+        removeCalls += 1;
+        return {
+          status: 200,
+          body: JSON.stringify({
+            path: '/music/a.mp3',
+            removed: 1,
+            index: { status: 'updated', message: null },
+          }),
+        };
+      },
+    );
+
+    await openEditModal('Song A');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    const dialog = getDialog('Song A');
+    const toggle = await within(dialog).findByRole('button', {
+      expanded: false,
+    });
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    expect(
+      within(dialog).getByRole('button', { name: 'Set as Folder.jpg artwork' }),
+    ).toBeTruthy();
+
+    // First click only arms the confirm; nothing is sent yet.
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+    });
+    expect(
+      within(dialog).getByRole('button', { name: 'Click to confirm' }),
+    ).toBeTruthy();
+    expect(removeCalls).toBe(0);
+
+    // Second click performs the removal and the row drops away.
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Click to confirm' }),
+      );
+    });
+
+    await waitFor(() => expect(removeCalls).toBe(1));
+    await waitFor(() =>
+      expect(within(dialog).queryByText('Embedded in this file')).toBeNull(),
+    );
+  });
+
   it('uploads a picked file as the album artwork', async () => {
     const tracksWithArt: T.TrackMetadata[] = [
       {
@@ -937,7 +1031,7 @@ describe('edit track modal', () => {
     });
     expect(lastHadBody).toBe(true);
     expect(
-      await within(dialog).findByRole('button', { name: 'Saved ✓' }),
+      await within(dialog).findByRole('button', { name: 'Saved' }),
     ).toBeTruthy();
   });
 
