@@ -111,6 +111,7 @@ export async function createTestServer(
 
   const app = Express();
   app.use(Express.json());
+  app.use(Express.raw({ type: ['image/jpeg', 'image/png'], limit: '25mb' }));
   setupRoutes(app, new MountPath(mountDir));
 
   const server = await new Promise<ReturnType<typeof createServer>>(

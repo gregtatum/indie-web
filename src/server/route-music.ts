@@ -34,6 +34,8 @@ const COVER_ART_FILENAMES = [
   'cover.png',
   'folder.jpg',
   'Folder.jpg',
+  'folder.png',
+  'Folder.png',
   'front.jpg',
   'front.png',
 ];
@@ -325,9 +327,8 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /**
-   * Extracts the first embedded APIC picture from an audio file and writes it
-   * as Folder.jpg (or Folder.png) in the same directory.
-   * Accepts a ?path= query parameter pointing to the audio file.
+   * Writes the album folder's primary cover image, and optionally embeds the
+   * same image into individual track files.
    */
   route.post(
     '/write-folder-art',
@@ -340,23 +341,86 @@ export function musicRoute(mountPath: MountPath) {
       if (!resolvedPath) {
         throw new ClientError('Invalid path.');
       }
-      const meta = await parseFile(resolvedPath);
-      const picture = meta.common.picture?.[0];
-      if (!picture) {
-        throw new ClientError('No embedded picture found in this file.');
-      }
-      const filename =
-        picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
       const dirFullPath = dirname(resolvedPath);
       const dirClientPath = dirname(
         clientPath.startsWith('/') ? clientPath : '/' + clientPath,
       );
+
+      const uploaded =
+        Buffer.isBuffer(req.body) && req.body.length > 0
+          ? (req.body as Buffer)
+          : null;
+
+      let imageData: Buffer;
+      let mimeType: 'image/jpeg' | 'image/png';
+      if (uploaded) {
+        const sniffed = sniffImageMimeType(uploaded);
+        if (!sniffed) {
+          throw new ClientError(
+            'Uploaded artwork must be a JPEG or PNG image.',
+          );
+        }
+        imageData = uploaded;
+        mimeType = sniffed;
+      } else {
+        const meta = await parseFile(resolvedPath);
+        const picture = meta.common.picture?.[0];
+        if (!picture) {
+          throw new ClientError('No embedded picture found in this file.');
+        }
+        imageData = Buffer.from(picture.data);
+        mimeType = picture.format === 'image/png' ? 'image/png' : 'image/jpeg';
+      }
+
+      const filename = mimeType === 'image/png' ? 'Folder.png' : 'Folder.jpg';
       const artPath = mountPath.joinWithinMount(dirFullPath, filename);
       if (!artPath) {
         throw new Error('Unexpected: art path escaped the mount.');
       }
-      await fs.writeFile(artPath, picture.data);
-      return { coverArtPath: dirClientPath + '/' + filename };
+      await fs.writeFile(artPath, imageData);
+
+      const response: T.WriteFolderArtResponse = {
+        coverArtPath: dirClientPath + '/' + filename,
+      };
+
+      // An uploaded image is authoritative: clear the other recognized cover
+      // files so a higher-priority leftover (e.g. cover.jpg) can't shadow it.
+      if (uploaded) {
+        const removedCoverArt = await removeOutdatedCoverArt(
+          mountPath,
+          dirFullPath,
+          dirClientPath,
+          filename,
+        );
+        if (removedCoverArt.length > 0) {
+          response.removedCoverArt = removedCoverArt;
+        }
+      }
+
+      const embedParam = req.query.embed;
+      if (uploaded && typeof embedParam === 'string' && embedParam) {
+        const trackPaths = embedParam
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean);
+        const updatedTracks: string[] = [];
+        const errors: WriteTrackArtworkFailure[] = [];
+        for (const trackClientPath of trackPaths) {
+          const result = await embedImageIntoMp3(
+            mountPath,
+            trackClientPath,
+            imageData,
+          );
+          if ('message' in result) {
+            errors.push(result);
+          } else {
+            updatedTracks.push(result.clientPath);
+          }
+        }
+        response.tracksEmbedded = { updatedTracks, errors };
+      }
+
+      return response;
     },
   );
 
@@ -379,7 +443,7 @@ export function musicRoute(mountPath: MountPath) {
       // Validate/build the requested tags once up front so a malformed
       // request fails before any file is touched.
       buildNodeId3Tags(changes);
-      const updatedTracks: TrackTagWriteResult[] = [];
+      const updatedTracks = [] as T.ResultValue<typeof writeTrackTagsForPath>[];
       const errors: T.WriteTrackTagsResponse['errors'] = [];
 
       for (const clientPath of paths) {
@@ -388,8 +452,8 @@ export function musicRoute(mountPath: MountPath) {
           clientPath,
           changes,
         );
-        if ('message' in result) {
-          errors.push(result);
+        if (result.type === 'error') {
+          errors.push({ path: clientPath, message: result.message });
         } else {
           updatedTracks.push(result);
         }
@@ -409,6 +473,51 @@ export function musicRoute(mountPath: MountPath) {
   );
 
   return route.router;
+}
+
+/** Recognized cover-art basenames, lower-cased, matched case-insensitively. */
+const COVER_ART_BASENAMES_LOWER = new Set(
+  COVER_ART_FILENAMES.map((name) => name.toLowerCase()),
+);
+
+/**
+ * When updating new album art, remove any older album artwork with all variants from
+ * COVER_ART_FILENAMES.
+ */
+async function removeOutdatedCoverArt(
+  mountPath: MountPath,
+  dirFullPath: string,
+  dirClientPath: string,
+  keepFilename: string,
+): Promise<string[]> {
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(dirFullPath, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const keepLower = keepFilename.toLowerCase();
+  const removed: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue;
+    }
+    const lower = entry.name.toLowerCase();
+    if (lower === keepLower || !COVER_ART_BASENAMES_LOWER.has(lower)) {
+      continue;
+    }
+    const fullPath = mountPath.joinWithinMount(dirFullPath, entry.name);
+    if (!fullPath) {
+      continue;
+    }
+    try {
+      await fs.unlink(fullPath);
+      removed.push(dirClientPath + '/' + entry.name);
+    } catch {
+      // Leave the file in place; the new folder image is still written.
+    }
+  }
+  return removed;
 }
 
 interface ScanCallbacks {
@@ -642,17 +751,6 @@ function getNativePrivateTextTags(
   );
 }
 
-interface TrackTagWriteResult {
-  clientPath: string;
-  resolvedPath: string;
-  /**
-   * Fields eagerly migrated into ID3v2.3 alongside the requested changes.
-   */
-  gapFillChanges: T.TrackTagUpdate[];
-}
-
-type IndexTagWriteResult = T.WriteTrackTagsResponse['index'];
-
 /**
  * True if every character is an ASCII digit and the string is non-empty.
  */
@@ -752,9 +850,9 @@ function extractCommentText(rawValue: string): string {
  * only edits the leading tag, so a non-leading legacy ID3v2.3 tag will not
  * migrate. This is an accepted, atypical edge case.
  */
-async function computeGapFillChanges(
+async function computeId3v23Backfills(
   resolvedPath: string,
-  changes: T.WriteTrackTagsRequest['changes'],
+  changes: T.TrackTagUpdate[],
 ): Promise<T.TrackTagUpdate[]> {
   const requestedFrameIds = new Set(changes.map((change) => change.frameId));
   let blocks: T.TrackTagsResponse['blocks'];
@@ -842,28 +940,21 @@ async function backfillId3v1Tag(resolvedPath: string): Promise<void> {
 
 async function writeTrackTagsForPath(
   mountPath: MountPath,
-  clientPath: unknown,
-  changes: T.WriteTrackTagsRequest['changes'],
-): Promise<TrackTagWriteResult | { path: string; message: string }> {
-  const pathForError = typeof clientPath === 'string' ? clientPath : '';
-  let errorPath = pathForError;
+  clientPath: string,
+  changes: T.TrackTagUpdate[],
+): T.AsyncResult<{
+  clientPath: string;
+  resolvedPath: string;
+  id3v23Backfills: T.TrackTagUpdate[];
+}> {
   try {
-    if (typeof clientPath !== 'string' || !clientPath) {
-      return { path: pathForError, message: 'Invalid path.' };
-    }
-
     const resolvedPath = mountPath.resolve(clientPath);
     if (!resolvedPath) {
-      return { path: clientPath, message: 'Invalid path.' };
+      return { type: 'error', message: 'Invalid path.' };
     }
-    const normalizedClientPath = mountPath.toClientPath(resolvedPath);
-    if (normalizedClientPath === null) {
-      return { path: clientPath, message: 'Invalid path.' };
-    }
-    errorPath = normalizedClientPath;
     if (extname(resolvedPath).toLowerCase() !== '.mp3') {
       return {
-        path: normalizedClientPath,
+        type: 'error',
         message: 'Only MP3 files are supported for tag writing.',
       };
     }
@@ -871,26 +962,31 @@ async function writeTrackTagsForPath(
       await fs.stat(resolvedPath);
     } catch (err: any) {
       if (err?.code === 'ENOENT') {
-        return { path: normalizedClientPath, message: 'File not found.' };
+        return { type: 'error', message: 'File not found.' };
       }
       return {
-        path: normalizedClientPath,
+        type: 'error',
         message: err instanceof Error ? err.message : 'Unable to read file.',
       };
     }
 
-    const gapFillChanges = await computeGapFillChanges(resolvedPath, changes);
-    const tags = buildNodeId3Tags([...gapFillChanges, ...changes]);
+    const id3v23Backfills = await computeId3v23Backfills(resolvedPath, changes);
+    const tags = buildNodeId3Tags([...id3v23Backfills, ...changes]);
 
     const result = NodeID3.update(tags, resolvedPath);
     if (result instanceof Error) {
-      return { path: normalizedClientPath, message: result.message };
+      return { type: 'error', message: result.message };
     }
     await backfillId3v1Tag(resolvedPath);
-    return { clientPath: normalizedClientPath, resolvedPath, gapFillChanges };
+    return {
+      type: 'success',
+      clientPath,
+      resolvedPath,
+      id3v23Backfills,
+    };
   } catch (error) {
     return {
-      path: errorPath,
+      type: 'error',
       message: error instanceof Error ? error.message : 'Unable to write tags.',
     };
   }
@@ -902,9 +998,9 @@ async function writeTrackTagsForPath(
  */
 async function updateIndexAfterTrackTagWrites(
   mountPath: MountPath,
-  updatedTracks: TrackTagWriteResult[],
+  updatedTracks: T.ResultValue<typeof writeTrackTagsForPath>[],
   changes: T.WriteTrackTagsRequest['changes'],
-): Promise<IndexTagWriteResult> {
+): Promise<T.WriteTrackTagsResponse['index']> {
   if (updatedTracks.length === 0) {
     return { status: 'skipped', message: 'No tracks were updated.' };
   }
@@ -971,7 +1067,7 @@ async function updateIndexAfterTrackTagWrites(
       updatedTrack.mtime = stats.mtime.toISOString();
 
       for (const { frameId, value, description } of [
-        ...updated.gapFillChanges,
+        ...updated.id3v23Backfills,
         ...changes,
       ]) {
         switch (frameId) {
@@ -1166,4 +1262,116 @@ async function findAudioFiles(
   }
 
   return results;
+}
+
+export function sniffImageMimeType(data: Buffer) {
+  if (
+    data.length >= 3 &&
+    data[0] === 0xff &&
+    data[1] === 0xd8 &&
+    data[2] === 0xff
+  ) {
+    return 'image/jpeg' as const;
+  }
+  if (
+    data.length >= 8 &&
+    data[0] === 0x89 &&
+    data[1] === 0x50 &&
+    data[2] === 0x4e &&
+    data[3] === 0x47 &&
+    data[4] === 0x0d &&
+    data[5] === 0x0a &&
+    data[6] === 0x1a &&
+    data[7] === 0x0a
+  ) {
+    return 'image/png' as const;
+  }
+  return null;
+}
+
+export interface WriteTrackArtworkSuccess {
+  clientPath: string;
+  resolvedPath: string;
+  mimeType: 'image/jpeg' | 'image/png';
+}
+
+export interface WriteTrackArtworkFailure {
+  path: string;
+  message: string;
+}
+
+export async function embedImageIntoMp3(
+  mountPath: MountPath,
+  clientPath: string,
+  imageBuffer: Buffer,
+): Promise<WriteTrackArtworkSuccess | WriteTrackArtworkFailure> {
+  const pathForError = clientPath;
+  let errorPath = pathForError;
+  try {
+    const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      return { path: clientPath, message: 'Invalid path.' };
+    }
+    const normalizedClientPath = mountPath.toClientPath(resolvedPath);
+    if (normalizedClientPath === null) {
+      return { path: clientPath, message: 'Invalid path.' };
+    }
+    errorPath = normalizedClientPath;
+
+    if (extname(resolvedPath).toLowerCase() !== '.mp3') {
+      return {
+        path: normalizedClientPath,
+        message: 'Only MP3 files are supported for artwork embedding.',
+      };
+    }
+
+    if (!Buffer.isBuffer(imageBuffer) || imageBuffer.length === 0) {
+      return {
+        path: normalizedClientPath,
+        message: 'Artwork image data is empty.',
+      };
+    }
+    const mimeType = sniffImageMimeType(imageBuffer);
+    if (!mimeType) {
+      return {
+        path: normalizedClientPath,
+        message: 'Artwork must be a JPEG or PNG image.',
+      };
+    }
+
+    try {
+      await fs.stat(resolvedPath);
+    } catch (err: any) {
+      if (err?.code === 'ENOENT') {
+        return { path: normalizedClientPath, message: 'File not found.' };
+      }
+      return {
+        path: normalizedClientPath,
+        message: err instanceof Error ? err.message : 'Unable to read file.',
+      };
+    }
+
+    const result = NodeID3.update(
+      {
+        image: {
+          mime: mimeType,
+          type: { id: 3 }, // ID3v2 APIC picture type for "Cover (front)".
+          description: '',
+          imageBuffer,
+        },
+      },
+      resolvedPath,
+    );
+    if (result instanceof Error) {
+      return { path: normalizedClientPath, message: result.message };
+    }
+
+    return { clientPath: normalizedClientPath, resolvedPath, mimeType };
+  } catch (error) {
+    return {
+      path: errorPath,
+      message:
+        error instanceof Error ? error.message : 'Unable to embed artwork.',
+    };
+  }
 }

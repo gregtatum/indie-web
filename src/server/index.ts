@@ -23,6 +23,7 @@ export function startServer(): ExpressApp {
     }),
   );
   app.use(Express.json());
+  app.use(Express.raw({ type: ['image/jpeg', 'image/png'], limit: '50mb' }));
   app.use(simpleLoggingMiddleware);
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment

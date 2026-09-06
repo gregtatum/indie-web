@@ -1,5 +1,42 @@
 import type { MUSIC_INDEX_VERSION } from '../music.ts';
 
+/**
+ * Provide error messages for fallible functions.
+ */
+export type Result<T> =
+  | ({ type: 'success' } & T)
+  | {
+      type: 'error';
+      message: string;
+    };
+
+/**
+ * Provide error messages for fallible async functions. Useful for async workflows like
+ * file edits.
+ */
+export type AsyncResult<T> = Promise<Result<T>>;
+
+/**
+ * Extract the T from the Results, or the functions that use Results.
+ *
+ * type A = ResultValue<Result<{ foo: string }>>;
+ * // { foo: string }
+ *
+ * type B = ResultValue<AsyncResult<{ foo: string }>>;
+ * // { foo: string }
+ *
+ * type C = ResultValue<() => Result<{ foo: string }>>;
+ * // { foo: string }
+ *
+ * type D = ResultValue<() => AsyncResult<{ foo: string }>>;
+ * // { foo: string }
+ */
+export type ResultValue<T> = T extends (...args: any[]) => infer R
+  ? ResultValue<R>
+  : Awaited<T> extends Result<infer U>
+    ? U
+    : never;
+
 export type DownloadedTextFile = {
   metadata: FileMetadata;
   text: string;
@@ -117,6 +154,17 @@ export interface RawTagEntry {
 export interface WriteFolderArtResponse {
   /** Client path of the written cover art file (e.g. /Artist/Album/Folder.jpg). */
   coverArtPath: string;
+  /**
+   * Result of embedding the same image into individual track files. Present
+   * only when the request supplied an image body and an `embed` list. Every
+   * requested track is attempted; per-file failures land in `errors` without
+   * stopping the rest.
+   */
+  tracksEmbedded?: {
+    updatedTracks: string[];
+    errors: Array<{ path: string; message: string }>;
+  };
+  removedCoverArt?: string[];
 }
 
 export interface TrackTagsResponse {
