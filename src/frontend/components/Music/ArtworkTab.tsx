@@ -15,16 +15,18 @@ interface Props {
   hideEmbeddedArtwork?: boolean;
   tagsState: TrackTagsLoadState;
   trackPath: string;
-  /** Album tracks carrying their own embedded art that "Sync" would rewrite. */
-  syncableTrackPaths: string[];
+  /** Album MP3s the folder image can be embedded into (those lacking it). */
+  embeddableTrackPaths: string[];
   /** Patches the store after the folder artwork file is written or replaced. */
   onFolderArtworkWritten: (folderArtworkPath: string) => void;
+  /** Patches the store after the folder image is embedded into tracks. */
+  onTracksEmbedded: (trackPaths: string[]) => void;
   serverUrl: string;
 }
 
 /**
- * How long a button lingers on its "Saved ✓" / "Synced ✓" state before it
- * returns to the actionable label.
+ * How long a button lingers on its "done" state ("Saved ✓", "Embedded ✓")
+ * before it returns to the actionable label.
  */
 const STATUS_RESET_MS = 2500;
 
@@ -130,10 +132,10 @@ function PictureIcon() {
   );
 }
 
-function WarningIcon() {
+function InfoIcon() {
   return (
     <svg
-      className="artworkSyncBannerIcon"
+      className="artworkEmbedBannerIcon"
       width="18"
       height="18"
       viewBox="0 0 24 24"
@@ -144,17 +146,17 @@ function WarningIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-      <path d="M12 9v4" />
-      <path d="M12 17h.01" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <path d="M12 8h.01" />
     </svg>
   );
 }
 
-function RefreshIcon() {
+function EmbedIcon() {
   return (
     <svg
-      className="artworkSyncBannerButtonIcon"
+      className="artworkEmbedBannerButtonIcon"
       width="14"
       height="14"
       viewBox="0 0 24 24"
@@ -165,8 +167,9 @@ function RefreshIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-      <path d="M21 4v5h-5" />
+      <path d="M12 3v10" />
+      <path d="m8 9 4 4 4-4" />
+      <path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
     </svg>
   );
 }
@@ -321,20 +324,22 @@ function UseEmbeddedArtworkButton({
   );
 }
 
-function SyncEmbeddedBanner({
+function EmbedArtworkBanner({
   folderArtworkPath,
   trackPaths,
   serverUrl,
+  onEmbedded,
 }: {
   folderArtworkPath: string;
   trackPaths: string[];
   serverUrl: string;
+  onEmbedded: (trackPaths: string[]) => void;
 }) {
   const dispatch = Hooks.useDispatch();
   const embedStatus = $$.getMusicFolderArtworkEmbedStatus();
   const [statusHidden, setStatusHidden] = React.useState(false);
   const count = trackPaths.length;
-  const tracksLabel = `${count} track${count === 1 ? '' : 's'}`;
+  const tracksLabel = count === 1 ? 'this track' : `${count} tracks`;
 
   // Drop back to the actionable label a beat after a success.
   React.useEffect(() => {
@@ -348,7 +353,7 @@ function SyncEmbeddedBanner({
 
   const status = statusHidden ? 'idle' : embedStatus;
 
-  function sync() {
+  function embed() {
     dispatch(A.musicFolderArtworkEmbedStart());
     fetch(`${serverUrl}/music/artwork/embed`, {
       method: 'POST',
@@ -364,6 +369,9 @@ function SyncEmbeddedBanner({
         return res.json() as Promise<EmbedFolderArtworkResponse>;
       })
       .then((data) => {
+        if (data.updated.length > 0) {
+          onEmbedded(data.updated);
+        }
         if (data.updated.length === 0 && data.errors.length > 0) {
           dispatch(A.musicFolderArtworkEmbedError());
         } else {
@@ -375,30 +383,33 @@ function SyncEmbeddedBanner({
 
   let buttonLabel: React.ReactNode = (
     <>
-      <RefreshIcon />
-      Sync {tracksLabel}
+      <EmbedIcon />
+      Embed artwork
     </>
   );
   if (status === 'saving') {
-    buttonLabel = 'Syncing…';
+    buttonLabel = 'Embedding…';
   } else if (status === 'saved') {
-    buttonLabel = `Synced ${tracksLabel} ✓`;
+    buttonLabel = 'Embedded ✓';
   } else if (status === 'error') {
     buttonLabel = 'Error — retry';
   }
 
   return (
-    <div className="artworkSyncBanner">
-      <WarningIcon />
-      <div className="artworkSyncBannerText">
-        <strong>Embedded track art may be missing or out of date.</strong>
-        <span>{tracksLabel} can be updated to match the folder image.</span>
+    <div className="artworkEmbedBanner">
+      <InfoIcon />
+      <div className="artworkEmbedBannerText">
+        <strong>The album artwork isn’t saved inside {tracksLabel}.</strong>
+        <span>
+          Embedding it keeps each file portable, so another player or app can
+          show the artwork without this folder.
+        </span>
       </div>
       <button
         type="button"
-        className="artworkSyncBannerButton"
+        className="artworkEmbedBannerButton"
         disabled={status === 'saving' || status === 'saved'}
-        onClick={sync}
+        onClick={embed}
       >
         {buttonLabel}
       </button>
@@ -559,8 +570,9 @@ export function ArtworkTab({
   hideEmbeddedArtwork = false,
   tagsState,
   trackPath,
-  syncableTrackPaths,
+  embeddableTrackPaths,
   onFolderArtworkWritten,
+  onTracksEmbedded,
   serverUrl,
 }: Props) {
   const dispatch = Hooks.useDispatch();
@@ -664,10 +676,11 @@ export function ArtworkTab({
       {folderArtworkUrl &&
         folderArtworkPath &&
         !hideEmbeddedArtwork &&
-        syncableTrackPaths.length > 0 && (
-          <SyncEmbeddedBanner
+        embeddableTrackPaths.length > 0 && (
+          <EmbedArtworkBanner
             folderArtworkPath={folderArtworkPath}
-            trackPaths={syncableTrackPaths}
+            trackPaths={embeddableTrackPaths}
+            onEmbedded={onTracksEmbedded}
             serverUrl={serverUrl}
           />
         )}

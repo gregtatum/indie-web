@@ -767,9 +767,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const folderArtworkUrl = sharedFolderArtworkPath
     ? `${server.url}/music/artwork?path=${encodeURIComponent(sharedFolderArtworkPath)}`
     : null;
-  // MP3 tracks sharing this album folder, so the artwork tab can offer to embed
-  // the folder image into them (whether or not they already have embedded art).
-  const syncableTrackPaths = React.useMemo(() => {
+  // Album MP3s that do not yet carry the folder image as embedded art, so the
+  // artwork tab can offer to embed it into them.
+  const embeddableTrackPaths = React.useMemo(() => {
     if (isBulkEdit || !sharedFolderArtworkPath) {
       return [];
     }
@@ -777,13 +777,14 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     return tracks
       .filter(
         (t) =>
+          !t.hasEmbeddedArtwork &&
           getDirName(t.path) === folderDir &&
           t.path.toLowerCase().endsWith('.mp3'),
       )
       .map((t) => t.path);
   }, [isBulkEdit, sharedFolderArtworkPath, tracks]);
-  // The folder artwork write does not touch the music index, so point every
-  // track in that folder at the new file to keep the tab (and library) current.
+  // Neither the folder artwork write nor the embed touches the music index, so
+  // patch the store to keep the tab (and library) current until the next scan.
   const handleFolderArtworkWritten = React.useCallback(
     (folderArtworkPath: string) => {
       const folderDir = getDirName(folderArtworkPath);
@@ -791,6 +792,21 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         A.setMusicTracks(
           tracks.map((t) =>
             getDirName(t.path) === folderDir ? { ...t, folderArtworkPath } : t,
+          ),
+          needsRescan,
+          servedIndexVersion,
+        ),
+      );
+    },
+    [dispatch, tracks, needsRescan, servedIndexVersion],
+  );
+  const handleTracksEmbedded = React.useCallback(
+    (embeddedPaths: string[]) => {
+      const embedded = new Set(embeddedPaths);
+      dispatch(
+        A.setMusicTracks(
+          tracks.map((t) =>
+            embedded.has(t.path) ? { ...t, hasEmbeddedArtwork: true } : t,
           ),
           needsRescan,
           servedIndexVersion,
@@ -1111,8 +1127,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
                 : tagsState
             }
             trackPath={editTracks[0].path}
-            syncableTrackPaths={syncableTrackPaths}
+            embeddableTrackPaths={embeddableTrackPaths}
             onFolderArtworkWritten={handleFolderArtworkWritten}
+            onTracksEmbedded={handleTracksEmbedded}
             serverUrl={server.url}
           />
         ) : (

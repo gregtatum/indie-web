@@ -473,7 +473,13 @@ export function musicRoute(mountPath: MountPath) {
           updated.push(result.clientPath);
         }
       }
-      return { updated, errors };
+
+      const index = await updateIndexAfterFolderArtworkWrite(
+        mountPath,
+        folderArtworkPath,
+        updated,
+      );
+      return { updated, errors, index };
     },
   );
 

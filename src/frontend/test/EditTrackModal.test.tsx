@@ -984,8 +984,8 @@ describe('edit track modal', () => {
     expect(within(dialog).queryByText('No artwork found')).toBeNull();
   });
 
-  it('offers to sync the folder image into the album tracks', async () => {
-    // Folder art present, but no track has embedded art yet.
+  it('offers to embed the folder image into album tracks that lack it', async () => {
+    // Folder art present, but neither track has it embedded yet.
     const albumTracks: T.TrackMetadata[] = [
       {
         ...TRACKS[0],
@@ -1014,6 +1014,7 @@ describe('edit track modal', () => {
           body: JSON.stringify({
             updated: ['/music/Album A/1.mp3', '/music/Album A/2.mp3'],
             errors: [],
+            index: { status: 'updated', message: null },
           }),
         };
       },
@@ -1025,15 +1026,14 @@ describe('edit track modal', () => {
     });
 
     const dialog = getDialog('Nested One');
-    expect(
-      await within(dialog).findByText(
-        '2 tracks can be updated to match the folder image.',
-      ),
-    ).toBeTruthy();
+    const reason =
+      'Embedding it keeps each file portable, so another player or app can ' +
+      'show the artwork without this folder.';
+    expect(await within(dialog).findByText(reason)).toBeTruthy();
 
     await act(async () => {
       fireEvent.click(
-        within(dialog).getByRole('button', { name: 'Sync 2 tracks' }),
+        within(dialog).getByRole('button', { name: 'Embed artwork' }),
       );
     });
 
@@ -1044,9 +1044,10 @@ describe('edit track modal', () => {
       folderArtworkPath: '/music/Album A/Folder.jpg',
       trackPaths: ['/music/Album A/1.mp3', '/music/Album A/2.mp3'],
     });
-    expect(
-      await within(dialog).findByRole('button', { name: 'Synced 2 tracks ✓' }),
-    ).toBeTruthy();
+    // Both tracks now carry the artwork, so the prompt goes away.
+    await waitFor(() => {
+      expect(within(dialog).queryByText(reason)).toBeNull();
+    });
   });
 
   it('skips live tag loading above the bulk cutoff', async () => {

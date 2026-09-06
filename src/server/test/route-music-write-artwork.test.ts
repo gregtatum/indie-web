@@ -413,7 +413,7 @@ describe('POST /music/artwork — embed into tracks', () => {
   );
 });
 
-describe('POST /music/artwork/embed — sync an existing folder image', () => {
+describe('POST /music/artwork/embed — embed an existing folder image', () => {
   let server: TestServer;
   before(async () => {
     server = await createTestServer((app, mountPath) => {
@@ -447,10 +447,11 @@ describe('POST /music/artwork/embed — sync an existing folder image', () => {
       });
       assert.equal(res.status, 200);
       const json = (await res.json()) as T.EmbedFolderArtworkResponse;
-      assert.deepEqual(json, {
-        updated: ['/Sync/Album/01.mp3', '/Sync/Album/02.mp3'],
-        errors: [],
-      });
+      assert.deepEqual(json.updated, [
+        '/Sync/Album/01.mp3',
+        '/Sync/Album/02.mp3',
+      ]);
+      assert.deepEqual(json.errors, []);
 
       for (const name of ['01.mp3', '02.mp3']) {
         const bytes = await readFile(join(dir, name));
@@ -501,6 +502,31 @@ describe('POST /music/artwork/embed — sync an existing folder image', () => {
 
       const meta = await parseFile(join(dir, 'ok.mp3'));
       assert.equal(meta.common.picture?.length, 1);
+    }),
+  );
+
+  it(
+    'marks embedded tracks in the durable index without a rescan',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Sync', 'Indexed');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, 'Folder.jpg'), MINIMAL_JPEG);
+      await writeFile(join(dir, '01.mp3'), buildMp3WithTags({ title: 'One' }));
+      await scan(server);
+
+      const res = await embed({
+        folderArtworkPath: '/Sync/Indexed/Folder.jpg',
+        trackPaths: ['/Sync/Indexed/01.mp3'],
+      });
+      assert.equal(res.status, 200);
+      const json = (await res.json()) as T.EmbedFolderArtworkResponse;
+      assert.equal(json.index.status, 'updated');
+
+      const index = JSON.parse(
+        await readFile(join(server.mountDir, '.music-index.json'), 'utf-8'),
+      ) as { tracks: Array<Record<string, unknown>> };
+      const track = index.tracks.find((t) => t.path === '/Sync/Indexed/01.mp3');
+      assert.equal(track?.hasEmbeddedArtwork, true);
     }),
   );
 

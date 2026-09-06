@@ -467,9 +467,9 @@
   background: var(--light-border);
 }
 
-.artworkSyncBanner {
+.artworkEmbedBanner {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid var(--light-border);
@@ -477,13 +477,14 @@
   background: var(--surface-raised);
 }
 
-.artworkSyncBannerIcon {
+.artworkEmbedBannerIcon {
   flex: 0 0 auto;
   display: block;
+  margin-top: 1px;
   color: var(--text-label);
 }
 
-.artworkSyncBannerText {
+.artworkEmbedBannerText {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
@@ -493,12 +494,13 @@
   color: var(--text-body);
 }
 
-.artworkSyncBannerText span {
+.artworkEmbedBannerText span {
   color: var(--text-label);
 }
 
-.artworkSyncBannerButton {
+.artworkEmbedBannerButton {
   flex: 0 0 auto;
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -514,16 +516,16 @@
   white-space: nowrap;
 }
 
-.artworkSyncBannerButton:hover:not(:disabled) {
+.artworkEmbedBannerButton:hover:not(:disabled) {
   background: var(--accent-tint);
 }
 
-.artworkSyncBannerButton:disabled {
+.artworkEmbedBannerButton:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-.artworkSyncBannerButtonIcon {
+.artworkEmbedBannerButtonIcon {
   display: block;
 }
 
