@@ -153,7 +153,27 @@ function AlbumArtwork({
   children?: React.ReactNode;
 }) {
   const [dimensions, setDimensions] = React.useState<string | null>(null);
+  const [sizeBytes, setSizeBytes] = React.useState<number | null>(null);
   const [imgError, setImgError] = React.useState(false);
+
+  // Send a HEAD request for the Content-Length so the meta line can show
+  // "· 240 KB". This is best effort, so the size segment is dropped if the
+  // request fails.
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(src, { method: 'HEAD' })
+      .then((res) => {
+        const header = res.ok ? res.headers.get('content-length') : null;
+        const parsed = header ? parseInt(header, 10) : NaN;
+        if (!cancelled && Number.isFinite(parsed) && parsed > 0) {
+          setSizeBytes(parsed);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
 
   return (
     <div className="artworkAlbumLayout">
@@ -175,7 +195,11 @@ function AlbumArtwork({
       <div className="artworkAlbumInfo">
         <div className="artworkAlbumHeading">Album artwork</div>
         <div className="artworkMetaLine">
-          {metaLine([fileName, dimensions])}
+          {metaLine([
+            fileName,
+            dimensions,
+            sizeBytes ? formatBytes(sizeBytes) : null,
+          ])}
         </div>
         {dirHref && (
           <a

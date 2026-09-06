@@ -296,6 +296,37 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /**
+   * Reports the folder artwork size and type with no body, so the client can
+   * show "· 240 KB" without downloading the image. Content-Length is
+   * CORS-safelisted.
+   */
+  route.addBlobRoute('HEAD', '/artwork', async (req, res) => {
+    const clientPath = req.query.path;
+    if (typeof clientPath !== 'string' || !clientPath) {
+      throw new ClientError('Missing path query parameter.');
+    }
+
+    const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      throw new ClientError('Invalid path.');
+    }
+
+    let stats: Awaited<ReturnType<typeof fs.stat>>;
+    try {
+      stats = await fs.stat(resolvedPath);
+    } catch {
+      res.status(404).end();
+      return;
+    }
+
+    const ext = extname(resolvedPath).toLowerCase();
+    res.setHeader('Content-Type', ext === '.png' ? 'image/png' : 'image/jpeg');
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.status(200).end();
+  });
+
+  /**
    * Writes the album folder's primary artwork image, and optionally embeds the
    * same image into individual track files.
    */

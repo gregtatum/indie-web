@@ -252,6 +252,52 @@ describe('POST /music/artwork — upload an image body', () => {
   );
 });
 
+describe('HEAD /music/artwork — report size without a body', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  it(
+    'returns Content-Length and Content-Type with an empty body',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Head', 'Album');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, 'Folder.jpg'), LARGE_JPEG);
+
+      const res = await fetch(
+        `${server.baseUrl}/music/artwork?path=${encodeURIComponent(
+          '/Head/Album/Folder.jpg',
+        )}`,
+        { method: 'HEAD' },
+      );
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get('content-type'), 'image/jpeg');
+      assert.equal(
+        res.headers.get('content-length'),
+        String(LARGE_JPEG.length),
+      );
+      assert.equal(await res.text(), '');
+    }),
+  );
+
+  it(
+    'returns 404 when the artwork file does not exist',
+    withLogs([], async () => {
+      const res = await fetch(
+        `${server.baseUrl}/music/artwork?path=${encodeURIComponent(
+          '/Head/Missing/Folder.jpg',
+        )}`,
+        { method: 'HEAD' },
+      );
+      assert.equal(res.status, 404);
+    }),
+  );
+});
+
 describe('POST /music/artwork — embed into tracks', () => {
   let server: TestServer;
   before(async () => {

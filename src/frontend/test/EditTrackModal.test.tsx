@@ -145,6 +145,11 @@ function setup(tracks = TRACKS, options: SetupOptions = {}) {
     },
   );
 
+  fetchMock.head(new RegExp(`${FAKE_SERVER.url}/music/artwork`), {
+    status: 200,
+    headers: { 'content-length': '245760' },
+  });
+
   render(
     <MemoryRouter
       initialEntries={[`/${FAKE_SERVER.id}/music${options.search ?? ''}`]}
@@ -864,6 +869,7 @@ describe('edit track modal', () => {
       0,
     );
     expect(within(dialog).getByText('/music/Album A/')).toBeTruthy();
+    expect(await within(dialog).findByText(/Folder\.jpg.*240 KB/)).toBeTruthy();
 
     expect(
       await within(dialog).findByText('Embedded in this file'),
