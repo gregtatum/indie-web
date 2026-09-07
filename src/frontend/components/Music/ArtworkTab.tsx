@@ -23,12 +23,6 @@ interface Props {
 }
 
 /**
- * How long a button lingers on its "done" state ("Saved", "Embedded")
- * before it returns to the actionable label.
- */
-const STATUS_RESET_MS = 2500;
-
-/**
  * Human-readable byte size, e.g. 240 KB.
  */
 function formatBytes(bytes: number): string {
@@ -192,15 +186,6 @@ function useFolderArtworkSave(
       setActive(false);
     }
   }, [saveStatus]);
-
-  // Drop back to the actionable label a beat after a success.
-  React.useEffect(() => {
-    if (!active || saveStatus !== 'saved') {
-      return undefined;
-    }
-    const id = window.setTimeout(() => setActive(false), STATUS_RESET_MS);
-    return () => window.clearTimeout(id);
-  }, [active, saveStatus]);
 
   const save = React.useCallback(
     (trackPath: string, body?: { data: Blob; contentType: string }) => {
@@ -439,23 +424,18 @@ function EmbedArtworkBanner({
 }) {
   const dispatch = Hooks.useDispatch();
   const embedStatus = $$.getMusicFolderArtworkEmbedStatus();
-  const [statusHidden, setStatusHidden] = React.useState(false);
+  // embedStatus lives in the store and outlives this banner, which unmounts
+  // once every track carries the art. Gate it behind a mount-local flag so a
+  // later remount (e.g. after the art is removed) doesn't replay a stale
+  // "saved" and leave the button disabled.
+  const [active, setActive] = React.useState(false);
   const count = trackPaths.length;
   const tracksLabel = count === 1 ? 'this track' : `${count} tracks`;
 
-  // Drop back to the actionable label a beat after a success.
-  React.useEffect(() => {
-    if (embedStatus !== 'saved') {
-      setStatusHidden(false);
-      return undefined;
-    }
-    const id = window.setTimeout(() => setStatusHidden(true), STATUS_RESET_MS);
-    return () => window.clearTimeout(id);
-  }, [embedStatus]);
-
-  const status = statusHidden ? 'idle' : embedStatus;
+  const status = active ? embedStatus : 'idle';
 
   function embed() {
+    setActive(true);
     dispatch(A.musicFolderArtworkEmbedStart());
     fetch(`${serverUrl}/music/artwork/embed`, {
       method: 'POST',
@@ -658,17 +638,11 @@ function EmbeddedArtworkRow({
               sizeBytes > 0 ? formatBytes(sizeBytes) : null,
             ])}
           </span>
-          <span className="artworkEmbeddedSub">Embedded in ID3 (APIC)</span>
+          <span className="artworkEmbeddedSub">Embedded in ID3</span>
         </span>
       </button>
       {expanded && (
         <div className="artworkEmbeddedExpanded">
-          {!imgError && (
-            <img className="artworkSectionImage" src={src} alt="" />
-          )}
-          {pictureType && (
-            <div className="artworkEmbeddedSub">{pictureType}</div>
-          )}
           <div className="artworkEmbeddedExpandedActions">
             <SetAsAlbumArtworkButton
               trackPath={trackPath}
@@ -682,6 +656,12 @@ function EmbeddedArtworkRow({
               onRemoved={onRemoved}
             />
           </div>
+          {!imgError && (
+            <img className="artworkSectionImage" src={src} alt="" />
+          )}
+          {pictureType && (
+            <div className="artworkEmbeddedSub">{pictureType}</div>
+          )}
         </div>
       )}
     </div>

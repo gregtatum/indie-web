@@ -591,7 +591,7 @@ describe('<EditTrackModal> with real server', () => {
       await within(dialog).findByText('Embedded in this file'),
     ).toBeTruthy();
     expect(within(dialog).getByText(/image\/jpeg/)).toBeTruthy();
-    expect(within(dialog).getByText('Embedded in ID3 (APIC)')).toBeTruthy();
+    expect(within(dialog).getByText('Embedded in ID3')).toBeTruthy();
 
     const toggle = within(dialog).getByRole('button', { expanded: false });
     await act(async () => {
@@ -657,6 +657,10 @@ describe('<EditTrackModal> with real server', () => {
     await waitFor(() =>
       expect(within(dialog).queryByText('Embedded in this file')).toBeNull(),
     );
+    // The panel flips straight to the embed prompt; no reload round trip.
+    expect(
+      within(dialog).getByRole('button', { name: 'Embed artwork' }),
+    ).toBeTruthy();
   }, 30_000);
 
   // NOTE: the two artwork *upload* cases (picking a file, and the empty-state
@@ -708,5 +712,57 @@ describe('<EditTrackModal> with real server', () => {
     for (const path of ['/Album A/1.mp3', '/Album A/2.mp3']) {
       expect(frameValue(await fetchTrackTags(path), 'APIC')).toBeDefined();
     }
+
+    // The tab re-reads the track's tags, so the freshly embedded art shows up
+    // under "Embedded in this file" instead of leaving the panel empty.
+    expect(
+      await within(dialog).findByText('Embedded in this file'),
+    ).toBeTruthy();
+  }, 30_000);
+
+  it('re-arms the embed prompt immediately when the just-embedded art is removed', async () => {
+    const cover = buildJpegBytes();
+    await writeFolderArtwork(getServer(), '/Album A', cover);
+    await writeTrack('Album A/only.mp3', {
+      title: 'Only One',
+      artist: 'Artist A',
+      album: 'Album A',
+    });
+    await setup();
+
+    await openEditModal('Only One');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+    const dialog = getDialog('Only One');
+
+    // Embed the folder art. The banner then unmounts (nothing left to embed).
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Embed artwork' }),
+      );
+    });
+    const toggle = await within(dialog).findByRole('button', {
+      expanded: false,
+    });
+
+    // Remove it right away; the embed prompt must come straight back.
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Click to confirm' }),
+      );
+    });
+
+    // The prompt comes back actionable — not stuck showing a stale "Embedded".
+    const embedButton = await within(dialog).findByRole('button', {
+      name: 'Embed artwork',
+    });
+    expect((embedButton as HTMLButtonElement).disabled).toBe(false);
   }, 30_000);
 });

@@ -812,8 +812,9 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           servedIndexVersion,
         ),
       );
+      void loadTrackTags();
     },
-    [dispatch, tracks, needsRescan, servedIndexVersion],
+    [dispatch, tracks, needsRescan, servedIndexVersion, loadTrackTags],
   );
   const handleEmbeddedArtworkRemoved = React.useCallback(
     (removedPath: string) => {
@@ -826,9 +827,31 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           servedIndexVersion,
         ),
       );
-      void loadTrackTags();
+      // The remove endpoint strips the file's embedded APIC picture frames.
+      // Drop them from the already-loaded tags in place so the panel flips to
+      // the "Embed artwork" prompt the moment the write returns, instead of
+      // flashing through a loading state on a second round trip.
+      setTagsState((prev) => {
+        if (prev.status !== 'loaded') {
+          return prev;
+        }
+
+        const blocks = prev.data.blocks.map((block) => ({
+          ...block,
+          tags: block.tags.filter(
+            (tag) =>
+              !(
+                tag.id === 'APIC' &&
+                tag.binary !== undefined &&
+                !tag.value.startsWith('-->')
+              ),
+          ),
+        }));
+
+        return { status: 'loaded', data: { ...prev.data, blocks } };
+      });
     },
-    [dispatch, tracks, needsRescan, servedIndexVersion, loadTrackTags],
+    [dispatch, tracks, needsRescan, servedIndexVersion],
   );
   let sharedAlbumHeader: { album: string; artist: string } | null = null;
   if (isBulkEdit && editTracks.length > 0) {

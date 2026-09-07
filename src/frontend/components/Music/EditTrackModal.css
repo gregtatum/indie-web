@@ -367,18 +367,18 @@
 .artworkSaveFolderBtn {
   font-size: var(--font-size-small);
   font-family: inherit;
-  padding: 6px 10px;
+  font-weight: 500;
+  padding: 6px 12px;
   border-radius: var(--button-border-radius);
-  border: 1px solid var(--light-border);
+  border: 1px solid var(--primary-color);
   background: transparent;
-  color: var(--text-label);
+  color: var(--accent-strong);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .artworkSaveFolderBtn:hover:not(:disabled) {
-  border-color: var(--text-label);
-  color: var(--text-interactive);
+  background: var(--accent-tint);
 }
 
 .artworkSaveFolderBtn:disabled {
@@ -614,7 +614,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 2px;
 }
 
 .artworkEmbeddedRemoveBtn {
@@ -623,18 +622,18 @@
   gap: 6px;
   font-size: var(--font-size-small);
   font-family: inherit;
-  padding: 6px 10px;
+  font-weight: 500;
+  padding: 6px 12px;
   border-radius: var(--button-border-radius);
-  border: 1px solid var(--light-border);
+  border: 1px solid var(--primary-color);
   background: transparent;
-  color: var(--text-label);
+  color: var(--accent-strong);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .artworkEmbeddedRemoveBtn:hover:not(:disabled) {
-  border-color: var(--text-border);
-  color: var(--ink);
+  background: var(--accent-tint);
 }
 
 .artworkEmbeddedRemoveBtn:disabled {
