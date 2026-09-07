@@ -1,12 +1,13 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, Hooks, $, $$ } from 'frontend';
+import {
+  useFolderArtworkSave,
+  useFolderArtworkDrop,
+} from 'frontend/hooks/useFolderArtworkDrop';
 import { getDirName, getPathFileName } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
-import type {
-  EmbedFolderArtworkResponse,
-  WriteFolderArtworkResponse,
-} from 'shared/@types/shared';
+import type { EmbedFolderArtworkResponse } from 'shared/@types/shared';
 
 interface Props {
   folderArtworkUrl: string | null;
@@ -172,56 +173,6 @@ interface ArtworkButtonProps {
   serverUrl: string;
   /** Called with the written folder artwork path once a save succeeds. */
   onSaved: (folderArtworkPath: string) => void;
-}
-
-function useFolderArtworkSave(
-  serverUrl: string,
-  onSaved: (folderArtworkPath: string) => void,
-) {
-  const dispatch = Hooks.useDispatch();
-  const saveStatus = $$.getMusicFolderArtworkSaveStatus();
-  const [active, setActive] = React.useState(false);
-
-  React.useEffect(() => {
-    if (saveStatus === 'idle') {
-      setActive(false);
-    }
-  }, [saveStatus]);
-
-  const save = React.useCallback(
-    (trackPath: string, body?: { data: Blob; contentType: string }) => {
-      setActive(true);
-      dispatch(A.musicFolderArtworkSaveStart());
-      fetch(
-        `${serverUrl}/music/artwork?path=${encodeURIComponent(trackPath)}`,
-        body
-          ? {
-              method: 'POST',
-              headers: { 'Content-Type': body.contentType },
-              body: body.data,
-            }
-          : { method: 'POST' },
-      )
-        .then((res) => {
-          if (!res.ok) {
-            return res.text().then((t) => {
-              throw new Error(t || `${res.status}`);
-            });
-          }
-          return res.json() as Promise<WriteFolderArtworkResponse>;
-        })
-        .then((data) => {
-          if (data.folderArtworkPath) {
-            onSaved(data.folderArtworkPath);
-          }
-          dispatch(A.musicFolderArtworkSaveSuccess());
-        })
-        .catch(() => dispatch(A.musicFolderArtworkSaveError()));
-    },
-    [dispatch, serverUrl, onSaved],
-  );
-
-  return { saveStatus, active, save };
 }
 
 function artworkButtonStatus(
@@ -500,51 +451,22 @@ function EmbedArtworkBanner({
   );
 }
 
-function artworkFileFromDrop(dataTransfer: DataTransfer | null): File | null {
-  const files = Array.from(dataTransfer?.files ?? []);
-  return (
-    files.find((file) => file.type.startsWith('image/')) ?? files[0] ?? null
-  );
-}
-
 function ArtworkDropZone({
   trackPath,
   serverUrl,
   canEdit,
-  onSaved,
   children,
 }: {
   trackPath: string;
   serverUrl: string;
   canEdit: boolean;
-  onSaved: (folderArtworkPath: string) => void;
   children: React.ReactNode;
 }) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const { saveStatus, save } = useFolderArtworkSave(serverUrl, onSaved);
-
-  const onDrop = React.useCallback(
-    (event: DragEvent) => {
-      const file = artworkFileFromDrop(event.dataTransfer);
-      if (file) {
-        save(trackPath, {
-          data: file,
-          contentType: file.type || 'image/jpeg',
-        });
-      }
-    },
-    [save, trackPath],
-  );
-
-  const canAcceptDrop = React.useCallback(
-    (event: DragEvent) =>
-      canEdit &&
-      saveStatus !== 'saving' &&
-      Array.from(event.dataTransfer?.types ?? []).includes('Files'),
-    [canEdit, saveStatus],
-  );
-
-  const dragging = Hooks.useFileDrop(ref, onDrop, canAcceptDrop);
+  const { ref, dragging } = useFolderArtworkDrop({
+    trackPath,
+    serverUrl,
+    canEdit,
+  });
 
   return (
     <div ref={ref} className="artworkAlbumImageWrap">
@@ -567,7 +489,6 @@ function AlbumArtwork({
   trackPath,
   serverUrl,
   canEditFolderArtwork,
-  onArtworkSaved,
   children,
 }: {
   src: string;
@@ -578,7 +499,6 @@ function AlbumArtwork({
   trackPath: string;
   serverUrl: string;
   canEditFolderArtwork: boolean;
-  onArtworkSaved: (folderArtworkPath: string) => void;
   children?: React.ReactNode;
 }) {
   const [dimensions, setDimensions] = React.useState<string | null>(null);
@@ -610,7 +530,6 @@ function AlbumArtwork({
         trackPath={trackPath}
         serverUrl={serverUrl}
         canEdit={canEditFolderArtwork}
-        onSaved={onArtworkSaved}
       >
         {imgError ? (
           <div className="artworkSectionError">Unable to load image</div>
@@ -813,7 +732,6 @@ export function ArtworkTab({
               trackPath={trackPath}
               serverUrl={serverUrl}
               canEdit={canEditFolderArtwork}
-              onSaved={onFolderArtworkWritten}
             >
               <div className="artworkAlbumPlaceholder" aria-hidden="true" />
             </ArtworkDropZone>
@@ -852,7 +770,6 @@ export function ArtworkTab({
             trackPath={trackPath}
             serverUrl={serverUrl}
             canEditFolderArtwork={canEditFolderArtwork}
-            onArtworkSaved={onFolderArtworkWritten}
           >
             {canEditFolderArtwork && (
               <ChangeArtworkButton

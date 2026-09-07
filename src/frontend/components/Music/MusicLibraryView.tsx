@@ -5,6 +5,7 @@ import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import { persistedState } from 'frontend/logic/persisted-state';
+import { useFolderArtworkDrop } from 'frontend/hooks/useFolderArtworkDrop';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
 
@@ -507,6 +508,19 @@ function AlbumHero() {
     });
   }, [allTracks, albumName, contextTrack]);
 
+  // Any track in the album's folder works as the write target. Prefer the one
+  // that already carries folder artwork so a replacement lands in the same
+  // folder even when the album spans more than one.
+  const artworkDropTrackPath =
+    orderedTracks.find((track) => track.folderArtworkPath)?.path ??
+    orderedTracks[0]?.path ??
+    null;
+  const { ref: artworkDropRef, dragging: artworkDragging } =
+    useFolderArtworkDrop({
+      trackPath: artworkDropTrackPath,
+      serverUrl: server.url,
+    });
+
   if (!contextTrack || orderedTracks.length === 0) {
     return null;
   }
@@ -546,7 +560,7 @@ function AlbumHero() {
 
   return (
     <div className="musicAlbumHero">
-      <div className="musicAlbumHeroArtwork">
+      <div className="musicAlbumHeroArtwork" ref={artworkDropRef}>
         {folderArtworkUrl ? (
           <img
             src={
@@ -561,6 +575,11 @@ function AlbumHero() {
             className="musicAlbumHeroArtworkPlaceholder"
             aria-hidden="true"
           />
+        )}
+        {artworkDragging && (
+          <div className="musicAlbumHeroArtworkDropHint" aria-hidden="true">
+            Drop to set album artwork
+          </div>
         )}
       </div>
       <div className="musicAlbumHeroBody">

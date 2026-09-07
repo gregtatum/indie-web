@@ -184,12 +184,38 @@
 }
 
 .musicAlbumHeroArtwork {
+  position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
   border-radius: 8px;
   overflow: hidden;
   background: var(--artwork-bg);
+}
+
+/* Highlight the hero art while an image file is dragged over it. */
+.musicAlbumHeroArtwork.dragging::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px dashed var(--accent-strong);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.musicAlbumHeroArtworkDropHint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  background: #000000a6;
+  color: #fff;
+  font-size: var(--music-item-font-size);
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .musicAlbumHeroArtwork img {

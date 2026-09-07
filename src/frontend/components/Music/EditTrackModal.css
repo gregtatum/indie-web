@@ -431,7 +431,6 @@
   max-width: 45%;
 }
 
-/* Highlight the image area while a file is dragged over it. */
 .artworkAlbumImageWrap.dragging::after {
   content: '';
   position: absolute;
