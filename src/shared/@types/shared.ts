@@ -164,16 +164,6 @@ export interface WriteFolderArtworkResponse {
     updatedTracks: string[];
     errors: Array<{ path: string; message: string }>;
   };
-  removedFolderArtwork?: string[];
-  /**
-   * Status of the best-effort durable music index patch after the file write.
-   * The artwork file is authoritative; a non-'updated' status means the index
-   * stays stale until the next scan.
-   */
-  index: {
-    status: 'updated' | 'skipped' | 'error';
-    message: string | null;
-  };
 }
 
 export interface EmbedFolderArtworkRequest {
@@ -191,11 +181,6 @@ export interface EmbedFolderArtworkResponse {
    * not stop the rest.
    */
   errors: Array<{ path: string; message: string }>;
-  /** Status of the best-effort durable music index patch after the writes. */
-  index: {
-    status: 'updated' | 'skipped' | 'error';
-    message: string | null;
-  };
 }
 
 export interface TrackTagsResponse {

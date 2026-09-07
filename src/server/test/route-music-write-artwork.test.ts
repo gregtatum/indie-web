@@ -94,7 +94,6 @@ describe('POST /music/artwork — extract from embedded APIC (no body)', () => {
       const json = (await res.json()) as T.WriteFolderArtworkResponse;
       assert.equal(json.folderArtworkPath, '/A/JpgAlbum/Folder.jpg');
       assert.equal(json.tracksEmbedded, undefined);
-      assert.equal(json.removedFolderArtwork, undefined);
 
       const written = await readFile(
         join(server.mountDir, 'A', 'JpgAlbum', 'Folder.jpg'),
@@ -237,12 +236,8 @@ describe('POST /music/artwork — upload an image body', () => {
         body: MINIMAL_JPEG,
       });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.WriteFolderArtworkResponse;
-      assert.deepEqual([...(json.removedFolderArtwork ?? [])].sort(), [
-        '/Up/Variants/cover.jpg',
-        '/Up/Variants/front.png',
-      ]);
 
+      // cover.jpg and front.png are gone; the non-artwork file is kept.
       assert.deepEqual((await readdir(dir)).sort(), [
         '01.mp3',
         'Folder.jpg',
@@ -519,8 +514,6 @@ describe('POST /music/artwork/embed — embed an existing folder image', () => {
         trackPaths: ['/Sync/Indexed/01.mp3'],
       });
       assert.equal(res.status, 200);
-      const json = (await res.json()) as T.EmbedFolderArtworkResponse;
-      assert.equal(json.index.status, 'updated');
 
       const index = JSON.parse(
         await readFile(join(server.mountDir, '.music-index.json'), 'utf-8'),
@@ -741,8 +734,6 @@ describe('POST /music/artwork — end to end with a library scan', () => {
         body: LARGE_JPEG,
       });
       assert.equal(post.status, 200);
-      const json = (await post.json()) as T.WriteFolderArtworkResponse;
-      assert.equal(json.index.status, 'updated');
 
       // Read the on-disk index directly — no rescan.
       const index = JSON.parse(

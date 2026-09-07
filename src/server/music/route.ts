@@ -380,22 +380,18 @@ export function musicRoute(mountPath: MountPath) {
 
     const response: T.WriteFolderArtworkResponse = {
       folderArtworkPath: dirClientPath + '/' + filename,
-      index: { status: 'skipped', message: 'Index update not attempted.' },
     };
 
     // An uploaded image is authoritative: clear the other recognized folder
     // artwork files so a higher-priority leftover (e.g. cover.jpg) can't
     // shadow it.
     if (uploaded) {
-      const removedFolderArtwork = await removeOutdatedFolderArtwork(
+      await removeOutdatedFolderArtwork(
         mountPath,
         dirFullPath,
         dirClientPath,
         filename,
       );
-      if (removedFolderArtwork.length > 0) {
-        response.removedFolderArtwork = removedFolderArtwork;
-      }
     }
 
     const embedParam = req.query.embedInTracks;
@@ -421,7 +417,9 @@ export function musicRoute(mountPath: MountPath) {
       response.tracksEmbedded = { updatedTracks, errors };
     }
 
-    response.index = await updateIndexAfterFolderArtworkWrite(
+    // Best-effort: keep the durable music index fresh so the new artwork
+    // survives without a rescan.
+    await updateIndexAfterFolderArtworkWrite(
       mountPath,
       response.folderArtworkPath,
       response.tracksEmbedded?.updatedTracks ?? [],
@@ -476,12 +474,14 @@ export function musicRoute(mountPath: MountPath) {
         }
       }
 
-      const index = await updateIndexAfterFolderArtworkWrite(
+      // Best-effort: keep the durable music index fresh so the embedded art
+      // survives without a rescan.
+      await updateIndexAfterFolderArtworkWrite(
         mountPath,
         folderArtworkPath,
         updated,
       );
-      return { updated, errors, index };
+      return { updated, errors };
     },
   );
 
