@@ -42,6 +42,22 @@
   object-fit: cover;
 }
 
+.editTrackModalHeaderArtworkEmpty {
+  position: relative;
+}
+
+.editTrackModalHeaderArtworkEmpty::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: #00000059;
+  mask-position: center;
+  mask-size: 36%;
+  mask-repeat: no-repeat;
+  /* webpackIgnore: true */
+  mask-image: url('/svg/music.svg');
+}
+
 .editTrackModalHeaderAlbumDetails {
   min-width: 0;
   display: flex;

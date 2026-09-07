@@ -1236,7 +1236,13 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         >
           {sharedAlbumHeader ? (
             <>
-              <div className="editTrackModalHeaderArtwork">
+              <div
+                className={
+                  folderArtworkUrl
+                    ? 'editTrackModalHeaderArtwork'
+                    : 'editTrackModalHeaderArtwork editTrackModalHeaderArtworkEmpty'
+                }
+              >
                 {folderArtworkUrl ? (
                   <img
                     src={folderArtworkUrl}
