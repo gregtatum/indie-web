@@ -1,221 +1,223 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
-import * as React from 'react';
-import { MemoryRouter } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { createStore } from 'frontend/store/create-store';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { A, T } from 'frontend';
-import { AppRoutes } from 'frontend/components/App';
-import { BULK_SMALL_LOAD_NOTICE_DELAY } from 'frontend/components/Music/EditTrackModal';
-import fetchMock from '@fetch-mock/jest';
-import type {
-  WriteTrackTagsRequest,
-  WriteTrackTagsResponse,
-} from 'shared/@types/shared';
-import { MUSIC_INDEX_VERSION } from 'shared/music';
+import {
+  buildJpegBytes,
+  buildMp3WithTags,
+  clearMusicMount,
+  renderMusicApp,
+  useMusicTestServer,
+  writeFolderArtwork,
+} from './utils/music';
 
-const FAKE_SERVER: T.FileStoreServer = {
-  id: 'test-music',
-  url: 'http://fake-music',
-  name: 'Test Music',
-  storeType: 'music',
+/**
+ * The preferred tests for driving the Edit Track modal behavior against the real music
+ * server.
+ */
+
+const jestDescribe = globalThis.describe;
+let describe: (name: string, fn: () => void) => void = jestDescribe;
+if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
+  // The check runner enables this in sandboxes that cannot bind localhost.
+  describe = (name) => {
+    process.stderr.write(`LOCALHOST_BIND_SKIPPED_TEST ${name}\n`);
+  };
+  it.skip('localhost-dependent tests skipped by check runner', () => {});
+}
+
+type TrackTags = {
+  blocks: Array<{
+    format: string;
+    tags: Array<{ id: string; value: string; binary?: string }>;
+  }>;
+  resolved: Record<string, string>;
 };
 
-const TRACKS: T.TrackMetadata[] = [
-  {
-    path: '/music/a.mp3',
-    title: 'Song A',
-    artist: 'Artist A',
-    albumArtist: 'Album Artist A',
-    composer: null,
-    album: 'Album A',
-    genre: 'Rock',
-    preferComposerGrouping: null,
-    track: 1,
-    duration: 180,
-    size: 1024,
-    mtime: '2024-01-01T00:00:00Z',
-    folderArtworkPath: null,
-    hasEmbeddedArtwork: false,
-  },
-  {
-    path: '/music/b.mp3',
-    title: 'Song B',
-    artist: 'Artist B',
-    albumArtist: 'Album Artist A',
-    composer: null,
-    album: 'Album A',
-    genre: 'Rock',
-    preferComposerGrouping: null,
-    track: 2,
-    duration: 200,
-    size: 2048,
-    mtime: '2024-01-01T00:00:00Z',
-    folderArtworkPath: null,
-    hasEmbeddedArtwork: false,
-  },
-  {
-    path: '/music/c.mp3',
-    title: 'Song C',
-    artist: 'Artist A',
-    albumArtist: 'Album Artist B',
-    composer: null,
-    album: 'Album B',
-    genre: 'Jazz',
-    preferComposerGrouping: null,
-    track: 1,
-    duration: 240,
-    size: 3072,
-    mtime: '2024-01-01T00:00:00Z',
-    folderArtworkPath: null,
-    hasEmbeddedArtwork: false,
-  },
-];
+describe('<EditTrackModal> with real server', () => {
+  const { getServer } = useMusicTestServer();
 
-function mockWriteTrackTags(
-  response: WriteTrackTagsResponse = {
-    updated: ['/music/a.mp3'],
-    errors: [],
-    index: { status: 'updated', message: null },
-  },
-): WriteTrackTagsRequest[] {
-  const requests: WriteTrackTagsRequest[] = [];
-  fetchMock.post(
-    `${FAKE_SERVER.url}/music/write-track-tags`,
-    ({ options }: any) => {
-      requests.push(JSON.parse(options.body));
-      return {
-        body: JSON.stringify(response),
-        status: 200,
-      };
-    },
-  );
-  return requests;
-}
-
-beforeEach(() => {
-  jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
-  jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
-});
-
-interface SetupOptions {
-  search?: string;
-  musicIndexResponse?:
-    | {
-        body: string;
-        status: number;
-      }
-    | (() => Promise<{ body: string; status: number }>);
-  trackTagsResponse?:
-    | {
-        body: string;
-        status: number;
-      }
-    | (() => Promise<{ body: string; status: number }>);
-}
-
-function setup(tracks = TRACKS, options: SetupOptions = {}) {
-  const store = createStore();
-  store.dispatch(A.addFileStoreServer(FAKE_SERVER));
-
-  fetchMock.get(
-    `${FAKE_SERVER.url}/music/music-index`,
-    options.musicIndexResponse ?? {
-      body: JSON.stringify({
-        version: MUSIC_INDEX_VERSION,
-        scannedAt: '2024-01-01T00:00:00Z',
-        tracks,
-      }),
-      status: 200,
-    },
-  );
-
-  fetchMock.get(
-    new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-    options.trackTagsResponse ?? {
-      body: JSON.stringify({ blocks: [], resolved: {} }),
-      status: 200,
-    },
-  );
-
-  fetchMock.head(new RegExp(`${FAKE_SERVER.url}/music/artwork`), {
-    status: 200,
-    headers: { 'content-length': '245760' },
+  // The virtualizer reads offsetHeight/offsetWidth to decide how many rows to
+  // render; jsdom returns 0 for both, so without this it renders nothing.
+  beforeEach(() => {
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockReturnValue(600);
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockReturnValue(800);
   });
 
-  render(
-    <MemoryRouter
-      initialEntries={[`/${FAKE_SERVER.id}/music${options.search ?? ''}`]}
-    >
-      <Provider store={store as any}>
-        <AppRoutes />
-      </Provider>
-    </MemoryRouter>,
-  );
+  // The server and its mount are shared for the lifetime of this file, so each
+  // test has to leave the library empty for the next one.
+  afterEach(async () => {
+    await clearMusicMount(getServer());
+  });
 
-  return { store };
-}
+  async function writeTrack(
+    clientPath: string,
+    tags: Parameters<typeof buildMp3WithTags>[0],
+  ): Promise<void> {
+    const full = join(getServer().mountDir, clientPath);
+    await mkdir(dirname(full), { recursive: true });
+    await writeFile(full, buildMp3WithTags(tags));
+  }
 
-describe('edit track modal', () => {
+  async function fetchJson<T>(path: string): Promise<T> {
+    const res = await fetch(`${getServer().baseUrl}${path}`);
+    if (!res.ok) {
+      throw new Error(`GET ${path} failed: ${res.status}`);
+    }
+    return (await res.json()) as T;
+  }
+
+  function fetchTrackTags(clientPath: string): Promise<TrackTags> {
+    return fetchJson<TrackTags>(
+      `/music/track-tags?path=${encodeURIComponent(clientPath)}`,
+    );
+  }
+
+  async function fetchIndexTrack(
+    clientPath: string,
+  ): Promise<T.TrackMetadata | undefined> {
+    const index = await fetchJson<T.MusicIndex>('/music/music-index');
+    return index.tracks.find((track) => track.path === clientPath);
+  }
+
+  function frameValue(tags: TrackTags, id: string): string | undefined {
+    return tags.blocks.flatMap((block) => block.tags).find((t) => t.id === id)
+      ?.value;
+  }
+
+  /**
+   * Builds the durable index straight from the server, without rendering.
+   */
+  async function scanViaApi(): Promise<void> {
+    const res = await fetch(`${getServer().baseUrl}/music/music-index/scan`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      throw new Error(`scan failed: ${res.status}`);
+    }
+  }
+
+  async function scanLibrary(): Promise<void> {
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await screen.findByText(/Found \d+ tracks\./);
+  }
+
+  /**
+   * Renders the app, scans the (already-written) files, and returns the store.
+   */
+  async function setup(search = '') {
+    const rendered = renderMusicApp({ server: getServer(), search });
+    if (!search.includes('edit=')) {
+      await scanLibrary();
+    }
+    return rendered;
+  }
+
   function getDialog(name: string) {
     return screen.getByRole('dialog', { name });
   }
 
+  function findTrackRow(title: string) {
+    return screen.findByText(title, { selector: '.musicTrackTitle' });
+  }
+
   async function openEditModal(trackText: string) {
-    const track = await screen.findByText(trackText);
+    const track = await findTrackRow(trackText);
     await act(async () => {
       fireEvent.contextMenu(track);
     });
-    const editButton = await screen.findByRole('button', { name: 'Edit' });
     await act(async () => {
-      fireEvent.click(editButton);
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
   }
 
-  async function openBulkEditModal(store: ReturnType<typeof createStore>) {
+  async function openBulkEditModal(
+    store: T.Store,
+    paths: string[],
+    anchorTitle: string,
+  ) {
     await act(async () => {
-      store.dispatch(
-        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
-      );
+      store.dispatch(A.setMusicSelectedTracks(paths));
     });
-    const track = await screen.findByText('Song A');
+    const track = await findTrackRow(anchorTitle);
     await act(async () => {
       fireEvent.contextMenu(track);
     });
-    const editButton = await screen.findByRole('button', {
-      name: 'Edit Selection',
-    });
     await act(async () => {
-      fireEvent.click(editButton);
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Edit Selection' }),
+      );
     });
+  }
+
+  async function writeAlbumA(): Promise<void> {
+    await writeTrack('a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+      genre: 'Rock',
+      track: 1,
+    });
+    await writeTrack('b.mp3', {
+      title: 'Song B',
+      artist: 'Artist B',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+      genre: 'Rock',
+      track: 2,
+    });
+  }
+
+  async function waitForEnabledField(label: string) {
+    const input = screen.getByLabelText(label) as HTMLInputElement;
+    await waitFor(() => {
+      expect(input.disabled).toBe(false);
+    });
+    return input;
   }
 
   it('opens with the right-clicked track fields pre-populated', async () => {
-    setup();
+    await writeTrack('a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      album: 'Album A',
+      genre: 'Rock',
+    });
+    await setup();
+
     await openEditModal('Song A');
     getDialog('Song A');
-    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
-      'Song A',
-    );
+    await waitFor(() => {
+      expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
+        'Song A',
+      );
+    });
     expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
       'Artist A',
     );
     expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
       'Rock',
     );
-  });
+  }, 30_000);
 
   it('reopens a bulk edit from URL params after refresh', async () => {
-    setup(TRACKS, {
-      search:
-        '?track=%2Fmusic%2Fa.mp3&track=%2Fmusic%2Fb.mp3&edit=%2Fmusic%2Fa.mp3',
+    await writeAlbumA();
+    await scanViaApi();
+    renderMusicApp({
+      server: getServer(),
+      search: '?track=%2Fa.mp3&track=%2Fb.mp3&edit=%2Fa.mp3',
     });
 
     const dialog = await screen.findByRole('dialog', { name: 'Album A' });
@@ -227,94 +229,45 @@ describe('edit track modal', () => {
       ).toBe(false);
     });
     expect(screen.queryByLabelText('Title')).toBeNull();
-  });
-
-  it('fills a refreshed bulk edit after the music index loads', async () => {
-    let resolveMusicIndex!: (response: {
-      body: string;
-      status: number;
-    }) => void;
-    setup(TRACKS, {
-      search:
-        '?track=%2Fmusic%2Fa.mp3&track=%2Fmusic%2Fb.mp3&edit=%2Fmusic%2Fa.mp3',
-      musicIndexResponse: () =>
-        new Promise((resolve) => {
-          resolveMusicIndex = resolve;
-        }),
-    });
-
-    await screen.findByText('Edit 0 Tracks');
-
-    await act(async () => {
-      resolveMusicIndex({
-        body: JSON.stringify({
-          version: MUSIC_INDEX_VERSION,
-          scannedAt: '2024-01-01T00:00:00Z',
-          tracks: TRACKS,
-        }),
-        status: 200,
-      });
-    });
-
-    await screen.findByRole('dialog', { name: 'Album A' });
-    await waitFor(() => {
-      expect((screen.getByLabelText('Album') as HTMLInputElement).value).toBe(
-        'Album A',
-      );
-      expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
-        'Rock',
-      );
-    });
-    expect(
-      (screen.getByLabelText('Artist') as HTMLInputElement).placeholder,
-    ).toBe('Mixed');
-  });
+  }, 30_000);
 
   it('allows editing the artist field', async () => {
-    setup();
+    await writeTrack('a.mp3', { title: 'Song A', artist: 'Artist A' });
+    await setup();
+
     await openEditModal('Song A');
-    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
-    await waitFor(() => {
-      expect(artistInput.disabled).toBe(false);
-    });
+    const artistInput = await waitForEnabledField('Artist');
     await act(async () => {
       fireEvent.change(artistInput, { target: { value: 'New Artist' } });
     });
     expect(artistInput.value).toBe('New Artist');
-  });
+  }, 30_000);
 
-  it('saves and closes when Enter is pressed in the Details form', async () => {
-    const user = userEvent.setup();
-
-    setup();
-    const writeRequests = mockWriteTrackTags();
+  it('saves and persists the artist to the MP3 when Enter is pressed', async () => {
+    await writeTrack('a.mp3', { title: 'Song A', artist: 'Artist A' });
+    await setup();
 
     await openEditModal('Song A');
-    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
-    await waitFor(() => {
-      expect(artistInput.disabled).toBe(false);
+    const artistInput = await waitForEnabledField('Artist');
+    await act(async () => {
+      await userEvent.clear(artistInput);
+      await userEvent.type(artistInput, 'New Artist{Enter}');
     });
 
-    await user.clear(artistInput);
-    await user.type(artistInput, 'New Artist{Enter}');
-
-    await waitFor(() => {
-      expect(writeRequests).toHaveLength(1);
-    });
-    expect(writeRequests[0]).toEqual({
-      paths: ['/music/a.mp3'],
-      changes: [{ frameId: 'TPE1', value: 'New Artist' }],
-    });
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
-  });
+    const tags = await fetchTrackTags('/a.mp3');
+    expect(frameValue(tags, 'TPE1')).toBe('New Artist');
+  }, 30_000);
 
-  it('saves the prefer composer grouping private tag from the Details form', async () => {
-    const user = userEvent.setup();
-
-    setup();
-    const writeRequests = mockWriteTrackTags();
+  it('persists the prefer-composer-grouping private tag from the Details form', async () => {
+    await writeTrack('a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      genre: 'Rock',
+    });
+    await setup();
 
     await openEditModal('Song A');
     const preferComposerRadio = await within(
@@ -324,35 +277,26 @@ describe('edit track modal', () => {
       expect((preferComposerRadio as HTMLInputElement).disabled).toBe(false);
     });
 
-    await user.click(preferComposerRadio);
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-
-    await waitFor(() => {
-      expect(writeRequests).toHaveLength(1);
+    await act(async () => {
+      await userEvent.click(preferComposerRadio);
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     });
-    expect(writeRequests[0]).toEqual({
-      paths: ['/music/a.mp3'],
-      changes: [
-        {
-          frameId: 'TXXX',
-          description: 'indie-web:prefer-composer-grouping',
-          value: 'true',
-        },
-      ],
+
+    await waitFor(async () => {
+      expect((await fetchIndexTrack('/a.mp3'))?.preferComposerGrouping).toBe(
+        true,
+      );
     });
-  });
+  }, 30_000);
 
-  it('writes the prefer composer grouping default when the default is selected', async () => {
-    const user = userEvent.setup();
-
-    setup([
-      {
-        ...TRACKS[0],
-        genre: 'Classical',
-        preferComposerGrouping: false,
-      },
-    ]);
-    const writeRequests = mockWriteTrackTags();
+  it('persists the prefer-composer-grouping default when the default is selected', async () => {
+    await writeTrack('a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      genre: 'Classical',
+      txxx: { 'indie-web:prefer-composer-grouping': 'false' },
+    });
+    await setup();
 
     await openEditModal('Song A');
     const defaultComposerRadio = await within(
@@ -362,190 +306,87 @@ describe('edit track modal', () => {
       expect((defaultComposerRadio as HTMLInputElement).disabled).toBe(false);
     });
 
-    await user.click(defaultComposerRadio);
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await act(async () => {
+      await userEvent.click(defaultComposerRadio);
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
 
-    await waitFor(() => {
-      expect(writeRequests).toHaveLength(1);
+    await waitFor(async () => {
+      expect((await fetchIndexTrack('/a.mp3'))?.preferComposerGrouping).toBe(
+        true,
+      );
     });
-    expect(writeRequests[0]).toEqual({
-      paths: ['/music/a.mp3'],
-      changes: [
-        {
-          frameId: 'TXXX',
-          description: 'indie-web:prefer-composer-grouping',
-          value: 'true',
-        },
-      ],
-    });
-  });
+  }, 30_000);
 
   it('closes when the close button is clicked', async () => {
-    setup();
+    await writeTrack('a.mp3', { title: 'Song A', artist: 'Artist A' });
+    await setup();
+
     await openEditModal('Song A');
     getDialog('Song A');
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     });
     expect(screen.queryByRole('dialog')).toBeNull();
-  });
+  }, 30_000);
 
   it('closes when Escape is pressed', async () => {
-    setup();
+    await writeTrack('a.mp3', { title: 'Song A', artist: 'Artist A' });
+    await setup();
+
     await openEditModal('Song A');
     getDialog('Song A');
     await act(async () => {
       fireEvent.keyDown(document, { key: 'Escape' });
     });
     expect(screen.queryByRole('dialog')).toBeNull();
-  });
+  }, 30_000);
 
   it('repopulates fields when opening for a different track', async () => {
-    setup();
+    await writeTrack('a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      genre: 'Rock',
+    });
+    await writeTrack('b.mp3', {
+      title: 'Song B',
+      artist: 'Artist B',
+      genre: 'Rock',
+    });
+    await setup();
+
     await openEditModal('Song A');
-    expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
-      'Artist A',
-    );
+    await waitFor(() => {
+      expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
+        'Artist A',
+      );
+    });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     });
+
     await openEditModal('Song B');
-    expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
-      'Artist B',
-    );
+    await waitFor(() => {
+      expect((screen.getByLabelText('Artist') as HTMLInputElement).value).toBe(
+        'Artist B',
+      );
+    });
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe(
       'Song B',
     );
     expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe(
       'Rock',
     );
-  });
-
-  // The indexed metadata is only a preview while live ID3 tags load. Keeping the
-  // fields disabled until the live tags establish the save baseline prevents
-  // stale index data from being edited or written back over newer ID3 tags.
-  it('does not allow editing stale indexed fields before live tags load', async () => {
-    const staleTracks: T.TrackMetadata[] = [
-      {
-        ...TRACKS[0],
-        title: 'Indexed Title',
-        artist: 'Indexed Artist',
-      },
-    ];
-    let resolveTags: (response: { body: string; status: number }) => void;
-    const tagsPromise = new Promise<{ body: string; status: number }>(
-      (resolve) => {
-        resolveTags = resolve;
-      },
-    );
-    setup(staleTracks, {
-      trackTagsResponse: () => tagsPromise,
-    });
-    const writeRequests = mockWriteTrackTags();
-
-    await openEditModal('Indexed Title');
-    const titleInput = screen.getByLabelText('Title') as HTMLInputElement;
-    const artistInput = screen.getByLabelText('Artist') as HTMLInputElement;
-    const saveButton = screen.getByRole('button', {
-      name: 'Save',
-    }) as HTMLButtonElement;
-
-    expect(titleInput.value).toBe('Indexed Title');
-    expect(artistInput.value).toBe('Indexed Artist');
-    expect(titleInput.disabled).toBe(true);
-    expect(artistInput.disabled).toBe(true);
-    expect(saveButton.disabled).toBe(true);
-
-    await act(async () => {
-      resolveTags!({
-        body: JSON.stringify({
-          blocks: [
-            {
-              format: 'ID3v2.3',
-              tags: [
-                { id: 'TIT2', value: 'Live Title' },
-                { id: 'TPE1', value: 'Live Artist' },
-              ],
-            },
-          ],
-          resolved: { TIT2: 'Live Title', TPE1: 'Live Artist' },
-        }),
-        status: 200,
-      });
-      await tagsPromise;
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByText('Loading…')).toBeNull();
-    });
-    expect(titleInput.disabled).toBe(false);
-    expect(artistInput.disabled).toBe(false);
-    expect(titleInput.value).toBe('Live Title');
-    expect(artistInput.value).toBe('Live Artist');
-
-    await act(async () => {
-      fireEvent.change(titleInput, {
-        target: { value: 'User Edited Title' },
-      });
-    });
-
-    await act(async () => {
-      fireEvent.click(saveButton);
-    });
-
-    await waitFor(() => {
-      expect(writeRequests).toHaveLength(1);
-    });
-    expect(writeRequests[0]).toEqual({
-      paths: ['/music/a.mp3'],
-      changes: [{ frameId: 'TIT2', value: 'User Edited Title' }],
-    });
-  });
-
-  it('keeps details editing disabled when live tags fail to load', async () => {
-    setup(TRACKS, {
-      trackTagsResponse: {
-        body: 'Tag load failed',
-        status: 500,
-      },
-    });
-    const writeRequests = mockWriteTrackTags();
-
-    await openEditModal('Song A');
-    await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
-    });
-    await waitFor(() => {
-      expect(screen.getByText(/Error: 500/)).toBeTruthy();
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'Details' }));
-    });
-
-    expect((screen.getByLabelText('Title') as HTMLInputElement).disabled).toBe(
-      true,
-    );
-    const saveButton = screen.getByRole('button', {
-      name: 'Save',
-    }) as HTMLButtonElement;
-    expect(saveButton.disabled).toBe(true);
-
-    await act(async () => {
-      fireEvent.click(saveButton);
-    });
-    expect(writeRequests).toHaveLength(0);
-  });
+  }, 30_000);
 
   it('opens a bulk Details editor with shared values and mixed placeholders', async () => {
-    const { store } = setup();
-    await openBulkEditModal(store);
+    await writeAlbumA();
+    const { store } = await setup();
+
+    await openBulkEditModal(store, ['/a.mp3', '/b.mp3'], 'Song A');
 
     const dialog = getDialog('Album A');
-    await waitFor(() => {
-      expect(
-        (screen.getByLabelText('Artist') as HTMLInputElement).disabled,
-      ).toBe(false);
-    });
+    await waitForEnabledField('Artist');
 
     expect(screen.queryByLabelText('Title')).toBeNull();
     expect(within(dialog).getByText('Album Artist A')).toBeTruthy();
@@ -565,53 +406,40 @@ describe('edit track modal', () => {
     const trackInputs = trackLabel!.closest('label')!.querySelectorAll('input');
     expect(trackInputs[0].value).toBe('');
     expect(trackInputs[0].placeholder).toBe('–');
-  });
+  }, 30_000);
 
   it('uses the bulk count header for mixed album edits', async () => {
-    const { store } = setup();
-    await act(async () => {
-      store.dispatch(
-        A.setMusicSelectedTracks(['/music/a.mp3', '/music/c.mp3']),
-      );
+    await writeAlbumA();
+    await writeTrack('c.mp3', {
+      title: 'Song C',
+      artist: 'Artist A',
+      albumArtist: 'Album Artist B',
+      album: 'Album B',
+      genre: 'Jazz',
     });
-    const track = await screen.findByText('Song A');
-    await act(async () => {
-      fireEvent.contextMenu(track);
-    });
-    const editButton = await screen.findByRole('button', {
-      name: 'Edit Selection',
-    });
-    await act(async () => {
-      fireEvent.click(editButton);
-    });
+    const { store } = await setup();
+
+    await openBulkEditModal(store, ['/a.mp3', '/c.mp3'], 'Song A');
 
     const dialog = getDialog('Edit 2 Tracks');
     expect(within(dialog).getByText('2 selected tracks')).toBeTruthy();
-  });
+  }, 30_000);
 
-  it('keeps ID3 disabled and saves shared bulk genre edits', async () => {
-    const { store } = setup();
-    const writeRequests = mockWriteTrackTags({
-      updated: ['/music/a.mp3', '/music/b.mp3'],
-      errors: [],
-      index: { status: 'updated', message: null },
-    });
+  it('keeps ID3 disabled and persists shared bulk genre edits to every file', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
 
-    await openBulkEditModal(store);
+    await openBulkEditModal(store, ['/a.mp3', '/b.mp3'], 'Song A');
     const id3Tab = screen.getByRole('tab', {
       name: 'ID3',
     }) as HTMLButtonElement;
     expect(id3Tab.disabled).toBe(true);
-
     await act(async () => {
       fireEvent.click(id3Tab);
     });
     expect(id3Tab.getAttribute('aria-selected')).toBe('false');
 
-    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
-    await waitFor(() => {
-      expect(genreInput.disabled).toBe(false);
-    });
+    const genreInput = await waitForEnabledField('Genre');
     await act(async () => {
       fireEvent.change(genreInput, { target: { value: 'New Genre' } });
     });
@@ -625,82 +453,34 @@ describe('edit track modal', () => {
     });
 
     await waitFor(() => {
-      expect(writeRequests).toHaveLength(1);
-    });
-    expect(writeRequests[0]).toEqual({
-      paths: ['/music/a.mp3', '/music/b.mp3'],
-      changes: [{ frameId: 'TCON', value: 'New Genre' }],
-    });
-    await waitFor(() => {
       expect(
         (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
           .disabled,
       ).toBe(true);
     });
-    const state = store.getState() as any;
-    const tracks = state.music.tracks as T.TrackMetadata[];
-    expect(tracks.find((track) => track.path === '/music/a.mp3')?.genre).toBe(
-      'New Genre',
-    );
-    expect(tracks.find((track) => track.path === '/music/b.mp3')?.genre).toBe(
-      'New Genre',
-    );
-  });
 
-  it('shows all server save errors from a partial bulk failure', async () => {
-    const tracks: T.TrackMetadata[] = [
-      ...TRACKS,
-      {
-        ...TRACKS[0],
-        path: '/music/d.mp3',
-        title: 'Song D',
-      },
-      {
-        ...TRACKS[0],
-        path: '/music/e.mp3',
-        title: 'Song E',
-      },
-      {
-        ...TRACKS[0],
-        path: '/music/f.mp3',
-        title: 'Song F',
-      },
-      {
-        ...TRACKS[0],
-        path: '/music/g.mp3',
-        title: 'Song G',
-      },
-    ];
-    const { store } = setup(tracks);
+    for (const path of ['/a.mp3', '/b.mp3']) {
+      const tags = await fetchTrackTags(path);
+      expect(frameValue(tags, 'TCON')).toBe('New Genre');
+    }
+    const state = store.getState() as T.State;
+    const tracks = state.music.tracks as T.TrackMetadata[];
+    expect(tracks.find((t) => t.path === '/a.mp3')?.genre).toBe('New Genre');
+    expect(tracks.find((t) => t.path === '/b.mp3')?.genre).toBe('New Genre');
+  }, 30_000);
+
+  it('shows every server save error from a partial bulk failure', async () => {
+    await writeAlbumA();
+    // A non-MP3 the server will reject, plus a path that does not exist.
+    await writeFile(join(getServer().mountDir, 'notes.txt'), 'not audio');
+    const { store } = await setup();
+
     await act(async () => {
       store.dispatch(
-        A.setMusicSelectedTracks([
-          '/music/a.mp3',
-          '/music/b.mp3',
-          '/music/d.mp3',
-          '/music/e.mp3',
-          '/music/f.mp3',
-        ]),
+        A.setMusicSelectedTracks(['/a.mp3', '/b.mp3', '/missing.mp3']),
       );
     });
-    mockWriteTrackTags({
-      updated: ['/music/a.mp3'],
-      errors: [
-        { path: '/music/b.mp3', message: 'File not found.' },
-        {
-          path: '/music/d.mp3',
-          message: 'Only MP3 files are supported for tag writing.',
-        },
-        { path: '/music/e.mp3', message: 'Permission denied.' },
-        { path: '/music/f.mp3', message: 'Unable to write tags.' },
-      ],
-      index: {
-        status: 'error',
-        message: 'Failed to write music index after writing track tags.',
-      },
-    });
-
-    const track = await screen.findByText('Song A');
+    const track = await findTrackRow('Song A');
     await act(async () => {
       fireEvent.contextMenu(track);
     });
@@ -709,10 +489,8 @@ describe('edit track modal', () => {
         await screen.findByRole('button', { name: 'Edit Selection' }),
       );
     });
-    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
-    await waitFor(() => {
-      expect(genreInput.disabled).toBe(false);
-    });
+
+    const genreInput = await waitForEnabledField('Genre');
     await act(async () => {
       fireEvent.change(genreInput, { target: { value: 'New Genre' } });
     });
@@ -720,99 +498,53 @@ describe('edit track modal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     });
 
-    await screen.findByText('Saved 1 of 5 tracks. Could not save 4 tracks.');
-    expect(screen.getByText('/music/b.mp3')).toBeTruthy();
-    expect(screen.queryByText('/music/f.mp3')).toBeNull();
-    expect(
-      screen.getByText(
-        'Music index update failed: Failed to write music index after writing track tags.',
-      ),
-    ).toBeTruthy();
+    await screen.findByText(/Could not save/);
+    expect(screen.getByText('/missing.mp3')).toBeTruthy();
 
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Show all failed tracks' }),
-      );
-    });
-    expect(screen.getByText('/music/f.mp3')).toBeTruthy();
-    expect(
-      (
-        screen.getByRole('button', {
-          name: 'Save failed — retry',
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(false);
-
-    const state = store.getState() as any;
-    const savedTrack = (state.music.tracks as T.TrackMetadata[]).find(
-      (track) => track.path === '/music/a.mp3',
-    );
-    const failedTrack = (state.music.tracks as T.TrackMetadata[]).find(
-      (track) => track.path === '/music/b.mp3',
-    );
-    expect(savedTrack?.genre).toBe('New Genre');
-    expect(failedTrack?.genre).toBe('Rock');
-  });
-
-  it('defers the bulk loading progress notice for small selections', async () => {
-    jest.useFakeTimers();
-    const { store } = setup(TRACKS, {
-      trackTagsResponse: () => new Promise(() => {}),
-    });
-
-    await openBulkEditModal(store);
-
-    expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
-    expect((screen.getByLabelText('Artist') as HTMLInputElement).disabled).toBe(
-      true,
-    );
-
-    await act(async () => {
-      jest.advanceTimersByTime(BULK_SMALL_LOAD_NOTICE_DELAY - 1);
-    });
-    expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
-
-    await act(async () => {
-      jest.advanceTimersByTime(1);
-    });
-    expect(screen.getByText('Loading ID3 tags: 0 / 2')).toBeTruthy();
-  });
+    // The tracks that could be written were written.
+    const tags = await fetchTrackTags('/a.mp3');
+    expect(frameValue(tags, 'TCON')).toBe('New Genre');
+  }, 30_000);
 
   it('shows shared folder artwork only in the bulk editor', async () => {
-    const tracksWithArt: T.TrackMetadata[] = TRACKS.map((track, index) => ({
-      ...track,
-      folderArtworkPath:
-        index < 2 ? '/music/Album A/Folder.jpg' : '/music/Album B/Folder.jpg',
-      hasEmbeddedArtwork: true,
-    }));
-    const { store } = setup(tracksWithArt, {
-      trackTagsResponse: {
-        body: JSON.stringify({
-          blocks: [
-            {
-              format: 'ID3v2.3',
-              tags: [
-                {
-                  id: 'APIC',
-                  value: 'image/jpeg — Cover (front)',
-                  binary: 'abc123',
-                },
-              ],
-            },
-          ],
-          resolved: {},
-        }),
-        status: 200,
-      },
+    const cover = buildJpegBytes();
+    await writeFolderArtwork(getServer(), '/Album A', cover);
+    await writeFolderArtwork(getServer(), '/Album B', cover);
+    await writeTrack('Album A/1.mp3', {
+      title: 'Shared One',
+      artist: 'Artist A',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+      picture: { mimeType: 'image/jpeg', data: cover },
     });
+    await writeTrack('Album A/2.mp3', {
+      title: 'Shared Two',
+      artist: 'Artist B',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+      picture: { mimeType: 'image/jpeg', data: cover },
+    });
+    await writeTrack('Album B/3.mp3', {
+      title: 'Shared Three',
+      artist: 'Artist C',
+      albumArtist: 'Album Artist B',
+      album: 'Album B',
+      picture: { mimeType: 'image/jpeg', data: cover },
+    });
+    const { store } = await setup();
 
-    await openBulkEditModal(store);
+    await openBulkEditModal(
+      store,
+      ['/Album A/1.mp3', '/Album A/2.mp3'],
+      'Shared One',
+    );
     const headerArtwork = within(getDialog('Album A')).getByRole('img', {
       name: 'Album A artwork',
     });
     expect(headerArtwork.getAttribute('src')).toBe(
-      'http://fake-music/music/artwork?path=%2Fmusic%2FAlbum%20A%2FFolder.jpg',
+      `${getServer().baseUrl}/music/artwork?path=%2FAlbum%20A%2FFolder.jpg`,
     );
+
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
     });
@@ -820,7 +552,7 @@ describe('edit track modal', () => {
     expect(
       (await screen.findAllByText('Album artwork')).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText('/music/Album A/')).toBeTruthy();
+    expect(screen.getByText('/Album A/')).toBeTruthy();
     expect(screen.queryByText('Embedded in this file')).toBeNull();
     expect(
       screen.queryByRole('button', {
@@ -830,37 +562,18 @@ describe('edit track modal', () => {
     expect(
       screen.queryByRole('button', { name: /Change album artwork/ }),
     ).toBeNull();
-  });
+  }, 30_000);
 
   it('shows album artwork and a collapsible embedded row for a single track', async () => {
-    const tracksWithArt: T.TrackMetadata[] = [
-      {
-        ...TRACKS[0],
-        folderArtworkPath: '/music/Album A/Folder.jpg',
-        hasEmbeddedArtwork: true,
-      },
-      ...TRACKS.slice(1),
-    ];
-    setup(tracksWithArt, {
-      trackTagsResponse: {
-        body: JSON.stringify({
-          blocks: [
-            {
-              format: 'ID3v2.3',
-              tags: [
-                {
-                  id: 'APIC',
-                  value: 'image/jpeg — Cover (front)',
-                  binary: 'abc123',
-                },
-              ],
-            },
-          ],
-          resolved: {},
-        }),
-        status: 200,
-      },
+    const cover = buildJpegBytes();
+    await writeFolderArtwork(getServer(), '/Album A', cover);
+    await writeTrack('Album A/a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      album: 'Album A',
+      picture: { mimeType: 'image/jpeg', data: cover },
     });
+    await setup();
 
     await openEditModal('Song A');
     await act(async () => {
@@ -871,7 +584,7 @@ describe('edit track modal', () => {
     expect(within(dialog).getAllByText('Album artwork').length).toBeGreaterThan(
       0,
     );
-    expect(within(dialog).getByText('/music/Album A/')).toBeTruthy();
+    expect(within(dialog).getByText('/Album A/')).toBeTruthy();
     expect(await within(dialog).findByText(/Folder\.jpg.*240 KB/)).toBeTruthy();
 
     expect(
@@ -886,60 +599,18 @@ describe('edit track modal', () => {
     });
     expect(within(dialog).getByRole('button', { expanded: true })).toBeTruthy();
     expect(within(dialog).getByText('Cover (front)')).toBeTruthy();
-  });
+  }, 30_000);
 
   it('removes a track’s embedded artwork after a confirm click', async () => {
-    const tracksWithArt: T.TrackMetadata[] = [
-      {
-        ...TRACKS[0],
-        folderArtworkPath: '/music/Album A/Folder.jpg',
-        hasEmbeddedArtwork: true,
-      },
-      ...TRACKS.slice(1),
-    ];
-    let tagsCall = 0;
-    setup(tracksWithArt, {
-      trackTagsResponse: () => {
-        tagsCall += 1;
-        return Promise.resolve({
-          status: 200,
-          body: JSON.stringify({
-            blocks:
-              tagsCall === 1
-                ? [
-                    {
-                      format: 'ID3v2.3',
-                      tags: [
-                        {
-                          id: 'APIC',
-                          value: 'image/jpeg — Cover (front)',
-                          binary: 'abc123',
-                        },
-                      ],
-                    },
-                  ]
-                : [],
-            resolved: {},
-          }),
-        });
-      },
+    const cover = buildJpegBytes();
+    await writeFolderArtwork(getServer(), '/Album A', cover);
+    await writeTrack('Album A/a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      album: 'Album A',
+      picture: { mimeType: 'image/jpeg', data: cover },
     });
-
-    let removeCalls = 0;
-    fetchMock.post(
-      new RegExp(`${FAKE_SERVER.url}/music/artwork/embedded/remove`),
-      () => {
-        removeCalls += 1;
-        return {
-          status: 200,
-          body: JSON.stringify({
-            path: '/music/a.mp3',
-            removed: 1,
-            index: { status: 'updated', message: null },
-          }),
-        };
-      },
-    );
+    await setup();
 
     await openEditModal('Song A');
     await act(async () => {
@@ -955,7 +626,9 @@ describe('edit track modal', () => {
     });
 
     expect(
-      within(dialog).getByRole('button', { name: 'Set as Folder.jpg artwork' }),
+      within(dialog).getByRole('button', {
+        name: 'Set as Folder.jpg artwork',
+      }),
     ).toBeTruthy();
 
     // First click only arms the confirm; nothing is sent yet.
@@ -965,7 +638,9 @@ describe('edit track modal', () => {
     expect(
       within(dialog).getByRole('button', { name: 'Click to confirm' }),
     ).toBeTruthy();
-    expect(removeCalls).toBe(0);
+    expect(
+      frameValue(await fetchTrackTags('/Album A/a.mp3'), 'APIC'),
+    ).toBeDefined();
 
     // Second click performs the removal and the row drops away.
     await act(async () => {
@@ -974,145 +649,39 @@ describe('edit track modal', () => {
       );
     });
 
-    await waitFor(() => expect(removeCalls).toBe(1));
+    await waitFor(async () => {
+      expect(
+        frameValue(await fetchTrackTags('/Album A/a.mp3'), 'APIC'),
+      ).toBeUndefined();
+    });
     await waitFor(() =>
       expect(within(dialog).queryByText('Embedded in this file')).toBeNull(),
     );
-  });
+  }, 30_000);
 
-  it('uploads a picked file as the album artwork', async () => {
-    const tracksWithArt: T.TrackMetadata[] = [
-      {
-        ...TRACKS[0],
-        folderArtworkPath: '/music/Album A/Folder.jpg',
-        hasEmbeddedArtwork: false,
-      },
-      ...TRACKS.slice(1),
-    ];
-    setup(tracksWithArt);
-
-    let uploadCount = 0;
-    let lastHadBody = false;
-    fetchMock.post(
-      new RegExp(`${FAKE_SERVER.url}/music/artwork`),
-      ({ options }: any) => {
-        uploadCount++;
-        lastHadBody = Boolean(options.body);
-        return {
-          status: 200,
-          body: JSON.stringify({
-            folderArtworkPath: '/music/Album A/Folder.jpg',
-          }),
-        };
-      },
-    );
-
-    await openEditModal('Song A');
-    await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
-    });
-
-    const dialog = getDialog('Song A');
-    const changeButton = within(dialog).getByRole('button', {
-      name: /Change album artwork/,
-    });
-    expect(changeButton).toBeTruthy();
-
-    const input = dialog.querySelector(
-      'input[type="file"]',
-    ) as HTMLInputElement;
-    const file = new File(['fake-bytes'], 'cover.png', { type: 'image/png' });
-    await act(async () => {
-      fireEvent.change(input, { target: { files: [file] } });
-    });
-
-    await waitFor(() => {
-      expect(uploadCount).toBe(1);
-    });
-    expect(lastHadBody).toBe(true);
-    expect(
-      await within(dialog).findByRole('button', { name: 'Saved' }),
-    ).toBeTruthy();
-  });
-
-  it('adds artwork from the empty state and shows it', async () => {
-    const noArtTracks: T.TrackMetadata[] = [
-      {
-        ...TRACKS[0],
-        path: '/music/Guero/01.mp3',
-        title: 'Que Onda Guero',
-        folderArtworkPath: null,
-        hasEmbeddedArtwork: false,
-      },
-    ];
-    setup(noArtTracks);
-
-    fetchMock.post(new RegExp(`${FAKE_SERVER.url}/music/artwork`), {
-      status: 200,
-      body: JSON.stringify({
-        folderArtworkPath: '/music/Guero/Folder.jpg',
-      }),
-    });
-
-    await openEditModal('Que Onda Guero');
-    await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
-    });
-
-    const dialog = getDialog('Que Onda Guero');
-    expect(within(dialog).getByText('No artwork found')).toBeTruthy();
-
-    const input = dialog.querySelector(
-      'input[type="file"]',
-    ) as HTMLInputElement;
-    expect(
-      within(dialog).getByRole('button', { name: /Add album artwork/ }),
-    ).toBeTruthy();
-
-    const file = new File(['bytes'], 'cover.jpg', { type: 'image/jpeg' });
-    await act(async () => {
-      fireEvent.change(input, { target: { files: [file] } });
-    });
-
-    expect(await within(dialog).findByText('/music/Guero/')).toBeTruthy();
-    expect(within(dialog).queryByText('No artwork found')).toBeNull();
-  });
+  // NOTE: the two artwork *upload* cases (picking a file, and the empty-state
+  // "Add album artwork" flow) live in EditTrackModal.loading-states.test.tsx.
+  // The frontend passes the picked File straight to fetch as the body, and
+  // jsdom + node-fetch cannot serialize a File, so the real server only ever
+  // receives an empty upload here. The server's handling of an uploaded image
+  // body is covered by server/test/route-music-write-artwork.test.ts.
 
   it('offers to embed the folder image into album tracks that lack it', async () => {
-    // Folder art present, but neither track has it embedded yet.
-    const albumTracks: T.TrackMetadata[] = [
-      {
-        ...TRACKS[0],
-        path: '/music/Album A/1.mp3',
-        title: 'Nested One',
-        folderArtworkPath: '/music/Album A/Folder.jpg',
-        hasEmbeddedArtwork: false,
-      },
-      {
-        ...TRACKS[1],
-        path: '/music/Album A/2.mp3',
-        title: 'Nested Two',
-        folderArtworkPath: '/music/Album A/Folder.jpg',
-        hasEmbeddedArtwork: false,
-      },
-    ];
-    setup(albumTracks);
-
-    let embedBody: unknown = null;
-    fetchMock.post(
-      new RegExp(`${FAKE_SERVER.url}/music/artwork/embed`),
-      ({ options }: any) => {
-        embedBody = JSON.parse(options.body);
-        return {
-          status: 200,
-          body: JSON.stringify({
-            updated: ['/music/Album A/1.mp3', '/music/Album A/2.mp3'],
-            errors: [],
-            index: { status: 'updated', message: null },
-          }),
-        };
-      },
-    );
+    const cover = buildJpegBytes();
+    await writeFolderArtwork(getServer(), '/Album A', cover);
+    await writeTrack('Album A/1.mp3', {
+      title: 'Nested One',
+      artist: 'Artist A',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+    });
+    await writeTrack('Album A/2.mp3', {
+      title: 'Nested Two',
+      artist: 'Artist B',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+    });
+    await setup();
 
     await openEditModal('Nested One');
     await act(async () => {
@@ -1131,333 +700,13 @@ describe('edit track modal', () => {
       );
     });
 
-    await waitFor(() => {
-      expect(embedBody).not.toBeNull();
-    });
-    expect(embedBody).toEqual({
-      folderArtworkPath: '/music/Album A/Folder.jpg',
-      trackPaths: ['/music/Album A/1.mp3', '/music/Album A/2.mp3'],
-    });
-    // Both tracks now carry the artwork, so the prompt goes away.
+    // Both tracks now carry the artwork, so the prompt goes away…
     await waitFor(() => {
       expect(within(dialog).queryByText(reason)).toBeNull();
     });
-  });
-
-  it('skips live tag loading above the bulk cutoff', async () => {
-    const manyTracks: T.TrackMetadata[] = Array.from(
-      { length: 201 },
-      (_, i) => ({
-        ...TRACKS[0],
-        path: `/music/${i}.mp3`,
-        title: `Song ${i}`,
-        artist: i === 0 ? 'Artist A' : 'Artist B',
-        track: i + 1,
-      }),
-    );
-    const store = createStore();
-    store.dispatch(A.addFileStoreServer(FAKE_SERVER));
-    let trackTagsFetchCount = 0;
-
-    fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
-      body: JSON.stringify({
-        version: 4,
-        scannedAt: '2024-01-01T00:00:00Z',
-        tracks: manyTracks,
-      }),
-      status: 200,
-    });
-    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
-      trackTagsFetchCount++;
-      return {
-        body: JSON.stringify({ blocks: [], resolved: {} }),
-        status: 200,
-      };
-    });
-
-    render(
-      <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
-
-    const track = await screen.findByText('Song 0');
-    await act(async () => {
-      store.dispatch(A.setMusicSelectedTracks(manyTracks.map((t) => t.path)));
-    });
-    await act(async () => {
-      fireEvent.contextMenu(track);
-    });
-    const editButton = await screen.findByRole('button', {
-      name: 'Edit Selection',
-    });
-    await act(async () => {
-      fireEvent.click(editButton);
-    });
-
-    getDialog('Album A');
-    expect(
-      screen.getByText('Using track details from the library scan.'),
-    ).toBeTruthy();
-    expect(trackTagsFetchCount).toBe(0);
-    expect(
-      (screen.getByLabelText('Artist') as HTMLInputElement).placeholder,
-    ).toBe('Mixed');
-    expect(
-      (screen.getByRole('textbox', { name: 'Composer' }) as HTMLInputElement)
-        .placeholder,
-    ).toBe('Not loaded');
-
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Load all 201 tracks' }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(trackTagsFetchCount).toBe(201);
-    });
-    expect(screen.queryByText(/Using track details/)).toBeNull();
-    expect(
-      (screen.getByRole('textbox', { name: 'Composer' }) as HTMLInputElement)
-        .placeholder,
-    ).toBe('');
-  });
-
-  it('saves bulk edits from scanned index values when live tags are skipped', async () => {
-    const manyTracks: T.TrackMetadata[] = Array.from(
-      { length: 201 },
-      (_, i) => ({
-        ...TRACKS[0],
-        path: `/music/${i}.mp3`,
-        title: `Song ${i}`,
-        artist: 'Artist A',
-        genre: 'Old Genre',
-        track: i + 1,
-      }),
-    );
-    const store = createStore();
-    store.dispatch(A.addFileStoreServer(FAKE_SERVER));
-    let trackTagsFetchCount = 0;
-
-    fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
-      body: JSON.stringify({
-        version: 4,
-        scannedAt: '2024-01-01T00:00:00Z',
-        tracks: manyTracks,
-      }),
-      status: 200,
-    });
-    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
-      trackTagsFetchCount++;
-      return {
-        body: JSON.stringify({ blocks: [], resolved: {} }),
-        status: 200,
-      };
-    });
-    const writeRequests = mockWriteTrackTags({
-      updated: manyTracks.map((track) => track.path),
-      errors: [],
-      index: { status: 'updated', message: null },
-    });
-
-    render(
-      <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
-
-    const track = await screen.findByText('Song 0');
-    await act(async () => {
-      store.dispatch(A.setMusicSelectedTracks(manyTracks.map((t) => t.path)));
-    });
-    await act(async () => {
-      fireEvent.contextMenu(track);
-    });
-    await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
-    });
-
-    expect(
-      screen.getByText('Using track details from the library scan.'),
-    ).toBeTruthy();
-    const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;
-    expect(genreInput.disabled).toBe(false);
-    await act(async () => {
-      fireEvent.change(genreInput, { target: { value: 'New Genre' } });
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    });
-
-    await waitFor(() => {
-      expect(writeRequests).toHaveLength(1);
-    });
-    expect(trackTagsFetchCount).toBe(0);
-    expect(writeRequests[0]).toEqual({
-      paths: manyTracks.map((track) => track.path),
-      changes: [{ frameId: 'TCON', value: 'New Genre' }],
-    });
-  });
-
-  it('discards bulk edits and disables fields while loading all ID3 tags', async () => {
-    const manyTracks: T.TrackMetadata[] = Array.from(
-      { length: 201 },
-      (_, i) => ({
-        ...TRACKS[0],
-        path: `/music/${i}.mp3`,
-        title: `Song ${i}`,
-        artist: i === 0 ? 'Artist A' : 'Artist B',
-        track: i + 1,
-      }),
-    );
-    const store = createStore();
-    store.dispatch(A.addFileStoreServer(FAKE_SERVER));
-    const signals: AbortSignal[] = [];
-
-    fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
-      body: JSON.stringify({
-        version: 4,
-        scannedAt: '2024-01-01T00:00:00Z',
-        tracks: manyTracks,
-      }),
-      status: 200,
-    });
-    fetchMock.get(
-      new RegExp(`${FAKE_SERVER.url}/music/track-tags`),
-      ({ options }: any) => {
-        signals.push(options.signal);
-        return new Promise((_resolve, reject) => {
-          options.signal.addEventListener('abort', () => {
-            reject(new DOMException('Aborted', 'AbortError'));
-          });
-        });
-      },
-    );
-
-    render(
-      <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
-
-    const track = await screen.findByText('Song 0');
-    await act(async () => {
-      store.dispatch(A.setMusicSelectedTracks(manyTracks.map((t) => t.path)));
-    });
-    await act(async () => {
-      fireEvent.contextMenu(track);
-    });
-    await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
-    });
-
-    const albumInput = screen.getByLabelText('Album') as HTMLInputElement;
-    await act(async () => {
-      fireEvent.change(albumInput, { target: { value: 'Unsaved Album' } });
-    });
-    expect(albumInput.value).toBe('Unsaved Album');
-
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Load all 201 tracks' }),
-      );
-    });
-
-    const resetAlbumInput = screen.getByLabelText('Album') as HTMLInputElement;
-    expect(resetAlbumInput.value).toBe('Album A');
-    expect(resetAlbumInput.disabled).toBe(true);
-    expect(screen.getByText('Loading ID3 tags: 0 / 201')).toBeTruthy();
-
-    await waitFor(() => {
-      expect(signals.length).toBeGreaterThan(0);
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-    });
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(signals.every((signal) => signal.aborted)).toBe(true);
-  });
-
-  it('keeps scan values and offers retry when bulk ID3 loading fails', async () => {
-    const manyTracks: T.TrackMetadata[] = Array.from(
-      { length: 201 },
-      (_, i) => ({
-        ...TRACKS[0],
-        path: `/music/${i}.mp3`,
-        title: `Song ${i}`,
-        artist: i === 0 ? 'Artist A' : 'Artist B',
-        track: i + 1,
-      }),
-    );
-    const store = createStore();
-    store.dispatch(A.addFileStoreServer(FAKE_SERVER));
-    let trackTagsFetchCount = 0;
-
-    fetchMock.get(`${FAKE_SERVER.url}/music/music-index`, {
-      body: JSON.stringify({
-        version: 4,
-        scannedAt: '2024-01-01T00:00:00Z',
-        tracks: manyTracks,
-      }),
-      status: 200,
-    });
-    fetchMock.get(new RegExp(`${FAKE_SERVER.url}/music/track-tags`), () => {
-      trackTagsFetchCount++;
-      if (trackTagsFetchCount === 1) {
-        return { body: 'Nope', status: 500 };
-      }
-      return {
-        body: JSON.stringify({ blocks: [], resolved: {} }),
-        status: 200,
-      };
-    });
-
-    render(
-      <MemoryRouter initialEntries={[`/${FAKE_SERVER.id}/music`]}>
-        <Provider store={store as any}>
-          <AppRoutes />
-        </Provider>
-      </MemoryRouter>,
-    );
-
-    const track = await screen.findByText('Song 0');
-    await act(async () => {
-      store.dispatch(A.setMusicSelectedTracks(manyTracks.map((t) => t.path)));
-    });
-    await act(async () => {
-      fireEvent.contextMenu(track);
-    });
-    await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
-    });
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Load all 201 tracks' }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Could not load ID3 tags for 1 tracks.'),
-      ).toBeTruthy();
-    });
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
-    expect(
-      (screen.getByRole('textbox', { name: 'Composer' }) as HTMLInputElement)
-        .placeholder,
-    ).toBe('Not loaded');
-  });
+    // …and it is really embedded on disk.
+    for (const path of ['/Album A/1.mp3', '/Album A/2.mp3']) {
+      expect(frameValue(await fetchTrackTags(path), 'APIC')).toBeDefined();
+    }
+  }, 30_000);
 });

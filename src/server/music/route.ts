@@ -417,8 +417,6 @@ export function musicRoute(mountPath: MountPath) {
       response.tracksEmbedded = { updatedTracks, errors };
     }
 
-    // Best-effort: keep the durable music index fresh so the new artwork
-    // survives without a rescan.
     await updateIndexAfterFolderArtworkWrite(
       mountPath,
       response.folderArtworkPath,

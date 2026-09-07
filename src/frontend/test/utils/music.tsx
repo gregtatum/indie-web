@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { spawn } from 'child_process';
 import { writeFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import * as net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -29,6 +29,19 @@ export function buildMp3WithTags(
     composer: string;
     album: string;
     genre: string;
+    /** Track number, written as a TRCK frame. */
+    track: number;
+    /**
+     * When set, an APIC picture frame is embedded so a scan reports
+     * hasEmbeddedArtwork and the ID3 tab shows an embedded-art row.
+     */
+    picture: {
+      mimeType: 'image/jpeg' | 'image/png';
+      description?: string;
+      data: Buffer;
+    };
+    /** Raw TXXX private frames, keyed by description (e.g. app grouping flags). */
+    txxx: Record<string, string>;
   }>,
 ): Buffer {
   function frame(id: string, content: Buffer): Buffer {
@@ -63,6 +76,42 @@ export function buildMp3WithTags(
   if (tags.genre) {
     frames.push(textFrame('TCON', tags.genre));
   }
+  if (tags.track !== undefined) {
+    frames.push(textFrame('TRCK', String(tags.track)));
+  }
+  for (const [description, value] of Object.entries(tags.txxx ?? {})) {
+    // TXXX: encoding(1) + description + NUL + value.
+    frames.push(
+      frame(
+        'TXXX',
+        Buffer.concat([
+          Buffer.from([0x00]),
+          Buffer.from(description, 'latin1'),
+          Buffer.from([0x00]),
+          Buffer.from(value, 'latin1'),
+        ]),
+      ),
+    );
+  }
+  if (tags.picture) {
+    // APIC: encoding(1) + MIME + NUL + picture type(1)=0x03 (front cover) +
+    // description + NUL + picture data.
+    const description = tags.picture.description ?? 'Cover (front)';
+    frames.push(
+      frame(
+        'APIC',
+        Buffer.concat([
+          Buffer.from([0x00]),
+          Buffer.from(tags.picture.mimeType, 'latin1'),
+          Buffer.from([0x00]),
+          Buffer.from([0x03]),
+          Buffer.from(description, 'latin1'),
+          Buffer.from([0x00]),
+          tags.picture.data,
+        ]),
+      ),
+    );
+  }
   const frameData = Buffer.concat(frames);
   const id3Header = Buffer.alloc(10);
   id3Header.write('ID3', 0, 3, 'ascii');
@@ -88,6 +137,48 @@ export function buildMinimalMp3(): Buffer {
   header.writeUInt8(0, 5); // flags
   header.writeUInt32BE(0, 6); // size = 0 (no frames)
   return header;
+}
+
+/**
+ * A byte buffer that sniffs as a real JPEG (SOI…EOI markers) so the server's
+ * image detection accepts it as folder artwork. `size` pads the middle so tests
+ * can assert a human-readable size label (e.g. "240 KB").
+ */
+export function buildJpegBytes(size = 245_760): Buffer {
+  const head = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+  const tail = Buffer.from([0xff, 0xd9]);
+  const padLength = Math.max(0, size - head.length - tail.length);
+  return Buffer.concat([head, Buffer.alloc(padLength, 0x20), tail]);
+}
+
+/**
+ * Like {@link buildJpegBytes} but with a PNG signature.
+ */
+export function buildPngBytes(size = 4_096): Buffer {
+  const signature = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ]);
+  const padLength = Math.max(0, size - signature.length);
+  return Buffer.concat([signature, Buffer.alloc(padLength, 0x00)]);
+}
+
+/**
+ * Writes a `Folder.jpg` (or `Folder.png`) into an album directory under the
+ * mount so the server serves real folder artwork and its HEAD size.
+ */
+export async function writeFolderArtwork(
+  server: MusicTestServer,
+  albumDirClientPath: string,
+  bytes: Buffer = buildJpegBytes(),
+): Promise<string> {
+  const filename = bytes[0] === 0x89 ? 'Folder.png' : 'Folder.jpg';
+  const dir = join(server.mountDir, albumDirClientPath);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, filename), bytes);
+  const normalizedDir = albumDirClientPath.startsWith('/')
+    ? albumDirClientPath
+    : '/' + albumDirClientPath;
+  return `${normalizedDir.replace(/\/$/, '')}/${filename}`;
 }
 
 export function writeMusicIndex(
@@ -243,6 +334,20 @@ export async function removeMusicIndex(server: MusicTestServer): Promise<void> {
   await rm(join(server.mountDir, '.music-index.json'), {
     force: true,
   });
+}
+
+/**
+ * Empties the shared mount directory so each test starts from a clean library.
+ * Tests that assert on track titles need this — a leftover file from an earlier
+ * test would make `findByText` match multiple rows.
+ */
+export async function clearMusicMount(server: MusicTestServer): Promise<void> {
+  const entries = await readdir(server.mountDir);
+  await Promise.all(
+    entries.map((entry) =>
+      rm(join(server.mountDir, entry), { recursive: true, force: true }),
+    ),
+  );
 }
 
 interface RenderMusicAppOptions {
