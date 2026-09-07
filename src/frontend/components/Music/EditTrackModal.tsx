@@ -749,6 +749,13 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
     }
   }
 
+  const selectionDir =
+    editTracks.length > 0 ? getDirName(editTracks[0].path) : null;
+  const isColocatedSelection =
+    editTracks.length > 0 &&
+    editTracks.every((t) => getDirName(t.path) === selectionDir);
+  const canEditFolderArtwork = !isBulkEdit || isColocatedSelection;
+
   let sharedFolderArtworkPath: string | null = null;
   if (
     editTracks.length > 0 &&
@@ -770,7 +777,10 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   // Album MP3s that do not yet carry the folder image as embedded art, so the
   // artwork tab can offer to embed it into them.
   const embeddableTrackPaths = React.useMemo(() => {
-    if (isBulkEdit || !sharedFolderArtworkPath) {
+    if (!sharedFolderArtworkPath) {
+      return [];
+    }
+    if (isBulkEdit && !isColocatedSelection) {
       return [];
     }
     const folderDir = getDirName(sharedFolderArtworkPath);
@@ -782,7 +792,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
           t.path.toLowerCase().endsWith('.mp3'),
       )
       .map((t) => t.path);
-  }, [isBulkEdit, sharedFolderArtworkPath, tracks]);
+  }, [isBulkEdit, isColocatedSelection, sharedFolderArtworkPath, tracks]);
   // Neither the folder artwork write nor the embed touches the music index, so
   // patch the store to keep the tab (and library) current until the next scan.
   const handleFolderArtworkWritten = React.useCallback(
@@ -1159,6 +1169,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
               hasMixedFolderArtwork ? 'Mixed folder artwork' : undefined
             }
             hideEmbeddedArtwork={isBulkEdit}
+            canEditFolderArtwork={canEditFolderArtwork}
             tagsState={
               isBulkEdit
                 ? { status: 'loaded', data: { blocks: [], resolved: {} } }

@@ -506,7 +506,7 @@ describe('<EditTrackModal> with real server', () => {
     expect(frameValue(tags, 'TCON')).toBe('New Genre');
   }, 30_000);
 
-  it('shows shared folder artwork only in the bulk editor', async () => {
+  it('treats a co-located bulk selection as a folder artwork edit', async () => {
     const cover = buildJpegBytes();
     await writeFolderArtwork(getServer(), '/Album A', cover);
     await writeFolderArtwork(getServer(), '/Album B', cover);
@@ -553,15 +553,113 @@ describe('<EditTrackModal> with real server', () => {
       (await screen.findAllByText('Album artwork')).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText('/Album A/')).toBeTruthy();
+    // The per-file APIC section stays hidden — that is inherently one file.
     expect(screen.queryByText('Embedded in this file')).toBeNull();
     expect(
       screen.queryByRole('button', {
         name: /Set as Folder\.(jpg|png) artwork/,
       }),
     ).toBeNull();
+    // …but the folder image is now editable, just like a single-track edit.
+    expect(
+      screen.getByRole('button', { name: /Change album artwork/ }),
+    ).toBeTruthy();
+    // Every track already carries the art, so nothing is left to embed.
+    expect(screen.queryByRole('button', { name: 'Embed artwork' })).toBeNull();
+  }, 30_000);
+
+  it('offers a folder-wide embed from a co-located bulk selection', async () => {
+    const cover = buildJpegBytes();
+    await writeFolderArtwork(getServer(), '/Album A', cover);
+    await writeTrack('Album A/1.mp3', {
+      title: 'Bulk One',
+      artist: 'Artist A',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+    });
+    await writeTrack('Album A/2.mp3', {
+      title: 'Bulk Two',
+      artist: 'Artist B',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+    });
+    await writeTrack('Album A/3.mp3', {
+      title: 'Bulk Three',
+      artist: 'Artist C',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+    });
+    const { store } = await setup();
+
+    // Select only two of the folder's three tracks.
+    await openBulkEditModal(
+      store,
+      ['/Album A/1.mp3', '/Album A/2.mp3'],
+      'Bulk One',
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    const dialog = getDialog('Album A');
+    expect(
+      within(dialog).getByText(
+        'The album artwork isn’t saved inside 3 tracks.',
+      ),
+    ).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(
+        await within(dialog).findByRole('button', { name: 'Embed artwork' }),
+      );
+    });
+
+    // The banner clears once every folder track carries the art.
+    await waitFor(
+      () =>
+        expect(
+          within(dialog).queryByRole('button', { name: 'Embed artwork' }),
+        ).toBeNull(),
+      { timeout: 10_000 },
+    );
+
+    // The embed is folder-wide: the unselected third track gets the art too.
+    for (const path of ['/Album A/1.mp3', '/Album A/2.mp3', '/Album A/3.mp3']) {
+      expect(frameValue(await fetchTrackTags(path), 'APIC')).toBeDefined();
+    }
+  }, 30_000);
+
+  it('keeps a cross-folder bulk selection preview-only', async () => {
+    const cover = buildJpegBytes();
+    await writeFolderArtwork(getServer(), '/Album A', cover);
+    await writeTrack('Album A/1.mp3', {
+      title: 'Cross One',
+      artist: 'Artist A',
+      album: 'Album A',
+    });
+    await writeTrack('Album B/2.mp3', {
+      title: 'Cross Two',
+      artist: 'Artist B',
+      album: 'Album B',
+    });
+    const { store } = await setup();
+
+    await openBulkEditModal(
+      store,
+      ['/Album A/1.mp3', '/Album B/2.mp3'],
+      'Cross One',
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    expect(await screen.findByText('Mixed folder artwork')).toBeTruthy();
     expect(
       screen.queryByRole('button', { name: /Change album artwork/ }),
     ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /Add album artwork/ }),
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Embed artwork' })).toBeNull();
   }, 30_000);
 
   it('shows album artwork and a collapsible embedded row for a single track', async () => {

@@ -13,6 +13,7 @@ interface Props {
   folderArtworkPath: string | null;
   emptyMessage?: string;
   hideEmbeddedArtwork?: boolean;
+  canEditFolderArtwork?: boolean;
   tagsState: TrackTagsLoadState;
   trackPath: string;
   embeddableTrackPaths: string[];
@@ -673,6 +674,7 @@ export function ArtworkTab({
   folderArtworkPath,
   emptyMessage = 'No artwork found',
   hideEmbeddedArtwork = false,
+  canEditFolderArtwork = false,
   tagsState,
   trackPath,
   embeddableTrackPaths,
@@ -734,7 +736,7 @@ export function ArtworkTab({
     return (
       <div className="editTrackModalArtwork">
         <div className="editTrackModalArtworkEmpty">{emptyMessage}</div>
-        {!hideEmbeddedArtwork && (
+        {canEditFolderArtwork && (
           <ChangeArtworkButton
             trackPath={trackPath}
             serverUrl={serverUrl}
@@ -760,7 +762,7 @@ export function ArtworkTab({
             dirHref={folderArtworkHref}
             onOpenDir={() => navigateToFile(folderArtworkPath)}
           >
-            {!hideEmbeddedArtwork && (
+            {canEditFolderArtwork && (
               <ChangeArtworkButton
                 trackPath={trackPath}
                 serverUrl={serverUrl}
@@ -772,7 +774,7 @@ export function ArtworkTab({
       )}
       {folderArtworkUrl &&
         folderArtworkPath &&
-        !hideEmbeddedArtwork &&
+        canEditFolderArtwork &&
         embeddableTrackPaths.length > 0 && (
           <EmbedArtworkBanner
             folderArtworkPath={folderArtworkPath}
