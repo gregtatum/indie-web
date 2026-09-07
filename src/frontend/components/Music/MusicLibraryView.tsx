@@ -434,6 +434,7 @@ function AlbumHero() {
   const playingTrackPath = $$.getMusicPlaybackTrackPath();
   const selectedTrackPath = selectedTrackPaths[0] ?? null;
   const panelSelections = $$.getMusicPanelSelections();
+  const folderArtworkVersion = $$.getMusicFolderArtworkVersion();
 
   // The hero follows the most recent thing you clicked: a track (selected or
   // playing) or a filter panel. After a track click it shows that track's
@@ -547,7 +548,14 @@ function AlbumHero() {
     <div className="musicAlbumHero">
       <div className="musicAlbumHeroArtwork">
         {folderArtworkUrl ? (
-          <img src={folderArtworkUrl} alt="" />
+          <img
+            src={
+              folderArtworkVersion
+                ? `${folderArtworkUrl}&v=${folderArtworkVersion}`
+                : folderArtworkUrl
+            }
+            alt=""
+          />
         ) : (
           <span
             className="musicAlbumHeroArtworkPlaceholder"

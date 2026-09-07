@@ -425,9 +425,36 @@
 }
 
 .artworkAlbumImageWrap {
+  position: relative;
   flex: 0 0 auto;
   width: 300px;
   max-width: 45%;
+}
+
+/* Highlight the image area while a file is dragged over it. */
+.artworkAlbumImageWrap.dragging::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px dashed var(--primary-color);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.artworkDropOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  border-radius: 8px;
+  background: #000000a6;
+  color: #fff;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .artworkAlbumPlaceholder {

@@ -500,12 +500,74 @@ function EmbedArtworkBanner({
   );
 }
 
+function artworkFileFromDrop(dataTransfer: DataTransfer | null): File | null {
+  const files = Array.from(dataTransfer?.files ?? []);
+  return (
+    files.find((file) => file.type.startsWith('image/')) ?? files[0] ?? null
+  );
+}
+
+function ArtworkDropZone({
+  trackPath,
+  serverUrl,
+  canEdit,
+  onSaved,
+  children,
+}: {
+  trackPath: string;
+  serverUrl: string;
+  canEdit: boolean;
+  onSaved: (folderArtworkPath: string) => void;
+  children: React.ReactNode;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const { saveStatus, save } = useFolderArtworkSave(serverUrl, onSaved);
+
+  const onDrop = React.useCallback(
+    (event: DragEvent) => {
+      const file = artworkFileFromDrop(event.dataTransfer);
+      if (file) {
+        save(trackPath, {
+          data: file,
+          contentType: file.type || 'image/jpeg',
+        });
+      }
+    },
+    [save, trackPath],
+  );
+
+  const canAcceptDrop = React.useCallback(
+    (event: DragEvent) =>
+      canEdit &&
+      saveStatus !== 'saving' &&
+      Array.from(event.dataTransfer?.types ?? []).includes('Files'),
+    [canEdit, saveStatus],
+  );
+
+  const dragging = Hooks.useFileDrop(ref, onDrop, canAcceptDrop);
+
+  return (
+    <div ref={ref} className="artworkAlbumImageWrap">
+      {children}
+      {dragging && (
+        <div className="artworkDropOverlay" aria-hidden="true">
+          Drop to set album artwork
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AlbumArtwork({
   src,
   fileName,
   dirName,
   dirHref,
   onOpenDir,
+  trackPath,
+  serverUrl,
+  canEditFolderArtwork,
+  onArtworkSaved,
   children,
 }: {
   src: string;
@@ -513,6 +575,10 @@ function AlbumArtwork({
   dirName: string;
   dirHref: string | null;
   onOpenDir: () => void;
+  trackPath: string;
+  serverUrl: string;
+  canEditFolderArtwork: boolean;
+  onArtworkSaved: (folderArtworkPath: string) => void;
   children?: React.ReactNode;
 }) {
   const [dimensions, setDimensions] = React.useState<string | null>(null);
@@ -540,7 +606,12 @@ function AlbumArtwork({
 
   return (
     <div className="artworkAlbumLayout">
-      <div className="artworkAlbumImageWrap">
+      <ArtworkDropZone
+        trackPath={trackPath}
+        serverUrl={serverUrl}
+        canEdit={canEditFolderArtwork}
+        onSaved={onArtworkSaved}
+      >
         {imgError ? (
           <div className="artworkSectionError">Unable to load image</div>
         ) : (
@@ -554,7 +625,7 @@ function AlbumArtwork({
             onError={() => setImgError(true)}
           />
         )}
-      </div>
+      </ArtworkDropZone>
       <div className="artworkAlbumInfo">
         <div className="artworkAlbumHeading">Album artwork</div>
         <div className="artworkMetaLine">
@@ -738,9 +809,14 @@ export function ArtworkTab({
         <div className="artworkBlock">
           <div className="artworkBlockLabel">Album artwork</div>
           <div className="artworkAlbumLayout">
-            <div className="artworkAlbumImageWrap">
+            <ArtworkDropZone
+              trackPath={trackPath}
+              serverUrl={serverUrl}
+              canEdit={canEditFolderArtwork}
+              onSaved={onFolderArtworkWritten}
+            >
               <div className="artworkAlbumPlaceholder" aria-hidden="true" />
-            </div>
+            </ArtworkDropZone>
             <div className="artworkAlbumInfo">
               <div className="artworkMetaLine">{emptyMessage}</div>
               {canEditFolderArtwork && (
@@ -773,6 +849,10 @@ export function ArtworkTab({
             dirName={`${getDirName(folderArtworkPath)}/`}
             dirHref={folderArtworkHref}
             onOpenDir={() => navigateToFile(folderArtworkPath)}
+            trackPath={trackPath}
+            serverUrl={serverUrl}
+            canEditFolderArtwork={canEditFolderArtwork}
+            onArtworkSaved={onFolderArtworkWritten}
           >
             {canEditFolderArtwork && (
               <ChangeArtworkButton

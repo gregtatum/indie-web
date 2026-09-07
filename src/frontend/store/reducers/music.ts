@@ -77,13 +77,13 @@ function embeddedArtworkRemoveStatus(
   }
 }
 
+/**
+ * A monotonic counter to invalidate the HTTP cache.
+ */
 function folderArtworkVersion(state = 0, action: T.Action): number {
   switch (action.type) {
     case 'music-folder-artwork-save-success':
       return state + 1;
-    case 'set-music-selected-tracks':
-    case 'view-music':
-      return 0;
     default:
       return state;
   }

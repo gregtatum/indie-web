@@ -282,6 +282,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
   const activeTab = $$.getMusicEditTab();
   const needsRescan = $$.getMusicNeedsRescan();
   const servedIndexVersion = $$.getMusicServedIndexVersion();
+  const folderArtworkVersion = $$.getMusicFolderArtworkVersion();
   const dispatch = Hooks.useDispatch();
 
   const [formState, setFormState] = React.useState<DetailFieldValues>(
@@ -1245,7 +1246,11 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
               >
                 {folderArtworkUrl ? (
                   <img
-                    src={folderArtworkUrl}
+                    src={
+                      folderArtworkVersion
+                        ? `${folderArtworkUrl}&v=${folderArtworkVersion}`
+                        : folderArtworkUrl
+                    }
                     alt={`${sharedAlbumHeader.album} artwork`}
                   />
                 ) : null}
