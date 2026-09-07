@@ -734,16 +734,28 @@ export function ArtworkTab({
     (embeddedArtwork.length === 0 || tagsState.status === 'error')
   ) {
     return (
-      <div className="editTrackModalArtwork">
-        <div className="editTrackModalArtworkEmpty">{emptyMessage}</div>
-        {canEditFolderArtwork && (
-          <ChangeArtworkButton
-            trackPath={trackPath}
-            serverUrl={serverUrl}
-            onSaved={onFolderArtworkWritten}
-            label="Add album artwork"
-          />
-        )}
+      <div className="editTrackModalArtworkSections">
+        <div className="artworkBlock">
+          <div className="artworkBlockLabel">Album artwork</div>
+          <div className="artworkAlbumLayout">
+            <div className="artworkAlbumImageWrap">
+              <div className="artworkAlbumPlaceholder" aria-hidden="true" />
+            </div>
+            <div className="artworkAlbumInfo">
+              <div className="artworkMetaLine">{emptyMessage}</div>
+              {canEditFolderArtwork && (
+                <div className="artworkAlbumActions">
+                  <ChangeArtworkButton
+                    trackPath={trackPath}
+                    serverUrl={serverUrl}
+                    onSaved={onFolderArtworkWritten}
+                    label="Add album artwork"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

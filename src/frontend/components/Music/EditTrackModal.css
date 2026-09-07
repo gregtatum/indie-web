@@ -414,6 +414,26 @@
   max-width: 45%;
 }
 
+.artworkAlbumPlaceholder {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--artwork-bg);
+}
+
+.artworkAlbumPlaceholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: #00000059;
+  mask-position: center;
+  mask-size: 36%;
+  mask-repeat: no-repeat;
+  /* webpackIgnore: true */
+  mask-image: url('/svg/music.svg');
+}
+
 .artworkAlbumInfo {
   flex: 1 1 auto;
   min-width: 0;
