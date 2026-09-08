@@ -104,6 +104,74 @@ export function useMusicIndexFolderArtworkPatch() {
   );
 }
 
+export function useMusicIndexFolderArtworkClear() {
+  const dispatch = Hooks.useDispatch();
+  const tracks = $$.getMusicTracks();
+  const needsRescan = $$.getMusicNeedsRescan();
+  const servedIndexVersion = $$.getMusicServedIndexVersion();
+
+  return React.useCallback(
+    (folderDir: string) => {
+      dispatch(
+        A.setMusicTracks(
+          tracks.map((track) =>
+            getDirName(track.path) === folderDir && track.folderArtworkPath
+              ? { ...track, folderArtworkPath: null }
+              : track,
+          ),
+          needsRescan,
+          servedIndexVersion,
+        ),
+      );
+    },
+    [dispatch, tracks, needsRescan, servedIndexVersion],
+  );
+}
+
+export function useFolderArtworkRemove(
+  serverUrl: string,
+  onRemoved?: () => void,
+) {
+  const dispatch = Hooks.useDispatch();
+  const removeStatus = $$.getMusicFolderArtworkRemoveStatus();
+  const clearIndex = useMusicIndexFolderArtworkClear();
+  const [active, setActive] = React.useState(false);
+
+  React.useEffect(() => {
+    if (removeStatus === 'idle') {
+      setActive(false);
+    }
+  }, [removeStatus]);
+
+  const remove = React.useCallback(
+    (trackPath: string) => {
+      setActive(true);
+      dispatch(A.musicFolderArtworkRemoveStart());
+      fetch(
+        `${serverUrl}/music/artwork/remove?path=${encodeURIComponent(trackPath)}`,
+        { method: 'POST' },
+      )
+        .then((res) => {
+          if (!res.ok) {
+            return res.text().then((t) => {
+              throw new Error(t || `${res.status}`);
+            });
+          }
+          return res.json();
+        })
+        .then(() => {
+          clearIndex(getDirName(trackPath));
+          onRemoved?.();
+          dispatch(A.musicFolderArtworkRemoveSuccess());
+        })
+        .catch(() => dispatch(A.musicFolderArtworkRemoveError()));
+    },
+    [dispatch, serverUrl, clearIndex, onRemoved],
+  );
+
+  return { removeStatus, active, remove };
+}
+
 interface FolderArtworkDropOptions {
   /** A track in the target folder; the written Folder.jpg lands beside it. */
   trackPath: string | null;

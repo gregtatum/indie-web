@@ -27,6 +27,7 @@ import {
   serializeTagBlocks,
   sniffImageMimeType,
   updateMusicIndexAfterEmbeddedArtworkRemoval,
+  updateIndexAfterFolderArtworkRemoval,
   updateIndexAfterFolderArtworkWrite,
   updateIndexAfterTrackTagWrites,
   writeTrackTagsForPath,
@@ -424,6 +425,35 @@ export function musicRoute(mountPath: MountPath) {
     );
 
     return response;
+  });
+
+  /**
+   * Deletes the album folder's artwork image.
+   */
+  route.post('/artwork/remove', async (req): Promise<{ removed: string[] }> => {
+    const clientPath = req.query.path;
+    if (typeof clientPath !== 'string' || !clientPath) {
+      throw new ClientError('Missing path query parameter.');
+    }
+    const resolvedPath = mountPath.resolve(clientPath);
+    if (!resolvedPath) {
+      throw new ClientError('Invalid path.');
+    }
+    const dirFullPath = dirname(resolvedPath);
+    const dirClientPath = dirname(
+      clientPath.startsWith('/') ? clientPath : '/' + clientPath,
+    );
+
+    const removed = await removeOutdatedFolderArtwork(
+      mountPath,
+      dirFullPath,
+      dirClientPath,
+      '',
+    );
+
+    await updateIndexAfterFolderArtworkRemoval(mountPath, dirClientPath);
+
+    return { removed };
   });
 
   /**

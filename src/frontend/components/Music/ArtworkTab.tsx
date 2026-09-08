@@ -3,6 +3,7 @@ import * as Router from 'react-router-dom';
 import { A, Hooks, $, $$ } from 'frontend';
 import {
   useFolderArtworkSave,
+  useFolderArtworkRemove,
   useFolderArtworkDrop,
 } from 'frontend/hooks/useFolderArtworkDrop';
 import { getDirName, getPathFileName } from 'frontend/utils';
@@ -236,6 +237,61 @@ function ChangeArtworkButton({
         )}
       </button>
     </>
+  );
+}
+
+function RemoveFolderArtworkButton({
+  trackPath,
+  serverUrl,
+}: {
+  trackPath: string;
+  serverUrl: string;
+}) {
+  const { removeStatus, active, remove } = useFolderArtworkRemove(serverUrl);
+  const [confirming, setConfirming] = React.useState(false);
+  const busy =
+    active && (removeStatus === 'saving' || removeStatus === 'saved');
+
+  let label: React.ReactNode = (
+    <>
+      <span className="artworkEmbeddedRemoveBtnIcon" aria-hidden="true" />
+      Remove album artwork
+    </>
+  );
+  if (active && removeStatus === 'saving') {
+    label = 'Removing…';
+  } else if (active && removeStatus === 'saved') {
+    label = 'Removed';
+  } else if (active && removeStatus === 'error') {
+    label = 'Error — retry';
+  } else if (confirming) {
+    label = 'Click to confirm';
+  }
+
+  return (
+    <button
+      type="button"
+      className={
+        confirming
+          ? 'artworkChangeBtn artworkChangeBtnDanger artworkChangeBtnDangerConfirm'
+          : 'artworkChangeBtn artworkChangeBtnDanger'
+      }
+      disabled={busy}
+      onClick={() => {
+        if (busy) {
+          return;
+        }
+        if (confirming || (active && removeStatus === 'error')) {
+          setConfirming(false);
+          remove(trackPath);
+        } else {
+          setConfirming(true);
+        }
+      }}
+      onBlur={() => setConfirming(false)}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -772,11 +828,17 @@ export function ArtworkTab({
             canEditFolderArtwork={canEditFolderArtwork}
           >
             {canEditFolderArtwork && (
-              <ChangeArtworkButton
-                trackPath={trackPath}
-                serverUrl={serverUrl}
-                onSaved={onFolderArtworkWritten}
-              />
+              <>
+                <ChangeArtworkButton
+                  trackPath={trackPath}
+                  serverUrl={serverUrl}
+                  onSaved={onFolderArtworkWritten}
+                />
+                <RemoveFolderArtworkButton
+                  trackPath={trackPath}
+                  serverUrl={serverUrl}
+                />
+              </>
             )}
           </AlbumArtwork>
         </div>

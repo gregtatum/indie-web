@@ -77,12 +77,32 @@ function embeddedArtworkRemoveStatus(
   }
 }
 
+function folderArtworkRemoveStatus(
+  state: FolderArtworkSaveStatus = 'idle',
+  action: T.Action,
+): FolderArtworkSaveStatus {
+  switch (action.type) {
+    case 'music-folder-artwork-remove-start':
+      return 'saving';
+    case 'music-folder-artwork-remove-success':
+      return 'saved';
+    case 'music-folder-artwork-remove-error':
+      return 'error';
+    case 'set-music-selected-tracks':
+    case 'view-music':
+      return 'idle';
+    default:
+      return state;
+  }
+}
+
 /**
  * A monotonic counter to invalidate the HTTP cache.
  */
 function folderArtworkVersion(state = 0, action: T.Action): number {
   switch (action.type) {
     case 'music-folder-artwork-save-success':
+    case 'music-folder-artwork-remove-success':
       return state + 1;
     default:
       return state;
@@ -347,6 +367,7 @@ const combinedMusicReducer = combineReducers({
   folderArtworkSaveStatus,
   folderArtworkEmbedStatus,
   embeddedArtworkRemoveStatus,
+  folderArtworkRemoveStatus,
   folderArtworkVersion,
 });
 

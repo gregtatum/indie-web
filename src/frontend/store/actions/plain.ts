@@ -452,6 +452,18 @@ export function musicFolderArtworkEmbedError() {
   return { type: 'music-folder-artwork-embed-error' as const };
 }
 
+export function musicFolderArtworkRemoveStart() {
+  return { type: 'music-folder-artwork-remove-start' as const };
+}
+
+export function musicFolderArtworkRemoveSuccess() {
+  return { type: 'music-folder-artwork-remove-success' as const };
+}
+
+export function musicFolderArtworkRemoveError() {
+  return { type: 'music-folder-artwork-remove-error' as const };
+}
+
 export function musicEmbeddedArtworkRemoveStart() {
   return { type: 'music-embedded-artwork-remove-start' as const };
 }

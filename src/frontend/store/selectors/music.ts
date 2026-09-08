@@ -202,6 +202,12 @@ export function getMusicEmbeddedArtworkRemoveStatus(
   return getMusic(state).embeddedArtworkRemoveStatus;
 }
 
+export function getMusicFolderArtworkRemoveStatus(
+  state: State,
+): FolderArtworkSaveStatus {
+  return getMusic(state).folderArtworkRemoveStatus;
+}
+
 /**
  * All panel filters applied in order — the final track list for the tracks view.
  */

@@ -376,6 +376,23 @@
   cursor: default;
 }
 
+.artworkChangeBtnDanger {
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+
+.artworkChangeBtnDanger:hover:not(:disabled) {
+  background: var(--accent-tint);
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+
+.artworkChangeBtnDangerConfirm,
+.artworkChangeBtnDangerConfirm:hover:not(:disabled) {
+  background: var(--accent);
+  box-shadow: none;
+  color: #fff;
+}
+
 .artworkChangeBtnIcon {
   display: block;
 }

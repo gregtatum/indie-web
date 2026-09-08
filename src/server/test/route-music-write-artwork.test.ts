@@ -672,6 +672,79 @@ describe('POST /music/artwork/embedded/remove — strip embedded pictures', () =
   );
 });
 
+describe('POST /music/artwork/remove — delete the folder image', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  async function removeFolderArtwork(path: string) {
+    return fetch(
+      `${server.baseUrl}/music/artwork/remove?path=${encodeURIComponent(path)}`,
+      { method: 'POST' },
+    );
+  }
+
+  it(
+    'unlinks every recognized folder-artwork variant and clears the index',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Del', 'Album');
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        join(dir, '01.mp3'),
+        buildMp3WithTags({ title: 'One', album: 'Album' }),
+      );
+      await writeFile(join(dir, 'Folder.jpg'), LARGE_JPEG);
+      await writeFile(join(dir, 'cover.png'), LARGE_PNG);
+      await scan(server);
+
+      const res = await removeFolderArtwork('/Del/Album/01.mp3');
+      assert.equal(res.status, 200);
+      const json = (await res.json()) as { removed: string[] };
+      assert.deepEqual(json.removed.sort(), [
+        '/Del/Album/Folder.jpg',
+        '/Del/Album/cover.png',
+      ]);
+
+      assert.deepEqual(await readdir(dir), ['01.mp3']);
+
+      const index = JSON.parse(
+        await readFile(join(server.mountDir, '.music-index.json'), 'utf-8'),
+      ) as {
+        tracks: Array<{ path: string; folderArtworkPath: string | null }>;
+      };
+      const track = index.tracks.find((t) => t.path === '/Del/Album/01.mp3');
+      assert.equal(track?.folderArtworkPath, null);
+    }),
+  );
+
+  it(
+    'is idempotent when there is nothing to remove',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Del', 'Bare');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, '01.mp3'), buildMp3WithTags({ title: 'One' }));
+
+      const res = await removeFolderArtwork('/Del/Bare/01.mp3');
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { removed: [] });
+    }),
+  );
+
+  it(
+    'returns 400 when the path query parameter is missing',
+    withLogs(['Missing path query parameter.'], async () => {
+      const res = await fetch(`${server.baseUrl}/music/artwork/remove`, {
+        method: 'POST',
+      });
+      assert.equal(res.status, 400);
+    }),
+  );
+});
+
 describe('POST /music/artwork — end to end with a library scan', () => {
   let server: TestServer;
   before(async () => {

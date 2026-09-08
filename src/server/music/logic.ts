@@ -841,6 +841,96 @@ export async function updateIndexAfterFolderArtworkWrite(
   }
 }
 
+export async function updateIndexAfterFolderArtworkRemoval(
+  mountPath: MountPath,
+  folderDirClientPath: string,
+): Promise<{
+  status: 'updated' | 'skipped' | 'error';
+  message: string | null;
+}> {
+  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
+  const tmpPath = mountPath.joinOnMount(
+    MUSIC_INDEX_FILENAME + '.artwork-remove.tmp',
+  );
+  if (!indexPath || !tmpPath) {
+    return {
+      status: 'error',
+      message: 'Unexpected: music index path escaped the mount.',
+    };
+  }
+
+  let index: T.MusicIndex;
+  try {
+    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      return { status: 'skipped', message: 'Music index not found.' };
+    }
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to read music index after removing folder artwork.',
+    };
+  }
+  if (index.version !== MUSIC_INDEX_VERSION) {
+    return {
+      status: 'skipped',
+      message: 'Music index version does not match the server version.',
+    };
+  }
+
+  const folderDir = folderDirClientPath.startsWith('/')
+    ? folderDirClientPath
+    : '/' + folderDirClientPath;
+  let changed = false;
+  const tracks = index.tracks.map((track) => {
+    if (dirname(track.path) === folderDir && track.folderArtworkPath !== null) {
+      changed = true;
+      return { ...track, folderArtworkPath: null };
+    }
+    return track;
+  });
+
+  if (!changed) {
+    return {
+      status: 'skipped',
+      message: 'Index had no folder artwork for this directory.',
+    };
+  }
+
+  const updatedIndex: T.MusicIndex = {
+    ...index,
+    scannedAt: new Date().toISOString(),
+    tracks,
+  };
+
+  let renamed = false;
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
+    await fs.rename(tmpPath, indexPath);
+    renamed = true;
+    return { status: 'updated', message: null };
+  } catch (error) {
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to write music index after removing folder artwork.',
+    };
+  } finally {
+    if (!renamed) {
+      await fs.unlink(tmpPath).catch((error: any) => {
+        if (error?.code !== 'ENOENT') {
+          console.error('Failed to clean up temporary music index.', error);
+        }
+      });
+    }
+  }
+}
+
 function isBinary(value: unknown): value is Buffer | Uint8Array {
   return Buffer.isBuffer(value) || ArrayBuffer.isView(value);
 }
