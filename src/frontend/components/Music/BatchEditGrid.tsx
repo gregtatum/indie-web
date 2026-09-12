@@ -394,6 +394,10 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
   }
 
   React.useEffect(() => {
+    gridRef.current?.focus();
+  }, []);
+
+  React.useEffect(() => {
     function moveRowFocus(direction: 1 | -1, extend: boolean) {
       const currentRowOrder = rowOrderRef.current;
       if (currentRowOrder.length === 0) {
