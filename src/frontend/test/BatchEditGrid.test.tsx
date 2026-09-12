@@ -145,10 +145,20 @@ describe('<BatchEditGrid> with real server', () => {
     getCellText('Artist B');
     expect(screen.getAllByText('Album A').length).toBeGreaterThan(0);
 
-    // The sidebar reuses the shared selection: with both rows still selected
-    // and sharing an album, it shows the existing bulk "shared album" editor
-    // (the same one EditTrackModal already renders for this case).
-    expect(screen.getByRole('heading', { name: 'Album A' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Song A' })).toBeTruthy();
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
+  }, 30_000);
+
+  it('opens with only the first track and field active, not the whole frozen set', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
+
+    const activeCells = document.querySelectorAll('.musicBatchEditCell.active');
+    expect(activeCells).toHaveLength(1);
+    expect(activeCells[0].textContent).toBe('1');
   }, 30_000);
 
   it('autosaves a single cell without touching other tracks', async () => {
@@ -156,15 +166,12 @@ describe('<BatchEditGrid> with real server', () => {
     const { store } = await setup();
     await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
 
-    // Clicking a track's field selects just that track and makes the field
-    // the active one — a field can only ever be open on a selected track.
     fireEvent.click(getCellText('Song A'));
     const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
     grid.focus();
     fireEvent.keyDown(document.body, { key: 'Enter' });
 
-    // The sidebar can also show a "Song A" title input for the single
-    // selected track, so scope the query to the grid.
+    // Scoped to the grid — the sidebar also has a "Song A" title input.
     const input = await within(grid).findByDisplayValue('Song A');
     fireEvent.change(input, { target: { value: 'Retitled A' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -172,7 +179,6 @@ describe('<BatchEditGrid> with real server', () => {
     await waitFor(async () => {
       expect((await fetchIndexTrack('/a.mp3'))?.title).toBe('Retitled A');
     });
-    // The other row's title is untouched — only one track was selected.
     expect((await fetchIndexTrack('/b.mp3'))?.title).toBe('Song B');
     getCellText('Retitled A');
     getCellText('Song B');
@@ -191,19 +197,16 @@ describe('<BatchEditGrid> with real server', () => {
       );
     }
 
-    // Clicking the Artist field selects just that track and activates Artist.
     fireEvent.click(getCellText('Artist A'));
     const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
     grid.focus();
     expect(activeCellText()).toBe('Artist A');
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
 
-    // Down moves the selection to the next track, keeping Artist active.
     fireEvent.keyDown(document.body, { key: 'ArrowDown' });
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/b.mp3']);
     expect(activeCellText()).toBe('Artist B');
 
-    // Left moves the active field back to Title, without touching selection.
     fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
     expect(activeCellText()).toBe('Song B');
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/b.mp3']);
@@ -214,15 +217,18 @@ describe('<BatchEditGrid> with real server', () => {
     const { store } = await setup();
     await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
 
-    // Both tracks are already selected — the frozen Batch Edit set — so
-    // typing right away should bulk-apply to all of them.
+    fireEvent.click(getCellText('Artist A'));
+    fireEvent.click(getCellText('Artist B'), { shiftKey: true });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/a.mp3',
+      '/b.mp3',
+    ]);
+
     const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
     grid.focus();
-    fireEvent.keyDown(document.body, { key: 'ArrowRight' }); // Track # -> Title
-    fireEvent.keyDown(document.body, { key: 'ArrowRight' }); // Title -> Artist
     fireEvent.keyDown(document.body, { key: 'x' });
 
-    const input = await screen.findByDisplayValue('x');
+    const input = await within(grid).findByDisplayValue('x');
     fireEvent.change(input, { target: { value: 'New Artist' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -265,16 +271,12 @@ describe('<BatchEditGrid> with real server', () => {
     fireEvent.click(titleHeader);
     expect(titleOrder()).toEqual(['Alpha', 'Bravo']);
 
-    // A second click is a two-state toggle: it reverses to descending...
     fireEvent.click(titleHeader);
     expect(titleOrder()).toEqual(['Bravo', 'Alpha']);
-    // ...and a third click goes back to ascending (no third "unsorted" state).
     fireEvent.click(titleHeader);
     expect(titleOrder()).toEqual(['Alpha', 'Bravo']);
 
-    // Editing the sorted column's value doesn't reorder rows mid-session: a
-    // live re-sort would move this row (now "Charlie") after "Bravo".
-    fireEvent.click(getCellText('Alpha')); // row 0 = b.mp3, currently "Alpha"
+    fireEvent.click(getCellText('Alpha'));
     const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
     grid.focus();
     fireEvent.keyDown(document.body, { key: 'Enter' });
@@ -302,7 +304,7 @@ describe('<BatchEditGrid> with real server', () => {
     expect(screen.queryByRole('columnheader', { name: 'Genre' })).toBeNull();
   }, 30_000);
 
-  it('closes back to the normal library view and keeps the selection', async () => {
+  it('closes back to the normal library view', async () => {
     await writeAlbumA();
     const { store } = await setup();
     await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
@@ -311,9 +313,6 @@ describe('<BatchEditGrid> with real server', () => {
 
     expect(screen.queryByText(/Batch Edit ·/)).toBeNull();
     expect(screen.getByRole('listbox', { name: 'genre' })).toBeTruthy();
-    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
-      '/a.mp3',
-      '/b.mp3',
-    ]);
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
   }, 30_000);
 });

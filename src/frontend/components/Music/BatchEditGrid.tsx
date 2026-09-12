@@ -15,18 +15,14 @@ const ROW_HEIGHT = 32;
 
 interface EditingState {
   value: string;
-  /** The value before this edit session, so an unchanged commit is a no-op. */
   initialValue: string;
-  /** "Mixed" when the selected tracks don't all share the same starting value. */
   placeholder: string;
   columnIndex: number;
-  /** The selection this edit applies to — captured once, at edit start. */
   paths: string[];
 }
 
 interface CellStatus {
   status: 'saving' | 'error';
-  /** The value that failed to save, so clicking to retry resends the same thing. */
   value: string;
 }
 
@@ -79,9 +75,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     return map;
   }, [tracks]);
 
-  // The row order is frozen on entry (see BATCH_EDIT_PLAN.md "Row order").
-  // Re-mounting BatchEditGrid (leaving and re-entering Batch Edit) is what
-  // picks up a new trackPaths set — this never re-reads it while mounted.
   const [rowOrder, setRowOrder] = React.useState<string[]>(() =>
     tracks.filter((t) => trackPaths.includes(t.path)).map((t) => t.path),
   );
@@ -103,10 +96,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     direction: 'asc' | 'desc';
   } | null>(null);
 
-  // The field cursor (which column) is independent of row selection. The row
-  // side of "the cursor" IS the selection — moving it up/down changes which
-  // track(s) are selected, rather than tracking a separate row index, so a
-  // field can never be "open" on a track that isn't selected.
   const [cursorColumn, setCursorColumnState] = React.useState(0);
   const cursorColumnRef = React.useRef(0);
   function setCursorColumn(index: number) {
@@ -114,10 +103,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     setCursorColumnState(index);
   }
 
-  // The keyboard-focused row (mirrors Tracks' focusedPath/anchorPath model).
-  // For a single selection this is that track; for a shift-extended range
-  // it's the leading edge, and it's always the row that hosts the live
-  // <input> when multiple rows are selected for a bulk edit.
   const [focusedPath, setFocusedPathState] = React.useState<string | null>(
     null,
   );
@@ -128,8 +113,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
   }
   const anchorPathRef = React.useRef<string | null>(null);
 
-  // Sync focusedPath from Redux when selection has 0 or 1 item, so selection
-  // changes made elsewhere (e.g. the sidebar) stay in sync.
   React.useEffect(() => {
     if (selectedPaths.length === 1) {
       const only = selectedPaths[0];
@@ -145,11 +128,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
         anchorPathRef.current = null;
       }
     } else if (focusedPathRef.current === null) {
-      // Batch Edit is entered with several tracks already selected (the
-      // frozen set from the context menu), so there's no single row to sync
-      // to above. Seed focus to one of them so typing right away still
-      // knows which selection to bulk-edit, instead of silently no-oping
-      // until the user clicks or arrow-keys onto a row first.
       const seed = selectedPaths[selectedPaths.length - 1];
       focusedPathRef.current = seed;
       setFocusedPathState(seed);
@@ -257,10 +235,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     }
   }
 
-  // Ref-based (not closing over `columns`/`selectedPaths` directly) so the
-  // single persistent document keydown listener below always sees current
-  // values. Editing always targets the focused row's current selection —
-  // one track edits just that track, several bulk-apply to all of them.
   function startEdit(seedChar?: string) {
     const path = focusedPathRef.current;
     const columnDef = columnsRef.current[cursorColumnRef.current];
@@ -414,12 +388,8 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     switch (event.key) {
       case 'Enter':
         event.preventDefault();
-        // Stop this same keydown from bubbling to the document-level grid
-        // listener below — by the time it would arrive there, the
-        // `gridRef.current?.focus()` call a few lines down has already
-        // moved focus onto the grid container, which would otherwise make
-        // that listener treat this identical event as a fresh "start
-        // editing the cursor cell" command.
+        // Without this, the event bubbles to the grid's own keydown handler
+        // after focus() below moves onto it, re-triggering "start edit".
         event.stopPropagation();
         pendingMoveRef.current = { type: 'down' };
         gridRef.current?.focus();
@@ -504,8 +474,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
           break;
         case 'ArrowLeft':
         case 'Shift+ArrowLeft':
-          // Left/Right only ever move the field cursor — Shift never extends
-          // the row selection here, unlike Up/Down.
           event.preventDefault();
           if (currentColumn > 0) {
             setCursorColumn(currentColumn - 1);
@@ -535,9 +503,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
           startEdit();
           break;
         default: {
-          // A plain (optionally shifted, for capitals) single character opens
-          // the cell for editing, spreadsheet-style. Anything with Meta,
-          // Control, or Alt held is left alone as a potential shortcut.
           const upperKey =
             event.key.length === 1 ? event.key.toUpperCase() : null;
           const keyString = getKeyboardString(event);
@@ -556,8 +521,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     return () => {
       document.body.removeEventListener('keydown', handleKeyDown);
     };
-    // Reads current rowOrder/columns/selection via refs and getState(), so
-    // this listener never needs to be re-registered.
   }, []);
 
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
@@ -655,7 +618,6 @@ interface BatchEditRowProps {
   track: T.TrackMetadata | undefined;
   columns: BatchEditColumn[];
   isSelected: boolean;
-  /** Whether this row hosts the live <input> for the current field. */
   isFocused: boolean;
   cursorColumn: number;
   editing: EditingState | null;
@@ -706,10 +668,6 @@ function BatchEditRow({
     >
       {columns.map((column, columnIndex) => {
         const isActiveColumn = columnIndex === cursorColumn;
-        // The field is only ever "open" on a selected track — a background
-        // box shows on every selected row in the active column (they'll all
-        // update together), and the one live <input> lives on the focused
-        // row.
         const showActiveBox = isSelected && isActiveColumn;
         const isEditingHere = editing !== null && isFocused && isActiveColumn;
         const statusKey = `${path}:${column.frameId}`;

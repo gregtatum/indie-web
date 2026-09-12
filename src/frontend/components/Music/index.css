@@ -308,8 +308,6 @@
   overflow: hidden;
   font-size: var(--music-item-font-size);
 
-  /* The field that's open for editing — always on a selected (so purple)
-     row — reads as an input via a solid contrasting fill, not a border. */
   &.active {
     margin: -3px -5px;
     padding: 3px 5px;

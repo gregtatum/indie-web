@@ -27,8 +27,11 @@ single/bulk track editor, reused as-is) for anything deeper.
   "set one value on everyone" vs. "edit each one's own values").
 - Clicking it freezes the current `selectedTrackPaths` into new state
   `batchEditTrackPaths: string[] | null` (action `setMusicBatchEditTrackPaths`).
-  `selectedTrackPaths` itself is untouched, so the sidebar immediately shows
-  the bulk editor for the whole frozen set.
+  `selectedTrackPaths` is then collapsed to just the first track of that set
+  (in library order, not click order), so the grid opens with a single row
+  and field active — not the whole set bulk-editing from the first
+  keystroke. (Revised from the original design, which left the full
+  selection in place.)
 
 ## Layout / lifecycle
 

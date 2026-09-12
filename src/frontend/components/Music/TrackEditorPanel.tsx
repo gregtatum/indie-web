@@ -61,16 +61,10 @@ const INDEXED_DETAIL_FIELD_KEYS: Partial<
 
 export interface TrackEditorPanelProps {
   trackPath: string | null;
-  /**
-   * The real close action. Pass null when there is no way to dismiss this
-   * panel (e.g. the Batch Edit sidebar, which always reflects the current
-   * selection) — the dirty-confirmation UI then simply never triggers.
-   */
   onClose: (() => void) | null;
 }
 
 export interface TrackEditorPanelHandle {
-  /** Runs the same dirty-confirmation gate the modal's close button/Escape used to. */
   requestClose(): void;
 }
 
