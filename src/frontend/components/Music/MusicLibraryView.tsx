@@ -279,6 +279,7 @@ function useColumnWidths() {
 
 function TracksView() {
   const { columnWidths, setColumnWidths } = useColumnWidths();
+  const [scrollbarWidth, setScrollbarWidth] = React.useState(0);
 
   return (
     <div
@@ -287,11 +288,12 @@ function TracksView() {
         {
           '--column-artist': `${columnWidths.artist}px`,
           '--column-album': `${columnWidths.album}px`,
+          '--scrollbar-width': `${scrollbarWidth}px`,
         } as React.CSSProperties
       }
     >
       <TracksHeader setColumnWidths={setColumnWidths} />
-      <Tracks />
+      <Tracks onScrollbarWidthChange={setScrollbarWidth} />
     </div>
   );
 }
@@ -1061,7 +1063,11 @@ function FilterPanelItem({
 
 const sizeEstimate = 32;
 
-function Tracks() {
+interface TracksProps {
+  onScrollbarWidthChange: (width: number) => void;
+}
+
+function Tracks({ onScrollbarWidthChange }: TracksProps) {
   const tracks = $$.getFilteredMusicTracks();
   const selectedPaths = $$.getMusicSelectedTrackPaths();
   const playingPath = $$.getMusicPlaybackTrackPath();
@@ -1071,6 +1077,18 @@ function Tracks() {
   const contextMenuRef = React.useRef<TrackContextMenuHandle | null>(null);
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
+
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (!el) {
+      return undefined;
+    }
+    const observer = new ResizeObserver(() => {
+      onScrollbarWidthChange(el.offsetWidth - el.clientWidth);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onScrollbarWidthChange]);
 
   // focusedPath is the keyboard cursor and the anchor for Enter/Space playback.
   // focusedPathRef gives the keyboard handler synchronous access.

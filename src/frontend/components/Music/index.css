@@ -641,6 +641,7 @@
   display: flex;
   gap: var(--music-gap);
   padding: var(--music-padding-v) var(--music-padding-h);
+  padding-right: calc(var(--music-padding-h) + var(--scrollbar-width));
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
   user-select: none;
