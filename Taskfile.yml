@@ -35,11 +35,13 @@ tasks:
       - npx npm-check-updates
 
   start:
-    desc: Start one of the Indie Web projects.
+    desc: |
+      Start one of the Indie Web projects.
+      task start
+      task start -- --site floppydisk
+      task start -- --site browserchords
     cmds:
-      - |
-        eval "$(node src/shared/scripts/select-site.mjs)"
-        SITE="$SITE" task --parallel start-webpack start-docs-watch
+      - node src/shared/scripts/start.mjs {{.CLI_ARGS}}
 
   start-webpack:
     desc: Start Webpack server for the selected site
