@@ -307,6 +307,7 @@
   min-width: 0;
   overflow: hidden;
   font-size: var(--music-item-font-size);
+  scroll-margin-inline: var(--music-gap);
 
   &.active {
     margin: -3px -5px;

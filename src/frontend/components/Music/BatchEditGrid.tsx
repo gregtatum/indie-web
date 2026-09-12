@@ -502,6 +502,25 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     overscan: 8,
   });
 
+  const virtualizerRef = React.useRef(virtualizer);
+  virtualizerRef.current = virtualizer;
+
+  const focusedRowIndex = focusedPath ? rowOrder.indexOf(focusedPath) : -1;
+
+  React.useEffect(() => {
+    if (focusedRowIndex >= 0) {
+      virtualizerRef.current.scrollToIndex(focusedRowIndex, {
+        align: 'auto',
+      });
+    }
+  }, [focusedRowIndex]);
+
+  React.useEffect(() => {
+    gridRef.current
+      ?.querySelector('.musicBatchEditCell.active')
+      ?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }, [cursorColumn, focusedRowIndex]);
+
   const [columnMenuFor, setColumnMenuFor] = React.useState<{
     rect: DOMRect;
   } | null>(null);
