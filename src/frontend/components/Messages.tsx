@@ -34,14 +34,16 @@ export function Messages() {
     <div className="messages">
       {messages.map(({ message, generation }) => (
         <div className="messagesMessage" key={generation}>
-          {message}
+          <span className="messagesMessageText">{message}</span>
           <button
             type="button"
+            className="messagesDismissButton"
             onClick={() => {
               dispatch(A.dismissMessage(generation));
             }}
+            aria-label="Dismiss"
           >
-            Dismiss
+            <img src="/svg/xmark.svg" alt="" />
           </button>
         </div>
       ))}

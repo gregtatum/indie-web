@@ -11,24 +11,50 @@
 
 .messagesMessage {
   pointer-events: auto;
-  padding: 8px 14px;
-  background-color: #bed7ff;
-  border: 1px solid #000;
-  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  background: var(--accent-wash);
+  color: var(--ink);
+  border: 1px solid var(--accent);
+  border-radius: var(--button-border-radius);
+  box-shadow: 0 4px 16px #00000026;
   margin: 7px;
-  animation: fadein 500ms;
-}
-
-.messagesMessage button {
-  background: #fff;
-  display: inline-block;
-  margin-inline-start: 14px;
-  border-radius: 3px;
-  padding: 4px 10px;
   font-size: var(--font-size-small);
-  border: 1px solid #8c8c8c;
+  animation: fadein 200ms;
 }
 
-.messagesMessage button:hover {
-  background-color: #eee;
+.messagesMessageText {
+  max-width: 420px;
+}
+
+.messagesDismissButton {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 0;
+  background: none;
+  border-radius: var(--button-border-radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+}
+
+.messagesDismissButton:hover {
+  background: #0001;
+  opacity: 1;
+}
+
+.messagesDismissButton:focus {
+  outline: var(--outline-focus);
+  opacity: 1;
+}
+
+.messagesDismissButton > img {
+  width: var(--icon-size);
+  height: var(--icon-size);
 }

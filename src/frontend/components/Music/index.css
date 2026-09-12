@@ -121,7 +121,7 @@
 }
 
 .musicViewToggleButton-active {
-  background: #ece6fb;
+  background: var(--accent-wash);
   color: var(--accent-strong);
   box-shadow: 0 1px 2px #00000024;
 }

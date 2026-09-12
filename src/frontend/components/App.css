@@ -36,12 +36,14 @@
   --accent: #7c3aed;
   --accent-strong: #5b28d6;
   --accent-tint: #7c3aed14;
+  --accent-wash: #ece6fb;
   --line: #e6e6e6;
   --line-strong: #bbb;
   --font-display: 'Hanken Grotesk', system-ui, sans-serif;
 
   --ink: #111;
   --muted: #595959;
+  --raised: #fafafa;
   --syntax-string: #0f5132;
 
   --accent-color: var(--accent);
