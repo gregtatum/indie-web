@@ -673,7 +673,7 @@ function BatchEditRow({
     >
       {columns.map((column, columnIndex) => {
         const isActiveColumn = columnIndex === cursorColumn;
-        const showActiveBox = isSelected && isActiveColumn;
+        const showActiveBox = isFocused && isActiveColumn;
         const isEditingHere = editing !== null && isFocused && isActiveColumn;
         const statusKey = `${path}:${column.frameId}`;
         const status = cellStatus.get(statusKey);
@@ -708,7 +708,7 @@ function BatchEditRow({
                 inputMode={column.numeric ? 'numeric' : 'text'}
               />
             ) : (
-              <span className="musicBatchEditCellText">{value}</span>
+              <span className="musicBatchEditCellText">{value || ' '}</span>
             )}
             {status?.status === 'saving' ? (
               <span className="musicBatchEditCellSaving" aria-hidden="true" />
