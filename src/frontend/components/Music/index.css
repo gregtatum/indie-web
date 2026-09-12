@@ -6,7 +6,6 @@
   --music-label-font-size: 11px;
   --music-meta-font-size: 13px;
   --music-item-font-size: 14px;
-  --success-color: green;
   --error-color: red;
 
   /* Surfaces */
@@ -52,18 +51,6 @@
 .musicToolbar-inHeader {
   padding: 0;
   border-bottom: none;
-}
-
-.musicScanStatus {
-  font-size: var(--music-meta-font-size);
-}
-
-.musicScanStatus-done {
-  color: var(--success-color);
-}
-
-.musicScanStatus-error {
-  color: var(--error-color);
 }
 
 .musicScanLibraryButton-rescan {

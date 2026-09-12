@@ -12,10 +12,6 @@ import { CURRENT_MUSIC_INDEX_VERSION } from 'frontend/logic/music/music-index-up
 import './index.css';
 
 type ScanPhase = 'idle' | 'scanning' | 'done' | 'error';
-interface ScanProgress {
-  scanCount: number;
-  total: number | null;
-}
 
 export function Music() {
   const server = $$.getCurrentServerOrNull();
@@ -35,12 +31,10 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const { dispatch } = Hooks.useStore();
   const { isFilesView } = useMusicUrlSerialization();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
-  const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [completedScanCount, setCompletedScanCount] = React.useState(0);
-  const [scanProgress, setScanProgress] = React.useState<ScanProgress | null>(
-    null,
-  );
   const eventSourceRef = React.useRef<EventSource | null>(null);
+  const scanMessageGeneration = React.useRef<number | undefined>(undefined);
+  const scanTotalRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     return () => {
@@ -53,8 +47,10 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
       return;
     }
     setScanPhase('scanning');
-    setScanProgress({ scanCount: 0, total: null });
-    setStatusMessage(null);
+    scanTotalRef.current = null;
+    scanMessageGeneration.current = dispatch(
+      A.addMessage({ message: 'Scanning…' }),
+    );
 
     const eventSource = new EventSource(
       `${server.url}/music/music-index/scan${force ? '?force=true' : ''}`,
@@ -65,20 +61,36 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
       const data = JSON.parse(event.data);
       switch (data.type) {
         case 'total':
-          setScanProgress({ scanCount: 0, total: data.count });
+          scanTotalRef.current = data.count;
+          dispatch(
+            A.addMessage({
+              message: `Scanning… 0 / ${data.count.toLocaleString()} files`,
+              generation: scanMessageGeneration.current,
+            }),
+          );
           break;
-        case 'progress':
-          setScanProgress((p) => ({
-            total: p?.total ?? null,
-            scanCount: data.scanCount,
-          }));
+        case 'progress': {
+          const total = scanTotalRef.current;
+          dispatch(
+            A.addMessage({
+              message:
+                total === null
+                  ? 'Scanning…'
+                  : `Scanning… ${data.scanCount.toLocaleString()} / ${total.toLocaleString()} files`,
+              generation: scanMessageGeneration.current,
+            }),
+          );
           break;
+        }
         case 'done':
           eventSource.close();
           setScanPhase('done');
-          setScanProgress(null);
-          setStatusMessage(
-            `Found ${data.tracks.length.toLocaleString()} tracks.`,
+          dispatch(
+            A.addMessage({
+              message: `Found ${data.tracks.length.toLocaleString()} tracks.`,
+              generation: scanMessageGeneration.current,
+              timeout: true,
+            }),
           );
           dispatch(A.setMusicTracks(data.tracks, false));
           setCompletedScanCount((count) => count + 1);
@@ -86,8 +98,12 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
         case 'error':
           eventSource.close();
           setScanPhase('error');
-          setScanProgress(null);
-          setStatusMessage(data.message || 'Scan failed.');
+          dispatch(
+            A.addMessage({
+              message: data.message || 'Scan failed.',
+              generation: scanMessageGeneration.current,
+            }),
+          );
           break;
         default:
           break;
@@ -97,20 +113,13 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     eventSource.onerror = () => {
       eventSource.close();
       setScanPhase('error');
-      setScanProgress(null);
-      setStatusMessage('Could not connect to the server.');
+      dispatch(
+        A.addMessage({
+          message: 'Could not connect to the server.',
+          generation: scanMessageGeneration.current,
+        }),
+      );
     };
-  }
-
-  let displayMessage: string | null = null;
-  if (scanPhase === 'scanning') {
-    if (scanProgress?.total !== null && scanProgress?.total !== undefined) {
-      displayMessage = `Scanning… ${scanProgress.scanCount.toLocaleString()} / ${scanProgress.total.toLocaleString()} files`;
-    } else {
-      displayMessage = 'Scanning…';
-    }
-  } else {
-    displayMessage = statusMessage;
   }
 
   // A rescan can't produce current-format data from a server that doesn't
@@ -160,11 +169,6 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
       ) : (
         scanButton
       )}
-      {displayMessage ? (
-        <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
-          {displayMessage}
-        </span>
-      ) : null}
       {serverOutdated ? (
         <a
           className="button button-primary"
