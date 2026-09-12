@@ -607,6 +607,26 @@ interface BatchEditRowProps {
   onInputBlur: () => void;
 }
 
+function findNearestColumnIndex(row: HTMLElement, clientX: number): number {
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+  const cells = row.children;
+  for (let i = 0; i < cells.length; i++) {
+    const rect = cells[i].getBoundingClientRect();
+    let distance = 0;
+    if (clientX < rect.left) {
+      distance = rect.left - clientX;
+    } else if (clientX > rect.right) {
+      distance = clientX - rect.right;
+    }
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = i;
+    }
+  }
+  return nearestIndex;
+}
+
 function BatchEditRow({
   path,
   track,
@@ -624,6 +644,18 @@ function BatchEditRow({
   onInputKeyDown,
   onInputBlur,
 }: BatchEditRowProps) {
+  function handleRowClick(event: React.MouseEvent<HTMLDivElement>) {
+    // Only reached by a click that missed every cell (row gap/padding).
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    const columnIndex = findNearestColumnIndex(
+      event.currentTarget,
+      event.clientX,
+    );
+    onCellClick(path, columnIndex, event);
+  }
+
   return (
     <div
       className={`musicBatchEditRow${isSelected ? ' selected' : ''}`}
@@ -637,6 +669,7 @@ function BatchEditRow({
         transform: `translateY(${offsetTop}px)`,
         gridTemplateColumns,
       }}
+      onClick={handleRowClick}
     >
       {columns.map((column, columnIndex) => {
         const isActiveColumn = columnIndex === cursorColumn;

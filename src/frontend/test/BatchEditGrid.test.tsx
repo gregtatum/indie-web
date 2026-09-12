@@ -212,6 +212,44 @@ describe('<BatchEditGrid> with real server', () => {
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/b.mp3']);
   }, 30_000);
 
+  it('a click that misses every cell falls back to the nearest one', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    const row = getCellText('Song A').closest(
+      '.musicBatchEditRow',
+    ) as HTMLElement;
+    const cells = row.querySelectorAll<HTMLElement>('.musicBatchEditCell');
+    expect(cells.length).toBe(6);
+    for (const [index, cell] of cells.entries()) {
+      jest.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+        left: index * 100,
+        right: index * 100 + 90,
+        top: 0,
+        bottom: 32,
+        width: 90,
+        height: 32,
+        x: index * 100,
+        y: 0,
+        toJSON() {
+          return this;
+        },
+      } as DOMRect);
+    }
+
+    // Between the Artist cell (index 2, right edge 290) and the Album Artist
+    // cell (index 3, left edge 300) — closer to Artist.
+    fireEvent.click(row, { clientX: 292 });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
+    expect(
+      document.querySelector(
+        '.musicBatchEditCell.active .musicBatchEditCellText',
+      )?.textContent,
+    ).toBe('Artist A');
+  }, 30_000);
+
   it('leaves Tab to the browser instead of cycling fields', async () => {
     await writeAlbumA();
     const { store } = await setup();
