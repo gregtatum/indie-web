@@ -34,6 +34,7 @@ function getMetadataFromCache(
  */
 
 const DEFAULT_MESSAGE_DELAY = 3000;
+const pendingMessageTimeouts = new Map<number, ReturnType<typeof setTimeout>>();
 
 /**
  * Plain actions defined in thunks.tsx should either be APICalls, or internal.
@@ -971,13 +972,22 @@ export function addMessage({
 }: MessageArgs): Thunk<number> {
   return (dispatch) => {
     dispatch(PlainInternal.addMessage(message, generation));
+
+    const existingTimeout = pendingMessageTimeouts.get(generation);
+    if (existingTimeout !== undefined) {
+      clearTimeout(existingTimeout);
+      pendingMessageTimeouts.delete(generation);
+    }
+
     if (timeout) {
-      setTimeout(
+      const timeoutId = setTimeout(
         () => {
+          pendingMessageTimeouts.delete(generation);
           dispatch(Plain.dismissMessage(generation));
         },
         typeof timeout === 'number' ? timeout : DEFAULT_MESSAGE_DELAY,
       );
+      pendingMessageTimeouts.set(generation, timeoutId);
     }
     return generation;
   };
