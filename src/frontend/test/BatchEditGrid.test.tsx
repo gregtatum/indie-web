@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -156,27 +156,80 @@ describe('<BatchEditGrid> with real server', () => {
     const { store } = await setup();
     await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
 
+    // Clicking a track's field selects just that track and makes the field
+    // the active one — a field can only ever be open on a selected track.
+    fireEvent.click(getCellText('Song A'));
     const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
     grid.focus();
+    fireEvent.keyDown(document.body, { key: 'Enter' });
 
-    // First key press only seeds the cursor at (row 0, column 0).
-    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
-    // Second moves the cursor onto the Title column.
-    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
-    // Typing a printable character opens the cell for editing, seeded with it.
-    fireEvent.keyDown(document.body, { key: 'x' });
-
-    const input = await screen.findByDisplayValue('x');
+    // The sidebar can also show a "Song A" title input for the single
+    // selected track, so scope the query to the grid.
+    const input = await within(grid).findByDisplayValue('Song A');
     fireEvent.change(input, { target: { value: 'Retitled A' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
     await waitFor(async () => {
       expect((await fetchIndexTrack('/a.mp3'))?.title).toBe('Retitled A');
     });
-    // The other row's title is untouched — this was a single-track write.
+    // The other row's title is untouched — only one track was selected.
     expect((await fetchIndexTrack('/b.mp3'))?.title).toBe('Song B');
     getCellText('Retitled A');
     getCellText('Song B');
+  }, 30_000);
+
+  it('moves the row selection with Up/Down but only the field with Left/Right', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    function activeCellText(): string | null {
+      return (
+        document.querySelector(
+          '.musicBatchEditCell.active .musicBatchEditCellText',
+        )?.textContent ?? null
+      );
+    }
+
+    // Clicking the Artist field selects just that track and activates Artist.
+    fireEvent.click(getCellText('Artist A'));
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    expect(activeCellText()).toBe('Artist A');
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
+
+    // Down moves the selection to the next track, keeping Artist active.
+    fireEvent.keyDown(document.body, { key: 'ArrowDown' });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/b.mp3']);
+    expect(activeCellText()).toBe('Artist B');
+
+    // Left moves the active field back to Title, without touching selection.
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+    expect(activeCellText()).toBe('Song B');
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/b.mp3']);
+  }, 30_000);
+
+  it('bulk-edits every track in a multi-selection', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    // Both tracks are already selected — the frozen Batch Edit set — so
+    // typing right away should bulk-apply to all of them.
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' }); // Track # -> Title
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' }); // Title -> Artist
+    fireEvent.keyDown(document.body, { key: 'x' });
+
+    const input = await screen.findByDisplayValue('x');
+    fireEvent.change(input, { target: { value: 'New Artist' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(async () => {
+      expect((await fetchIndexTrack('/a.mp3'))?.artist).toBe('New Artist');
+    });
+    expect((await fetchIndexTrack('/b.mp3'))?.artist).toBe('New Artist');
   }, 30_000);
 
   it('sidebar shows the single-track editor when only one row is selected', async () => {
@@ -221,12 +274,11 @@ describe('<BatchEditGrid> with real server', () => {
 
     // Editing the sorted column's value doesn't reorder rows mid-session: a
     // live re-sort would move this row (now "Charlie") after "Bravo".
+    fireEvent.click(getCellText('Alpha')); // row 0 = b.mp3, currently "Alpha"
     const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
     grid.focus();
-    fireEvent.keyDown(document.body, { key: 'ArrowRight' }); // seed (0,0)
-    fireEvent.keyDown(document.body, { key: 'ArrowRight' }); // -> title column
-    fireEvent.keyDown(document.body, { key: 'C' });
-    const input = await screen.findByDisplayValue('C');
+    fireEvent.keyDown(document.body, { key: 'Enter' });
+    const input = await within(grid).findByDisplayValue('Alpha');
     fireEvent.change(input, { target: { value: 'Charlie' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 

@@ -307,17 +307,20 @@
   min-width: 0;
   overflow: hidden;
   font-size: var(--music-item-font-size);
-  cursor: cell;
 
-  &.cursor {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
+  /* The field that's open for editing — always on a selected (so purple)
+     row — reads as an input via a solid contrasting fill, not a border. */
+  &.active {
+    margin: -3px -5px;
+    padding: 3px 5px;
+    border-radius: 4px;
+    background: var(--modal-bg);
+    color: var(--text-body);
   }
 
   &.error {
     outline: 2px solid var(--error-color);
     outline-offset: -2px;
-    cursor: pointer;
   }
 }
 
@@ -333,15 +336,21 @@
 }
 
 .musicBatchEditCellInput {
+  display: block;
   width: 100%;
   box-sizing: border-box;
   border: none;
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline: none;
   padding: 0;
+  margin: 0;
   font: inherit;
   color: inherit;
-  background: var(--modal-bg);
+  background: transparent;
+}
+
+.musicBatchEditCellInput::placeholder {
+  color: var(--muted);
+  font-style: italic;
 }
 
 .musicBatchEditCellSaving {
