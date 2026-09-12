@@ -9,6 +9,7 @@ import { useMusicUrlSerialization } from './UrlSerialization';
 import { Tooltip } from '../Tooltip';
 import { HeaderToolbarSlotContext } from '../Header';
 import { CURRENT_MUSIC_INDEX_VERSION } from 'frontend/logic/music/music-index-upgraders';
+import { getGeneration } from 'frontend/utils';
 import './index.css';
 
 type ScanPhase = 'idle' | 'scanning' | 'done' | 'error';
@@ -33,7 +34,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
   const [completedScanCount, setCompletedScanCount] = React.useState(0);
   const eventSourceRef = React.useRef<EventSource | null>(null);
-  const scanMessageGeneration = React.useRef<number | undefined>(undefined);
+  const [scanMessageGeneration] = React.useState(getGeneration);
   const scanTotalRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
@@ -48,8 +49,8 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     }
     setScanPhase('scanning');
     scanTotalRef.current = null;
-    scanMessageGeneration.current = dispatch(
-      A.addMessage({ message: 'Scanning…' }),
+    dispatch(
+      A.addMessage({ message: 'Scanning…', generation: scanMessageGeneration }),
     );
 
     const eventSource = new EventSource(
@@ -65,7 +66,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
           dispatch(
             A.addMessage({
               message: `Scanning… 0 / ${data.count.toLocaleString()} files`,
-              generation: scanMessageGeneration.current,
+              generation: scanMessageGeneration,
             }),
           );
           break;
@@ -77,7 +78,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
                 total === null
                   ? 'Scanning…'
                   : `Scanning… ${data.scanCount.toLocaleString()} / ${total.toLocaleString()} files`,
-              generation: scanMessageGeneration.current,
+              generation: scanMessageGeneration,
             }),
           );
           break;
@@ -88,7 +89,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
           dispatch(
             A.addMessage({
               message: `Found ${data.tracks.length.toLocaleString()} tracks.`,
-              generation: scanMessageGeneration.current,
+              generation: scanMessageGeneration,
               timeout: true,
             }),
           );
@@ -101,7 +102,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
           dispatch(
             A.addMessage({
               message: data.message || 'Scan failed.',
-              generation: scanMessageGeneration.current,
+              generation: scanMessageGeneration,
             }),
           );
           break;
@@ -116,7 +117,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
       dispatch(
         A.addMessage({
           message: 'Could not connect to the server.',
-          generation: scanMessageGeneration.current,
+          generation: scanMessageGeneration,
         }),
       );
     };
