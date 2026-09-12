@@ -5,6 +5,7 @@ import {
   useFolderArtworkSave,
   useFolderArtworkRemove,
   useFolderArtworkDrop,
+  useFolderArtworkPaste,
 } from 'frontend/hooks/useFolderArtworkDrop';
 import { getDirName, getPathFileName } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
@@ -733,6 +734,13 @@ export function ArtworkTab({
   const { getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
   const version = $$.getMusicFolderArtworkVersion();
+  const activeTab = $$.getMusicEditTab();
+
+  useFolderArtworkPaste({
+    trackPath,
+    canEdit: canEditFolderArtwork,
+    isActive: () => activeTab === 'artwork',
+  });
 
   const embeddedArtwork = React.useMemo(() => {
     if (hideEmbeddedArtwork) {

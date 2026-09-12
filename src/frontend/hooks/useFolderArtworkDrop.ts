@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { A, $$, Hooks } from 'frontend';
-import { getDirName } from 'frontend/utils';
+import { getDirName, getKeyboardString } from 'frontend/utils';
 import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
 
 /**
@@ -16,6 +16,35 @@ export function artworkFileFromDrop(
   return (
     files.find((file) => file.type.startsWith('image/')) ?? files[0] ?? null
   );
+}
+
+/**
+ * Pull an image off the async clipboard. Mirrors `artworkFileFromDrop`: it takes
+ * the first image the clipboard offers. Returns null when the clipboard holds no
+ * image, or the read is unavailable/denied — no permission, the document isn't
+ * focused, or an older browser without `navigator.clipboard.read`.
+ */
+export async function artworkBlobFromClipboard(): Promise<Blob | null> {
+  if (!navigator.clipboard?.read) {
+    return null;
+  }
+  let items: ClipboardItem[];
+  try {
+    items = await navigator.clipboard.read();
+  } catch {
+    return null;
+  }
+  for (const item of items) {
+    const type = item.types.find((entry) => entry.startsWith('image/'));
+    if (type) {
+      try {
+        return await item.getType(type);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -235,4 +264,77 @@ export function useFolderArtworkDrop({
   const dragging = Hooks.useFileDrop(ref, onDrop, canAcceptDrop);
 
   return { ref, dragging, saveStatus };
+}
+
+interface FolderArtworkPasteOptions {
+  trackPath: string | null;
+  canEdit?: boolean;
+  isActive?: () => boolean;
+  onSaved?: (folderArtworkPath: string) => void;
+}
+
+export function useFolderArtworkPaste({
+  trackPath,
+  canEdit = true,
+  isActive,
+  onSaved,
+}: FolderArtworkPasteOptions) {
+  const serverUrl = $$.getCurrentServer().url;
+  const patchIndex = useMusicIndexFolderArtworkPatch();
+
+  const { saveStatus, save } = useFolderArtworkSave(
+    serverUrl,
+    (folderArtworkPath) => {
+      patchIndex(folderArtworkPath);
+      onSaved?.(folderArtworkPath);
+    },
+  );
+
+  const latest = React.useRef({
+    trackPath,
+    canEdit,
+    isActive,
+    saveStatus,
+    save,
+  });
+  latest.current = { trackPath, canEdit, isActive, saveStatus, save };
+
+  React.useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const shortcut = getKeyboardString(event);
+      if (shortcut !== 'Meta+V' && shortcut !== 'Control+V') {
+        return;
+      }
+      const current = latest.current;
+      if (
+        !current.canEdit ||
+        !current.trackPath ||
+        current.saveStatus === 'saving' ||
+        (current.isActive && !current.isActive())
+      ) {
+        return;
+      }
+      event.preventDefault();
+      const targetPath = current.trackPath;
+      artworkBlobFromClipboard()
+        .then((blob) => {
+          if (blob) {
+            current.save(targetPath, {
+              data: blob,
+              contentType: blob.type || 'image/jpeg',
+            });
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
+
+    document.body.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  return { saveStatus };
 }

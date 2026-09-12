@@ -5,7 +5,10 @@ import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import { persistedState } from 'frontend/logic/persisted-state';
-import { useFolderArtworkDrop } from 'frontend/hooks/useFolderArtworkDrop';
+import {
+  useFolderArtworkDrop,
+  useFolderArtworkPaste,
+} from 'frontend/hooks/useFolderArtworkDrop';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
 
@@ -1298,6 +1301,11 @@ function Tracks() {
       setFocusedPath(track.path);
       dispatch(A.setMusicSelectedTracks([track.path]));
     }
+  });
+
+  useFolderArtworkPaste({
+    trackPath: selectedPaths[0] ?? focusedPath ?? null,
+    isActive: () => document.activeElement === listRef.current,
   });
 
   return (
