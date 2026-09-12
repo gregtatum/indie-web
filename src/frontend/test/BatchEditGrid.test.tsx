@@ -212,6 +212,36 @@ describe('<BatchEditGrid> with real server', () => {
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/b.mp3']);
   }, 30_000);
 
+  it('leaves Tab to the browser instead of cycling fields', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    function activeCellText(): string | null {
+      return (
+        document.querySelector(
+          '.musicBatchEditCell.active .musicBatchEditCellText',
+        )?.textContent ?? null
+      );
+    }
+
+    fireEvent.click(getCellText('Song A'));
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    expect(activeCellText()).toBe('Song A');
+
+    expect(fireEvent.keyDown(document.body, { key: 'Tab' })).toBe(true);
+    expect(activeCellText()).toBe('Song A');
+    expect(
+      fireEvent.keyDown(document.body, { key: 'Tab', shiftKey: true }),
+    ).toBe(true);
+    expect(activeCellText()).toBe('Song A');
+
+    fireEvent.keyDown(document.body, { key: 'Enter' });
+    const input = await within(grid).findByDisplayValue('Song A');
+    expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(true);
+  }, 30_000);
+
   it('bulk-edits every track in a multi-selection', async () => {
     await writeAlbumA();
     const { store } = await setup();

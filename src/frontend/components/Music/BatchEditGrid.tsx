@@ -26,9 +26,6 @@ interface CellStatus {
   value: string;
 }
 
-type PendingMove =
-  { type: 'down' } | { type: 'next-column' } | { type: 'prev-column' };
-
 function getCellValue(
   track: T.TrackMetadata | undefined,
   column: BatchEditColumn,
@@ -155,7 +152,7 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
   }
 
   const cancelEditRef = React.useRef(false);
-  const pendingMoveRef = React.useRef<PendingMove | null>(null);
+  const pendingAdvanceRef = React.useRef(false);
   const gridRef = React.useRef<HTMLDivElement | null>(null);
 
   const columnsRef = React.useRef(columns);
@@ -353,7 +350,7 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     setEditing(null);
     if (cancelEditRef.current) {
       cancelEditRef.current = false;
-      pendingMoveRef.current = null;
+      pendingAdvanceRef.current = false;
       return;
     }
     if (current && current.value !== current.initialValue) {
@@ -362,9 +359,8 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
         void commitEdit(current.paths, columnDef, current.value);
       }
     }
-    const move = pendingMoveRef.current;
-    pendingMoveRef.current = null;
-    if (move?.type === 'down') {
+    if (pendingAdvanceRef.current) {
+      pendingAdvanceRef.current = false;
       const currentRowOrder = rowOrderRef.current;
       const currentIndex = focusedPathRef.current
         ? currentRowOrder.indexOf(focusedPathRef.current)
@@ -372,14 +368,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
       const nextPath = currentRowOrder[currentIndex + 1];
       if (nextPath) {
         selectSingleRow(nextPath);
-      }
-    } else if (move?.type === 'next-column') {
-      if (cursorColumnRef.current < columnsRef.current.length - 1) {
-        setCursorColumn(cursorColumnRef.current + 1);
-      }
-    } else if (move?.type === 'prev-column') {
-      if (cursorColumnRef.current > 0) {
-        setCursorColumn(cursorColumnRef.current - 1);
       }
     }
   }
@@ -391,21 +379,13 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
         // Without this, the event bubbles to the grid's own keydown handler
         // after focus() below moves onto it, re-triggering "start edit".
         event.stopPropagation();
-        pendingMoveRef.current = { type: 'down' };
+        pendingAdvanceRef.current = true;
         gridRef.current?.focus();
         break;
       case 'Escape':
         event.preventDefault();
         event.stopPropagation();
         cancelEditRef.current = true;
-        gridRef.current?.focus();
-        break;
-      case 'Tab':
-        event.preventDefault();
-        event.stopPropagation();
-        pendingMoveRef.current = {
-          type: event.shiftKey ? 'prev-column' : 'next-column',
-        };
         gridRef.current?.focus();
         break;
       default:
@@ -484,18 +464,6 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
           event.preventDefault();
           if (currentColumn < currentColumns.length - 1) {
             setCursorColumn(currentColumn + 1);
-          }
-          break;
-        case 'Tab':
-          event.preventDefault();
-          if (currentColumn < currentColumns.length - 1) {
-            setCursorColumn(currentColumn + 1);
-          }
-          break;
-        case 'Shift+Tab':
-          event.preventDefault();
-          if (currentColumn > 0) {
-            setCursorColumn(currentColumn - 1);
           }
           break;
         case 'Enter':
