@@ -43,7 +43,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--music-gap);
+  gap: var(--header-gap);
   padding: var(--music-padding-v) 16px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -76,10 +76,22 @@
   }
 }
 
+.musicScanLibraryButton:not(.button-primary) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-interactive);
+}
+
+.musicScanLibraryButton:not(.button-primary):hover:not(:disabled) {
+  background: var(--selection-hover);
+  border-color: var(--line-strong);
+  opacity: 1;
+}
+
 .musicViewToggle {
   display: flex;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: var(--button-border-radius);
   background: var(--selection-hover);
 }
 
@@ -94,11 +106,13 @@
 }
 
 .musicViewToggleButton:first-child {
-  border-radius: 7px 0 0 7px;
+  border-radius: calc(var(--button-border-radius) - 1px) 0 0
+    calc(var(--button-border-radius) - 1px);
 }
 
 .musicViewToggleButton:last-child {
-  border-radius: 0 7px 7px 0;
+  border-radius: 0 calc(var(--button-border-radius) - 1px)
+    calc(var(--button-border-radius) - 1px) 0;
 }
 
 .musicViewToggleButton + .musicViewToggleButton {

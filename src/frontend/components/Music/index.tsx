@@ -135,7 +135,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const scanButton = (
     <button
       type="button"
-      className={`button${showRescanPrompt && scanPhase !== 'scanning' ? ' button-primary musicScanLibraryButton-rescan' : ''}`}
+      className={`button musicScanLibraryButton${showRescanPrompt && scanPhase !== 'scanning' ? ' button-primary musicScanLibraryButton-rescan' : ''}`}
       onClick={(event) => handleScan(event.shiftKey)}
       disabled={scanPhase === 'scanning'}
     >
