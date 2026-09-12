@@ -64,11 +64,14 @@ export function MusicLibraryView({
   const wasBatchEditingRef = React.useRef(batchEditTrackPaths !== null);
   React.useEffect(() => {
     const wasBatchEditing = wasBatchEditingRef.current;
-    wasBatchEditingRef.current = batchEditTrackPaths !== null;
-    if (wasBatchEditing && batchEditTrackPaths === null) {
+    const isBatchEditing = batchEditTrackPaths !== null;
+    wasBatchEditingRef.current = isBatchEditing;
+    if (wasBatchEditing && !isBatchEditing) {
       document.querySelector<HTMLElement>('.musicTracks')?.focus();
+    } else if (!wasBatchEditing && isBatchEditing) {
+      dispatch(A.setMusicEditTab('artwork'));
     }
-  }, [batchEditTrackPaths]);
+  }, [batchEditTrackPaths, dispatch]);
 
   React.useEffect(() => {
     if (completedScanCount > 0) {
