@@ -32,6 +32,9 @@ exports[`LinkDropbox can render 1`] = `
       class="headerStart"
     />
     <div
+      class="headerToolbarSlot"
+    />
+    <div
       class="headerEnd"
     >
       <button

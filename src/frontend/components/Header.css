@@ -17,6 +17,10 @@
   flex: 1;
 }
 
+.headerToolbarSlot {
+  display: contents;
+}
+
 .headerPath {
   margin-left: 8px; 
 }

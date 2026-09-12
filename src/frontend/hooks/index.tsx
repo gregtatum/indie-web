@@ -485,6 +485,25 @@ export function useBoundingClientRect(
   return rect;
 }
 
+/**
+ * Tracks whether a media query currently matches, re-rendering on change.
+ */
+export function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = React.useState(
+    () => window.matchMedia(query).matches,
+  );
+
+  React.useEffect(() => {
+    const mediaQueryList = window.matchMedia(query);
+    const onChange = () => setMatches(mediaQueryList.matches);
+    onChange();
+    mediaQueryList.addEventListener('change', onChange);
+    return () => mediaQueryList.removeEventListener('change', onChange);
+  }, [query]);
+
+  return matches;
+}
+
 export function useContext2D(
   canvasRef: React.RefObject<HTMLCanvasElement>,
 ): null | CanvasRenderingContext2D {

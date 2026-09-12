@@ -42,10 +42,16 @@
 .musicToolbar {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--music-gap);
   padding: var(--music-padding-v) 16px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+}
+
+.musicToolbar-inHeader {
+  padding: 0;
+  border-bottom: none;
 }
 
 .musicScanStatus {
@@ -72,7 +78,6 @@
 
 .musicViewToggle {
   display: flex;
-  margin-left: auto;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--selection-hover);

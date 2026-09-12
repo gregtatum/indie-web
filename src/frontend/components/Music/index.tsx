@@ -1,10 +1,13 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { $$, A, Hooks, T } from 'frontend';
+import { useMediaQuery } from 'frontend/hooks';
 import { ListFiles } from '../ListFiles';
 import { MusicLibraryView } from './MusicLibraryView';
 import { useMusicUrlSerialization } from './UrlSerialization';
 import { Tooltip } from '../Tooltip';
+import { HeaderToolbarSlotContext } from '../Header';
 import { CURRENT_MUSIC_INDEX_VERSION } from 'frontend/logic/music/music-index-upgraders';
 import './index.css';
 
@@ -140,48 +143,58 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     </button>
   );
 
+  const isWideHeader = useMediaQuery('(min-width: 900px)');
+  const headerToolbarSlot = React.useContext(HeaderToolbarSlotContext);
+  const useHeaderToolbar = isWideHeader && headerToolbarSlot !== null;
+
+  const toolbar = (
+    <div
+      className={`musicToolbar${useHeaderToolbar ? ' musicToolbar-inHeader' : ''}`}
+    >
+      {showRescanPrompt && scanPhase !== 'scanning' ? (
+        <Tooltip
+          text={`Your library scan can be updated from version ${servedIndexVersion ?? '?'} to ${CURRENT_MUSIC_INDEX_VERSION}.`}
+        >
+          {scanButton}
+        </Tooltip>
+      ) : (
+        scanButton
+      )}
+      {displayMessage ? (
+        <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
+          {displayMessage}
+        </span>
+      ) : null}
+      {serverOutdated ? (
+        <a
+          className="button button-primary"
+          href={updateDocsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Server update needed
+        </a>
+      ) : null}
+      <div className="musicViewToggle">
+        <Link
+          to={{ search: '' }}
+          className={`musicViewToggleButton${!isFilesView ? ' musicViewToggleButton-active' : ''}`}
+        >
+          Library
+        </Link>
+        <Link
+          to={{ search: 'view=files' }}
+          className={`musicViewToggleButton${isFilesView ? ' musicViewToggleButton-active' : ''}`}
+        >
+          Files
+        </Link>
+      </div>
+    </div>
+  );
+
   return (
     <div className="music musicContainer">
-      <div className="musicToolbar">
-        {showRescanPrompt && scanPhase !== 'scanning' ? (
-          <Tooltip
-            text={`Your library scan can be updated from version ${servedIndexVersion ?? '?'} to ${CURRENT_MUSIC_INDEX_VERSION}.`}
-          >
-            {scanButton}
-          </Tooltip>
-        ) : (
-          scanButton
-        )}
-        {serverOutdated ? (
-          <a
-            className="button button-primary"
-            href={updateDocsHref}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Server update needed
-          </a>
-        ) : null}
-        {displayMessage ? (
-          <span className={`musicScanStatus musicScanStatus-${scanPhase}`}>
-            {displayMessage}
-          </span>
-        ) : null}
-        <div className="musicViewToggle">
-          <Link
-            to={{ search: '' }}
-            className={`musicViewToggleButton${!isFilesView ? ' musicViewToggleButton-active' : ''}`}
-          >
-            Library
-          </Link>
-          <Link
-            to={{ search: 'view=files' }}
-            className={`musicViewToggleButton${isFilesView ? ' musicViewToggleButton-active' : ''}`}
-          >
-            Files
-          </Link>
-        </div>
-      </div>
+      {useHeaderToolbar ? createPortal(toolbar, headerToolbarSlot) : toolbar}
       {isFilesView ? (
         <ListFiles />
       ) : (

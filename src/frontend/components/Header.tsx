@@ -11,7 +11,14 @@ import './Header.css';
 import { Menu, MenuButton } from './Menus';
 import { overlayPortal } from 'frontend/hooks';
 
-export function Header() {
+export const HeaderToolbarSlotContext =
+  React.createContext<HTMLDivElement | null>(null);
+
+export function Header({
+  toolbarSlotRef,
+}: {
+  toolbarSlotRef: (element: HTMLDivElement | null) => void;
+}) {
   const view = $$.getView();
   const path = $$.getActiveFileDisplayPath();
   const [shouldHideHeader, setShouldHideHeader] = React.useState(false);
@@ -136,6 +143,7 @@ export function Header() {
         showFileStoreSelection={showFileStoreSelection}
       />
       <div className="headerStart">{title}</div>
+      <div className="headerToolbarSlot" ref={toolbarSlotRef} />
       <div className="headerEnd">
         <SaveFileButton />
         <RequestFullScreen />

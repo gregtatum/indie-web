@@ -130,6 +130,42 @@ beforeEach(function () {
     disconnect = jest.fn();
   }
   (global as any).ResizeObserver = MockResizeObserver;
+
+  class MockMediaQueryList {
+    matches: boolean;
+    media: string;
+    onchange: null = null;
+    constructor(query: string) {
+      this.media = query;
+      // Lightly stub out min/max width mechanics.
+      const minWidth = query.match(/^\(min-width:\s*(\d+)px\)$/);
+      const maxWidth = query.match(/^\(max-width:\s*(\d+)px\)$/);
+      if (minWidth) {
+        this.matches = window.innerWidth >= Number(minWidth[1]);
+      } else if (maxWidth) {
+        this.matches = window.innerWidth <= Number(maxWidth[1]);
+      } else if (
+        // Other known queries.
+        query === '(prefers-reduced-motion: reduce)' ||
+        query === '(pointer: coarse)' ||
+        query === 'print'
+      ) {
+        this.matches = false;
+      } else {
+        throw new Error(
+          `MockMediaQueryList does not know how to evaluate the media ` +
+            `query "${query}". Add a case for it in setupAfterEnv.ts.`,
+        );
+      }
+    }
+    addEventListener = jest.fn();
+    removeEventListener = jest.fn();
+    addListener = jest.fn();
+    removeListener = jest.fn();
+    dispatchEvent = jest.fn();
+  }
+  window.matchMedia = (query: string) =>
+    new MockMediaQueryList(query) as unknown as MediaQueryList;
 });
 
 afterEach(() => {

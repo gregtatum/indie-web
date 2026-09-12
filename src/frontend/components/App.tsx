@@ -4,7 +4,7 @@ import { A, $, $$, T } from 'frontend';
 import * as Hooks from 'frontend/hooks';
 
 import { LinkDropbox } from './LinkDropbox';
-import { Header } from './Header';
+import { Header, HeaderToolbarSlotContext } from './Header';
 import { ListFiles } from './ListFiles';
 import { ViewChopro } from './ViewChopro';
 import { ViewPDF } from './ViewPDF';
@@ -264,12 +264,17 @@ export function MainView(props: { children: any }) {
   // survive navigating anywhere in the app (e.g. into the file tree).
   // PlaybackBar renders nothing while playback is idle.
   const showPlaybackBar = $$.getMusicPlaybackStatus() !== 'idle';
+  const [toolbarSlot, setToolbarSlot] = React.useState<HTMLDivElement | null>(
+    null,
+  );
   return (
     <div
       className={`appView${showPlaybackBar ? ' appView-withPlaybackBar' : ''}`}
     >
-      <Header />
-      {props.children}
+      <HeaderToolbarSlotContext.Provider value={toolbarSlot}>
+        <Header toolbarSlotRef={setToolbarSlot} />
+        {props.children}
+      </HeaderToolbarSlotContext.Provider>
       <PlaybackBar />
     </div>
   );
