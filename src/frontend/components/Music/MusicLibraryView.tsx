@@ -13,6 +13,11 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
 import { BatchEditGrid } from './BatchEditGrid';
 import { TrackEditorSidebar } from './TrackEditorSidebar';
+import {
+  ColumnResizeHandle,
+  clampColumnWidths,
+  resizeColumnsOnDrag,
+} from './column-resize';
 
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
   const { name, url } = server;
@@ -237,23 +242,6 @@ const MUSIC_GAP = 12; // matches --music-gap CSS variable
 const MUSIC_PADDING_H = 12; // matches --music-padding-h CSS variable
 const CONFIGURABLE_COLUMNS: ConfigurableColumns[] = ['artist', 'album'];
 
-function clampColumnWidths(prev: ColumnWidths, maxWidth: number): ColumnWidths {
-  const maxForConfigurable = maxWidth - TRACK_MIN_WIDTH;
-  const total = CONFIGURABLE_COLUMNS.reduce((sum, k) => sum + prev[k], 0);
-  if (total <= maxForConfigurable) {
-    return prev;
-  }
-  const result = { ...prev };
-  let excess = total - maxForConfigurable;
-  for (let i = CONFIGURABLE_COLUMNS.length - 1; i >= 0 && excess > 0; i--) {
-    const key = CONFIGURABLE_COLUMNS[i];
-    const shrinkBy = Math.min(excess, Math.max(0, result[key] - COL_MIN_WIDTH));
-    result[key] -= shrinkBy;
-    excess -= shrinkBy;
-  }
-  return result;
-}
-
 function loadColumnWidths(): ColumnWidths {
   const columnWidths = persistedState.musicTrackColumnWidths.read();
   if (columnWidths) {
@@ -314,48 +302,17 @@ function ColumnHeader({
   maxAvailableWidth,
 }: ColumnHeaderProps) {
   function dragHandler(dx: number) {
-    setColumnWidths((prev) => {
-      const result = { ...prev };
-      const myIndex = columnOrder.indexOf(columnKey);
-
-      if (dx > 0) {
-        // Drag right: shrink this column, cascade right if it hits min, grow left neighbor.
-        let remaining = dx;
-        for (let i = myIndex; i < columnOrder.length && remaining > 0; i++) {
-          const key = columnOrder[i];
-          const shrinkBy = Math.min(
-            remaining,
-            Math.max(0, result[key] - COL_MIN_WIDTH),
-          );
-          result[key] -= shrinkBy;
-          remaining -= shrinkBy;
-        }
-        // Grow left neighbor. Title column (K=0) grows automatically via flex:1.
-        if (myIndex > 0) {
-          result[columnOrder[myIndex - 1]] += dx - remaining;
-        }
-      } else {
-        // Drag left: grow this column, cascade left through explicit columns then the title column.
-        let remaining = -dx;
-        for (let i = myIndex - 1; i >= 0 && remaining > 0; i--) {
-          const key = columnOrder[i];
-          const canTake = Math.max(0, result[key] - COL_MIN_WIDTH);
-          const taken = Math.min(remaining, canTake);
-          result[key] -= taken;
-          result[columnKey] += taken;
-          remaining -= taken;
-        }
-        if (remaining > 0) {
-          const trackCurrent =
-            maxAvailableWidth -
-            columnOrder.reduce((sum, k) => sum + result[k], 0);
-          const canTake = Math.max(0, trackCurrent - TRACK_MIN_WIDTH);
-          result[columnKey] += Math.min(remaining, canTake);
-        }
-      }
-
-      return result;
-    });
+    setColumnWidths((prev) =>
+      resizeColumnsOnDrag(
+        columnOrder,
+        prev,
+        columnKey,
+        dx,
+        COL_MIN_WIDTH,
+        maxAvailableWidth,
+        TRACK_MIN_WIDTH,
+      ),
+    );
   }
 
   return (
@@ -391,7 +348,15 @@ function TracksHeader({ setColumnWidths }: TracksHeaderProps) {
         (numCols - 1) * MUSIC_GAP -
         TRACK_COLUMN_WIDTH;
       setMaxAvailableWidth(newMax);
-      setColumnWidths((prev) => clampColumnWidths(prev, newMax));
+      setColumnWidths((prev) =>
+        clampColumnWidths(
+          CONFIGURABLE_COLUMNS,
+          prev,
+          newMax,
+          COL_MIN_WIDTH,
+          TRACK_MIN_WIDTH,
+        ),
+      );
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -417,32 +382,6 @@ function TracksHeader({ setColumnWidths }: TracksHeaderProps) {
         setColumnWidths={setColumnWidths}
         maxAvailableWidth={maxAvailableWidth}
       />
-    </div>
-  );
-}
-
-function ColumnResizeHandle({ onDrag }: { onDrag: (dx: number) => void }) {
-  const onMouseDown: React.MouseEventHandler = (event) => {
-    event.preventDefault();
-    document.body.style.cursor = 'col-resize';
-    let lastX = event.pageX;
-
-    function handleMove(ev: MouseEvent) {
-      onDrag(ev.pageX - lastX);
-      lastX = ev.pageX;
-    }
-    function handleUp() {
-      document.body.style.cursor = '';
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
-    }
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-  };
-
-  return (
-    <div className="musicTrackColumnResize" onMouseDown={onMouseDown}>
-      <div className="musicTrackColumnResizeVisible" />
     </div>
   );
 }

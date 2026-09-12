@@ -4,14 +4,37 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { getKeyboardString } from 'frontend/utils';
 import { persistedState } from 'frontend/logic/persisted-state';
 import {
+  BATCH_EDIT_COLUMN_KEYS,
   BATCH_EDIT_COLUMNS,
   applyIndexedTrackChanges,
   type BatchEditColumn,
   type BatchEditColumnKey,
 } from 'frontend/logic/music/metadata';
 import type { WriteTrackTagsResponse } from 'shared/@types/shared';
+import {
+  ColumnResizeHandle,
+  clampColumnWidths,
+  resizeColumnsOnDrag,
+} from './column-resize';
 
 const ROW_HEIGHT = 32;
+const COL_MIN_WIDTH = 60;
+const FLEX_MIN_WIDTH = 100; // matches minmax(100px, 1fr) on the flex column
+const BATCH_EDIT_GAP = 12; // matches --music-gap CSS variable
+const BATCH_EDIT_PADDING_H = 12; // matches --music-padding-h CSS variable
+
+const PREFERRED_FLEX_COLUMN: BatchEditColumnKey = 'title';
+
+const DEFAULT_COLUMN_WIDTHS: Record<BatchEditColumnKey, number> = {
+  track: 70,
+  title: 200,
+  artist: 160,
+  albumArtist: 160,
+  album: 160,
+  genre: 120,
+};
+
+type ColumnWidths = Record<BatchEditColumnKey, number>;
 
 interface EditingState {
   value: string;
@@ -42,10 +65,51 @@ function loadVisibleColumns(): Set<BatchEditColumnKey> {
   return new Set(stored ?? BATCH_EDIT_COLUMNS.map((column) => column.key));
 }
 
-function getGridTemplateColumns(columns: BatchEditColumn[]): string {
+function getFlexColumnKey(columns: BatchEditColumn[]): BatchEditColumnKey {
+  return columns.some((column) => column.key === PREFERRED_FLEX_COLUMN)
+    ? PREFERRED_FLEX_COLUMN
+    : columns[0].key;
+}
+
+function getResizableColumnOrder(
+  columns: BatchEditColumn[],
+  flexColumnKey: BatchEditColumnKey,
+): BatchEditColumnKey[] {
   return columns
-    .map((column) => (column.key === 'track' ? '64px' : 'minmax(120px, 1fr)'))
+    .filter((column) => column.key !== flexColumnKey)
+    .map((column) => column.key);
+}
+
+function getGridTemplateColumns(
+  columns: BatchEditColumn[],
+  flexColumnKey: BatchEditColumnKey,
+): string {
+  return columns
+    .map((column) =>
+      column.key === flexColumnKey
+        ? `minmax(${FLEX_MIN_WIDTH}px, 1fr)`
+        : `var(--batchcol-${column.key})`,
+    )
     .join(' ');
+}
+
+function loadColumnWidths(): ColumnWidths {
+  const stored = persistedState.musicBatchEditColumnWidths.read();
+  return {
+    ...DEFAULT_COLUMN_WIDTHS,
+    ...(stored ?? {}),
+  };
+}
+
+function useColumnWidths() {
+  const [columnWidths, setColumnWidths] =
+    React.useState<ColumnWidths>(loadColumnWidths);
+
+  React.useEffect(() => {
+    persistedState.musicBatchEditColumnWidths.write(columnWidths);
+  }, [columnWidths]);
+
+  return { columnWidths, setColumnWidths };
 }
 
 interface BatchEditGridProps {
@@ -86,7 +150,35 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
     () => BATCH_EDIT_COLUMNS.filter((column) => visibleColumns.has(column.key)),
     [visibleColumns],
   );
-  const gridTemplateColumns = getGridTemplateColumns(columns);
+  const flexColumnKey = getFlexColumnKey(columns);
+  const resizableColumnOrder = getResizableColumnOrder(columns, flexColumnKey);
+  const gridTemplateColumns = getGridTemplateColumns(columns, flexColumnKey);
+
+  const { columnWidths, setColumnWidths } = useColumnWidths();
+  const [scrollbarWidth, setScrollbarWidth] = React.useState(0);
+  const [maxAvailableWidth, setMaxAvailableWidth] = React.useState(400);
+
+  const displayColumnWidths = React.useMemo(
+    () =>
+      clampColumnWidths(
+        resizableColumnOrder,
+        columnWidths,
+        maxAvailableWidth,
+        COL_MIN_WIDTH,
+        FLEX_MIN_WIDTH,
+      ),
+    [resizableColumnOrder, columnWidths, maxAvailableWidth],
+  );
+
+  const gridStyle = React.useMemo(() => {
+    const style: Record<string, string> = {
+      '--scrollbar-width': `${scrollbarWidth}px`,
+    };
+    for (const key of BATCH_EDIT_COLUMN_KEYS) {
+      style[`--batchcol-${key}`] = `${displayColumnWidths[key]}px`;
+    }
+    return style as React.CSSProperties;
+  }, [displayColumnWidths, scrollbarWidth]);
 
   const [sort, setSort] = React.useState<{
     column: BatchEditColumnKey;
@@ -161,6 +253,54 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
   rowOrderRef.current = rowOrder;
   const tracksByPathRef = React.useRef(tracksByPath);
   tracksByPathRef.current = tracksByPath;
+
+  const headerRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const el = headerRef.current;
+    if (!el) {
+      return undefined;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      const numCols = columnsRef.current.length;
+      setMaxAvailableWidth(
+        entry.contentRect.width -
+          2 * BATCH_EDIT_PADDING_H -
+          (numCols - 1) * BATCH_EDIT_GAP,
+      );
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    const el = headerRef.current;
+    if (!el) {
+      return;
+    }
+    const style = getComputedStyle(el);
+    const contentWidth =
+      el.getBoundingClientRect().width -
+      parseFloat(style.paddingLeft) -
+      parseFloat(style.paddingRight);
+    setMaxAvailableWidth(
+      contentWidth -
+        2 * BATCH_EDIT_PADDING_H -
+        (columns.length - 1) * BATCH_EDIT_GAP,
+    );
+  }, [columns.length]);
+
+  React.useEffect(() => {
+    const el = gridRef.current;
+    if (!el) {
+      return undefined;
+    }
+    const observer = new ResizeObserver(() => {
+      setScrollbarWidth(el.offsetWidth - el.clientWidth);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   function getAggregateValue(
     paths: string[],
@@ -526,33 +666,67 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
   } | null>(null);
 
   return (
-    <div className="musicBatchEditGrid">
+    <div className="musicBatchEditGrid" style={gridStyle}>
       <div
         className="musicBatchEditGridHeader"
         style={{ gridTemplateColumns }}
         role="row"
+        ref={headerRef}
       >
-        {columns.map((column) => (
-          <div
-            key={column.key}
-            className="musicBatchEditHeaderCell"
-            role="columnheader"
-            onClick={() => handleHeaderSortClick(column)}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              setColumnMenuFor({
-                rect: event.currentTarget.getBoundingClientRect(),
-              });
-            }}
-          >
-            <span className="musicBatchEditHeaderCellText">{column.label}</span>
-            {sort?.column === column.key ? (
-              <span className="musicBatchEditSortArrow" aria-hidden="true">
-                {sort.direction === 'asc' ? '↑' : '↓'}
+        {columns.map((column) => {
+          const isFlexColumn = column.key === flexColumnKey;
+          return (
+            <div
+              key={column.key}
+              className="musicBatchEditHeaderCell"
+              role="columnheader"
+              onClick={() => handleHeaderSortClick(column)}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                setColumnMenuFor({
+                  rect: event.currentTarget.getBoundingClientRect(),
+                });
+              }}
+            >
+              {isFlexColumn ? null : (
+                <div
+                  style={{ display: 'contents' }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <ColumnResizeHandle
+                    onDrag={(dx) =>
+                      setColumnWidths((prev) =>
+                        resizeColumnsOnDrag(
+                          resizableColumnOrder,
+                          clampColumnWidths(
+                            resizableColumnOrder,
+                            prev,
+                            maxAvailableWidth,
+                            COL_MIN_WIDTH,
+                            FLEX_MIN_WIDTH,
+                          ),
+                          column.key,
+                          dx,
+                          COL_MIN_WIDTH,
+                          maxAvailableWidth,
+                          FLEX_MIN_WIDTH,
+                        ),
+                      )
+                    }
+                  />
+                </div>
+              )}
+              <span className="musicBatchEditHeaderCellText">
+                {column.label}
               </span>
-            ) : null}
-          </div>
-        ))}
+              {sort?.column === column.key ? (
+                <span className="musicBatchEditSortArrow" aria-hidden="true">
+                  {sort.direction === 'asc' ? '↑' : '↓'}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
       {columnMenuFor ? (
         <ColumnVisibilityPopover

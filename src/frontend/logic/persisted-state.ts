@@ -28,6 +28,10 @@ export type MusicTrackColumnWidths = {
   album: number;
 };
 
+export type MusicBatchEditColumnWidths = Partial<
+  Record<BatchEditColumnKey, number>
+>;
+
 /**
  * Wraps one localStorage key with shared read/write/remove behavior. Subclasses
  * own the raw string conversion for each persisted shape.
@@ -296,6 +300,23 @@ export const persistedState = {
         (BATCH_EDIT_COLUMN_KEYS as string[]).includes(key as string),
       );
       return filtered.length > 0 ? filtered : null;
+    },
+  }),
+
+  musicBatchEditColumnWidths: new JsonStorage({
+    defaultValue: null,
+    parse(value): MusicBatchEditColumnWidths | null {
+      if (typeof value !== 'object' || value === null) {
+        return null;
+      }
+      const result: MusicBatchEditColumnWidths = {};
+      for (const key of BATCH_EDIT_COLUMN_KEYS) {
+        const width = getNumberProp(value, key);
+        if (width !== null) {
+          result[key] = width;
+        }
+      }
+      return Object.keys(result).length > 0 ? result : null;
     },
   }),
 

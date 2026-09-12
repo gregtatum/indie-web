@@ -246,6 +246,7 @@
   display: grid;
   gap: var(--music-gap);
   padding: var(--music-padding-v) var(--music-padding-h);
+  padding-right: calc(var(--music-padding-h) + var(--scrollbar-width));
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
   user-select: none;
@@ -255,11 +256,11 @@
 }
 
 .musicBatchEditHeaderCell {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
-  white-space: nowrap;
-  overflow: hidden;
+  min-width: 0;
   font-size: var(--music-label-font-size);
   font-weight: bold;
   text-transform: uppercase;
@@ -286,6 +287,7 @@
 }
 
 .musicBatchEditRow {
+  box-sizing: border-box;
   display: grid;
   gap: var(--music-gap);
   padding: 0 var(--music-padding-h);
