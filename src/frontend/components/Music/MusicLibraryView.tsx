@@ -44,10 +44,12 @@ function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
 
 interface MusicLibraryViewProps {
   completedScanCount: number;
+  onCloseBatchEdit: () => void;
 }
 
 export function MusicLibraryView({
   completedScanCount,
+  onCloseBatchEdit,
 }: MusicLibraryViewProps) {
   const server = $$.getCurrentServer();
   const { dispatch } = Hooks.useStore();
@@ -144,7 +146,10 @@ export function MusicLibraryView({
   if (batchEditTrackPaths) {
     return (
       <div className="musicLibraryView">
-        <BatchEditView trackPaths={batchEditTrackPaths} />
+        <BatchEditView
+          trackPaths={batchEditTrackPaths}
+          onClose={onCloseBatchEdit}
+        />
       </div>
     );
   }
@@ -174,14 +179,14 @@ export function MusicLibraryView({
   );
 }
 
-function BatchEditView({ trackPaths }: { trackPaths: string[] }) {
-  const dispatch = Hooks.useDispatch();
-
-  function close() {
-    dispatch(A.setMusicBatchEditTrackPaths(null));
-  }
-
-  Hooks.useEscape(close, true);
+function BatchEditView({
+  trackPaths,
+  onClose,
+}: {
+  trackPaths: string[];
+  onClose: () => void;
+}) {
+  Hooks.useEscape(onClose, true);
 
   return (
     <div className="musicBatchEditView">
@@ -194,7 +199,7 @@ function BatchEditView({ trackPaths }: { trackPaths: string[] }) {
           type="button"
           className="musicBatchEditCloseButton"
           aria-label="Close batch edit"
-          onClick={close}
+          onClick={onClose}
         >
           <img src="/svg/xmark.svg" alt="" />
         </button>

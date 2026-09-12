@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import {
+  NavigationType,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+  useSearchParams,
+} from 'react-router-dom';
 import { $$, A, Hooks, T } from 'frontend';
 import { ensureNever } from 'frontend/utils';
 
@@ -37,11 +43,13 @@ function appendUrlValues(
  */
 export function useMusicUrlSerialization(): {
   isFilesView: boolean;
+  closeBatchEdit: () => void;
 } {
   const [searchParams, setSearchParams] = useSearchParams();
   useFilterUrlSync(searchParams, setSearchParams);
   useEditModalUrlSync(searchParams, setSearchParams);
-  return { isFilesView: searchParams.get('view') === 'files' };
+  const closeBatchEdit = useBatchEditHistorySync();
+  return { isFilesView: searchParams.get('view') === 'files', closeBatchEdit };
 }
 
 /**
@@ -273,4 +281,72 @@ function useEditModalUrlSync(
       { replace: true },
     );
   }, [editTab, canSerializeCurrentEdit]);
+}
+
+interface BatchEditHistoryState {
+  musicBatchEdit: true;
+}
+
+function hasBatchEditMarker(state: unknown): boolean {
+  return (state as BatchEditHistoryState | null)?.musicBatchEdit === true;
+}
+
+function useBatchEditHistorySync(): () => void {
+  const dispatch = Hooks.useDispatch();
+  const batchEditTrackPaths = $$.getMusicBatchEditTrackPaths();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navigationType = useNavigationType();
+
+  const prevTrackPathsRef = React.useRef(batchEditTrackPaths);
+  const lastTrackPathsRef = React.useRef(batchEditTrackPaths);
+  const ignoreNextTransitionRef = React.useRef(false);
+  if (batchEditTrackPaths) {
+    lastTrackPathsRef.current = batchEditTrackPaths;
+  }
+
+  React.useEffect(() => {
+    if (hasBatchEditMarker(location.state) && !batchEditTrackPaths) {
+      navigate(`${location.pathname}${location.search}`, {
+        replace: true,
+        state: null,
+      });
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const prevTrackPaths = prevTrackPathsRef.current;
+    prevTrackPathsRef.current = batchEditTrackPaths;
+    if (ignoreNextTransitionRef.current) {
+      ignoreNextTransitionRef.current = false;
+      return;
+    }
+    if (batchEditTrackPaths && !prevTrackPaths) {
+      navigate(`${location.pathname}${location.search}`, {
+        state: { musicBatchEdit: true } satisfies BatchEditHistoryState,
+      });
+    }
+  }, [batchEditTrackPaths]);
+
+  React.useEffect(() => {
+    if (navigationType !== NavigationType.Pop) {
+      return;
+    }
+    const hasMarker = hasBatchEditMarker(location.state);
+    if (hasMarker && !batchEditTrackPaths && lastTrackPathsRef.current) {
+      ignoreNextTransitionRef.current = true;
+      dispatch(A.setMusicBatchEditTrackPaths(lastTrackPathsRef.current));
+    } else if (!hasMarker && batchEditTrackPaths) {
+      ignoreNextTransitionRef.current = true;
+      dispatch(A.setMusicBatchEditTrackPaths(null));
+    }
+  }, [location, navigationType]);
+
+  return React.useCallback(() => {
+    if (hasBatchEditMarker(location.state)) {
+      navigate(-1);
+    } else {
+      dispatch(A.setMusicBatchEditTrackPaths(null));
+    }
+  }, [location, navigate, dispatch]);
 }

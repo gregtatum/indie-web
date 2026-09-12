@@ -30,7 +30,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const serverMaxIndexVersion = $$.getMusicServerMaxIndexVersion();
   const containerName = $$.getFileStoreContainerName();
   const { dispatch } = Hooks.useStore();
-  const { isFilesView } = useMusicUrlSerialization();
+  const { isFilesView, closeBatchEdit } = useMusicUrlSerialization();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
   const [completedScanCount, setCompletedScanCount] = React.useState(0);
   const eventSourceRef = React.useRef<EventSource | null>(null);
@@ -203,7 +203,10 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
       {isFilesView ? (
         <ListFiles />
       ) : (
-        <MusicLibraryView completedScanCount={completedScanCount} />
+        <MusicLibraryView
+          completedScanCount={completedScanCount}
+          onCloseBatchEdit={closeBatchEdit}
+        />
       )}
     </div>
   );
