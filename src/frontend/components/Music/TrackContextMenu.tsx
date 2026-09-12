@@ -14,6 +14,7 @@ const MENU_WIDTH = 200;
 
 export interface TrackContextMenuHandle {
   edit(trackPaths: string[], tab?: T.MusicEditTab): void;
+  batchEdit(trackPaths: string[]): void;
   open(event: React.MouseEvent, trackPath: string): void;
   showInFiles(trackPath: string): void;
   revealInFileManager(trackPath: string): void;
@@ -55,6 +56,18 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
       [dispatch, getState, navigate],
     );
 
+    const batchEdit = React.useCallback(
+      (trackPaths: string[]) => {
+        const allTracks = $.getMusicTracks(getState());
+        const firstPath =
+          allTracks.find((t) => trackPaths.includes(t.path))?.path ??
+          trackPaths[0];
+        dispatch(A.setMusicBatchEditTrackPaths(trackPaths));
+        dispatch(A.setMusicSelectedTracks([firstPath]));
+      },
+      [dispatch, getState],
+    );
+
     const revealInFileManager = React.useCallback(
       (trackPath: string) => {
         const fs = $.getServerFSOrNull(getState());
@@ -78,6 +91,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
       ref,
       () => ({
         edit: editTracks,
+        batchEdit,
         open(event, trackPath) {
           event.preventDefault();
           const { clientX: x, clientY: y } = event;
@@ -106,7 +120,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
         showInFiles,
         revealInFileManager,
       }),
-      [editTracks, showInFiles, revealInFileManager],
+      [editTracks, batchEdit, showInFiles, revealInFileManager],
     );
 
     const selectedPaths = $$.getMusicSelectedTrackPaths();
@@ -114,6 +128,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     const revealLabel = $$.getFileManagerRevealLabel();
     const shortcutModifier = getPlatformCtrlModifier();
     const editShortcut = `${shortcutModifier} E`;
+    const batchEditShortcut = `${shortcutModifier} Shift E`;
     const showInFilesShortcut = `${shortcutModifier} Enter`;
     const revealInFileManagerShortcut = `${shortcutModifier} Shift Enter`;
 
@@ -149,13 +164,9 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
             {
               key: 'batch-edit',
               children: 'Batch Edit',
+              shortcut: batchEditShortcut,
               onClick() {
-                const allTracks = $.getMusicTracks(getState());
-                const firstPath =
-                  allTracks.find((t) => selectedPaths.includes(t.path))?.path ??
-                  selectedPaths[0];
-                dispatch(A.setMusicBatchEditTrackPaths(selectedPaths));
-                dispatch(A.setMusicSelectedTracks([firstPath]));
+                batchEdit(selectedPaths);
               },
             } as MenuButton,
           ]

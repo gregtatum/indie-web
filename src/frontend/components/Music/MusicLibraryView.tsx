@@ -1199,6 +1199,12 @@ function Tracks() {
           contextMenuRef.current?.edit(getShortcutTargetPaths(), 'id3');
           return;
         }
+        case 'Meta+Shift+E':
+        case 'Control+Shift+E': {
+          event.preventDefault();
+          contextMenuRef.current?.batchEdit(getShortcutTargetPaths());
+          return;
+        }
         case 'Meta+Enter':
         case 'Control+Enter': {
           event.preventDefault();

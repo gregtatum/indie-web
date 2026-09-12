@@ -422,6 +422,29 @@ describe('track list keyboard shortcuts', () => {
     expect($.getMusicEditTrackPath(store.getState())).toBe('/music/a.mp3');
   });
 
+  it('cmd+shift+e opens batch edit for the selection', async () => {
+    const { store } = setup();
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+      focusTrackList();
+      fireEvent.keyDown(document.body, {
+        key: 'e',
+        metaKey: true,
+        shiftKey: true,
+      });
+    });
+
+    expect($.getMusicBatchEditTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+    ]);
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+    ]);
+  });
+
   it('cmd+enter shows one selected track in files', async () => {
     const { store } = setup();
     const trackB = await screen.findByText('Song B');
