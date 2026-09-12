@@ -480,6 +480,10 @@ export function setMusicEditTrackPath(path: string | null) {
   return { type: 'set-music-edit-track-path' as const, path };
 }
 
+export function setMusicBatchEditTrackPaths(paths: string[] | null) {
+  return { type: 'set-music-batch-edit-track-paths' as const, paths };
+}
+
 export function setMusicEditTab(tab: T.MusicEditTab) {
   return { type: 'set-music-edit-tab' as const, tab };
 }

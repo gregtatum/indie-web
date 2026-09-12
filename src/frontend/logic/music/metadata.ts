@@ -1,4 +1,8 @@
-import type { TrackMetadata, TrackTagsResponse } from 'shared/@types/shared';
+import type {
+  TrackMetadata,
+  TrackTagsResponse,
+  TrackTagUpdate,
+} from 'shared/@types/shared';
 import {
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
   parseBooleanTagValue,
@@ -418,3 +422,76 @@ export function detailFieldValues(
 
   return state;
 }
+
+/**
+ * Applies one save's tag changes to an already-loaded TrackMetadata so the
+ * index reflects a write immediately, without waiting on a rescan.
+ */
+export function applyIndexedTrackChanges(
+  track: TrackMetadata,
+  changes: TrackTagUpdate[],
+): TrackMetadata {
+  const updated = { ...track };
+  for (const { frameId, value, description } of changes) {
+    if (frameId === 'TIT2') {
+      updated.title = value || null;
+    } else if (frameId === 'TPE1') {
+      updated.artist = value || null;
+    } else if (frameId === 'TPE2') {
+      updated.albumArtist = value || null;
+    } else if (frameId === 'TALB') {
+      updated.album = value || null;
+    } else if (frameId === 'TCON') {
+      updated.genre = value || null;
+    } else if (frameId === 'TRCK') {
+      const num = parseInt(value.split('/')[0], 10);
+      updated.track = isNaN(num) ? null : num;
+    } else if (
+      frameId === 'TXXX' &&
+      description === PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION
+    ) {
+      updated.preferComposerGrouping = parseBooleanTagValue(value);
+    }
+  }
+  return updated;
+}
+
+export type BatchEditColumnKey =
+  'track' | 'title' | 'artist' | 'albumArtist' | 'album' | 'genre';
+
+export interface BatchEditColumn {
+  key: BatchEditColumnKey;
+  label: string;
+  frameId: string;
+  metadataKey: keyof TrackMetadata;
+  numeric?: boolean;
+}
+
+/**
+ * The columns shown in the Batch Edit grid, and the ID3 frame each writes to.
+ * Kept in the shared metadata logic module (rather than the component) so
+ * both the grid and the persisted column-visibility state can reference the
+ * same key list.
+ */
+export const BATCH_EDIT_COLUMNS: BatchEditColumn[] = [
+  {
+    key: 'track',
+    label: 'Track #',
+    frameId: 'TRCK',
+    metadataKey: 'track',
+    numeric: true,
+  },
+  { key: 'title', label: 'Title', frameId: 'TIT2', metadataKey: 'title' },
+  { key: 'artist', label: 'Artist', frameId: 'TPE1', metadataKey: 'artist' },
+  {
+    key: 'albumArtist',
+    label: 'Album Artist',
+    frameId: 'TPE2',
+    metadataKey: 'albumArtist',
+  },
+  { key: 'album', label: 'Album', frameId: 'TALB', metadataKey: 'album' },
+  { key: 'genre', label: 'Genre', frameId: 'TCON', metadataKey: 'genre' },
+];
+
+export const BATCH_EDIT_COLUMN_KEYS: BatchEditColumnKey[] =
+  BATCH_EDIT_COLUMNS.map((column) => column.key);

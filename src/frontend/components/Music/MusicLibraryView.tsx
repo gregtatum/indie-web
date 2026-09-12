@@ -11,6 +11,8 @@ import {
 } from 'frontend/hooks/useFolderArtworkDrop';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
+import { BatchEditGrid } from './BatchEditGrid';
+import { TrackEditorSidebar } from './TrackEditorSidebar';
 
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
   const { name, url } = server;
@@ -50,6 +52,7 @@ export function MusicLibraryView({
   const server = $$.getCurrentServer();
   const { dispatch } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
+  const batchEditTrackPaths = $$.getMusicBatchEditTrackPaths();
 
   React.useEffect(() => {
     if (completedScanCount > 0) {
@@ -138,6 +141,14 @@ export function MusicLibraryView({
     );
   }
 
+  if (batchEditTrackPaths) {
+    return (
+      <div className="musicLibraryView">
+        <BatchEditView trackPaths={batchEditTrackPaths} />
+      </div>
+    );
+  }
+
   return (
     <div className="musicLibraryView">
       <div className="musicLibraryBody">
@@ -157,6 +168,46 @@ export function MusicLibraryView({
             />
           }
           persistLocalStorage="musicLibrarySidebarSplitterOffset"
+        />
+      </div>
+    </div>
+  );
+}
+
+function BatchEditView({ trackPaths }: { trackPaths: string[] }) {
+  const dispatch = Hooks.useDispatch();
+
+  function close() {
+    dispatch(A.setMusicBatchEditTrackPaths(null));
+  }
+
+  Hooks.useEscape(close, true);
+
+  return (
+    <div className="musicBatchEditView">
+      <div className="musicBatchEditHeader">
+        <h2 className="musicBatchEditHeaderTitle">
+          Batch Edit · {trackPaths.length}{' '}
+          {trackPaths.length === 1 ? 'track' : 'tracks'}
+        </h2>
+        <button
+          type="button"
+          className="musicBatchEditCloseButton"
+          aria-label="Close batch edit"
+          onClick={close}
+        >
+          <img src="/svg/xmark.svg" alt="" />
+        </button>
+      </div>
+      <div className="musicBatchEditBody">
+        <Splitter
+          direction="horizontal"
+          className="musicBatchEditSplitter"
+          defaultOffset={150}
+          constrain={{ pane: 'end', minSize: 320, maxSize: 560 }}
+          start={<BatchEditGrid trackPaths={trackPaths} />}
+          end={<TrackEditorSidebar />}
+          persistLocalStorage="musicBatchEditSplitterOffset"
         />
       </div>
     </div>

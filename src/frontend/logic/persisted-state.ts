@@ -5,6 +5,10 @@ import {
   getStringProp,
   sluggify,
 } from 'frontend/utils';
+import {
+  BATCH_EDIT_COLUMN_KEYS,
+  type BatchEditColumnKey,
+} from 'frontend/logic/music/metadata';
 
 export type EditorAutocompleteSettings = {
   markdown: boolean;
@@ -279,6 +283,19 @@ export const persistedState = {
         return { artist, album };
       }
       return null;
+    },
+  }),
+
+  musicBatchEditColumns: new JsonStorage({
+    defaultValue: null,
+    parse(value): BatchEditColumnKey[] | null {
+      if (!Array.isArray(value)) {
+        return null;
+      }
+      const filtered = value.filter((key): key is BatchEditColumnKey =>
+        (BATCH_EDIT_COLUMN_KEYS as string[]).includes(key as string),
+      );
+      return filtered.length > 0 ? filtered : null;
     },
   }),
 

@@ -146,6 +146,13 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
                 editTracks(selectedPaths);
               },
             } as MenuButton,
+            {
+              key: 'batch-edit',
+              children: 'Batch Edit',
+              onClick() {
+                dispatch(A.setMusicBatchEditTrackPaths(selectedPaths));
+              },
+            } as MenuButton,
           ]
         : []),
       ...(!isMultiSelect && contextTrackPath

@@ -224,6 +224,20 @@ function editTrackPath(
   }
 }
 
+function batchEditTrackPaths(
+  state: string[] | null = null,
+  action: T.Action,
+): string[] | null {
+  switch (action.type) {
+    case 'set-music-batch-edit-track-paths':
+      return action.paths;
+    case 'view-music':
+      return null;
+    default:
+      return state;
+  }
+}
+
 function editTab(
   state: T.MusicEditTab = 'details',
   action: T.Action,
@@ -349,6 +363,7 @@ function playbackServerId(
 
 const combinedMusicReducer = combineReducers({
   editTrackPath,
+  batchEditTrackPaths,
   editTab,
   panelOrder,
   panelSelections,

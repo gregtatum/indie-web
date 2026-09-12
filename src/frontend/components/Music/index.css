@@ -166,6 +166,222 @@
   overflow: hidden;
 }
 
+.musicBatchEditView {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.musicBatchEditHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: var(--music-padding-v) var(--music-padding-h);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.musicBatchEditHeaderTitle {
+  margin: 0;
+  font-size: var(--modal-header-font-size);
+  font-weight: 600;
+  color: var(--text-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.musicBatchEditCloseButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--selection-hover);
+  }
+
+  & img {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.musicBatchEditBody {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.musicBatchEditSplitter {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.musicBatchEditSidebar {
+  height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid var(--border-color);
+  background: var(--surface-raised);
+}
+
+.musicBatchEditGrid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.musicBatchEditGridHeader {
+  display: grid;
+  gap: var(--music-gap);
+  padding: var(--music-padding-v) var(--music-padding-h);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+  user-select: none;
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--header-shadow);
+}
+
+.musicBatchEditHeaderCell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: var(--music-label-font-size);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.musicBatchEditHeaderCellText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.musicBatchEditSortArrow {
+  flex-shrink: 0;
+}
+
+.musicBatchEditGridBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  outline: none;
+}
+
+.musicBatchEditRow {
+  display: grid;
+  gap: var(--music-gap);
+  padding: 0 var(--music-padding-h);
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+
+  &.selected {
+    background: var(--selection-inactive);
+  }
+}
+
+.musicBatchEditGridBody:focus-within .musicBatchEditRow.selected {
+  background: var(--selection-active);
+  color: #fff;
+}
+
+.musicBatchEditCell {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--music-item-font-size);
+  cursor: cell;
+
+  &.cursor {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  &.error {
+    outline: 2px solid var(--error-color);
+    outline-offset: -2px;
+    cursor: pointer;
+  }
+}
+
+.musicBatchEditCell-numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.musicBatchEditCellText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.musicBatchEditCellInput {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: var(--modal-bg);
+}
+
+.musicBatchEditCellSaving {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.musicBatchEditColumnPopover {
+  position: fixed;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--line-strong);
+  background: var(--modal-bg);
+  box-shadow: 0 4px 16px #00000024;
+}
+
+.musicBatchEditColumnPopoverItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: var(--music-item-font-size);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--selection-hover);
+  }
+}
+
 .musicFilterPanels {
   display: flex;
   flex-direction: row;
