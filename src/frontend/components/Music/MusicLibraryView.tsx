@@ -56,6 +56,15 @@ export function MusicLibraryView({
   const [error, setError] = React.useState<React.ReactNode>(null);
   const batchEditTrackPaths = $$.getMusicBatchEditTrackPaths();
 
+  const wasBatchEditingRef = React.useRef(batchEditTrackPaths !== null);
+  React.useEffect(() => {
+    const wasBatchEditing = wasBatchEditingRef.current;
+    wasBatchEditingRef.current = batchEditTrackPaths !== null;
+    if (wasBatchEditing && batchEditTrackPaths === null) {
+      document.querySelector<HTMLElement>('.musicTracks')?.focus();
+    }
+  }, [batchEditTrackPaths]);
+
   React.useEffect(() => {
     if (completedScanCount > 0) {
       // Clear out any stale errors.

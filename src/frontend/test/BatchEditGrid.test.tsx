@@ -382,5 +382,8 @@ describe('<BatchEditGrid> with real server', () => {
     expect(screen.queryByText(/Batch Edit ·/)).toBeNull();
     expect(screen.getByRole('listbox', { name: 'genre' })).toBeTruthy();
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
+    expect(document.activeElement).toBe(
+      screen.getByRole('listbox', { name: 'Tracks' }),
+    );
   }, 30_000);
 });
