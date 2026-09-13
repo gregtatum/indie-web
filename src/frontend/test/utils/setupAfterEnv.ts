@@ -10,6 +10,7 @@ globalThis.structuredClone = structuredClone;
 
 const originalEnv = process.env;
 const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
 /**
  * The secure digest is not available for some reason in Jest. Work around it
  * by providing a simple insecure implementation.
@@ -47,6 +48,12 @@ beforeEach(function () {
     }
 
     originalConsoleWarn.call(console, message, ...rest);
+  });
+  jest.spyOn(console, 'error').mockImplementation((...args) => {
+    originalConsoleError.call(console, ...args);
+    throw new Error(
+      'console.error was called during a test, which is disallowed. See the message logged above for details.',
+    );
   });
   global.indexedDB = new IDBFactory();
   fetchMock.mockGlobal();
