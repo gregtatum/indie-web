@@ -1,4 +1,5 @@
 import fetchMock from '@fetch-mock/jest';
+import { cleanup } from '@testing-library/react';
 import { resetTestGeneration } from './fixtures';
 import { persistedState } from 'frontend/logic/persisted-state';
 import 'fake-indexeddb/auto';
@@ -11,6 +12,16 @@ globalThis.structuredClone = structuredClone;
 const originalEnv = process.env;
 const originalConsoleWarn = console.warn;
 const originalConsoleError = console.error;
+let consoleErrorCalls: unknown[][] = [];
+interface ConsoleErrorExpectation {
+  filter: (args: unknown[]) => boolean;
+  matched: boolean;
+}
+let consoleErrorExpectations: ConsoleErrorExpectation[] = [];
+
+export function expectConsoleError(filter: (args: unknown[]) => boolean) {
+  consoleErrorExpectations.push({ filter, matched: false });
+}
 /**
  * The secure digest is not available for some reason in Jest. Work around it
  * by providing a simple insecure implementation.
@@ -32,6 +43,8 @@ function simpleDigest256(_scheme: string, buffer: Uint8Array): ArrayBuffer {
 }
 
 beforeEach(function () {
+  consoleErrorCalls = [];
+  consoleErrorExpectations = [];
   persistedState.musicPlaybackResume.remove();
   jest.resetModules();
   jest.spyOn(window, 'scrollBy').mockImplementation();
@@ -51,10 +64,16 @@ beforeEach(function () {
   });
   jest.spyOn(console, 'error').mockImplementation((...args) => {
     originalConsoleError.call(console, ...args);
-    throw new Error(
-      'console.error was called during a test, which is disallowed. See the message logged above for details.',
-    );
+    const expectation = consoleErrorExpectations.find((e) => e.filter(args));
+    if (expectation) {
+      expectation.matched = true;
+      return;
+    }
+    consoleErrorCalls.push(args);
   });
+  HTMLMediaElement.prototype.load = jest.fn();
+  HTMLMediaElement.prototype.pause = jest.fn();
+  HTMLMediaElement.prototype.play = jest.fn(() => Promise.resolve());
   global.indexedDB = new IDBFactory();
   fetchMock.mockGlobal();
   // Default response for a music server's root route, so tests using a mocked
@@ -176,6 +195,9 @@ beforeEach(function () {
 });
 
 afterEach(() => {
+  // Unmount here so a console.error from it is attributed to this test.
+  cleanup();
+
   indexedDB = new IDBFactory();
 
   jest.resetAllMocks();
@@ -186,4 +208,20 @@ afterEach(() => {
   resetTestGeneration();
 
   process.env = originalEnv;
+
+  if (consoleErrorCalls.length > 0) {
+    const count = consoleErrorCalls.length;
+    consoleErrorCalls = [];
+    throw new Error(
+      `console.error was called ${count} time(s) during this test, which is disallowed. See the message(s) logged above for details.`,
+    );
+  }
+
+  const unmatched = consoleErrorExpectations.filter((e) => !e.matched);
+  if (unmatched.length > 0) {
+    consoleErrorExpectations = [];
+    throw new Error(
+      `expectConsoleError was called ${unmatched.length} time(s) during this test, but the expected console.error never happened.`,
+    );
+  }
 });

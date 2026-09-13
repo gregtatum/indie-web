@@ -111,6 +111,10 @@ describe('<BatchEditGrid> with real server', () => {
         await screen.findByRole('button', { name: 'Batch Edit' }),
       );
     });
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
+      expect(screen.queryByText('Loading…')).toBeNull();
+    });
   }
 
   async function writeAlbumA(): Promise<void> {

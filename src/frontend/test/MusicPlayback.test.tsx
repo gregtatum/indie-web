@@ -4,12 +4,13 @@ import { act } from 'react';
 import { A, T, $ } from 'frontend';
 import { persistedState } from 'frontend/logic/persisted-state';
 import {
-  mockMusicMediaElement,
+  isNetworkIdle,
   removeMusicIndex,
   renderMusicApp,
   useMusicTestServer,
   writeMusicIndex,
 } from './utils/music';
+import { expectConsoleError } from './utils/setupAfterEnv';
 
 // When a new music index upgrader is written (bumping CURRENT_MUSIC_INDEX_VERSION),
 // add a representative track here with the new field populated.
@@ -76,13 +77,16 @@ if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
   it.skip('localhost-dependent tests skipped by check runner', () => {});
 }
 
-function setup(tracks: T.TrackMetadata[] = TRACKS) {
+async function setup(tracks: T.TrackMetadata[] = TRACKS) {
   const server = getServer();
   writeMusicIndex(server, tracks);
   const result = renderMusicApp({ server });
 
-  act(() => {
+  await act(async () => {
     result.store.dispatch(A.setMusicTracks(tracks, false));
+  });
+  await waitFor(() => {
+    expect(isNetworkIdle()).toBe(true);
   });
 
   return result;
@@ -95,7 +99,6 @@ beforeEach(() => {
   persistedState.musicPlaybackResume.remove();
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
-  mockMusicMediaElement();
 });
 
 afterEach(async () => {
@@ -105,7 +108,7 @@ afterEach(async () => {
 
 describe('track interactions', () => {
   it('double-clicking a track loads it for playback', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     const trackA = await screen.findByText('Song A');
     await act(async () => {
       await userEvent.dblClick(trackA);
@@ -116,7 +119,7 @@ describe('track interactions', () => {
   });
 
   it('pressing Enter on a selected track loads it', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     // Click to select Song A first
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
@@ -133,7 +136,7 @@ describe('track interactions', () => {
   });
 
   it('pressing Enter with multiple tracks selected queues only those tracks', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -153,7 +156,7 @@ describe('track interactions', () => {
   });
 
   it('pressing Space with an idle status loads the selected track', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song B'));
     });
@@ -168,7 +171,7 @@ describe('track interactions', () => {
   });
 
   it('pressing Space while playing pauses', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
@@ -182,7 +185,7 @@ describe('track interactions', () => {
   });
 
   it('pressing Space while paused resumes', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
@@ -197,7 +200,7 @@ describe('track interactions', () => {
   });
 
   it('clicking a track selects it', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -207,7 +210,7 @@ describe('track interactions', () => {
   });
 
   it('clicking the sole selected track keeps it selected', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -220,7 +223,7 @@ describe('track interactions', () => {
   });
 
   it('cmd+click adds a track to the selection', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -234,7 +237,7 @@ describe('track interactions', () => {
   });
 
   it('cmd+click removes an already-selected track', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -250,7 +253,7 @@ describe('track interactions', () => {
   });
 
   it('shift+click selects a range of tracks', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -265,7 +268,7 @@ describe('track interactions', () => {
   });
 
   it('Shift+ArrowDown extends the selection downward', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -281,7 +284,7 @@ describe('track interactions', () => {
   });
 
   it('Shift+ArrowUp extends the selection upward', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song C'));
     });
@@ -297,7 +300,7 @@ describe('track interactions', () => {
   });
 
   it('Shift+ArrowDown then Shift+ArrowUp shrinks the selection back', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -315,7 +318,7 @@ describe('track interactions', () => {
   });
 
   it('plain click after multi-select narrows to a single track', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       await userEvent.click(await screen.findByText('Song A'));
     });
@@ -332,15 +335,15 @@ describe('track interactions', () => {
 });
 
 describe('PlaybackBar', () => {
-  it('is not rendered when status is idle', () => {
-    setup();
+  it('is not rendered when status is idle', async () => {
+    await setup();
     expect(
       screen.queryByRole('region', { name: 'Playback controls' }),
     ).toBeNull();
   });
 
   async function setupPlaying() {
-    const result = setup();
+    const result = await setup();
     await act(async () => {
       result.store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       result.store.dispatch(A.musicPlaybackReady());
@@ -356,7 +359,7 @@ describe('PlaybackBar', () => {
   });
 
   it('captures panel filters when queueing playback', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     act(() => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
@@ -374,7 +377,7 @@ describe('PlaybackBar', () => {
   });
 
   it('clicking the playback title restores queued filters and selects the track', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     act(() => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
@@ -410,7 +413,7 @@ describe('PlaybackBar', () => {
   });
 
   it('clicking the album art filters to the album only and selects the track', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     act(() => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
@@ -445,7 +448,7 @@ describe('PlaybackBar', () => {
   });
 
   it('clicking the playback artist filters to the artist only and selects the track', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     act(() => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
@@ -484,7 +487,7 @@ describe('PlaybackBar', () => {
   });
 
   it('clicking Next track advances through the queued tracks', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     act(() => {
       store.dispatch(A.setMusicPlaybackQueue(TRACKS));
       store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
@@ -499,7 +502,7 @@ describe('PlaybackBar', () => {
   });
 
   it('shows Play button when paused', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
@@ -517,7 +520,7 @@ describe('PlaybackBar', () => {
   });
 
   it('clicking the Play button dispatches play', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
@@ -569,7 +572,7 @@ describe('PlaybackBar', () => {
       updatedAt: Date.now(),
     });
 
-    const { store } = setup();
+    const { store } = await setup();
 
     await waitFor(() => {
       expect($.getMusicPlaybackTrackPath(store.getState())).toBe(
@@ -609,7 +612,7 @@ describe('PlaybackBar', () => {
       updatedAt: Date.now() - 10_001,
     });
 
-    const { store } = setup();
+    const { store } = await setup();
 
     await waitFor(() => {
       expect(persistedState.musicPlaybackResume.read()).toBeNull();
@@ -652,6 +655,11 @@ describe('PlaybackBar', () => {
   it('does not reload or replay the track when returning from the Files view', async () => {
     const { store } = await setupPlaying();
     const loadIdBefore = $.getMusicPlaybackLoadId(store.getState());
+    expectConsoleError(
+      ([message]) =>
+        message instanceof TypeError &&
+        message.message === 'Only absolute URLs are supported',
+    );
 
     await act(async () => {
       await userEvent.click(screen.getByRole('link', { name: 'Files' }));
@@ -704,8 +712,8 @@ describe('PlaybackBar', () => {
 });
 
 describe('filter panels', () => {
-  it('lists items derived from track metadata', () => {
-    setup();
+  it('lists items derived from track metadata', async () => {
+    await setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     expect(
       within(genreList).getByRole('option', { name: 'Jazz' }),
@@ -716,7 +724,7 @@ describe('filter panels', () => {
   });
 
   it('clicking an item selects it', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     await act(async () => {
       await userEvent.click(
@@ -727,7 +735,7 @@ describe('filter panels', () => {
   });
 
   it('clicking the All option clears a selection', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
     });
@@ -741,7 +749,7 @@ describe('filter panels', () => {
   });
 
   it('cmd+click adds an item to the filter panel selection', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     await act(async () => {
       await userEvent.click(
@@ -760,7 +768,7 @@ describe('filter panels', () => {
   });
 
   it('cmd+click removes an already-selected filter panel item', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     await act(async () => {
       await userEvent.click(
@@ -781,7 +789,7 @@ describe('filter panels', () => {
   });
 
   it('shift+click selects a range in the filter panel', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     await act(async () => {
       await userEvent.click(
@@ -800,7 +808,7 @@ describe('filter panels', () => {
   });
 
   it('a multi-selection in a filter panel shows tracks matching any selection', async () => {
-    setup();
+    await setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     await act(async () => {
       await userEvent.click(
@@ -835,7 +843,7 @@ describe('filter panels', () => {
         album: 'Random Access Memories',
       },
     ];
-    const { store } = setup(tracks);
+    const { store } = await setup(tracks);
 
     const artistList = screen.getByRole('listbox', { name: 'artist' });
     await act(async () => {
@@ -885,7 +893,7 @@ describe('filter panels', () => {
   });
 
   it('Shift+ArrowDown extends the filter panel selection downward', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
     });
@@ -900,7 +908,7 @@ describe('filter panels', () => {
   });
 
   it('Shift+ArrowUp extends the filter panel selection upward', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
     });
@@ -915,7 +923,7 @@ describe('filter panels', () => {
   });
 
   it('Shift+ArrowDown then Shift+ArrowUp shrinks the filter panel selection', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
     });
@@ -927,7 +935,7 @@ describe('filter panels', () => {
   });
 
   it('Shift+ArrowUp on the first item does nothing', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
     });
@@ -939,7 +947,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowDown selects the first item when none is selected', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       screen.getByRole('listbox', { name: 'genre' }).focus();
       await userEvent.keyboard('{ArrowDown}');
@@ -948,7 +956,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowDown advances the selection', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
     });
@@ -960,7 +968,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowDown stays on the last item', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
     });
@@ -972,7 +980,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowUp from the first item clears to All', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
     });
@@ -984,7 +992,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowUp does nothing when All is active', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       screen.getByRole('listbox', { name: 'genre' }).focus();
       await userEvent.keyboard('{ArrowUp}');
@@ -993,7 +1001,7 @@ describe('filter panels', () => {
   });
 
   it('Escape clears the selection', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     await act(async () => {
       store.dispatch(A.setMusicPanelSelection('genre', ['Rock']));
     });
@@ -1005,7 +1013,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowRight moves focus to the next panel', async () => {
-    setup();
+    await setup();
     await act(async () => {
       screen.getByRole('listbox', { name: 'genre' }).focus();
       await userEvent.keyboard('{ArrowRight}');
@@ -1016,7 +1024,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowLeft moves focus to the previous panel', async () => {
-    setup();
+    await setup();
     await act(async () => {
       screen.getByRole('listbox', { name: 'artist' }).focus();
       await userEvent.keyboard('{ArrowLeft}');
@@ -1027,7 +1035,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowLeft does nothing on the first panel', async () => {
-    setup();
+    await setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     await act(async () => {
       genreList.focus();
@@ -1037,7 +1045,7 @@ describe('filter panels', () => {
   });
 
   it('ArrowRight does nothing on the last panel', async () => {
-    setup();
+    await setup();
     const albumList = screen.getByRole('listbox', { name: 'album' });
     await act(async () => {
       albumList.focus();
@@ -1047,7 +1055,7 @@ describe('filter panels', () => {
   });
 
   it('a genre selection cascades to narrow the artist panel', async () => {
-    setup();
+    await setup();
     const genreList = screen.getByRole('listbox', { name: 'genre' });
     await act(async () => {
       await userEvent.click(

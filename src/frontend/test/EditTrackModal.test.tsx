@@ -12,6 +12,7 @@ import {
   useMusicTestServer,
   writeFolderArtwork,
 } from './utils/music';
+import { expectConsoleError } from './utils/setupAfterEnv';
 
 /**
  * The preferred tests for driving the Edit Track modal behavior against the real music
@@ -140,6 +141,9 @@ describe('<EditTrackModal> with real server', () => {
     await act(async () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).toBeNull();
+    });
   }
 
   async function openBulkEditModal(
@@ -158,6 +162,9 @@ describe('<EditTrackModal> with real server', () => {
       fireEvent.click(
         await screen.findByRole('button', { name: 'Edit Selection' }),
       );
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
     });
   }
 
@@ -760,13 +767,6 @@ describe('<EditTrackModal> with real server', () => {
       within(dialog).getByRole('button', { name: 'Embed artwork' }),
     ).toBeTruthy();
   }, 30_000);
-
-  // NOTE: the two artwork *upload* cases (picking a file, and the empty-state
-  // "Add album artwork" flow) live in EditTrackModal.loading-states.test.tsx.
-  // The frontend passes the picked File straight to fetch as the body, and
-  // jsdom + node-fetch cannot serialize a File, so the real server only ever
-  // receives an empty upload here. The server's handling of an uploaded image
-  // body is covered by server/test/route-music-write-artwork.test.ts.
 
   it('offers to embed the folder image into album tracks that lack it', async () => {
     const cover = buildJpegBytes();

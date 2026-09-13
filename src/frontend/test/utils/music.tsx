@@ -304,6 +304,12 @@ class NodeEventSource {
   }
 }
 
+let pendingFetchCount = 0;
+
+export function isNetworkIdle(): boolean {
+  return pendingFetchCount === 0;
+}
+
 export function useMusicTestServer() {
   let server: MusicTestServer | null = null;
 
@@ -312,7 +318,17 @@ export function useMusicTestServer() {
   }, 15_000);
 
   beforeEach(() => {
-    (global as any).fetch = nodeFetch;
+    pendingFetchCount = 0;
+    (global as any).fetch = async (
+      ...args: Parameters<typeof nodeFetch>
+    ) => {
+      pendingFetchCount++;
+      try {
+        return await nodeFetch(...args);
+      } finally {
+        pendingFetchCount--;
+      }
+    };
     (global as any).EventSource = NodeEventSource;
   });
 
@@ -375,12 +391,4 @@ export function renderMusicApp({ server, search = '' }: RenderMusicAppOptions) {
   );
 
   return { store, testServer };
-}
-
-export function mockMusicMediaElement() {
-  jest.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation();
-  jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation();
-  jest
-    .spyOn(HTMLMediaElement.prototype, 'play')
-    .mockImplementation(() => Promise.resolve());
 }

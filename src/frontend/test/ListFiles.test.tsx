@@ -645,7 +645,9 @@ describe('ListFiles', () => {
       'README.md',
       'Notes/Ideas.md',
     ]);
-    store.dispatch(A.setDetectedPointerType('touch'));
+    await act(async () => {
+      store.dispatch(A.setDetectedPointerType('touch'));
+    });
 
     await waitFor(() => getFileListing('/README.md'));
 
@@ -655,9 +657,9 @@ describe('ListFiles', () => {
 
     await waitFor(() => screen.getByText(/Ideas/));
 
-    // The detected mode is persisted to localStorage; reset it so it doesn't
-    // leak into later tests in this file.
-    store.dispatch(A.setDetectedPointerType('mouse'));
+    act(() => {
+      store.dispatch(A.setDetectedPointerType('mouse'));
+    });
   });
 
   it('forces desktop click-to-select behavior on a touch tap when inputMode is "mouse"', async () => {
@@ -665,7 +667,9 @@ describe('ListFiles', () => {
       'README.md',
       'Notes/Ideas.md',
     ]);
-    store.dispatch(A.setInputMode('mouse'));
+    await act(async () => {
+      store.dispatch(A.setInputMode('mouse'));
+    });
 
     await waitFor(() => getFileListing('/README.md'));
 
@@ -676,9 +680,9 @@ describe('ListFiles', () => {
     expect(getSelectedFilePaths()).toEqual(['/Notes']);
     expect(screen.queryByText(/Ideas/)).toBeNull();
 
-    // The setting is persisted to localStorage; reset it so it doesn't leak
-    // into later tests in this file.
-    store.dispatch(A.setInputMode('auto'));
+    act(() => {
+      store.dispatch(A.setInputMode('auto'));
+    });
   });
 
   it('forces touch tap-to-open behavior on a mouse click when inputMode is "touch"', async () => {
@@ -686,7 +690,9 @@ describe('ListFiles', () => {
       'README.md',
       'Notes/Ideas.md',
     ]);
-    store.dispatch(A.setInputMode('touch'));
+    await act(async () => {
+      store.dispatch(A.setInputMode('touch'));
+    });
 
     await waitFor(() => getFileListing('/README.md'));
 
@@ -696,9 +702,9 @@ describe('ListFiles', () => {
 
     await waitFor(() => screen.getByText(/Ideas/));
 
-    // The setting is persisted to localStorage; reset it so it doesn't leak
-    // into later tests in this file.
-    store.dispatch(A.setInputMode('auto'));
+    act(() => {
+      store.dispatch(A.setInputMode('auto'));
+    });
   });
 
   it('hides the file menu button in mouse mode, but right-click still opens the menu', async () => {
@@ -722,7 +728,9 @@ describe('ListFiles', () => {
     const { store, user, navigateByKeyboard } = await setupWithListing([
       'README.md',
     ]);
-    store.dispatch(A.setInputMode('touch'));
+    await act(async () => {
+      store.dispatch(A.setInputMode('touch'));
+    });
 
     await waitFor(() => getFileListing('/README.md'));
 
@@ -742,9 +750,9 @@ describe('ListFiles', () => {
 
     expect(await screen.findByRole('button', { name: /Rename/i })).toBeTruthy();
 
-    // The setting is persisted to localStorage; reset it so it doesn't leak
-    // into later tests in this file.
-    store.dispatch(A.setInputMode('auto'));
+    act(() => {
+      store.dispatch(A.setInputMode('auto'));
+    });
   });
 
   it('toggles multi-selection with ctrl-click', async () => {

@@ -12,6 +12,7 @@ import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import fetchMock from '@fetch-mock/jest';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 import { mockDropboxListFolder } from './utils/fixtures';
+import { expectConsoleError } from './utils/setupAfterEnv';
 
 type Store = ReturnType<typeof createStore>;
 
@@ -137,6 +138,23 @@ describe('Settings', () => {
     connectDropbox(store);
     await connectBrowserFiles(store, getIDBFS());
     mockDropboxListFolder([]);
+    expectConsoleError(([message]) => {
+      if (message === 'Attempting to createInitialFiles after failiure') {
+        return true;
+      }
+      if (
+        message instanceof Error &&
+        message.message === 'Failed to create files in the file store'
+      ) {
+        return true;
+      }
+      return (
+        typeof message === 'object' &&
+        message !== null &&
+        'error' in message &&
+        (message as { error?: { status?: number } }).error?.status === 404
+      );
+    });
     const deleteDatabase = watchDatabaseDeletes();
 
     renderSettings(store);
@@ -163,6 +181,7 @@ describe('Settings', () => {
     const deleteDatabase = watchDatabaseDeletes();
 
     renderSettings(store);
+    await screen.findByText('1 file stored in the browser');
     await signOutOfDropbox();
 
     expect(confirm).toHaveBeenCalled();

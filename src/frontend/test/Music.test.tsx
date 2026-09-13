@@ -70,6 +70,7 @@ describe('<Music> with real server', () => {
   it('does not show a server update notice against an up-to-date server', async () => {
     setup();
     await screen.findByRole('button', { name: 'Scan Library' });
+    await screen.findByText('Music library not found. Run a scan first.');
     expect(
       screen.queryByRole('link', { name: 'Server update needed' }),
     ).toBeNull();
@@ -283,6 +284,9 @@ describe('<Music> with real server', () => {
         (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
           .disabled,
       ).toBe(true);
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).toBeNull();
     });
 
     // Confirm the tag was written by re-fetching from the real server.

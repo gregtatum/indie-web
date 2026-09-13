@@ -9,7 +9,6 @@ import { persistedState } from 'frontend/logic/persisted-state';
 import { AppRoutes } from 'frontend/components/App';
 import fetchMock from '@fetch-mock/jest';
 import { mockServerListFiles } from './utils/fixtures';
-import { mockMusicMediaElement } from './utils/music';
 import { MUSIC_INDEX_VERSION } from 'shared/music';
 
 const FAKE_SERVER: T.FileStoreServer = {
@@ -60,7 +59,6 @@ beforeEach(() => {
   persistedState.musicLastPlayedTrackPath.remove();
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
-  mockMusicMediaElement();
 });
 
 function setup(tracks = TRACKS) {

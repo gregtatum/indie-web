@@ -7,7 +7,6 @@ import { createStore } from 'frontend/store/create-store';
 import { A, T, $ } from 'frontend';
 import { AppRoutes } from 'frontend/components/App';
 import fetchMock from '@fetch-mock/jest';
-import { mockMusicMediaElement } from './utils/music';
 import { MUSIC_INDEX_VERSION } from 'shared/music';
 
 const FAKE_SERVER: T.FileStoreServer = {
@@ -71,7 +70,6 @@ const TRACKS: T.TrackMetadata[] = [
 beforeEach(() => {
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
-  mockMusicMediaElement();
 });
 
 function mockPlatform(platform: string) {
