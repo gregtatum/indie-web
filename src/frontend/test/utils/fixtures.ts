@@ -1,3 +1,4 @@
+import { act } from 'react';
 import { A, $, T } from 'frontend';
 import { type files } from 'dropbox';
 import {
@@ -9,6 +10,16 @@ import fetchMock from '@fetch-mock/jest';
 import { createStore } from 'frontend/store/create-store';
 import { fixupMetadata } from 'frontend/logic/file-store/dropbox-fs';
 import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
+import { getCodes } from 'frontend/hooks/pcse';
+
+/**
+ * Flushes known post-render mount races inside act().
+ */
+export async function settleApp() {
+  await act(async () => {
+    await getCodes();
+  });
+}
 
 export function createFileMetadata(path: string, id?: string): T.FileMetadata {
   const parts = path.split('/');

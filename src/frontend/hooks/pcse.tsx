@@ -72,7 +72,7 @@ function generateRandomString(): string {
   return new BufferSerializer(array.buffer).toHexString();
 }
 
-async function getCodes(): Promise<Codes> {
+export async function getCodes(): Promise<Codes> {
   if (!_codes) {
     const codeVerifier = generateRandomString();
     const codeChallenge = await sha256Base64(codeVerifier);

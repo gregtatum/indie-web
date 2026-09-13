@@ -14,7 +14,7 @@ import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import { A, $ } from 'frontend';
 import { ensureExists } from 'frontend/utils';
-import { getFileTree } from './utils/fixtures';
+import { getFileTree, settleApp } from './utils/fixtures';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 
 function mockPlatform(platform: string) {
@@ -59,6 +59,8 @@ describe('ListFiles', () => {
         </Provider>
       </MemoryRouter>,
     );
+
+    await settleApp();
 
     function getSelectedFilePath() {
       const element = screen.queryByRole('option', { selected: true });
