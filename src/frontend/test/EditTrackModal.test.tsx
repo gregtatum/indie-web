@@ -118,7 +118,7 @@ describe('<EditTrackModal> with real server', () => {
    * Renders the app, scans the (already-written) files, and returns the store.
    */
   async function setup(search = '') {
-    const rendered = renderMusicApp({ server: getServer(), search });
+    const rendered = await renderMusicApp({ server: getServer(), search });
     if (!search.includes('edit=')) {
       await scanLibrary();
     }
@@ -222,7 +222,7 @@ describe('<EditTrackModal> with real server', () => {
   it('reopens a bulk edit from URL params after refresh', async () => {
     await writeAlbumA();
     await scanViaApi();
-    renderMusicApp({
+    await renderMusicApp({
       server: getServer(),
       search: '?track=%2Fa.mp3&track=%2Fb.mp3&edit=%2Fa.mp3',
     });

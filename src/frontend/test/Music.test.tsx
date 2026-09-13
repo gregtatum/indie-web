@@ -57,18 +57,18 @@ describe('<Music> with real server', () => {
     await removeMusicIndex(getServer());
   });
 
-  function setup(search = '') {
+  async function setup(search = '') {
     return renderMusicApp({ server: getServer(), search });
   }
 
   it('renders the Scan Library button', async () => {
-    setup();
+    await setup();
     await screen.findByRole('button', { name: 'Scan Library' });
     await screen.findByText('Music library not found. Run a scan first.');
   });
 
   it('does not show a server update notice against an up-to-date server', async () => {
-    setup();
+    await setup();
     await screen.findByRole('button', { name: 'Scan Library' });
     await screen.findByText('Music library not found. Run a scan first.');
     expect(
@@ -79,7 +79,7 @@ describe('<Music> with real server', () => {
   it('shows files from the server in the listing', async () => {
     await writeFile(join(getServer().mountDir, 'Blue.mp3'), buildMinimalMp3());
 
-    setup('?view=files');
+    await setup('?view=files');
 
     // The filename is split across spans (name + "." + extension).
     // Match extension span ("mp3") and name within the display span ("Blue...").
@@ -100,7 +100,7 @@ describe('<Music> with real server', () => {
       buildMinimalMp3(),
     );
 
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
 
     await act(async () => {
@@ -113,7 +113,7 @@ describe('<Music> with real server', () => {
   });
 
   it('shows "Scanning…" and disables the button while a scan is in progress', async () => {
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
 
     const button = await screen.findByRole('button', {
@@ -133,7 +133,7 @@ describe('<Music> with real server', () => {
   it('picks up a newly added file on a second scan', async () => {
     await writeFile(join(getServer().mountDir, 'IncrA.mp3'), buildMinimalMp3());
 
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
 
     // First scan — establishes the baseline count.
@@ -159,7 +159,7 @@ describe('<Music> with real server', () => {
   });
 
   it('re-enables the Scan Library button after a scan completes', async () => {
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
 
     await act(async () => {
@@ -175,7 +175,7 @@ describe('<Music> with real server', () => {
   });
 
   it('does not show the rescan button after a fresh scan', async () => {
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
 
     await act(async () => {
@@ -193,7 +193,7 @@ describe('<Music> with real server', () => {
   it('shows "Scan Library (updates detected)" when the served index is v1', async () => {
     await writeFile(join(getServer().mountDir, '.music-index.json'), v1Fixture);
 
-    setup();
+    await setup();
 
     await screen.findByRole('button', {
       name: 'Scan Library (updates detected)',
@@ -203,7 +203,7 @@ describe('<Music> with real server', () => {
   it('discloses the index format mismatch in a tooltip', async () => {
     await writeFile(join(getServer().mountDir, '.music-index.json'), v1Fixture);
 
-    setup();
+    await setup();
 
     const button = await screen.findByRole('button', {
       name: 'Scan Library (updates detected)',
@@ -218,7 +218,7 @@ describe('<Music> with real server', () => {
   it('reverts to "Scan Library" after scanning clears the stale index', async () => {
     await writeFile(join(getServer().mountDir, '.music-index.json'), v1Fixture);
 
-    setup();
+    await setup();
 
     await screen.findByRole('button', {
       name: 'Scan Library (updates detected)',
@@ -242,7 +242,7 @@ describe('<Music> with real server', () => {
       buildMp3WithTags({ title: 'Original Title', artist: 'Test Artist' }),
     );
 
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
     await act(async () => {
       await userEvent.click(
@@ -325,7 +325,7 @@ describe('<Music> with real server', () => {
       }),
     );
 
-    const { store } = setup();
+    const { store } = await setup();
     await screen.findByText('Music library not found. Run a scan first.');
     await act(async () => {
       await userEvent.click(
@@ -392,7 +392,7 @@ describe('<Music> with real server', () => {
     }
 
     cleanup();
-    setup();
+    await setup();
     await screen.findByText('New Album Genre');
     expect(
       screen.queryByRole('button', {
@@ -414,7 +414,7 @@ describe('<Music> with real server', () => {
       }),
     );
 
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
     await act(async () => {
       await userEvent.click(
@@ -477,7 +477,7 @@ describe('<Music> with real server', () => {
       buildMp3WithTags({ title: 'Indexed Title', artist: 'Test Artist' }),
     );
 
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
     await act(async () => {
       await userEvent.click(
@@ -521,7 +521,7 @@ describe('<Music> with real server', () => {
     ).toBeNull();
 
     cleanup();
-    setup();
+    await setup();
     await screen.findByText('Saved Title');
     expect(screen.queryByText('Indexed Title')).toBeNull();
     expect(
@@ -537,7 +537,7 @@ describe('<Music> with real server', () => {
       buildMp3WithTags({ title: 'Before Rescan', artist: 'Test Artist' }),
     );
 
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
     await act(async () => {
       await userEvent.click(
@@ -588,7 +588,7 @@ describe('<Music> with real server', () => {
       buildMp3WithTags({ title: 'ID3 Old Title', artist: 'Test Artist' }),
     );
 
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
     await act(async () => {
       await userEvent.click(
@@ -671,7 +671,7 @@ describe('<Music> with real server', () => {
       buildMp3WithTags({ title: 'Close Test Track' }),
     );
 
-    setup();
+    await setup();
     await screen.findByText('Music library not found. Run a scan first.');
     await act(async () => {
       await userEvent.click(

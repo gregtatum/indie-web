@@ -14,6 +14,7 @@ import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import * as Types from 'frontend/@types';
 import { MUSIC_INDEX_VERSION } from 'shared/music';
+import { settleApp } from './fixtures';
 
 export interface MusicTestServer {
   baseUrl: string;
@@ -371,7 +372,10 @@ interface RenderMusicAppOptions {
   search?: string;
 }
 
-export function renderMusicApp({ server, search = '' }: RenderMusicAppOptions) {
+export async function renderMusicApp({
+  server,
+  search = '',
+}: RenderMusicAppOptions) {
   const testServer: T.FileStoreServer = {
     url: server.baseUrl,
     name: 'Test Music',
@@ -389,6 +393,7 @@ export function renderMusicApp({ server, search = '' }: RenderMusicAppOptions) {
       </Provider>
     </MemoryRouter>,
   );
+  await settleApp();
 
   return { store, testServer };
 }

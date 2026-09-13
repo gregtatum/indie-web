@@ -80,7 +80,7 @@ if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
 async function setup(tracks: T.TrackMetadata[] = TRACKS) {
   const server = getServer();
   writeMusicIndex(server, tracks);
-  const result = renderMusicApp({ server });
+  const result = await renderMusicApp({ server });
 
   await act(async () => {
     result.store.dispatch(A.setMusicTracks(tracks, false));

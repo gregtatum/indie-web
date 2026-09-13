@@ -81,7 +81,7 @@ describe('<BatchEditGrid> with real server', () => {
   }
 
   async function setup() {
-    const rendered = renderMusicApp({ server: getServer() });
+    const rendered = await renderMusicApp({ server: getServer() });
     await scanLibrary();
     return rendered;
   }

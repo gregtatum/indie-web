@@ -11,7 +11,7 @@ import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import fetchMock from '@fetch-mock/jest';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
-import { mockDropboxListFolder } from './utils/fixtures';
+import { mockDropboxListFolder, settleApp } from './utils/fixtures';
 import { expectConsoleError } from './utils/setupAfterEnv';
 
 type Store = ReturnType<typeof createStore>;
@@ -40,7 +40,7 @@ function addNasStorage(store: Store) {
   store.dispatch(A.addFileStoreServer(NAS_STORAGE));
 }
 
-function renderSettings(store: Store) {
+async function renderSettings(store: Store) {
   render(
     <MemoryRouter initialEntries={['/settings']}>
       <Provider store={store as any}>
@@ -48,6 +48,7 @@ function renderSettings(store: Store) {
       </Provider>
     </MemoryRouter>,
   );
+  await settleApp();
 }
 
 function watchDatabaseDeletes() {
@@ -113,7 +114,7 @@ describe('Settings', () => {
     await connectBrowserFiles(store, getIDBFS());
     const deleteDatabase = watchDatabaseDeletes();
 
-    renderSettings(store);
+    await renderSettings(store);
     await requestBrowserFileDeletion();
     await confirmBrowserFileDeletion();
 
@@ -157,7 +158,7 @@ describe('Settings', () => {
     });
     const deleteDatabase = watchDatabaseDeletes();
 
-    renderSettings(store);
+    await renderSettings(store);
     await requestBrowserFileDeletion();
     await confirmBrowserFileDeletion();
 
@@ -180,7 +181,7 @@ describe('Settings', () => {
     const confirm = confirmPrompts();
     const deleteDatabase = watchDatabaseDeletes();
 
-    renderSettings(store);
+    await renderSettings(store);
     await screen.findByText('1 file stored in the browser');
     await signOutOfDropbox();
 
@@ -204,7 +205,7 @@ describe('Settings', () => {
     const confirm = confirmPrompts();
     const deleteDatabase = watchDatabaseDeletes();
 
-    renderSettings(store);
+    await renderSettings(store);
     await signOutOfDropbox();
 
     expect(confirm).toHaveBeenCalled();
@@ -220,7 +221,7 @@ describe('Settings', () => {
     addNasStorage(store);
     const confirm = confirmPrompts();
 
-    renderSettings(store);
+    await renderSettings(store);
 
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
     expect(screen.getByText('1 configured')).toBeTruthy();
@@ -246,7 +247,7 @@ describe('Settings', () => {
     store.dispatch(A.changeFileStore('server', NAS_STORAGE));
     const confirm = confirmPrompts();
 
-    renderSettings(store);
+    await renderSettings(store);
 
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
 
@@ -271,7 +272,7 @@ describe('Settings', () => {
     const confirm = confirmPrompts();
     const deleteDatabase = watchDatabaseDeletes();
 
-    renderSettings(store);
+    await renderSettings(store);
 
     expect(await screen.findByDisplayValue('NAS Storage')).toBeTruthy();
 
@@ -289,7 +290,7 @@ describe('Settings', () => {
     const store = createStore();
     onboard(store);
 
-    renderSettings(store);
+    await renderSettings(store);
 
     expect(store.getState().inputMode).toBe('auto');
 

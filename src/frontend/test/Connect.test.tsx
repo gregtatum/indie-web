@@ -10,7 +10,11 @@ import { persistedState } from 'frontend/logic/persisted-state';
 import { createStore } from 'frontend/store/create-store';
 import { A } from 'frontend';
 import fetchMock from '@fetch-mock/jest';
-import { createFileMetadata, mockServerListFiles } from './utils/fixtures';
+import {
+  createFileMetadata,
+  mockServerListFiles,
+  settleApp,
+} from './utils/fixtures';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -35,6 +39,7 @@ describe('Connect', () => {
         </Provider>
       </MemoryRouter>,
     );
+    await settleApp();
 
     expect(
       await screen.findByRole('heading', { name: /Connect a Folder/ }),
@@ -49,6 +54,7 @@ describe('Connect', () => {
         </Provider>
       </MemoryRouter>,
     );
+    await settleApp();
 
     await act(async () => {
       await userEvent.click(
@@ -91,6 +97,7 @@ describe('Connect', () => {
         </Provider>
       </MemoryRouter>,
     );
+    await settleApp();
 
     await userEvent.type(screen.getByLabelText('Name'), 'NAS Storage');
     await userEvent.clear(screen.getByLabelText('Server Address'));
@@ -200,6 +207,7 @@ describe('Connect', () => {
           </Provider>
         </MemoryRouter>,
       );
+      await settleApp();
 
       if (providerName) {
         await userEvent.type(screen.getByLabelText('Name'), providerName);
