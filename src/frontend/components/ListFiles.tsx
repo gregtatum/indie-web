@@ -868,6 +868,8 @@ function Search() {
     }, wait);
   }, []);
 
+  React.useEffect(() => onChange.cancel, [onChange]);
+
   return (
     <input
       className="listFilesFilterInput"

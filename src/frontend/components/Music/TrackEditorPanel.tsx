@@ -307,6 +307,7 @@ export const TrackEditorPanel = React.forwardRef<
     bulkAbortControllerRef.current = null;
     bulkProgressRequestIdRef.current = null;
     clearBulkLoadingNoticeDelay();
+    bulkProgressCommit.cancel();
     setShowBulkLoadingNotice(false);
   }
 

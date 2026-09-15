@@ -57,7 +57,7 @@ export function maybeGetProperty(value: any, property: string): string | null {
 export function throttle<F extends (...args: any) => void>(
   callback: F,
   wait: number,
-): F {
+): F & { cancel: () => void } {
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let pendingArgs: any[] | null = null;
 
@@ -79,6 +79,14 @@ export function throttle<F extends (...args: any) => void>(
     } else {
       pendingArgs = args;
     }
+  };
+
+  result.cancel = () => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+    pendingArgs = null;
   };
 
   return result;
@@ -159,15 +167,25 @@ export function assertType<T>(value: T): T {
 export function debounce<F extends (...args: any) => void>(
   callback: F,
   wait: number,
-): F {
-  let timeout: ReturnType<typeof setTimeout>;
+): F & { cancel: () => void } {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
 
   const result: any = (...args: any[]): void => {
-    clearTimeout(timeout);
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
 
     timeout = setTimeout(() => {
+      timeout = null;
       callback(...args);
     }, wait);
+  };
+
+  result.cancel = () => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
   };
 
   return result;
