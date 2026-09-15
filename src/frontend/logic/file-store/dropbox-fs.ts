@@ -55,14 +55,14 @@ export class DropboxFS extends FileStore {
   ) {
     super(workerClient);
     this.#dropbox = dropbox;
-    if (!cacheEnabled || process.env.NODE_ENV === 'test') {
-      this.cachePromise = Promise.resolve();
-    } else {
+    if (cacheEnabled) {
       this.cachePromise = void openIDBFS(IDB_CACHE_NAME, workerClient).then(
         (IDBFS) => {
           this.cache = IDBFS;
         },
       );
+    } else {
+      this.cachePromise = Promise.resolve();
     }
   }
 

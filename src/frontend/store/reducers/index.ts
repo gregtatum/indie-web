@@ -762,6 +762,9 @@ function fileStoreCacheEnabled(
 }
 
 function getFileStoreCacheEnabledDefault(): boolean {
+  if (process.env.NODE_ENV === 'test') {
+    return false;
+  }
   return persistedState.fileStoreCacheEnabled.read() ?? true;
 }
 
