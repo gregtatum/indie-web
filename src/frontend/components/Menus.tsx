@@ -201,15 +201,14 @@ export function Menu({
     elementY1 = anchorPoint.y - docBodyRect.top;
     elementY2 = elementY1;
     left = anchorPoint.x;
-  } else {
-    const elementRect = ensureExists(
-      clickedElement.current,
-      'The clicked element did not exist in the menu',
-    ).getBoundingClientRect();
+  } else if (clickedElement.current) {
+    const elementRect = clickedElement.current.getBoundingClientRect();
     elementY1 = elementRect.top + elementRect.height / 3 - docBodyRect.top;
     elementY2 = elementRect.bottom - elementRect.height / 3 - docBodyRect.top;
     const elementCenterX = elementRect.width / 2 + elementRect.left;
     left = elementCenterX - menuWidth / 2;
+  } else {
+    return null;
   }
 
   if (left < menuMargin) {
