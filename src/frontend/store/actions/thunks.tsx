@@ -437,6 +437,15 @@ export function moveFile(
 
       dispatch(PlainInternal.moveFileDone(fromPath, metadata));
 
+      const fromDir = getDirName(fromPath);
+      const toDir = getDirName(toPath);
+      if (fromDir !== toDir) {
+        await Promise.all([
+          dispatch(listFiles(fromDir)),
+          dispatch(listFiles(toDir)),
+        ]);
+      }
+
       if (generation !== undefined) {
         dispatch(
           addMessage({
@@ -450,9 +459,6 @@ export function moveFile(
           }),
         );
       }
-
-      void dispatch(listFiles(getDirName(fromPath)));
-      void dispatch(listFiles(getDirName(toPath)));
     } catch (error) {
       if (generation !== undefined) {
         dispatch(
