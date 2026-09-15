@@ -122,7 +122,7 @@ describe('Settings', () => {
     expectDropboxCacheDeleted(deleteDatabase);
     await expectOnboardingHomeScreen();
 
-    fetchMock.get('/guide/Getting Started.chopro', 'Getting started');
+    fetchMock.get('/guide/Getting%20Started.chopro', 'Getting started');
 
     await act(async () => {
       await userEvent.click(
