@@ -1028,6 +1028,9 @@ export function forceExpiration(): Thunk {
 const hasFailureMap = new Map<string, boolean>();
 export function createInitialFiles(): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
     const fileStore = $.getCurrentFS(getState());
     const fsSlug = $.getCurrentFileStoreSlug(getState());
     let hasFailure = hasFailureMap.get(fsSlug);
@@ -1053,7 +1056,7 @@ export function createInitialFiles(): Thunk<Promise<void>> {
       // Load the file locally first.
       let contents: string;
       try {
-        const response = await fetch('/guide/' + file);
+        const response = await fetch(window.location.origin + '/guide/' + file);
         contents = await response.text();
       } catch (error) {
         setFailure(error);

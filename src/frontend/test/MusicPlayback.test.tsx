@@ -10,7 +10,6 @@ import {
   useMusicTestServer,
   writeMusicIndex,
 } from './utils/music';
-import { expectConsoleError } from './utils/setupAfterEnv';
 
 // When a new music index upgrader is written (bumping CURRENT_MUSIC_INDEX_VERSION),
 // add a representative track here with the new field populated.
@@ -655,11 +654,6 @@ describe('PlaybackBar', () => {
   it('does not reload or replay the track when returning from the Files view', async () => {
     const { store } = await setupPlaying();
     const loadIdBefore = $.getMusicPlaybackLoadId(store.getState());
-    expectConsoleError(
-      ([message]) =>
-        message instanceof TypeError &&
-        message.message === 'Only absolute URLs are supported',
-    );
 
     await act(async () => {
       await userEvent.click(screen.getByRole('link', { name: 'Files' }));

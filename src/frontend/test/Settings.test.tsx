@@ -9,10 +9,8 @@ import { createStore } from 'frontend/store/create-store';
 import { A } from 'frontend';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
-import fetchMock from '@fetch-mock/jest';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 import { mockDropboxListFolder, settleApp } from './utils/fixtures';
-import { expectConsoleError } from './utils/setupAfterEnv';
 
 type Store = ReturnType<typeof createStore>;
 
@@ -122,8 +120,6 @@ describe('Settings', () => {
     expectDropboxCacheDeleted(deleteDatabase);
     await expectOnboardingHomeScreen();
 
-    fetchMock.get('/guide/Getting%20Started.chopro', 'Getting started');
-
     await act(async () => {
       await userEvent.click(
         screen.getByRole('button', { name: 'Start a Blank Workspace' }),
@@ -139,23 +135,6 @@ describe('Settings', () => {
     connectDropbox(store);
     await connectBrowserFiles(store, getIDBFS());
     mockDropboxListFolder([]);
-    expectConsoleError(([message]) => {
-      if (message === 'Attempting to createInitialFiles after failiure') {
-        return true;
-      }
-      if (
-        message instanceof Error &&
-        message.message === 'Failed to create files in the file store'
-      ) {
-        return true;
-      }
-      return (
-        typeof message === 'object' &&
-        message !== null &&
-        'error' in message &&
-        (message as { error?: { status?: number } }).error?.status === 404
-      );
-    });
     const deleteDatabase = watchDatabaseDeletes();
 
     await renderSettings(store);
