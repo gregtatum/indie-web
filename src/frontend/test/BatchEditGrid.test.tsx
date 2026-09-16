@@ -8,6 +8,7 @@ import {
   clearMusicMount,
   renderMusicApp,
   useMusicTestServer,
+  waitForNetworkIdle,
 } from './utils/music';
 
 /**
@@ -210,6 +211,10 @@ describe('<BatchEditGrid> with real server', () => {
     fireEvent.keyDown(document.body, { key: 'ArrowDown' });
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/b.mp3']);
     expect(activeCellText()).toBe('Artist B');
+
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
 
     fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
     expect(activeCellText()).toBe('Song B');

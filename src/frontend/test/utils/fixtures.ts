@@ -7,6 +7,7 @@ import {
   UnhandledCaseError,
 } from '../../utils';
 import fetchMock from '@fetch-mock/jest';
+import type nodeFetch from 'node-fetch';
 import { createStore } from 'frontend/store/create-store';
 import { fixupMetadata } from 'frontend/logic/file-store/dropbox-fs';
 import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
@@ -19,6 +20,70 @@ export async function settleApp() {
   await act(async () => {
     await getCodes();
   });
+}
+
+export interface RealFetchMock {
+  isNetworkIdle(): boolean;
+  waitForNetworkIdle(): Promise<void>;
+}
+
+const TRACKED_BODY_METHODS = ['json', 'text', 'arrayBuffer', 'buffer'] as const;
+
+function flushMicrotaskQueue(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Installs a real (non-mocked) fetch as global.fetch for the duration of
+ * each test, tracking every in-flight request and its body read (json(),
+ * text(), etc. resolve separately from fetch() itself) so a test can
+ * deterministically await the network settling instead of polling on a
+ * timer. Restores the previous global.fetch after every test.
+ */
+export function mockRealFetch(fetchImpl: typeof nodeFetch): RealFetchMock {
+  const pendingFetches = new Set<Promise<unknown>>();
+  let originalFetch: typeof fetch | undefined;
+
+  function trackPending<T>(promise: Promise<T>): Promise<T> {
+    pendingFetches.add(promise);
+    promise.finally(() => pendingFetches.delete(promise)).catch(() => {});
+    return promise;
+  }
+
+  beforeEach(() => {
+    pendingFetches.clear();
+    originalFetch = global.fetch;
+    (global as any).fetch = async (...args: Parameters<typeof fetchImpl>) => {
+      const response: any = await trackPending(fetchImpl(...args));
+      for (const method of TRACKED_BODY_METHODS) {
+        const original = response[method];
+        if (typeof original !== 'function') {
+          continue;
+        }
+        response[method] = () => trackPending(original.call(response));
+      }
+      return response;
+    };
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch as typeof fetch;
+  });
+
+  return {
+    isNetworkIdle: () => pendingFetches.size === 0,
+    async waitForNetworkIdle() {
+      for (;;) {
+        while (pendingFetches.size > 0) {
+          await Promise.allSettled(pendingFetches);
+        }
+        await flushMicrotaskQueue();
+        if (pendingFetches.size === 0) {
+          return;
+        }
+      }
+    },
+  };
 }
 
 export function createFileMetadata(path: string, id?: string): T.FileMetadata {

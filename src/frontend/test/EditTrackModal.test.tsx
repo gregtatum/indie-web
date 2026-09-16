@@ -10,9 +10,9 @@ import {
   clearMusicMount,
   renderMusicApp,
   useMusicTestServer,
+  waitForNetworkIdle,
   writeFolderArtwork,
 } from './utils/music';
-import { expectConsoleError } from './utils/setupAfterEnv';
 
 /**
  * The preferred tests for driving the Edit Track modal behavior against the real music
@@ -141,9 +141,10 @@ describe('<EditTrackModal> with real server', () => {
     await act(async () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
-    await waitFor(() => {
-      expect(screen.queryByText('Loading…')).toBeNull();
+    await act(async () => {
+      await waitForNetworkIdle();
     });
+    expect(screen.queryByText('Loading…')).toBeNull();
   }
 
   async function openBulkEditModal(
@@ -621,13 +622,12 @@ describe('<EditTrackModal> with real server', () => {
     });
 
     // The banner clears once every folder track carries the art.
-    await waitFor(
-      () =>
-        expect(
-          within(dialog).queryByRole('button', { name: 'Embed artwork' }),
-        ).toBeNull(),
-      { timeout: 10_000 },
-    );
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
+    expect(
+      within(dialog).queryByRole('button', { name: 'Embed artwork' }),
+    ).toBeNull();
 
     // The embed is folder-wide: the unselected third track gets the art too.
     for (const path of ['/Album A/1.mp3', '/Album A/2.mp3', '/Album A/3.mp3']) {
@@ -803,9 +803,10 @@ describe('<EditTrackModal> with real server', () => {
     });
 
     // Both tracks now carry the artwork, so the prompt goes away…
-    await waitFor(() => {
-      expect(within(dialog).queryByText(reason)).toBeNull();
+    await act(async () => {
+      await waitForNetworkIdle();
     });
+    expect(within(dialog).queryByText(reason)).toBeNull();
     // …and it is really embedded on disk.
     for (const path of ['/Album A/1.mp3', '/Album A/2.mp3']) {
       expect(frameValue(await fetchTrackTags(path), 'APIC')).toBeDefined();

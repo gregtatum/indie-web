@@ -14,7 +14,8 @@ import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import * as Types from 'frontend/@types';
 import { MUSIC_INDEX_VERSION } from 'shared/music';
-import { settleApp } from './fixtures';
+import { ensureExists } from '../../utils';
+import { mockRealFetch, type RealFetchMock, settleApp } from './fixtures';
 
 export interface MusicTestServer {
   baseUrl: string;
@@ -305,32 +306,38 @@ class NodeEventSource {
   }
 }
 
-let pendingFetchCount = 0;
+let networkMock: RealFetchMock | null = null;
 
 export function isNetworkIdle(): boolean {
-  return pendingFetchCount === 0;
+  return ensureExists(
+    networkMock,
+    'useMusicTestServer() must be called before isNetworkIdle()',
+  ).isNetworkIdle();
+}
+
+export async function waitForNetworkIdle(): Promise<void> {
+  await ensureExists(
+    networkMock,
+    'useMusicTestServer() must be called before waitForNetworkIdle()',
+  ).waitForNetworkIdle();
 }
 
 export function useMusicTestServer() {
   let server: MusicTestServer | null = null;
+  networkMock = mockRealFetch(nodeFetch);
 
   beforeAll(async () => {
     server = await startMusicTestServer();
   }, 15_000);
 
+  let originalEventSource: typeof EventSource | undefined;
   beforeEach(() => {
-    pendingFetchCount = 0;
-    (global as any).fetch = async (
-      ...args: Parameters<typeof nodeFetch>
-    ) => {
-      pendingFetchCount++;
-      try {
-        return await nodeFetch(...args);
-      } finally {
-        pendingFetchCount--;
-      }
-    };
+    originalEventSource = (global as any).EventSource;
     (global as any).EventSource = NodeEventSource;
+  });
+
+  afterEach(() => {
+    (global as any).EventSource = originalEventSource;
   });
 
   afterAll(async () => {
@@ -359,6 +366,9 @@ export async function removeMusicIndex(server: MusicTestServer): Promise<void> {
  * test would make `findByText` match multiple rows.
  */
 export async function clearMusicMount(server: MusicTestServer): Promise<void> {
+  await React.act(async () => {
+    await waitForNetworkIdle();
+  });
   const entries = await readdir(server.mountDir);
   await Promise.all(
     entries.map((entry) =>
