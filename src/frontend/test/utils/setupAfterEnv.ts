@@ -1,5 +1,6 @@
 import fetchMock from '@fetch-mock/jest';
 import { cleanup } from '@testing-library/react';
+import { act } from 'react';
 import { resetTestGeneration } from './fixtures';
 import { persistedState } from 'frontend/logic/persisted-state';
 import 'fake-indexeddb/auto';
@@ -194,7 +195,16 @@ beforeEach(function () {
     new MockMediaQueryList(query) as unknown as MediaQueryList;
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // Wrap the final component settling into 3 microtask waits. This allows external
+  // libraries to resolve their internal mechanics.
+  jest.useRealTimers();
+  await act(async () => {
+    for (let i = 0; i < 3; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  });
+
   // Unmount here so a console.error from it is attributed to this test.
   cleanup();
 

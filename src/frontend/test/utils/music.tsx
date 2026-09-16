@@ -203,15 +203,8 @@ export function writeMusicIndex(
  * The server binary is started the same way `task start-server` does it, but with
  * MOUNT_PATH and PORT overridden so it's isolated and won't collide with other tests.
  */
-export async function startMusicTestServer(): Promise<MusicTestServer> {
-  if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS) {
-    throw new Error(
-      'Running in a sandboxed environtment, please skip this test with the ' +
-        'INDIE_WEB_SKIP_LOCALHOST_TESTS pattern.',
-    );
-  }
-  const mountDir = await mkdtemp(join(tmpdir(), 'indie-web-music-test-'));
-  const port = await new Promise<number>((resolve, reject) => {
+async function getFreePort(): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
     const srv = net.createServer();
     srv.listen(0, '127.0.0.1', () => {
       const { port } = srv.address() as net.AddressInfo;
@@ -219,33 +212,48 @@ export async function startMusicTestServer(): Promise<MusicTestServer> {
     });
     srv.on('error', reject);
   });
-  const serverDir = join(__dirname, '../../../server');
+}
 
-  const child = spawn('node', ['--disable-warning=ExperimentalWarning', '.'], {
-    cwd: serverDir,
-    env: {
-      ...process.env,
-      PORT: String(port),
-      HOST: '127.0.0.1',
-      MOUNT_PATH: mountDir,
-    },
-  });
+function trySpawnServer(
+  port: number,
+  mountDir: string,
+  serverDir: string,
+): Promise<ReturnType<typeof spawn>> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      'node',
+      ['--disable-warning=ExperimentalWarning', '.'],
+      {
+        cwd: serverDir,
+        env: {
+          ...process.env,
+          PORT: String(port),
+          HOST: '127.0.0.1',
+          MOUNT_PATH: mountDir,
+        },
+      },
+    );
 
-  await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       child.kill();
       reject(new Error('Timed out waiting for music server to start'));
     }, 10_000);
 
+    let sawPortInUse = false;
+
     child.stdout?.on('data', (chunk: Buffer) => {
       if (chunk.toString().includes('Server started at')) {
         clearTimeout(timeout);
-        resolve();
+        resolve(child);
       }
     });
 
     child.stderr?.on('data', (chunk: Buffer) => {
-      console.error('[music-server]', chunk.toString());
+      const text = chunk.toString();
+      if (text.includes('EADDRINUSE')) {
+        sawPortInUse = true;
+      }
+      console.error('[music-server]', text);
     });
 
     child.on('error', (err) => {
@@ -256,10 +264,43 @@ export async function startMusicTestServer(): Promise<MusicTestServer> {
     child.on('exit', (code) => {
       clearTimeout(timeout);
       if (code !== 0) {
-        reject(new Error(`Music server exited unexpectedly with code ${code}`));
+        const error = new Error(
+          `Music server exited unexpectedly with code ${code}`,
+        );
+        (error as Error & { isPortInUse?: boolean }).isPortInUse = sawPortInUse;
+        reject(error);
       }
     });
   });
+}
+
+export async function startMusicTestServer(): Promise<MusicTestServer> {
+  if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS) {
+    throw new Error(
+      'Running in a sandboxed environtment, please skip this test with the ' +
+        'INDIE_WEB_SKIP_LOCALHOST_TESTS pattern.',
+    );
+  }
+  const mountDir = await mkdtemp(join(tmpdir(), 'indie-web-music-test-'));
+  const serverDir = join(__dirname, '../../../server');
+
+  // Resolve port contention which can happen in parallelized tests.
+  let port: number;
+  let child: ReturnType<typeof spawn>;
+  const maxAttempts = 5;
+  for (let attempt = 1; ; attempt++) {
+    port = await getFreePort();
+    try {
+      child = await trySpawnServer(port, mountDir, serverDir);
+      break;
+    } catch (error) {
+      const isPortInUse = (error as Error & { isPortInUse?: boolean })
+        .isPortInUse;
+      if (!isPortInUse || attempt >= maxAttempts) {
+        throw error;
+      }
+    }
+  }
 
   const baseUrl = `http://127.0.0.1:${port}`;
 
@@ -336,7 +377,12 @@ export function useMusicTestServer() {
     (global as any).EventSource = NodeEventSource;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Ensure any pending network traffic from a test lands within the same test,
+    // so that the updates are accounted for, and don't error out.
+    await React.act(async () => {
+      await waitForNetworkIdle();
+    });
     (global as any).EventSource = originalEventSource;
   });
 

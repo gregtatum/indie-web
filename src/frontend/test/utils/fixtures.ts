@@ -73,14 +73,15 @@ export function mockRealFetch(fetchImpl: typeof nodeFetch): RealFetchMock {
   return {
     isNetworkIdle: () => pendingFetches.size === 0,
     async waitForNetworkIdle() {
-      for (;;) {
+      // Ensure the microtask queue is fully settled because of network activity.
+      let consecutiveIdleTicks = 0;
+      while (consecutiveIdleTicks < 3) {
         while (pendingFetches.size > 0) {
           await Promise.allSettled(pendingFetches);
         }
         await flushMicrotaskQueue();
-        if (pendingFetches.size === 0) {
-          return;
-        }
+        consecutiveIdleTicks =
+          pendingFetches.size === 0 ? consecutiveIdleTicks + 1 : 0;
       }
     },
   };

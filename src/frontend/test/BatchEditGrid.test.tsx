@@ -187,6 +187,12 @@ describe('<BatchEditGrid> with real server', () => {
     expect((await fetchIndexTrack('/b.mp3'))?.title).toBe('Song B');
     getCellText('Retitled A');
     getCellText('Song B');
+
+    // Clicking the cell re-focused the row, which re-fetches the sidebar's
+    // tags for the newly focused track.
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
   }, 30_000);
 
   it('moves the row selection with Up/Down but only the field with Left/Right', async () => {
