@@ -143,7 +143,7 @@ describe('ListFiles', () => {
   });
 
   it('copies a file into a folder using keyboard navigation', async () => {
-    const { renderTree, navigateByKeyboard, getSelectedFilePath, user } =
+    const { renderTree, navigateByKeyboard, getSelectedFilePath, user, store } =
       await setupWithListing([
         'README.md',
         '01 - Stone End/Enemies.md',
@@ -174,6 +174,8 @@ describe('ListFiles', () => {
 
     // Paste the file NPCs file.
     await act(() => user.keyboard('{Meta>}v{/Meta}'));
+    // pasteCopyFile clears this last, once its async work is fully done.
+    await waitFor(() => expect($.getCopyFile(store.getState())).toBeNull());
 
     expect(await renderTree()).toMatchInlineSnapshot(`
       "

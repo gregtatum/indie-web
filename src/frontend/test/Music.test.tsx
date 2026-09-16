@@ -61,6 +61,17 @@ describe('<Music> with real server', () => {
     return renderMusicApp({ server: getServer(), search });
   }
 
+  async function waitForScanToFinish(
+    matcher: Parameters<typeof screen.findByText>[0] = /Found \d+ tracks\./,
+  ) {
+    const message = await screen.findByText(matcher);
+    await act(async () => {
+      // Wait on tick in case the virtual list needs to remeasure and settle.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    return message;
+  }
+
   it('renders the Scan Library button', async () => {
     await setup();
     await screen.findByRole('button', { name: 'Scan Library' });
@@ -109,7 +120,7 @@ describe('<Music> with real server', () => {
       );
     });
 
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
   });
 
   it('shows "Scanning…" and disables the button while a scan is in progress', async () => {
@@ -142,7 +153,7 @@ describe('<Music> with real server', () => {
         await screen.findByRole('button', { name: 'Scan Library' }),
       );
     });
-    const firstResult = await screen.findByText(/Found \d+ tracks\./);
+    const firstResult = await waitForScanToFinish();
     const firstCount = parseInt(firstResult.textContent!.match(/\d+/)![0], 10);
 
     // Add another file, then scan again.
@@ -155,7 +166,7 @@ describe('<Music> with real server', () => {
     });
 
     // The count must have gone up by exactly one.
-    await screen.findByText(`Found ${firstCount + 1} tracks.`);
+    await waitForScanToFinish(`Found ${firstCount + 1} tracks.`);
   });
 
   it('re-enables the Scan Library button after a scan completes', async () => {
@@ -184,7 +195,7 @@ describe('<Music> with real server', () => {
       );
     });
 
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
     expect(
       screen.queryByRole('button', { name: 'Rescan recommended' }),
     ).toBeNull();
@@ -232,7 +243,7 @@ describe('<Music> with real server', () => {
       );
     });
 
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
     await screen.findByRole('button', { name: 'Scan Library' });
   });
 
@@ -249,7 +260,7 @@ describe('<Music> with real server', () => {
         await screen.findByRole('button', { name: 'Scan Library' }),
       );
     });
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
 
     const trackEl = await screen.findByText('Original Title');
     await act(async () => {
@@ -332,7 +343,7 @@ describe('<Music> with real server', () => {
         await screen.findByRole('button', { name: 'Scan Library' }),
       );
     });
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
 
     await act(async () => {
       store.dispatch(
@@ -421,7 +432,7 @@ describe('<Music> with real server', () => {
         await screen.findByRole('button', { name: 'Scan Library' }),
       );
     });
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
 
     const artistList = screen.getByRole('listbox', { name: 'artist' });
     expect(
@@ -484,7 +495,7 @@ describe('<Music> with real server', () => {
         await screen.findByRole('button', { name: 'Scan Library' }),
       );
     });
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
 
     await act(async () => {
       fireEvent.contextMenu(await screen.findByText('Indexed Title'));
@@ -544,7 +555,7 @@ describe('<Music> with real server', () => {
         await screen.findByRole('button', { name: 'Scan Library' }),
       );
     });
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
 
     await act(async () => {
       fireEvent.contextMenu(await screen.findByText('Before Rescan'));
@@ -595,7 +606,7 @@ describe('<Music> with real server', () => {
         await screen.findByRole('button', { name: 'Scan Library' }),
       );
     });
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
 
     await act(async () => {
       fireEvent.contextMenu(await screen.findByText('ID3 Old Title'));
@@ -678,7 +689,7 @@ describe('<Music> with real server', () => {
         await screen.findByRole('button', { name: 'Scan Library' }),
       );
     });
-    await screen.findByText(/Found \d+ tracks\./);
+    await waitForScanToFinish();
 
     const trackEl = await screen.findByText('Close Test Track');
     await act(async () => {
