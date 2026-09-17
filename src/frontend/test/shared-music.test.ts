@@ -18,6 +18,7 @@ const BASE_TRACK: TrackMetadata = {
   composer: 'Composer',
   album: 'Album',
   genre: 'Rock',
+  year: null,
   preferComposerGrouping: null,
   track: 1,
   duration: 180,

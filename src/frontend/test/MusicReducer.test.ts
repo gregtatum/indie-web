@@ -9,6 +9,7 @@ const BASE_TRACK: T.TrackMetadata = {
   composer: null,
   album: 'Base Album',
   genre: 'Base Genre',
+  year: null,
   preferComposerGrouping: null,
   track: 1,
   duration: 180,

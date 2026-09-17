@@ -374,12 +374,7 @@ export function useMusicImportTrackSource(
     () => ({
       tracks,
       updateTracks: (nextTracks: T.TrackMetadata[]) => {
-        dispatch(
-          A.setMusicImportBatchTracks(
-            batchId,
-            nextTracks as T.StagedTrackMetadata[],
-          ),
-        );
+        dispatch(A.setMusicImportBatchTracks(batchId, nextTracks));
       },
     }),
     [dispatch, batchId, tracks],

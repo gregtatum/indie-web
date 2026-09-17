@@ -413,3 +413,62 @@ describe('upgradeMusicIndex v8 → current', () => {
     expect(track.size).toBe(3145728);
   });
 });
+
+// v9 → current: backfill year as null (v9 had no year field on the real
+// index — it was scanned but discarded before reaching `TrackMetadata`).
+describe('upgradeMusicIndex v9 → current', () => {
+  const v9Fixture = JSON.parse(
+    readFileSync(join(__dirname, 'fixtures/music-index-v9.json'), 'utf-8'),
+  );
+
+  it('upgrades a v9 index to current', () => {
+    const { index, wasUpgraded } = upgradeMusicIndex(v9Fixture);
+    expect(wasUpgraded).toBe(true);
+    expect(index).toMatchSnapshot();
+  });
+
+  it('sets version to current', () => {
+    const { index } = upgradeMusicIndex(v9Fixture);
+    expect(index.version).toBe(CURRENT_MUSIC_INDEX_VERSION);
+  });
+
+  it('backfills year as null', () => {
+    const { index } = upgradeMusicIndex(v9Fixture);
+    for (const track of index.tracks) {
+      expect(track.year).toBeNull();
+    }
+  });
+
+  it('preserves every other track field unchanged', () => {
+    const { index } = upgradeMusicIndex(v9Fixture);
+    const track = index.tracks[0];
+    expect(track.path).toBe('/Artist/Album/track.mp3');
+    expect(track.title).toBe('Test Track');
+    expect(track.artist).toBe('Test Artist');
+    expect(track.albumArtist).toBe('Test Album Artist');
+    expect(track.composer).toBe('Test Composer');
+    expect(track.album).toBe('Test Album');
+    expect(track.genre).toBe('Rock');
+    expect(track.preferComposerGrouping).toBeNull();
+    expect(track.track).toBe(1);
+    expect(track.duration).toBe(180.5);
+    expect(track.size).toBe(3145728);
+    expect(track.folderArtworkPath).toBe('/Artist/Album/Folder.jpg');
+    expect(track.hasEmbeddedArtwork).toBe(true);
+  });
+
+  it('preserves null fields', () => {
+    const { index } = upgradeMusicIndex(v9Fixture);
+    const track = index.tracks[1];
+    expect(track.title).toBeNull();
+    expect(track.artist).toBeNull();
+    expect(track.albumArtist).toBeNull();
+    expect(track.composer).toBeNull();
+    expect(track.album).toBeNull();
+    expect(track.genre).toBeNull();
+    expect(track.preferComposerGrouping).toBeNull();
+    expect(track.track).toBeNull();
+    expect(track.duration).toBeNull();
+    expect(track.folderArtworkPath).toBeNull();
+  });
+});

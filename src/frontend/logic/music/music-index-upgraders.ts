@@ -218,6 +218,22 @@ function upgradeV8ToV9(blob: IndexVersion<8>): T.MusicIndex {
 }
 
 /**
+ * v9 → v10: backfill year as null (v9 had no year field on the real index —
+ * it was scanned but discarded before reaching `TrackMetadata`).
+ */
+function upgradeV9ToV10(blob: IndexVersion<9>): T.MusicIndex {
+  const tracks = (blob.tracks as Record<string, unknown>[]).map((t) => ({
+    ...t,
+    year: null,
+  }));
+  return {
+    version: 10 as const,
+    scannedAt: blob.scannedAt as string,
+    tracks,
+  } as unknown as T.MusicIndex;
+}
+
+/**
  * Upgrades any serialized MusicIndex to the current format.
  * Returns the normalized index and whether an upgrade was applied.
  * Callers should surface a rescan recommendation when `wasUpgraded` is true,
@@ -266,6 +282,10 @@ export function upgradeMusicIndex(blob: unknown): {
   }
   if (raw.version === 8) {
     raw = upgradeV8ToV9(raw as IndexVersion<8>) as unknown as typeof raw;
+    wasUpgraded = true;
+  }
+  if (raw.version === 9) {
+    raw = upgradeV9ToV10(raw as IndexVersion<9>) as unknown as typeof raw;
     wasUpgraded = true;
   }
   return { index: raw as unknown as T.MusicIndex, wasUpgraded, servedVersion };

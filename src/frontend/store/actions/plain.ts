@@ -490,7 +490,7 @@ export function setMusicImportBatch(batch: T.MusicImportBatch | null) {
 
 export function setMusicImportBatchTracks(
   batchId: string,
-  tracks: T.StagedTrackMetadata[],
+  tracks: T.TrackMetadata[],
 ) {
   return { type: 'set-music-import-batch-tracks' as const, batchId, tracks };
 }

@@ -177,11 +177,11 @@ export function musicRoute(mountPath: MountPath) {
         throw new ClientError('Missing or empty paths array.');
       }
       const results = await scanTrackFiles(mountPath, paths);
-      const tracks: T.StagedTrackMetadata[] = [];
+      const tracks: T.TrackMetadata[] = [];
       const errors: T.ScanTrackPathsResponse['errors'] = [];
       for (const result of results) {
         if (result.track) {
-          tracks.push({ ...result.track, year: result.year });
+          tracks.push(result.track);
         } else {
           errors.push({ path: result.clientPath, message: 'File not found.' });
         }

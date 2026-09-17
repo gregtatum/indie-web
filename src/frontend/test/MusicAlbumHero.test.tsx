@@ -27,6 +27,7 @@ function makeTrack(overrides: Partial<T.TrackMetadata>): T.TrackMetadata {
     composer: null,
     album: 'Album',
     genre: 'Rock',
+    year: null,
     preferComposerGrouping: null,
     track: 1,
     duration: 100,

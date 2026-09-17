@@ -100,6 +100,7 @@ export interface TrackMetadata {
   composer: string | null;
   album: string | null;
   genre: string | null;
+  year: string | null;
   /** Explicit private-tag override for composer grouping; null means use defaults. */
   preferComposerGrouping: boolean | null;
   /** Track number within its album. */
@@ -243,16 +244,12 @@ export interface WriteTrackTagsResponse {
   };
 }
 
-export interface StagedTrackMetadata extends TrackMetadata {
-  year: string | null;
-}
-
 export interface ScanTrackPathsRequest {
   paths: string[];
 }
 
 export interface ScanTrackPathsResponse {
-  tracks: StagedTrackMetadata[];
+  tracks: TrackMetadata[];
   errors: Array<{ path: string; message: string }>;
 }
 
@@ -278,7 +275,7 @@ export interface StagedBatchSummary {
 
 export interface MusicImportBatch {
   batchId: string;
-  tracks: StagedTrackMetadata[];
+  tracks: TrackMetadata[];
   step: StagedBatchStep;
   template: string;
 }

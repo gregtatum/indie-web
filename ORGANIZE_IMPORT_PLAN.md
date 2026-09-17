@@ -30,7 +30,22 @@ not persisted to the manifest — irrelevant today since the "resume a staged
 batch" header chip described below was never built, but worth knowing if
 that's picked up later.
 
-Phase 5 (edge cases/tests/polish) up next. Phases below are the intended
+Phase 6 also done, out of order (done before Phase 5 per direct request):
+`year: string | null` added to the real `TrackMetadata`, `MUSIC_INDEX_VERSION`
+bumped 9→10 with an `upgradeV9ToV10` backfilling `year: null`
+(fixture/snapshot tests added), and `performScan`/`scanSingleAudioFile` now
+keep `year` instead of discarding it. `StagedTrackMetadata` was deleted —
+`ScanTrackPathsResponse`/`MusicImportBatch` now just use `TrackMetadata`
+directly, and `resolveOrganizationPath` now works unmodified against real
+tracks too (unlocks a future "reorganize library" action, not built here).
+
+Found in passing, not fixed: `shared/music.ts` has two verbatim-duplicate
+preset-template constants — `ORGANIZATION_TEMPLATE_PRESETS` (unused, dead)
+and `ORGANIZATION_PRESET_TEMPLATES` (the one actually imported by
+`OrganizeImportView.tsx`/`MusicLibraryView.tsx`). Worth deleting the dead
+one, left alone here since it wasn't part of what was asked.
+
+Phase 5 (edge cases/tests/polish) still open. Phases below are the intended
 checkpoints; each should land, pass `task check`, and get a visual
 confirmation in a real browser before moving to the next.
 

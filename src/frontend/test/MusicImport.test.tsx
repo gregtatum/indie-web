@@ -111,7 +111,7 @@ describe('drag-and-drop import & organize', () => {
 
   async function scanStagedTrack(
     path: string,
-  ): Promise<T.StagedTrackMetadata | undefined> {
+  ): Promise<T.TrackMetadata | undefined> {
     const res = await fetch(
       `${getServer().baseUrl}/music/music-index/scan-paths`,
       {

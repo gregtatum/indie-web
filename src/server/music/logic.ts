@@ -201,7 +201,7 @@ export async function performScan(
       // picked up on rescan even when the audio file itself is unchanged.
       tracks.push({ ...existingTrack, folderArtworkPath });
     } else {
-      const { track: parsedTrack } = await scanSingleAudioFile(
+      const parsedTrack = await scanSingleAudioFile(
         mountPath,
         clientPath,
         fullPath,
@@ -264,7 +264,7 @@ async function scanSingleAudioFile(
   stats: { mtime: Date; size: number },
   folderArtworkPathIn: string | null,
   folderArtworkDirCache: Map<string, string | null>,
-): Promise<{ track: T.TrackMetadata; year: string | null }> {
+): Promise<T.TrackMetadata> {
   const mtime = stats.mtime.toISOString();
   const size = stats.size;
   const dirClientPath = dirname(clientPath);
@@ -317,23 +317,21 @@ async function scanSingleAudioFile(
     // If tag reading fails, store what we have.
   }
   return {
-    track: {
-      path: clientPath,
-      title,
-      artist,
-      albumArtist,
-      composer,
-      album,
-      genre,
-      preferComposerGrouping,
-      track,
-      duration,
-      size,
-      mtime,
-      folderArtworkPath,
-      hasEmbeddedArtwork,
-    },
+    path: clientPath,
+    title,
+    artist,
+    albumArtist,
+    composer,
+    album,
+    genre,
     year,
+    preferComposerGrouping,
+    track,
+    duration,
+    size,
+    mtime,
+    folderArtworkPath,
+    hasEmbeddedArtwork,
   };
 }
 
@@ -343,30 +341,21 @@ async function scanSingleAudioFile(
 export async function scanTrackFiles(
   mountPath: MountPath,
   clientPaths: string[],
-): Promise<
-  Array<{
-    clientPath: string;
-    track: T.TrackMetadata | null;
-    year: string | null;
-  }>
-> {
+): Promise<Array<{ clientPath: string; track: T.TrackMetadata | null }>> {
   const folderArtworkDirCache = new Map<string, string | null>();
-  const results: Array<{
-    clientPath: string;
-    track: T.TrackMetadata | null;
-    year: string | null;
-  }> = [];
+  const results: Array<{ clientPath: string; track: T.TrackMetadata | null }> =
+    [];
   for (const clientPath of clientPaths) {
     const fullPath = mountPath.resolve(clientPath);
     if (!fullPath) {
-      results.push({ clientPath, track: null, year: null });
+      results.push({ clientPath, track: null });
       continue;
     }
     let stats: Awaited<ReturnType<typeof fs.stat>>;
     try {
       stats = await fs.stat(fullPath);
     } catch {
-      results.push({ clientPath, track: null, year: null });
+      results.push({ clientPath, track: null });
       continue;
     }
     const folderArtworkPath = await probeFolderArtworkForDir(
@@ -375,7 +364,7 @@ export async function scanTrackFiles(
       dirname(fullPath),
       folderArtworkDirCache,
     );
-    const { track, year } = await scanSingleAudioFile(
+    const track = await scanSingleAudioFile(
       mountPath,
       clientPath,
       fullPath,
@@ -383,7 +372,7 @@ export async function scanTrackFiles(
       folderArtworkPath,
       folderArtworkDirCache,
     );
-    results.push({ clientPath, track, year });
+    results.push({ clientPath, track });
   }
   return results;
 }
