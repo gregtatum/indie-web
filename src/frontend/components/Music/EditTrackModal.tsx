@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Modal } from 'frontend/components/Modal';
-import { useMusicLibraryTrackSource } from 'frontend/hooks/useMusicTrackSource';
+import { useMusicLibraryTrackSource } from 'frontend/hooks/music';
 import {
   TrackEditorPanel,
   type TrackEditorPanelHandle,

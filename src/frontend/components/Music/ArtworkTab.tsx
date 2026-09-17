@@ -6,7 +6,7 @@ import {
   useFolderArtworkRemove,
   useFolderArtworkDrop,
   useFolderArtworkPaste,
-} from 'frontend/hooks/useFolderArtworkDrop';
+} from 'frontend/hooks/music';
 import { getDirName, getPathFileName } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
 import type { EmbedFolderArtworkResponse } from 'shared/@types/shared';

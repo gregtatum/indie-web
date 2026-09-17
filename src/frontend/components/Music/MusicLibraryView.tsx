@@ -8,12 +8,10 @@ import { persistedState } from 'frontend/logic/persisted-state';
 import {
   useFolderArtworkDrop,
   useFolderArtworkPaste,
-} from 'frontend/hooks/useFolderArtworkDrop';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import {
   useMusicLibraryTrackSource,
   useMusicImportTrackSource,
-} from 'frontend/hooks/useMusicTrackSource';
+} from 'frontend/hooks/music';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
 import { BatchEditGrid } from './BatchEditGrid';
 import { TrackEditorSidebar } from './TrackEditorSidebar';
