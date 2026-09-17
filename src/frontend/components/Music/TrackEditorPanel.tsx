@@ -15,6 +15,7 @@ import {
   type DetailFieldGroup,
   type TrackTagsLoadState,
   type DetailFieldValues,
+  type MusicTrackSource,
 } from 'frontend/logic/music/metadata';
 import {
   defaultPreferComposerGroupingForGenre,
@@ -62,6 +63,7 @@ const INDEXED_DETAIL_FIELD_KEYS: Partial<
 export interface TrackEditorPanelProps {
   trackPath: string | null;
   onClose: (() => void) | null;
+  trackSource: MusicTrackSource;
 }
 
 export interface TrackEditorPanelHandle {
@@ -232,8 +234,8 @@ function buildDetailChanges(
 export const TrackEditorPanel = React.forwardRef<
   TrackEditorPanelHandle,
   TrackEditorPanelProps
->(function TrackEditorPanel({ trackPath, onClose }, ref) {
-  const tracks = $$.getMusicTracks();
+>(function TrackEditorPanel({ trackPath, onClose, trackSource }, ref) {
+  const { tracks, updateTracks } = trackSource;
   const track = tracks.find((t) => t.path === trackPath) ?? null;
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
   const isBulkEdit = selectedTrackPaths.length > 1;
@@ -256,8 +258,6 @@ export const TrackEditorPanel = React.forwardRef<
     .join('\u0000');
   const server = $$.getCurrentServer();
   const activeTab = $$.getMusicEditTab();
-  const needsRescan = $$.getMusicNeedsRescan();
-  const servedIndexVersion = $$.getMusicServedIndexVersion();
   const folderArtworkVersion = $$.getMusicFolderArtworkVersion();
   const dispatch = Hooks.useDispatch();
 
@@ -679,15 +679,9 @@ export const TrackEditorPanel = React.forwardRef<
       }
 
       const updatedPathSet = new Set(data.updated);
-      dispatch(
-        A.setMusicTracks(
-          tracks.map((t) =>
-            updatedPathSet.has(t.path)
-              ? applyIndexedTrackChanges(t, changes)
-              : t,
-          ),
-          needsRescan,
-          servedIndexVersion,
+      updateTracks(
+        tracks.map((t) =>
+          updatedPathSet.has(t.path) ? applyIndexedTrackChanges(t, changes) : t,
         ),
       );
 
@@ -781,43 +775,31 @@ export const TrackEditorPanel = React.forwardRef<
   const handleFolderArtworkWritten = React.useCallback(
     (folderArtworkPath: string) => {
       const folderDir = getDirName(folderArtworkPath);
-      dispatch(
-        A.setMusicTracks(
-          tracks.map((t) =>
-            getDirName(t.path) === folderDir ? { ...t, folderArtworkPath } : t,
-          ),
-          needsRescan,
-          servedIndexVersion,
+      updateTracks(
+        tracks.map((t) =>
+          getDirName(t.path) === folderDir ? { ...t, folderArtworkPath } : t,
         ),
       );
     },
-    [dispatch, tracks, needsRescan, servedIndexVersion],
+    [updateTracks, tracks],
   );
   const handleTracksEmbedded = React.useCallback(
     (embeddedPaths: string[]) => {
       const embedded = new Set(embeddedPaths);
-      dispatch(
-        A.setMusicTracks(
-          tracks.map((t) =>
-            embedded.has(t.path) ? { ...t, hasEmbeddedArtwork: true } : t,
-          ),
-          needsRescan,
-          servedIndexVersion,
+      updateTracks(
+        tracks.map((t) =>
+          embedded.has(t.path) ? { ...t, hasEmbeddedArtwork: true } : t,
         ),
       );
       void loadTrackTags();
     },
-    [dispatch, tracks, needsRescan, servedIndexVersion, loadTrackTags],
+    [updateTracks, tracks, loadTrackTags],
   );
   const handleEmbeddedArtworkRemoved = React.useCallback(
     (removedPath: string) => {
-      dispatch(
-        A.setMusicTracks(
-          tracks.map((t) =>
-            t.path === removedPath ? { ...t, hasEmbeddedArtwork: false } : t,
-          ),
-          needsRescan,
-          servedIndexVersion,
+      updateTracks(
+        tracks.map((t) =>
+          t.path === removedPath ? { ...t, hasEmbeddedArtwork: false } : t,
         ),
       );
       // The remove endpoint strips the file's embedded APIC picture frames.
@@ -844,7 +826,7 @@ export const TrackEditorPanel = React.forwardRef<
         return { status: 'loaded', data: { ...prev.data, blocks } };
       });
     },
-    [dispatch, tracks, needsRescan, servedIndexVersion],
+    [updateTracks, tracks],
   );
   let sharedAlbumHeader: { album: string; artist: string } | null = null;
   if (isBulkEdit && editTracks.length > 0) {

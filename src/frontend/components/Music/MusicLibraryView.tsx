@@ -10,6 +10,10 @@ import {
   useFolderArtworkPaste,
 } from 'frontend/hooks/useFolderArtworkDrop';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import {
+  useMusicLibraryTrackSource,
+  useMusicImportTrackSource,
+} from 'frontend/hooks/useMusicTrackSource';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
 import { BatchEditGrid } from './BatchEditGrid';
 import { TrackEditorSidebar } from './TrackEditorSidebar';
@@ -60,6 +64,7 @@ export function MusicLibraryView({
   const { dispatch, getState } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
   const batchEditTrackPaths = $$.getMusicBatchEditTrackPaths();
+  const importBatch = $$.getMusicImportBatch();
 
   const importDropRef = React.useRef<HTMLDivElement>(null);
   const importDropping = Hooks.useFileDrop(
@@ -177,6 +182,12 @@ export function MusicLibraryView({
     );
   }
 
+  if (importBatch) {
+    // A staged import batch doesn't depend on the real music index, so it
+    // renders even if that index has never been scanned.
+    return withDropTarget(<ImportBatchEditView batch={importBatch} />);
+  }
+
   if (error) {
     return withDropTarget(
       <div className="musicLibraryViewError">
@@ -225,6 +236,7 @@ function BatchEditView({
   onClose: () => void;
 }) {
   Hooks.useEscape(onClose, true);
+  const trackSource = useMusicLibraryTrackSource();
 
   return (
     <div className="musicBatchEditView">
@@ -248,9 +260,90 @@ function BatchEditView({
           className="musicBatchEditSplitter"
           defaultOffset={150}
           constrain={{ pane: 'end', minSize: 320, maxSize: 560 }}
-          start={<BatchEditGrid trackPaths={trackPaths} />}
-          end={<TrackEditorSidebar />}
+          start={
+            <BatchEditGrid trackPaths={trackPaths} trackSource={trackSource} />
+          }
+          end={<TrackEditorSidebar trackSource={trackSource} />}
           persistLocalStorage="musicBatchEditSplitterOffset"
+        />
+      </div>
+    </div>
+  );
+}
+
+function ImportBatchEditView({ batch }: { batch: T.MusicImportBatch }) {
+  const dispatch = Hooks.useDispatch();
+  const trackSource = useMusicImportTrackSource(batch);
+  const trackPaths = React.useMemo(
+    () => batch.tracks.map((t) => t.path),
+    [batch.tracks],
+  );
+
+  const [discardConfirmPending, setDiscardConfirmPendingState] =
+    React.useState(false);
+  const discardConfirmPendingRef = React.useRef(false);
+  function setDiscardConfirmPending(value: boolean) {
+    discardConfirmPendingRef.current = value;
+    setDiscardConfirmPendingState(value);
+  }
+
+  const handleDiscardOrEscape = React.useCallback(() => {
+    if (discardConfirmPendingRef.current) {
+      void dispatch(A.discardMusicImportBatch(batch.batchId));
+    } else {
+      setDiscardConfirmPending(true);
+    }
+  }, [dispatch, batch.batchId]);
+
+  Hooks.useEscape(handleDiscardOrEscape, true);
+
+  function handleContinueClick() {
+    void dispatch(
+      A.updateMusicImportBatchStep(batch.batchId, 'organizing', batch.template),
+    );
+  }
+
+  return (
+    <div className="musicBatchEditView">
+      <div className="musicBatchEditHeader">
+        <h2 className="musicBatchEditHeaderTitle">
+          Import · {batch.tracks.length}{' '}
+          {batch.tracks.length === 1 ? 'track' : 'tracks'}
+        </h2>
+        <div className="musicImportBatchHeaderActions">
+          {discardConfirmPending ? (
+            <span className="musicImportDiscardWarning">
+              Click again to discard
+            </span>
+          ) : null}
+          <button
+            type="button"
+            className="musicBatchEditCloseButton"
+            aria-label="Discard staged import"
+            onClick={handleDiscardOrEscape}
+          >
+            <img src="/svg/xmark.svg" alt="" />
+          </button>
+          <button
+            type="button"
+            className="musicImportContinueButton"
+            onClick={handleContinueClick}
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+      <div className="musicBatchEditBody">
+        <Splitter
+          direction="horizontal"
+          className="musicBatchEditSplitter"
+          defaultOffset={150}
+          constrain={{ pane: 'end', minSize: 320, maxSize: 560 }}
+          start={
+            <BatchEditGrid trackPaths={trackPaths} trackSource={trackSource} />
+          }
+          end={<TrackEditorSidebar trackSource={trackSource} />}
+          persistLocalStorage="musicImportBatchEditSplitterOffset"
         />
       </div>
     </div>

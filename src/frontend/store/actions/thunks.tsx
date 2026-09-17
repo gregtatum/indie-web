@@ -1893,6 +1893,9 @@ export function startMusicImportBatch(
           template: '',
         }),
       );
+      if (scanData.tracks.length > 0) {
+        dispatch(Plain.setMusicSelectedTracks([scanData.tracks[0].path]));
+      }
       void dispatch(refreshMusicStagedBatchSummaries());
       dispatch(
         addMessage({
@@ -1924,6 +1927,49 @@ export function refreshMusicStagedBatchSummaries(): Thunk<Promise<void>> {
       }
       const summaries = (await res.json()) as T.StagedBatchSummary[];
       dispatch(Plain.setMusicStagedBatchSummaries(summaries));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+}
+
+export function discardMusicImportBatch(batchId: string): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const server = $.getCurrentServer(getState());
+    try {
+      const res = await fetch(`${server.url}/music/staged-batch/discard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchId }),
+      });
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    dispatch(Plain.setMusicImportBatch(null));
+    void dispatch(refreshMusicStagedBatchSummaries());
+  };
+}
+
+export function updateMusicImportBatchStep(
+  batchId: string,
+  step: T.StagedBatchStep,
+  template: string,
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const server = $.getCurrentServer(getState());
+    dispatch(Plain.setMusicImportBatchStep(batchId, step, template));
+    try {
+      const res = await fetch(`${server.url}/music/staged-batch/step`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchId, step, template }),
+      });
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
     } catch (error) {
       console.error(error);
     }

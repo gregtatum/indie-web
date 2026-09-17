@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Modal } from 'frontend/components/Modal';
+import { useMusicLibraryTrackSource } from 'frontend/hooks/useMusicTrackSource';
 import {
   TrackEditorPanel,
   type TrackEditorPanelHandle,
@@ -14,6 +15,7 @@ interface Props {
 
 export function EditTrackModal({ trackPath, onClose }: Props) {
   const panelRef = React.useRef<TrackEditorPanelHandle>(null);
+  const trackSource = useMusicLibraryTrackSource();
 
   return (
     <Modal
@@ -26,6 +28,7 @@ export function EditTrackModal({ trackPath, onClose }: Props) {
         ref={panelRef}
         trackPath={trackPath}
         onClose={onClose}
+        trackSource={trackSource}
       />
     </Modal>
   );

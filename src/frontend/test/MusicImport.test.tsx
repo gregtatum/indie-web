@@ -1,8 +1,8 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { $ } from 'frontend';
+import { $, T } from 'frontend';
 import {
   buildMp3WithTags,
   clearMusicMount,
@@ -76,6 +76,12 @@ describe('drag-and-drop import & organize', () => {
 
       await screen.findByText(/Staged 1 track/);
 
+      // Staging auto-selects the first track, which mounts the sidebar editor
+      // and kicks off its own (separate) tag-loading fetch.
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
       const batch = $.getMusicImportBatch(store.getState());
       expect(batch?.tracks).toHaveLength(1);
       expect(batch?.tracks[0].title).toBe('Time');
@@ -109,7 +115,132 @@ describe('drag-and-drop import & organize', () => {
     });
   });
 
-  // Staged batch-edit screen (Phase 2), organize screen (Phase 3), and
-  // commit (Phase 4) tests land here as nested `describe`s, once those
-  // screens exist.
+  describe('staged batch-edit screen', () => {
+    // The virtualizer reads offsetHeight/offsetWidth to decide how many rows
+    // to render; jsdom returns 0 for both, so without this it renders nothing.
+    beforeEach(() => {
+      jest
+        .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+        .mockReturnValue(600);
+      jest
+        .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+        .mockReturnValue(800);
+    });
+
+    async function dropTrack(
+      fileName: string,
+      tags: Parameters<typeof buildMp3WithTags>[0],
+    ) {
+      const { store } = await renderMusicApp({ server: getServer() });
+      const zone = await dropZone();
+      const file = new File(
+        [new Uint8Array(buildMp3WithTags(tags))],
+        fileName,
+        { type: 'audio/mpeg' },
+      );
+      await act(async () => {
+        fireEvent.drop(zone, { dataTransfer: makeDataTransfer([file]) });
+        await waitForNetworkIdle();
+      });
+      await screen.findByText(/Staged 1 track/);
+      return { store };
+    }
+
+    async function scanStagedTrack(
+      path: string,
+    ): Promise<T.StagedTrackMetadata | undefined> {
+      const res = await fetch(
+        `${getServer().baseUrl}/music/music-index/scan-paths`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paths: [path] }),
+        },
+      );
+      const data = (await res.json()) as T.ScanTrackPathsResponse;
+      return data.tracks[0];
+    }
+
+    it('autosaves a cell edit to the staged file', async () => {
+      const { store } = await dropTrack('time.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+      const batch = $.getMusicImportBatch(store.getState());
+      const stagedPath = batch?.tracks[0].path as string;
+
+      const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+      fireEvent.click(
+        screen.getByText('Time', { selector: '.musicBatchEditCellText' }),
+      );
+      grid.focus();
+      fireEvent.keyDown(document.body, { key: 'Enter' });
+
+      const input = await within(grid).findByDisplayValue('Time');
+      fireEvent.change(input, { target: { value: 'Money' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(async () => {
+        expect((await scanStagedTrack(stagedPath))?.title).toBe('Money');
+      });
+      screen.getByText('Money', { selector: '.musicBatchEditCellText' });
+    }, 30_000);
+
+    it('shows the staged track in the sidebar editor by default', async () => {
+      await dropTrack('time.mp3', { title: 'Time', artist: 'Pink Floyd' });
+
+      expect(await screen.findByRole('heading', { name: 'Time' })).toBeTruthy();
+    }, 30_000);
+
+    it('discards the staged batch via the header button, deleting the staging folder', async () => {
+      const { store } = await dropTrack('time.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+      const batch = $.getMusicImportBatch(store.getState());
+      const batchDir = join(
+        getServer().mountDir,
+        '.music-staging',
+        batch?.batchId as string,
+      );
+
+      const discardButton = screen.getByRole('button', {
+        name: 'Discard staged import',
+      });
+      fireEvent.click(discardButton);
+      await screen.findByText('Click again to discard');
+      fireEvent.click(discardButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Import ·/)).toBeNull();
+      });
+
+      await expect(readdir(batchDir)).rejects.toThrow();
+    }, 30_000);
+
+    it('persists the organizing step to the manifest when Continue is clicked', async () => {
+      const { store } = await dropTrack('time.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+      const batch = $.getMusicImportBatch(store.getState());
+      const batchId = batch?.batchId as string;
+
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+      await waitFor(async () => {
+        const manifestPath = join(
+          getServer().mountDir,
+          '.music-staging',
+          batchId,
+          'batch.json',
+        );
+        const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+        expect(manifest.step).toBe('organizing');
+      });
+    }, 30_000);
+  });
+
+  // The organize screen (Phase 3) and commit (Phase 4) tests land here as
+  // nested `describe`s, once those screens exist.
 });

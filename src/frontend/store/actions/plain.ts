@@ -488,6 +488,13 @@ export function setMusicImportBatch(batch: T.MusicImportBatch | null) {
   return { type: 'set-music-import-batch' as const, batch };
 }
 
+export function setMusicImportBatchTracks(
+  batchId: string,
+  tracks: T.StagedTrackMetadata[],
+) {
+  return { type: 'set-music-import-batch-tracks' as const, batchId, tracks };
+}
+
 export function setMusicImportBatchStep(
   batchId: string,
   step: T.StagedBatchStep,

@@ -230,6 +230,35 @@
   }
 }
 
+.musicImportBatchHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.musicImportDiscardWarning {
+  font-size: var(--font-size-small);
+  color: var(--text-label);
+  white-space: nowrap;
+}
+
+.musicImportContinueButton {
+  font-size: var(--font-size-small);
+  font-family: inherit;
+  padding: 6px 16px;
+  border-radius: var(--button-border-radius);
+  border: none;
+  background: var(--primary-color);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--primary-color-hover);
+  }
+}
+
 .musicBatchEditBody {
   flex: 1;
   min-height: 0;

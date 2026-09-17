@@ -249,6 +249,10 @@ function importBatch(
       return state && state.batchId === action.batchId
         ? { ...state, step: action.step, template: action.template }
         : state;
+    case 'set-music-import-batch-tracks':
+      return state && state.batchId === action.batchId
+        ? { ...state, tracks: action.tracks }
+        : state;
     case 'view-music':
       return null;
     default:

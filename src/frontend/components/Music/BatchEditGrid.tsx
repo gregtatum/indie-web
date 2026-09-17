@@ -9,6 +9,7 @@ import {
   applyIndexedTrackChanges,
   type BatchEditColumn,
   type BatchEditColumnKey,
+  type MusicTrackSource,
 } from 'frontend/logic/music/metadata';
 import type { WriteTrackTagsResponse } from 'shared/@types/shared';
 import {
@@ -114,19 +115,18 @@ function useColumnWidths() {
 
 interface BatchEditGridProps {
   trackPaths: string[];
+  trackSource: MusicTrackSource;
 }
 
-export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
-  const tracks = $$.getMusicTracks();
+export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
+  const tracks = trackSource.tracks;
   const selectedPaths = $$.getMusicSelectedTrackPaths();
   const server = $$.getCurrentServer();
-  const needsRescan = $$.getMusicNeedsRescan();
-  const servedIndexVersion = $$.getMusicServedIndexVersion();
   const dispatch = Hooks.useDispatch();
   const { getState } = Hooks.useStore();
 
-  const tracksRef = React.useRef(tracks);
-  tracksRef.current = tracks;
+  const trackSourceRef = React.useRef(trackSource);
+  trackSourceRef.current = trackSource;
 
   const tracksByPath = React.useMemo(() => {
     const map = new Map<string, T.TrackMetadata>();
@@ -347,13 +347,9 @@ export function BatchEditGrid({ trackPaths }: BatchEditGridProps) {
       }
       const data = (await res.json()) as WriteTrackTagsResponse;
       const updatedSet = new Set(data.updated);
-      dispatch(
-        A.setMusicTracks(
-          tracksRef.current.map((t) =>
-            updatedSet.has(t.path) ? applyIndexedTrackChanges(t, changes) : t,
-          ),
-          needsRescan,
-          servedIndexVersion,
+      trackSourceRef.current.updateTracks(
+        trackSourceRef.current.tracks.map((t) =>
+          updatedSet.has(t.path) ? applyIndexedTrackChanges(t, changes) : t,
         ),
       );
       for (const path of paths) {
