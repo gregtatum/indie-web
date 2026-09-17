@@ -1,26 +1,27 @@
 import * as React from 'react';
 import { T, A, Hooks } from 'frontend';
 import { debounce } from 'shared/utils';
-import { ORGANIZATION_TOKENS, resolveOrganizationPath } from 'shared/music';
+import {
+  ORGANIZATION_PRESET_TEMPLATES,
+  ORGANIZATION_TOKENS,
+  resolveOrganizationPath,
+} from 'shared/music';
 import { useMusicImportDiscardConfirm } from 'frontend/hooks/music';
-
-const PRESET_TEMPLATES = [
-  '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
-  '{Genre}/{Artist}/{AlbumArtist}/{Track} - {Title}',
-  '{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
-  '{Artist}/{AlbumArtist}/{Track} - {Title}',
-];
 
 const TEMPLATE_PERSIST_DELAY = 400;
 
 export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
   const dispatch = Hooks.useDispatch();
   const [template, setTemplateState] = React.useState(
-    () => batch.template || PRESET_TEMPLATES[0],
+    () => batch.template || ORGANIZATION_PRESET_TEMPLATES[0],
   );
   const [overrides, setOverrides] = React.useState<Map<string, string>>(
     new Map(),
   );
+  const [collisionPaths, setCollisionPaths] = React.useState<Set<string>>(
+    new Set(),
+  );
+  const [committing, setCommitting] = React.useState(false);
 
   const { discardConfirmPending, handleDiscardOrEscape } =
     useMusicImportDiscardConfirm(batch.batchId);
@@ -86,6 +87,20 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
     });
   }
 
+  async function handleDoneClick() {
+    setCommitting(true);
+    const destinations: Record<string, string> = {};
+    for (const track of batch.tracks) {
+      destinations[track.path] =
+        overrides.get(track.path) ?? resolveOrganizationPath(template, track);
+    }
+    const result = await dispatch(
+      A.commitMusicImportBatch(batch.batchId, destinations),
+    );
+    setCollisionPaths(new Set(result.collisions));
+    setCommitting(false);
+  }
+
   return (
     <div className="musicBatchEditView">
       <div className="musicBatchEditHeader">
@@ -109,17 +124,26 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
           </button>
           <button
             type="button"
-            className="musicImportPrimaryButton"
+            className="button"
             onClick={handleBackClick}
+            disabled={committing}
           >
             Back to edit
+          </button>
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => void handleDoneClick()}
+            disabled={committing}
+          >
+            {committing ? 'Organizing…' : 'Done'}
           </button>
         </div>
       </div>
       <div className="musicBatchEditBody musicOrganizeBody">
         <div className="musicOrganizeTemplateSection">
           <div className="musicOrganizePresets">
-            {PRESET_TEMPLATES.map((preset) => (
+            {ORGANIZATION_PRESET_TEMPLATES.map((preset) => (
               <button
                 key={preset}
                 type="button"
@@ -149,32 +173,54 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
             const computedPath = resolveOrganizationPath(template, track);
             const overridden = overrides.get(track.path);
             const destPath = overridden ?? computedPath;
+            const hasCollision = collisionPaths.has(track.path);
             return (
-              <div key={track.path} className="musicOrganizePreviewRow">
-                <span className="musicOrganizePreviewSource">
-                  {track.title ?? track.path}
-                </span>
-                <span className="musicOrganizePreviewArrow" aria-hidden="true">
-                  →
-                </span>
-                <input
-                  className="musicOrganizePreviewDest"
-                  type="text"
-                  value={destPath}
-                  aria-label={`Destination path for ${track.title ?? track.path}`}
-                  onChange={(event) =>
-                    setOverride(track.path, event.target.value, computedPath)
-                  }
-                />
-                {overridden !== undefined ? (
-                  <button
-                    type="button"
-                    className="musicOrganizePreviewResetButton"
-                    aria-label={`Reset ${track.title ?? track.path} to the template path`}
-                    onClick={() => resetOverride(track.path)}
+              <div key={track.path} className="musicOrganizePreviewItem">
+                <div className="musicOrganizePreviewRow">
+                  <span className="musicOrganizePreviewSource">
+                    {track.title ?? track.path}
+                  </span>
+                  <span
+                    className="musicOrganizePreviewArrow"
+                    aria-hidden="true"
                   >
-                    ↺
-                  </button>
+                    →
+                  </span>
+                  <input
+                    className={
+                      'musicOrganizePreviewDest' +
+                      (hasCollision ? ' error' : '')
+                    }
+                    type="text"
+                    value={destPath}
+                    aria-label={`Destination path for ${track.title ?? track.path}`}
+                    onChange={(event) => {
+                      setCollisionPaths((prev) => {
+                        if (!prev.has(track.path)) {
+                          return prev;
+                        }
+                        const next = new Set(prev);
+                        next.delete(track.path);
+                        return next;
+                      });
+                      setOverride(track.path, event.target.value, computedPath);
+                    }}
+                  />
+                  {overridden !== undefined ? (
+                    <button
+                      type="button"
+                      className="musicOrganizePreviewResetButton"
+                      aria-label={`Reset ${track.title ?? track.path} to the template path`}
+                      onClick={() => resetOverride(track.path)}
+                    >
+                      ↺
+                    </button>
+                  ) : null}
+                </div>
+                {hasCollision ? (
+                  <div className="musicOrganizePreviewCollision">
+                    Already exists — change the name or path and retry
+                  </div>
                 ) : null}
               </div>
             );

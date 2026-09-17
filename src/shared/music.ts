@@ -258,6 +258,13 @@ export function resolveOrganizationPath(
   return '/' + segments.join('/') + '.mp3';
 }
 
+export const ORGANIZATION_PRESET_TEMPLATES: ReadonlyArray<string> = [
+  '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+  '{Genre}/{Artist}/{AlbumArtist}/{Track} - {Title}',
+  '{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+  '{Artist}/{AlbumArtist}/{Track} - {Title}',
+];
+
 /**
  * Some files contain more than one tag source. For example, an older iTunes
  * version may have left an ID3v2.4 tag that is now wrapped by a newer ID3v2.3

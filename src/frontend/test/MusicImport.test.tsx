@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { $, T } from 'frontend';
 import { resolveOrganizationPath } from 'shared/music';
@@ -69,6 +69,44 @@ describe('drag-and-drop import & organize', () => {
     });
     await screen.findByText(/Staged 1 track/);
     return { store };
+  }
+
+  async function dropTracks(
+    files: Array<{
+      fileName: string;
+      tags: Parameters<typeof buildMp3WithTags>[0];
+    }>,
+  ) {
+    const { store } = await renderMusicApp({ server: getServer() });
+    const zone = await dropZone();
+    const dataTransfer = makeDataTransfer(
+      files.map(
+        ({ fileName, tags }) =>
+          new File([new Uint8Array(buildMp3WithTags(tags))], fileName, {
+            type: 'audio/mpeg',
+          }),
+      ),
+    );
+    await act(async () => {
+      fireEvent.drop(zone, { dataTransfer });
+      await waitForNetworkIdle();
+    });
+    await screen.findByText(new RegExp(`Staged ${files.length} track`));
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
+    return { store };
+  }
+
+  async function scanLibrary(): Promise<void> {
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+      await waitForNetworkIdle();
+    });
+    await screen.findByText(/Found \d+ tracks\./);
   }
 
   async function scanStagedTrack(
@@ -416,6 +454,185 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
   });
 
-  // Commit (Phase 4) tests land here as a nested `describe`, once that
-  // screen exists.
+  describe('commit ("Done")', () => {
+    beforeEach(() => {
+      jest
+        .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+        .mockReturnValue(600);
+      jest
+        .spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+        .mockReturnValue(800);
+    });
+
+    async function continueToOrganize() {
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+        await waitForNetworkIdle();
+      });
+      await screen.findByText(/Organize ·/);
+    }
+
+    async function clickDone() {
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+        await waitForNetworkIdle();
+      });
+    }
+
+    it('moves staged tracks to their resolved destinations and patches the library without a rescan', async () => {
+      const { store } = await renderMusicApp({ server: getServer() });
+      await scanLibrary();
+      await dropTracks([
+        {
+          fileName: 'a.mp3',
+          tags: {
+            title: 'Time',
+            artist: 'Pink Floyd',
+            albumArtist: 'Pink Floyd',
+            album: 'The Dark Side of the Moon',
+            genre: 'Rock',
+            track: 4,
+          },
+        },
+        {
+          fileName: 'b.mp3',
+          tags: { title: 'Kaneda', artist: 'Geinoh', genre: 'Soundtrack' },
+        },
+      ]);
+      const batch = $.getMusicImportBatch(store.getState());
+      const batchId = batch?.batchId as string;
+
+      await continueToOrganize();
+      await clickDone();
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Organize ·/)).toBeNull();
+      });
+
+      const defaultPreset =
+        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+      const expectedPathA = resolveOrganizationPath(defaultPreset, {
+        genre: 'Rock',
+        artist: 'Pink Floyd',
+        albumArtist: 'Pink Floyd',
+        album: 'The Dark Side of the Moon',
+        year: null,
+        title: 'Time',
+        track: 4,
+        composer: null,
+      });
+      const expectedPathB = resolveOrganizationPath(defaultPreset, {
+        genre: 'Soundtrack',
+        artist: 'Geinoh',
+        albumArtist: null,
+        album: null,
+        year: null,
+        title: 'Kaneda',
+        track: null,
+        composer: null,
+      });
+
+      await expect(
+        stat(join(getServer().mountDir, expectedPathA)),
+      ).resolves.toBeTruthy();
+      await expect(
+        stat(join(getServer().mountDir, expectedPathB)),
+      ).resolves.toBeTruthy();
+
+      await expect(
+        readdir(join(getServer().mountDir, '.music-staging', batchId)),
+      ).rejects.toThrow();
+
+      const tracks = $.getMusicTracks(store.getState());
+      expect(tracks.some((t) => t.path === expectedPathA)).toBe(true);
+      expect(tracks.some((t) => t.path === expectedPathB)).toBe(true);
+
+      // No manual rescan needed — the library view already reflects the move.
+      await screen.findByText('Time', { selector: '.musicTrackTitle' });
+    }, 30_000);
+
+    it('flags colliding destinations without moving them, letting the rest commit and allowing a retry', async () => {
+      await renderMusicApp({ server: getServer() });
+      await scanLibrary();
+      const dupTags: Parameters<typeof buildMp3WithTags>[0] = {
+        title: 'Same',
+        artist: 'Dup',
+        albumArtist: 'Dup',
+        genre: 'Rock',
+        track: 1,
+      };
+      await dropTracks([
+        { fileName: 'dup1.mp3', tags: dupTags },
+        { fileName: 'dup2.mp3', tags: dupTags },
+        {
+          fileName: 'solo.mp3',
+          tags: { title: 'Unique', artist: 'Solo', genre: 'Jazz', track: 2 },
+        },
+      ]);
+
+      await continueToOrganize();
+      await clickDone();
+
+      await waitFor(() => {
+        expect(
+          screen.getAllByText(
+            'Already exists — change the name or path and retry',
+          ),
+        ).toHaveLength(2);
+      });
+      // The non-colliding track committed and dropped out of the preview.
+      expect(screen.queryByText('Unique')).toBeNull();
+
+      const uniquePath = resolveOrganizationPath(
+        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+        {
+          genre: 'Jazz',
+          artist: 'Solo',
+          albumArtist: null,
+          album: null,
+          year: null,
+          title: 'Unique',
+          track: 2,
+          composer: null,
+        },
+      );
+      await expect(
+        stat(join(getServer().mountDir, uniquePath)),
+      ).resolves.toBeTruthy();
+
+      // Giving one of the pair a unique destination resolves the mutual
+      // collision entirely — retrying now lands both.
+      const destInputs = screen.getAllByRole('textbox', {
+        name: 'Destination path for Same',
+      });
+      fireEvent.change(destInputs[0], {
+        target: { value: '/Rock/Dup/Dup/01 - Same (1).mp3' },
+      });
+
+      await clickDone();
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Organize ·/)).toBeNull();
+      });
+      await expect(
+        stat(join(getServer().mountDir, '/Rock/Dup/Dup/01 - Same (1).mp3')),
+      ).resolves.toBeTruthy();
+      const otherDupPath = resolveOrganizationPath(
+        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+        {
+          genre: 'Rock',
+          artist: 'Dup',
+          albumArtist: 'Dup',
+          album: null,
+          year: null,
+          title: 'Same',
+          track: 1,
+          composer: null,
+        },
+      );
+      await expect(
+        stat(join(getServer().mountDir, otherDupPath)),
+      ).resolves.toBeTruthy();
+    }, 30_000);
+  });
 });

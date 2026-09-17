@@ -242,23 +242,6 @@
   white-space: nowrap;
 }
 
-.musicImportPrimaryButton {
-  font-size: var(--font-size-small);
-  font-family: inherit;
-  padding: 6px 16px;
-  border-radius: var(--button-border-radius);
-  border: none;
-  background: var(--primary-color);
-  color: #fff;
-  cursor: pointer;
-  font-weight: 500;
-  white-space: nowrap;
-
-  &:hover {
-    background: var(--primary-color-hover);
-  }
-}
-
 .musicBatchEditBody {
   flex: 1;
   min-height: 0;
@@ -502,6 +485,11 @@
   gap: 2px;
 }
 
+.musicOrganizePreviewItem {
+  display: flex;
+  flex-direction: column;
+}
+
 .musicOrganizePreviewRow {
   display: grid;
   grid-template-columns: minmax(100px, 1fr) auto minmax(160px, 2fr) auto;
@@ -528,6 +516,17 @@
   border: 1px solid var(--line-strong);
   background: var(--modal-bg);
   color: var(--text-body);
+
+  &.error {
+    outline: 2px solid var(--error-color);
+    outline-offset: -1px;
+  }
+}
+
+.musicOrganizePreviewCollision {
+  font-size: var(--font-size-small);
+  color: var(--error-color);
+  padding: 2px 0 4px;
 }
 
 .musicOrganizePreviewResetButton {

@@ -1975,3 +1975,132 @@ export function updateMusicImportBatchStep(
     }
   };
 }
+
+async function findMusicImportCollisions(
+  fileStore: ReturnType<typeof $.getCurrentFS>,
+  destinations: Map<string, string>,
+): Promise<Set<string>> {
+  const collisions = new Set<string>();
+
+  const sourcesByDestination = new Map<string, string[]>();
+  for (const [source, destination] of destinations) {
+    const sources = sourcesByDestination.get(destination) ?? [];
+    sources.push(source);
+    sourcesByDestination.set(destination, sources);
+  }
+  for (const sources of sourcesByDestination.values()) {
+    if (sources.length > 1) {
+      for (const source of sources) {
+        collisions.add(source);
+      }
+    }
+  }
+
+  const listingByFolder = new Map<string, T.FolderListing | null>();
+  for (const [source, destination] of destinations) {
+    if (collisions.has(source)) {
+      continue;
+    }
+    const folder = getDirName(destination);
+    let listing = listingByFolder.get(folder);
+    if (listing === undefined) {
+      listing = await fileStore.listFiles(folder).catch(() => null);
+      listingByFolder.set(folder, listing);
+    }
+    if (listing?.some((entry) => entry.path === destination)) {
+      collisions.add(source);
+    }
+  }
+
+  return collisions;
+}
+
+export interface MusicImportCommitResult {
+  /** Source paths (still staged) that were not moved. */
+  collisions: string[];
+}
+
+export function commitMusicImportBatch(
+  batchId: string,
+  destinations: Record<string, string>,
+): Thunk<Promise<MusicImportCommitResult>> {
+  return async (dispatch, getState) => {
+    const fileStore = $.getCurrentFS(getState());
+    const destinationMap = new Map(Object.entries(destinations));
+    const collisions = await findMusicImportCollisions(
+      fileStore,
+      destinationMap,
+    );
+
+    const batch = $.getMusicImportBatch(getState());
+    const tracksToMove = (batch?.tracks ?? []).filter(
+      (track) => !collisions.has(track.path),
+    );
+
+    const messageGeneration = dispatch(
+      addMessage({ message: `Organizing… 0 / ${tracksToMove.length}` }),
+    );
+    const movedTracks: T.TrackMetadata[] = [];
+    const stillStagedPaths = new Set(collisions);
+    for (let i = 0; i < tracksToMove.length; i++) {
+      const track = tracksToMove[i];
+      const destination = destinationMap.get(track.path);
+      if (!destination) {
+        continue;
+      }
+      try {
+        await fileStore.createFolder(getDirName(destination));
+        await fileStore.move(track.path, destination);
+        movedTracks.push({ ...track, path: destination });
+      } catch (error) {
+        console.error(error);
+        stillStagedPaths.add(track.path);
+      }
+      dispatch(
+        addMessage({
+          message: `Organizing… ${i + 1} / ${tracksToMove.length}`,
+          generation: messageGeneration,
+        }),
+      );
+    }
+
+    if (movedTracks.length > 0) {
+      const existingTracks = $.getMusicTracks(getState());
+      const needsRescan = $.getMusicNeedsRescan(getState());
+      const servedIndexVersion = $.getMusicServedIndexVersion(getState());
+      dispatch(
+        setMusicTracks(
+          [...existingTracks, ...movedTracks],
+          needsRescan,
+          servedIndexVersion,
+        ),
+      );
+    }
+
+    if (batch && batch.batchId === batchId) {
+      if (stillStagedPaths.size === 0) {
+        void dispatch(discardMusicImportBatch(batchId));
+      } else {
+        dispatch(
+          Plain.setMusicImportBatchTracks(
+            batchId,
+            batch.tracks.filter((track) => stillStagedPaths.has(track.path)),
+          ),
+        );
+      }
+    }
+
+    dispatch(
+      addMessage({
+        message:
+          stillStagedPaths.size === 0
+            ? `Organized ${movedTracks.length} track(s).`
+            : `Organized ${movedTracks.length} track(s) — ${stillStagedPaths.size} need attention.`,
+        generation: messageGeneration,
+        timeout: true,
+      }),
+    );
+
+    return { collisions: [...stillStagedPaths] };
+  };
+}

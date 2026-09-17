@@ -5,6 +5,7 @@ import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import { persistedState } from 'frontend/logic/persisted-state';
+import { ORGANIZATION_PRESET_TEMPLATES } from 'shared/music';
 import {
   useFolderArtworkDrop,
   useFolderArtworkPaste,
@@ -290,7 +291,11 @@ function ImportBatchEditView({ batch }: { batch: T.MusicImportBatch }) {
 
   function handleContinueClick() {
     void dispatch(
-      A.updateMusicImportBatchStep(batch.batchId, 'organizing', batch.template),
+      A.updateMusicImportBatchStep(
+        batch.batchId,
+        'organizing',
+        batch.template || ORGANIZATION_PRESET_TEMPLATES[0],
+      ),
     );
   }
 
@@ -317,7 +322,7 @@ function ImportBatchEditView({ batch }: { batch: T.MusicImportBatch }) {
           </button>
           <button
             type="button"
-            className="musicImportPrimaryButton"
+            className="button button-primary"
             onClick={handleContinueClick}
           >
             Continue

@@ -1,21 +1,38 @@
 # Drag-and-drop import & organize — design & implementation plan
 
-Status: Phases 0, 1, 2, and 3 done (`task check` passes, including new
-`route-music-staged-batch.test.ts`, `MusicImport.test.tsx`, and unit tests
-for `resolveOrganizationPath`/`sanitizeFilenameSegment` in
-`shared-music.test.ts`). Phase 2 also wired up the import batch-edit
-screen's rendering (which Phase 1 had left unwired) and generalized
-`BatchEditGrid`/`TrackEditorSidebar`/`TrackEditorPanel` behind a shared
-`MusicTrackSource` so the import and selection-based batch-edit flows share
-one implementation. Phase 3 added `OrganizeImportView.tsx` (presets, custom
-template input, live per-track preview, per-track path override) and a
-shared `useMusicImportDiscardConfirm` hook (now used by both the batch-edit
-and organize screens) in `frontend/hooks/music.tsx`. "Back to edit"
-persists immediately; free-text template edits are debounced (400ms) before
-persisting — **none of this has a real-browser visual confirmation yet**.
-Phase 4 (commit) up next. Phases below are the intended checkpoints; each
-should land, pass `task check`, and get a visual confirmation in a real
-browser before moving to the next.
+Status: Phases 0–4 implemented (`task check` passes). Phase 2 also wired up
+the import batch-edit screen's rendering (which Phase 1 had left unwired)
+and generalized `BatchEditGrid`/`TrackEditorSidebar`/`TrackEditorPanel`
+behind a shared `MusicTrackSource`. Phase 3 added `OrganizeImportView.tsx`
+(presets, custom template input, live per-track preview, per-track path
+override) and a shared `useMusicImportDiscardConfirm` hook in
+`frontend/hooks/music.tsx`. Phase 4 added `commitMusicImportBatch` (a new
+thunk in `store/actions/thunks.tsx`, not a server endpoint — it orchestrates
+the existing generic `fileStore.createFolder`/`move` per track) plus
+collision detection (`findMusicImportCollisions`, checked before any moves:
+both intra-batch destination clashes and existing real-library files),
+inline per-row error flagging on the organize screen, and the "Done" CTA.
+`ORGANIZATION_PRESET_TEMPLATES` moved to `shared/music.ts` so both the
+Continue-click step transition and the organize screen's own default agree
+on the same default template up front — the two were previously issuing
+concurrent, unsynchronized writes to the same `batch.json` manifest file,
+which surfaced as an intermittent `JSON.parse` failure on the existing
+"persists the organizing step" test under load (fixed, verified with
+several repeated `task check` runs).
+
+Phases 0–4 have **not had a real-browser visual confirmation** — only
+`musicimport-drop-hover`/`musicimport-batch-edit`/`musicimport-organize`
+screenshots (`task screenshots`) so far, which look correct.
+
+Known gap carried forward: a staged batch's per-track destination overrides
+and collision state are React component state only (`OrganizeImportView`),
+not persisted to the manifest — irrelevant today since the "resume a staged
+batch" header chip described below was never built, but worth knowing if
+that's picked up later.
+
+Phase 5 (edge cases/tests/polish) up next. Phases below are the intended
+checkpoints; each should land, pass `task check`, and get a visual
+confirmation in a real browser before moving to the next.
 
 All frontend tests for this feature live in one file,
 `src/frontend/test/MusicImport.test.tsx`, nested by phase — not a new
