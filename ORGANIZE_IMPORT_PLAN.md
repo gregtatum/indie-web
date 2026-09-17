@@ -1,10 +1,25 @@
 # Drag-and-drop import & organize — design & implementation plan
 
-Status: Phase 0 done (`task check` passes, including new
-`route-music-staged-batch.test.ts`). Phase 1 (drop target + staging upload)
-up next. Phases below are the intended checkpoints; each should land, pass
-`task check`, and get a visual confirmation in a real browser before moving
-to the next.
+Status: Phases 0 and 1 done (`task check` passes, including new
+`route-music-staged-batch.test.ts` and `MusicImport.test.tsx`). Phase 2
+(staged batch-edit screen) up next. Phases below are the intended
+checkpoints; each should land, pass `task check`, and get a visual
+confirmation in a real browser before moving to the next.
+
+All frontend tests for this feature live in one file,
+`src/frontend/test/MusicImport.test.tsx`, nested by phase — not a new
+`*.test.tsx` per screen. Add to it, don't create siblings.
+
+Phase 1 incidentally fixed a real gap: `MusicLibraryView` only rendered the
+drop target in its normal (non-error) branch, which meant a never-scanned
+mount (showing "Music library not found. Run a scan first.") couldn't accept
+a drop at all — closed via `withDropTarget()` wrapping every branch. It also
+surfaced and fixed a test-environment-only bug: a native `File`/`Blob`
+posted as a fetch body silently serialized to the string "[object File]"
+under node-fetch (used by the test harness) — fixed in `ServerFS.saveBlob`
+by sending `contents.arrayBuffer()` instead of the Blob itself, plus adding
+real `File`/`Blob`/`crypto.randomUUID` to `fix-jsdom.ts`'s environment
+patches.
 
 ## Problem
 
@@ -207,7 +222,8 @@ rescan.
 ### Phase 5 — Edge cases, tests, polish
 
 - Tests: real-server harness (`useMusicTestServer`, `buildMp3WithTags`, no
-  mocked music server — matches every existing music test) covering the full
+  mocked music server — matches every existing music test), added as nested
+  `describe`s in the same `MusicImport.test.tsx`, covering the full
   drop → stage → edit → organize → commit path, plus: collision handling,
   non-MP3 rejection, discard/cancel cleanup, and a missing-field template
   case.

@@ -57,9 +57,23 @@ export function MusicLibraryView({
   onCloseBatchEdit,
 }: MusicLibraryViewProps) {
   const server = $$.getCurrentServer();
-  const { dispatch } = Hooks.useStore();
+  const { dispatch, getState } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
   const batchEditTrackPaths = $$.getMusicBatchEditTrackPaths();
+
+  const importDropRef = React.useRef<HTMLDivElement>(null);
+  const importDropping = Hooks.useFileDrop(
+    importDropRef,
+    (event) => {
+      const { files } = event.dataTransfer ?? {};
+      if (files?.length) {
+        void dispatch(A.startMusicImportBatch(files));
+      }
+    },
+    (event) =>
+      !$.getDraggedFiles(getState())?.length &&
+      Array.from(event.dataTransfer?.types ?? []).includes('Files'),
+  );
 
   const wasBatchEditingRef = React.useRef(batchEditTrackPaths !== null);
   React.useEffect(() => {
@@ -150,49 +164,56 @@ export function MusicLibraryView({
     };
   }, [server.url]);
 
-  if (error) {
+  function withDropTarget(children: React.ReactNode) {
     return (
-      <div className="musicLibraryView">
-        <div className="musicLibraryViewError">
-          <div>{error}</div>
-        </div>
+      <div className="musicLibraryView" ref={importDropRef}>
+        {importDropping ? (
+          <div className="musicImportDropOverlay" aria-hidden="true">
+            Drop MP3s to import
+          </div>
+        ) : null}
+        {children}
       </div>
+    );
+  }
+
+  if (error) {
+    return withDropTarget(
+      <div className="musicLibraryViewError">
+        <div>{error}</div>
+      </div>,
     );
   }
 
   if (batchEditTrackPaths) {
-    return (
-      <div className="musicLibraryView">
-        <BatchEditView
-          trackPaths={batchEditTrackPaths}
-          onClose={onCloseBatchEdit}
-        />
-      </div>
+    return withDropTarget(
+      <BatchEditView
+        trackPaths={batchEditTrackPaths}
+        onClose={onCloseBatchEdit}
+      />,
     );
   }
 
-  return (
-    <div className="musicLibraryView">
-      <div className="musicLibraryBody">
-        <Splitter
-          direction="horizontal"
-          className="musicLibrarySidebarSplitter"
-          defaultOffset={400}
-          constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
-          start={<AlbumHero />}
-          end={
-            <Splitter
-              direction="vertical"
-              className="musicLibrarySplitter"
-              start={<FilterPanels />}
-              end={<TracksView />}
-              persistLocalStorage="musicLibrarySplitterOffset"
-            />
-          }
-          persistLocalStorage="musicLibrarySidebarSplitterOffset"
-        />
-      </div>
-    </div>
+  return withDropTarget(
+    <div className="musicLibraryBody">
+      <Splitter
+        direction="horizontal"
+        className="musicLibrarySidebarSplitter"
+        defaultOffset={400}
+        constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
+        start={<AlbumHero />}
+        end={
+          <Splitter
+            direction="vertical"
+            className="musicLibrarySplitter"
+            start={<FilterPanels />}
+            end={<TracksView />}
+            persistLocalStorage="musicLibrarySplitterOffset"
+          />
+        }
+        persistLocalStorage="musicLibrarySidebarSplitterOffset"
+      />
+    </div>,
   );
 }
 

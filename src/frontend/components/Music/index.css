@@ -127,11 +127,27 @@
 }
 
 .musicLibraryView {
+  position: relative;
   user-select: none;
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+}
+
+.musicImportDropOverlay {
+  position: absolute;
+  inset: 10px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px dashed var(--accent-strong);
+  background: #fffffff2;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .musicLibrarySidebarSplitter {

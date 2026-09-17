@@ -1805,3 +1805,127 @@ export function uploadFilesWithMessages(
     }
   };
 }
+
+function dedupeStagedFilenames(names: string[]): string[] {
+  const seenCounts = new Map<string, number>();
+  return names.map((name) => {
+    const count = seenCounts.get(name) ?? 0;
+    seenCounts.set(name, count + 1);
+    if (count === 0) {
+      return name;
+    }
+    const { baseName, extension } = splitOutFileExtension(name);
+    return `${baseName} (${count + 1})${extension}`;
+  });
+}
+
+/**
+ * Drops dragged-in files into a new drag-and-drop import batch: stages the
+ * `.mp3` files under `.music-staging/<batchId>/`, parses their tags, and
+ * writes the batch manifest. Non-MP3 files in the drop are reported and
+ * skipped rather than failing the whole batch.
+ */
+export function startMusicImportBatch(
+  files: FileList | File[],
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const fileStore = $.getCurrentFS(getState());
+    const server = $.getCurrentServer(getState());
+
+    const allFiles = Array.from(files);
+    const mp3Files = allFiles.filter((file) =>
+      file.name.toLowerCase().endsWith('.mp3'),
+    );
+    const rejectedCount = allFiles.length - mp3Files.length;
+    if (rejectedCount > 0) {
+      dispatch(
+        addMessage({
+          message: `Only .mp3 files can be imported — skipped ${rejectedCount} file${rejectedCount === 1 ? '' : 's'}.`,
+          timeout: true,
+        }),
+      );
+    }
+    if (mp3Files.length === 0) {
+      return;
+    }
+
+    const batchId = crypto.randomUUID();
+    const filenames = dedupeStagedFilenames(mp3Files.map((file) => file.name));
+    const messageGeneration = dispatch(
+      addMessage({ message: `Staging ${mp3Files.length} track(s)…` }),
+    );
+
+    try {
+      const trackPaths: string[] = [];
+      for (let i = 0; i < mp3Files.length; i++) {
+        const path = `/.music-staging/${batchId}/${filenames[i]}`;
+        await fileStore.saveBlob(path, 'add', mp3Files[i]);
+        trackPaths.push(path);
+      }
+
+      const scanRes = await fetch(
+        `${server.url}/music/music-index/scan-paths`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paths: trackPaths }),
+        },
+      );
+      if (!scanRes.ok) {
+        throw new Error(await scanRes.text());
+      }
+      const scanData = (await scanRes.json()) as T.ScanTrackPathsResponse;
+
+      const manifestRes = await fetch(`${server.url}/music/staged-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchId, trackPaths }),
+      });
+      if (!manifestRes.ok) {
+        throw new Error(await manifestRes.text());
+      }
+
+      dispatch(
+        Plain.setMusicImportBatch({
+          batchId,
+          tracks: scanData.tracks,
+          step: 'editing',
+          template: '',
+        }),
+      );
+      void dispatch(refreshMusicStagedBatchSummaries());
+      dispatch(
+        addMessage({
+          message: `Staged ${scanData.tracks.length} track(s) for import.`,
+          generation: messageGeneration,
+          timeout: true,
+        }),
+      );
+    } catch (error) {
+      console.error(error);
+      dispatch(
+        addMessage({
+          message: 'There was an error staging the dropped files.',
+          generation: messageGeneration,
+          timeout: true,
+        }),
+      );
+    }
+  };
+}
+
+export function refreshMusicStagedBatchSummaries(): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const server = $.getCurrentServer(getState());
+    try {
+      const res = await fetch(`${server.url}/music/staged-batches`);
+      if (!res.ok) {
+        return;
+      }
+      const summaries = (await res.json()) as T.StagedBatchSummary[];
+      dispatch(Plain.setMusicStagedBatchSummaries(summaries));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+}

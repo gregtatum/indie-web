@@ -66,7 +66,8 @@ export class ServerFS extends FileStore {
         'Content-Type': 'application/octet-stream',
         'File-Store-Request': JSON.stringify({ path, mode }),
       },
-      body: contents,
+      // Ensure the content doesn't get stringified by node-fetch.
+      body: await contents.arrayBuffer(),
     });
 
     if (!response.ok) {

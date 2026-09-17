@@ -1,6 +1,7 @@
 // This works around an error where structured clone is not defined.
 // https://github.com/jsdom/jsdom/issues/3363
 import JSDOMEnvironment from 'jest-environment-jsdom';
+import { randomUUID } from 'node:crypto';
 
 // eslint-disable-next-line import/no-default-export
 export default class FixJSDOMEnvironment extends JSDOMEnvironment {
@@ -31,9 +32,21 @@ export default class FixJSDOMEnvironment extends JSDOMEnvironment {
     this.global.Response = Response;
     this.global.ReadableStream = ReadableStream;
 
+    // jsdom's File/Blob aren't recognized as Blob-like by real fetch
+    // implementations (node-fetch, undici) — a jsdom File passed as a fetch
+    // body silently serializes to the string "[object File]" instead of its
+    // bytes.
+    this.global.Blob = Blob;
+    this.global.File = File;
+
     // jsdom has no TextEncoder/TextDecoder, but react-router references them
     // at import time.
     this.global.TextEncoder = TextEncoder;
     this.global.TextDecoder = TextDecoder as any;
+
+    // jsdom's crypto object has no randomUUID.
+    if (!this.global.crypto.randomUUID) {
+      this.global.crypto.randomUUID = randomUUID as any;
+    }
   }
 }
