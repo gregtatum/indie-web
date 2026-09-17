@@ -238,6 +238,38 @@ function batchEditTrackPaths(
   }
 }
 
+function importBatch(
+  state: T.MusicImportBatch | null = null,
+  action: T.Action,
+): T.MusicImportBatch | null {
+  switch (action.type) {
+    case 'set-music-import-batch':
+      return action.batch;
+    case 'set-music-import-batch-step':
+      return state && state.batchId === action.batchId
+        ? { ...state, step: action.step, template: action.template }
+        : state;
+    case 'view-music':
+      return null;
+    default:
+      return state;
+  }
+}
+
+function stagedBatchSummaries(
+  state: T.StagedBatchSummary[] = [],
+  action: T.Action,
+): T.StagedBatchSummary[] {
+  switch (action.type) {
+    case 'set-music-staged-batch-summaries':
+      return action.summaries;
+    case 'view-music':
+      return [];
+    default:
+      return state;
+  }
+}
+
 function editTab(
   state: T.MusicEditTab = 'details',
   action: T.Action,
@@ -364,6 +396,8 @@ function playbackServerId(
 const combinedMusicReducer = combineReducers({
   editTrackPath,
   batchEditTrackPaths,
+  importBatch,
+  stagedBatchSummaries,
   editTab,
   panelOrder,
   panelSelections,

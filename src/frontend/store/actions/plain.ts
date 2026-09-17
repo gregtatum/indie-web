@@ -484,6 +484,29 @@ export function setMusicBatchEditTrackPaths(paths: string[] | null) {
   return { type: 'set-music-batch-edit-track-paths' as const, paths };
 }
 
+export function setMusicImportBatch(batch: T.MusicImportBatch | null) {
+  return { type: 'set-music-import-batch' as const, batch };
+}
+
+export function setMusicImportBatchStep(
+  batchId: string,
+  step: T.StagedBatchStep,
+  template: string,
+) {
+  return {
+    type: 'set-music-import-batch-step' as const,
+    batchId,
+    step,
+    template,
+  };
+}
+
+export function setMusicStagedBatchSummaries(
+  summaries: T.StagedBatchSummary[],
+) {
+  return { type: 'set-music-staged-batch-summaries' as const, summaries };
+}
+
 export function setMusicEditTab(tab: T.MusicEditTab) {
   return { type: 'set-music-edit-tab' as const, tab };
 }

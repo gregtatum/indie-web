@@ -184,29 +184,12 @@ export async function performScan(
     const mtime = stats.mtime.toISOString();
     const size = stats.size;
 
-    // Probe the album directory for folder artwork (cached per directory).
-    const dirClientPath = dirname(clientPath);
-    const dirFullPath = dirname(fullPath);
-    let folderArtworkPath: string | null;
-    if (folderArtworkDirCache.has(dirClientPath)) {
-      folderArtworkPath = folderArtworkDirCache.get(dirClientPath)!;
-    } else {
-      folderArtworkPath = null;
-      try {
-        const entries = await fs.readdir(dirFullPath);
-        const entryMap = new Map(entries.map((e) => [e.toLowerCase(), e]));
-        for (const name of FOLDER_ARTWORK_FILENAMES) {
-          const actual = entryMap.get(name.toLowerCase());
-          if (actual) {
-            folderArtworkPath = dirClientPath + '/' + actual;
-            break;
-          }
-        }
-      } catch {
-        // directory unreadable, no folder artwork
-      }
-      folderArtworkDirCache.set(dirClientPath, folderArtworkPath);
-    }
+    const folderArtworkPath = await probeFolderArtworkForDir(
+      mountPath,
+      dirname(clientPath),
+      dirname(fullPath),
+      folderArtworkDirCache,
+    );
 
     const existingTrack = existingTracks.get(clientPath);
     if (
@@ -218,70 +201,15 @@ export async function performScan(
       // picked up on rescan even when the audio file itself is unchanged.
       tracks.push({ ...existingTrack, folderArtworkPath });
     } else {
-      let title: string | null = null;
-      let artist: string | null = null;
-      let albumArtist: string | null = null;
-      let composer: string | null = null;
-      let album: string | null = null;
-      let genre: string | null = null;
-      let preferComposerGrouping: boolean | null = null;
-      let track: number | null = null;
-      let duration: number | null = null;
-      let hasEmbeddedArtwork = false;
-      try {
-        const meta = await parseFile(fullPath, { duration: true });
-        const blocks = serializeTagBlocks(meta.native ?? {});
-        title = resolveTagValue(blocks, 'TIT2') ?? null;
-        artist = resolveTagValue(blocks, 'TPE1') ?? null;
-        albumArtist = resolveTagValue(blocks, 'TPE2') ?? null;
-        composer = resolveTagValue(blocks, 'TCOM') ?? null;
-        album = resolveTagValue(blocks, 'TALB') ?? null;
-        genre = resolveTagValue(blocks, 'TCON') ?? null;
-        preferComposerGrouping = parsePreferComposerGroupingTag(
-          getNativePrivateTextTags(meta.native),
-        );
-        track = parseLeadingInt(resolveTagValue(blocks, 'TRCK'));
-        duration = meta.format.duration ?? null;
-        hasEmbeddedArtwork = (meta.common.picture?.length ?? 0) > 0;
-
-        // If no folder artwork exists but this file has an embedded artwork
-        // frame, write it to disk so the /music/artwork endpoint can serve it.
-        if (!folderArtworkPath && hasEmbeddedArtwork) {
-          const picture = meta.common.picture![0];
-          const filename =
-            picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
-          const artworkFullPath = mountPath.joinWithinMount(
-            dirFullPath,
-            filename,
-          );
-          if (!artworkFullPath) {
-            throw new Error(
-              'Unexpected: folder artwork path escaped the mount.',
-            );
-          }
-          await fs.writeFile(artworkFullPath, picture.data);
-          folderArtworkPath = dirClientPath + '/' + filename;
-          folderArtworkDirCache.set(dirClientPath, folderArtworkPath);
-        }
-      } catch {
-        // If tag reading fails, store what we have.
-      }
-      tracks.push({
-        path: clientPath,
-        title,
-        artist,
-        albumArtist,
-        composer,
-        album,
-        genre,
-        preferComposerGrouping,
-        track,
-        duration,
-        size,
-        mtime,
+      const { track: parsedTrack } = await scanSingleAudioFile(
+        mountPath,
+        clientPath,
+        fullPath,
+        stats,
         folderArtworkPath,
-        hasEmbeddedArtwork,
-      });
+        folderArtworkDirCache,
+      );
+      tracks.push(parsedTrack);
     }
 
     callbacks?.onTrackScanned(i + 1, clientPath);
@@ -300,6 +228,292 @@ export async function performScan(
   await fs.rename(tmpPath, indexPath);
 
   return index;
+}
+
+async function probeFolderArtworkForDir(
+  mountPath: MountPath,
+  dirClientPath: string,
+  dirFullPath: string,
+  folderArtworkDirCache: Map<string, string | null>,
+): Promise<string | null> {
+  if (folderArtworkDirCache.has(dirClientPath)) {
+    return folderArtworkDirCache.get(dirClientPath)!;
+  }
+  let folderArtworkPath: string | null = null;
+  try {
+    const entries = await fs.readdir(dirFullPath);
+    const entryMap = new Map(entries.map((e) => [e.toLowerCase(), e]));
+    for (const name of FOLDER_ARTWORK_FILENAMES) {
+      const actual = entryMap.get(name.toLowerCase());
+      if (actual) {
+        folderArtworkPath = dirClientPath + '/' + actual;
+        break;
+      }
+    }
+  } catch {
+    // directory unreadable, no folder artwork
+  }
+  folderArtworkDirCache.set(dirClientPath, folderArtworkPath);
+  return folderArtworkPath;
+}
+
+async function scanSingleAudioFile(
+  mountPath: MountPath,
+  clientPath: string,
+  fullPath: string,
+  stats: { mtime: Date; size: number },
+  folderArtworkPathIn: string | null,
+  folderArtworkDirCache: Map<string, string | null>,
+): Promise<{ track: T.TrackMetadata; year: string | null }> {
+  const mtime = stats.mtime.toISOString();
+  const size = stats.size;
+  const dirClientPath = dirname(clientPath);
+  const dirFullPath = dirname(fullPath);
+  let folderArtworkPath = folderArtworkPathIn;
+
+  let title: string | null = null;
+  let artist: string | null = null;
+  let albumArtist: string | null = null;
+  let composer: string | null = null;
+  let album: string | null = null;
+  let genre: string | null = null;
+  let preferComposerGrouping: boolean | null = null;
+  let track: number | null = null;
+  let duration: number | null = null;
+  let hasEmbeddedArtwork = false;
+  let year: string | null = null;
+  try {
+    const meta = await parseFile(fullPath, { duration: true });
+    const blocks = serializeTagBlocks(meta.native ?? {});
+    title = resolveTagValue(blocks, 'TIT2') ?? null;
+    artist = resolveTagValue(blocks, 'TPE1') ?? null;
+    albumArtist = resolveTagValue(blocks, 'TPE2') ?? null;
+    composer = resolveTagValue(blocks, 'TCOM') ?? null;
+    album = resolveTagValue(blocks, 'TALB') ?? null;
+    genre = resolveTagValue(blocks, 'TCON') ?? null;
+    preferComposerGrouping = parsePreferComposerGroupingTag(
+      getNativePrivateTextTags(meta.native),
+    );
+    track = parseLeadingInt(resolveTagValue(blocks, 'TRCK'));
+    duration = meta.format.duration ?? null;
+    hasEmbeddedArtwork = (meta.common.picture?.length ?? 0) > 0;
+    year = resolveTagValue(blocks, 'TYER') ?? null;
+
+    // If no folder artwork exists but this file has an embedded artwork
+    // frame, write it to disk so the /music/artwork endpoint can serve it.
+    if (!folderArtworkPath && hasEmbeddedArtwork) {
+      const picture = meta.common.picture![0];
+      const filename =
+        picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
+      const artworkFullPath = mountPath.joinWithinMount(dirFullPath, filename);
+      if (!artworkFullPath) {
+        throw new Error('Unexpected: folder artwork path escaped the mount.');
+      }
+      await fs.writeFile(artworkFullPath, picture.data);
+      folderArtworkPath = dirClientPath + '/' + filename;
+      folderArtworkDirCache.set(dirClientPath, folderArtworkPath);
+    }
+  } catch {
+    // If tag reading fails, store what we have.
+  }
+  return {
+    track: {
+      path: clientPath,
+      title,
+      artist,
+      albumArtist,
+      composer,
+      album,
+      genre,
+      preferComposerGrouping,
+      track,
+      duration,
+      size,
+      mtime,
+      folderArtworkPath,
+      hasEmbeddedArtwork,
+    },
+    year,
+  };
+}
+
+/**
+ * Unlike `performScan`, never reads or writes `.music-index.json`.
+ */
+export async function scanTrackFiles(
+  mountPath: MountPath,
+  clientPaths: string[],
+): Promise<
+  Array<{
+    clientPath: string;
+    track: T.TrackMetadata | null;
+    year: string | null;
+  }>
+> {
+  const folderArtworkDirCache = new Map<string, string | null>();
+  const results: Array<{
+    clientPath: string;
+    track: T.TrackMetadata | null;
+    year: string | null;
+  }> = [];
+  for (const clientPath of clientPaths) {
+    const fullPath = mountPath.resolve(clientPath);
+    if (!fullPath) {
+      results.push({ clientPath, track: null, year: null });
+      continue;
+    }
+    let stats: Awaited<ReturnType<typeof fs.stat>>;
+    try {
+      stats = await fs.stat(fullPath);
+    } catch {
+      results.push({ clientPath, track: null, year: null });
+      continue;
+    }
+    const folderArtworkPath = await probeFolderArtworkForDir(
+      mountPath,
+      dirname(clientPath),
+      dirname(fullPath),
+      folderArtworkDirCache,
+    );
+    const { track, year } = await scanSingleAudioFile(
+      mountPath,
+      clientPath,
+      fullPath,
+      stats,
+      folderArtworkPath,
+      folderArtworkDirCache,
+    );
+    results.push({ clientPath, track, year });
+  }
+  return results;
+}
+
+/**
+ * `findAudioFiles` skips dot-prefixed entries, so files staged here are
+ * invisible to the library until a batch is committed and moved out.
+ */
+export const MUSIC_STAGING_DIRNAME = '.music-staging';
+
+const BATCH_MANIFEST_FILENAME = 'batch.json';
+
+function stagedBatchDir(
+  mountPath: MountPath,
+  batchId: string,
+): { clientDir: string; fullDir: string } | null {
+  const clientDir = `/${MUSIC_STAGING_DIRNAME}/${batchId}`;
+  const fullDir = mountPath.joinOnMount(`${MUSIC_STAGING_DIRNAME}/${batchId}`);
+  return fullDir ? { clientDir, fullDir } : null;
+}
+
+/**
+ * `batchId` is client-generated — the client needs it before uploading.
+ */
+export async function createStagedBatch(
+  mountPath: MountPath,
+  batchId: string,
+  trackPaths: string[],
+): Promise<T.StagedBatchManifest> {
+  const dir = stagedBatchDir(mountPath, batchId);
+  if (!dir) {
+    throw new Error('Unexpected: staged batch path escaped the mount.');
+  }
+  await fs.mkdir(dir.fullDir, { recursive: true });
+  const manifest: T.StagedBatchManifest = {
+    batchId,
+    createdAt: new Date().toISOString(),
+    step: 'editing',
+    trackPaths,
+    template: null,
+  };
+  await writeStagedBatchManifest(mountPath, manifest);
+  return manifest;
+}
+
+export async function writeStagedBatchManifest(
+  mountPath: MountPath,
+  manifest: T.StagedBatchManifest,
+): Promise<void> {
+  const dir = stagedBatchDir(mountPath, manifest.batchId);
+  if (!dir) {
+    throw new Error('Unexpected: staged batch path escaped the mount.');
+  }
+  const manifestPath = mountPath.joinWithinMount(
+    dir.fullDir,
+    BATCH_MANIFEST_FILENAME,
+  );
+  if (!manifestPath) {
+    throw new Error(
+      'Unexpected: staged batch manifest path escaped the mount.',
+    );
+  }
+  await fs.writeFile(manifestPath, JSON.stringify(manifest, null, '\t'));
+}
+
+export async function readStagedBatchManifest(
+  mountPath: MountPath,
+  batchId: string,
+): Promise<T.StagedBatchManifest | null> {
+  const dir = stagedBatchDir(mountPath, batchId);
+  if (!dir) {
+    return null;
+  }
+  const manifestPath = mountPath.joinWithinMount(
+    dir.fullDir,
+    BATCH_MANIFEST_FILENAME,
+  );
+  if (!manifestPath) {
+    return null;
+  }
+  try {
+    return JSON.parse(
+      await fs.readFile(manifestPath, 'utf-8'),
+    ) as T.StagedBatchManifest;
+  } catch {
+    return null;
+  }
+}
+
+export async function listStagedBatches(
+  mountPath: MountPath,
+): Promise<T.StagedBatchSummary[]> {
+  const stagingRoot = mountPath.joinOnMount(MUSIC_STAGING_DIRNAME);
+  if (!stagingRoot) {
+    return [];
+  }
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(stagingRoot, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const summaries: T.StagedBatchSummary[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const manifest = await readStagedBatchManifest(mountPath, entry.name);
+    if (!manifest) {
+      continue;
+    }
+    summaries.push({
+      batchId: manifest.batchId,
+      createdAt: manifest.createdAt,
+      step: manifest.step,
+      trackCount: manifest.trackPaths.length,
+    });
+  }
+  return summaries;
+}
+
+export async function discardStagedBatch(
+  mountPath: MountPath,
+  batchId: string,
+): Promise<void> {
+  const dir = stagedBatchDir(mountPath, batchId);
+  if (!dir) {
+    throw new Error('Unexpected: staged batch path escaped the mount.');
+  }
+  await fs.rm(dir.fullDir, { recursive: true, force: true });
 }
 
 /**

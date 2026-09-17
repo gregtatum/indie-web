@@ -182,6 +182,82 @@ export function compareTracksDefault(
   return (a.title ?? a.path).localeCompare(b.title ?? b.path);
 }
 
+export const ORGANIZATION_TEMPLATE_PRESETS: readonly string[] = [
+  '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+  '{Genre}/{Artist}/{AlbumArtist}/{Track} - {Title}',
+  '{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+  '{Artist}/{AlbumArtist}/{Track} - {Title}',
+];
+
+export interface OrganizationTrackFields {
+  genre: string | null;
+  artist: string | null;
+  albumArtist: string | null;
+  album: string | null;
+  year: string | null;
+  title: string | null;
+  track: number | null;
+  composer: string | null;
+}
+
+export const ORGANIZATION_TOKENS: ReadonlyArray<{
+  token: string;
+  getValue: (track: OrganizationTrackFields) => string;
+}> = [
+  { token: '{Genre}', getValue: (t) => t.genre ?? '' },
+  { token: '{Artist}', getValue: (t) => t.artist ?? '' },
+  { token: '{AlbumArtist}', getValue: (t) => t.albumArtist ?? '' },
+  { token: '{Album}', getValue: (t) => t.album ?? '' },
+  { token: '{Year}', getValue: (t) => t.year ?? '' },
+  { token: '{Title}', getValue: (t) => t.title ?? '' },
+  {
+    token: '{Track}',
+    getValue: (t) => (t.track === null ? '' : String(t.track).padStart(2, '0')),
+  },
+  { token: '{Composer}', getValue: (t) => t.composer ?? '' },
+];
+
+// eslint-disable-next-line no-control-regex
+const ILLEGAL_FILENAME_CHARS = /[/\\:*?"<>|\x00-\x1f]/g;
+
+const DANGLING_SEPARATOR = /^[\s\-–—,•·]+|[\s\-–—,•·]+$/g;
+
+export function sanitizeFilenameSegment(value: string): string {
+  return value
+    .replace(ILLEGAL_FILENAME_CHARS, '-')
+    .trim()
+    .replace(/[\s.]+$/, '');
+}
+
+function cleanOrganizationSegment(segment: string): string {
+  let result = segment.trim();
+  for (let i = 0; i < 5; i++) {
+    const next = result.replace(DANGLING_SEPARATOR, '');
+    if (next === result) {
+      break;
+    }
+    result = next;
+  }
+  return result;
+}
+
+export function resolveOrganizationPath(
+  template: string,
+  track: OrganizationTrackFields,
+): string {
+  let substituted = template;
+  for (const { token, getValue } of ORGANIZATION_TOKENS) {
+    substituted = substituted
+      .split(token)
+      .join(sanitizeFilenameSegment(getValue(track)));
+  }
+  const segments = substituted
+    .split('/')
+    .map(cleanOrganizationSegment)
+    .filter((segment) => segment.length > 0);
+  return '/' + segments.join('/') + '.mp3';
+}
+
 /**
  * Some files contain more than one tag source. For example, an older iTunes
  * version may have left an ID3v2.4 tag that is now wrapped by a newer ID3v2.3

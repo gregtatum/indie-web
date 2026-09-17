@@ -242,3 +242,43 @@ export interface WriteTrackTagsResponse {
     message: string | null;
   };
 }
+
+export interface StagedTrackMetadata extends TrackMetadata {
+  year: string | null;
+}
+
+export interface ScanTrackPathsRequest {
+  paths: string[];
+}
+
+export interface ScanTrackPathsResponse {
+  tracks: StagedTrackMetadata[];
+  errors: Array<{ path: string; message: string }>;
+}
+
+export type StagedBatchStep = 'editing' | 'organizing';
+
+/**
+ * Written to `.music-staging/<batchId>/batch.json`.
+ */
+export interface StagedBatchManifest {
+  batchId: string;
+  createdAt: string;
+  step: StagedBatchStep;
+  trackPaths: string[];
+  template: string | null;
+}
+
+export interface StagedBatchSummary {
+  batchId: string;
+  createdAt: string;
+  step: StagedBatchStep;
+  trackCount: number;
+}
+
+export interface MusicImportBatch {
+  batchId: string;
+  tracks: StagedTrackMetadata[];
+  step: StagedBatchStep;
+  template: string;
+}

@@ -173,6 +173,8 @@ interface Mp3Tags {
   composer: string;
   album: string;
   genre: string;
+  year: string;
+  track: string;
   preferComposerGrouping: string;
   apic: Buffer;
 }
@@ -228,6 +230,12 @@ export function buildMp3WithTags(tags: Partial<Mp3Tags> = {}): Buffer {
   }
   if (tags.genre) {
     frames.push(textFrame('TCON', tags.genre));
+  }
+  if (tags.year) {
+    frames.push(textFrame('TYER', tags.year));
+  }
+  if (tags.track) {
+    frames.push(textFrame('TRCK', tags.track));
   }
   if (tags.preferComposerGrouping) {
     frames.push(

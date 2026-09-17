@@ -219,6 +219,25 @@ rescan.
   management, not a presentation moment) — no new chrome style invented,
   reuses the existing detail-view/CTA/error-state language.
 
+### Phase 6 — Add `year` to the real music index
+
+Deferred to the end of this process rather than done alongside Phase 0, so
+the rest of the plan (and its code) isn't full of caveats about a gap that
+stops existing the moment this phase lands.
+
+- Add `year: string | null` to the real `TrackMetadata` type, bump
+  `MUSIC_INDEX_VERSION`, add the upgrader in
+  `frontend/logic/music/music-index-upgraders.ts`, a `music-index-v{N}.json`
+  fixture, and a snapshot test — per the versioning steps already documented
+  on `MusicIndex` in `shared/@types/shared.ts`.
+- Have `performScan` keep `year` from `scanSingleAudioFile` instead of
+  discarding it.
+- Once real tracks carry `year`, `StagedTrackMetadata` collapses into plain
+  `TrackMetadata` and `scan-paths`/`scanTrackFiles`'s separate `year`
+  plumbing can be deleted — at that point `resolveOrganizationPath` also
+  works unmodified against real (not just staged) tracks, which is what
+  actually unlocks a future "reorganize library" action.
+
 ## File-by-file (once approved)
 
 - `src/server/music/logic.ts`, `route.ts` — `scan-paths` endpoint.

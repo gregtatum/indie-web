@@ -43,6 +43,16 @@ export function getMusicBatchEditTrackPaths(state: State): string[] | null {
   return getMusic(state).batchEditTrackPaths;
 }
 
+export function getMusicImportBatch(state: State): T.MusicImportBatch | null {
+  return getMusic(state).importBatch;
+}
+
+export function getMusicStagedBatchSummaries(
+  state: State,
+): T.StagedBatchSummary[] {
+  return getMusic(state).stagedBatchSummaries;
+}
+
 export function getMusicNeedsRescan(state: State): boolean {
   return getMusic(state).needsRescan;
 }
