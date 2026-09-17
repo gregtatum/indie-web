@@ -117,6 +117,39 @@ const SHOTS = [
     describe: 'TapePlayer: Edit Track modal, Artwork tab (folder + embedded)',
   },
   {
+    name: 'musicimport-drop-hover',
+    surface: 'music',
+    route: '/music/music/',
+    waitFor: '.musicLibraryView',
+    describe: 'Music import: drag-hover overlay over the library view',
+    prepare: (page) => simulateFileDragHover(page),
+  },
+  {
+    name: 'musicimport-batch-edit',
+    surface: 'music',
+    route: '/music/music/',
+    waitFor: '.musicLibraryView',
+    settleMs: 1000,
+    describe:
+      'Music import: staged batch-edit screen (grid + sidebar + Continue CTA)',
+    prepare: (page) => dropImportTracks(page),
+  },
+  {
+    name: 'musicimport-organize',
+    surface: 'music',
+    route: '/music/music/',
+    waitFor: '.musicLibraryView',
+    settleMs: 1000,
+    describe: 'Music import: organize screen (presets + live preview)',
+    prepare: async (page) => {
+      await dropImportTracks(page);
+      await page.locator('button:has-text("Continue")').click();
+      await page.waitForSelector('.musicOrganizePreviewList', {
+        timeout: 5000,
+      });
+    },
+  },
+  {
     name: 'floppydisk-files',
     surface: 'files',
     route: '/files/folder/',
@@ -174,6 +207,142 @@ async function openSplitEditor(page) {
   }
   await page.waitForSelector('.splitterSplit .cm-content', { timeout: 5000 });
   await page.waitForTimeout(800);
+}
+
+// Builds a minimal-but-valid MP3 (an ID3v2.3 tag header with no audio frames)
+// good enough for the server's music-metadata scan — same shape as
+// `buildMp3WithTags` in src/frontend/test/utils/music.tsx, kept as a small
+// local copy here rather than importing test-only code into this script.
+function buildTaggedMp3(tags) {
+  function frame(id, content) {
+    const header = Buffer.alloc(10);
+    header.write(id, 0, 4, 'ascii');
+    header.writeUInt32BE(content.length, 4);
+    header.writeUInt16BE(0, 8);
+    return Buffer.concat([header, content]);
+  }
+  function textFrame(id, text) {
+    return frame(
+      id,
+      Buffer.concat([Buffer.from([0x00]), Buffer.from(text, 'latin1')]),
+    );
+  }
+  const frames = [];
+  if (tags.title) {
+    frames.push(textFrame('TIT2', tags.title));
+  }
+  if (tags.artist) {
+    frames.push(textFrame('TPE1', tags.artist));
+  }
+  if (tags.albumArtist) {
+    frames.push(textFrame('TPE2', tags.albumArtist));
+  }
+  if (tags.album) {
+    frames.push(textFrame('TALB', tags.album));
+  }
+  if (tags.genre) {
+    frames.push(textFrame('TCON', tags.genre));
+  }
+  if (tags.track !== undefined) {
+    frames.push(textFrame('TRCK', String(tags.track)));
+  }
+  const frameData = Buffer.concat(frames);
+  const id3Header = Buffer.alloc(10);
+  id3Header.write('ID3', 0, 3, 'ascii');
+  id3Header.writeUInt8(3, 3);
+  id3Header.writeUInt8(0, 4);
+  id3Header.writeUInt8(0, 5);
+  const size = frameData.length;
+  id3Header.writeUInt8((size >> 21) & 0x7f, 6);
+  id3Header.writeUInt8((size >> 14) & 0x7f, 7);
+  id3Header.writeUInt8((size >> 7) & 0x7f, 8);
+  id3Header.writeUInt8(size & 0x7f, 9);
+  return Buffer.concat([id3Header, frameData]);
+}
+
+const IMPORT_SCREENSHOT_TRACKS = [
+  {
+    filename: 'time.mp3',
+    tags: {
+      title: 'Time',
+      artist: 'Pink Floyd',
+      albumArtist: 'Pink Floyd',
+      album: 'The Dark Side of the Moon',
+      genre: 'Rock',
+      track: 4,
+    },
+  },
+  {
+    filename: 'money.mp3',
+    tags: {
+      title: 'Money',
+      artist: 'Pink Floyd',
+      albumArtist: 'Pink Floyd',
+      album: 'The Dark Side of the Moon',
+      genre: 'Rock',
+      track: 6,
+    },
+  },
+  {
+    filename: 'kaneda.mp3',
+    tags: {
+      title: 'Kaneda',
+      artist: 'Geinoh Yamashirogumi',
+      album: 'Akira',
+      genre: 'Soundtrack',
+      track: 1,
+    },
+  },
+];
+
+// Dispatches a real drag/drop DOM event carrying File objects at an element —
+// Playwright has no higher-level file-drop API, so this constructs the
+// DataTransfer in-page the same way a browser would for an OS file drag.
+async function dispatchFileDrop(page, selector, files, dropType) {
+  await page.evaluate(
+    ({ selector, files, dropType }) => {
+      /* eslint-disable no-undef */
+      const dataTransfer = new DataTransfer();
+      for (const file of files) {
+        const bytes = Uint8Array.from(atob(file.base64), (c) =>
+          c.charCodeAt(0),
+        );
+        dataTransfer.items.add(
+          new File([bytes], file.name, { type: 'audio/mpeg' }),
+        );
+      }
+      const el = document.querySelector(selector);
+      const init = { bubbles: true, cancelable: true, dataTransfer };
+      el.dispatchEvent(new DragEvent('dragenter', init));
+      el.dispatchEvent(new DragEvent('dragover', init));
+      if (dropType === 'drop') {
+        el.dispatchEvent(new DragEvent('drop', init));
+      }
+      /* eslint-enable no-undef */
+    },
+    { selector, files, dropType },
+  );
+}
+
+async function simulateFileDragHover(page) {
+  await dispatchFileDrop(
+    page,
+    '.musicLibraryView',
+    [{ name: 'hover.mp3', base64: buildTaggedMp3({}).toString('base64') }],
+    'hover',
+  );
+  await page.waitForSelector('.musicImportDropOverlay', { timeout: 5000 });
+}
+
+async function dropImportTracks(page) {
+  const files = IMPORT_SCREENSHOT_TRACKS.map((track) => ({
+    name: track.filename,
+    base64: buildTaggedMp3(track.tags).toString('base64'),
+  }));
+  await dispatchFileDrop(page, '.musicLibraryView', files, 'drop');
+  await page.waitForSelector('.musicBatchEditGrid', { timeout: 10_000 });
+  // Lets the sidebar's own tag-loading fetch for the auto-selected track land.
+  await page.waitForTimeout(500);
 }
 
 function parseArgs(argv) {
