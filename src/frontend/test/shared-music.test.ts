@@ -4,7 +4,10 @@ import {
   getTrackFilterArtist,
   nativePrivateTextTagValue,
   parsePreferComposerGroupingTag,
+  resolveOrganizationPath,
+  sanitizeFilenameSegment,
   serializePreferComposerGroupingTag,
+  type OrganizationTrackFields,
 } from 'shared/music';
 
 const BASE_TRACK: TrackMetadata = {
@@ -93,5 +96,66 @@ describe('shared music helpers', () => {
       description: 'indie-web:prefer-composer-grouping',
       value: 'true',
     });
+  });
+});
+
+const ORGANIZATION_TRACK: OrganizationTrackFields = {
+  genre: 'Rock',
+  artist: 'Pink Floyd',
+  albumArtist: 'Pink Floyd',
+  album: 'The Dark Side of the Moon',
+  year: '1973',
+  title: 'Time',
+  track: 4,
+  composer: null,
+};
+
+describe('resolveOrganizationPath', () => {
+  it('substitutes every token and zero-pads the track number', () => {
+    expect(
+      resolveOrganizationPath(
+        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+        ORGANIZATION_TRACK,
+      ),
+    ).toBe('/Rock/Pink Floyd/1973 - Pink Floyd/04 - Time.mp3');
+  });
+
+  it('drops a missing field but collapses the dangling separator around it', () => {
+    expect(
+      resolveOrganizationPath(
+        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+        { ...ORGANIZATION_TRACK, year: null },
+      ),
+    ).toBe('/Rock/Pink Floyd/Pink Floyd/04 - Time.mp3');
+  });
+
+  it('sanitizes a slash inside a resolved field value instead of nesting a folder', () => {
+    expect(
+      resolveOrganizationPath('{Artist}/{Title}', {
+        ...ORGANIZATION_TRACK,
+        artist: 'AC/DC',
+      }),
+    ).toBe('/AC-DC/Time.mp3');
+  });
+
+  it('renders a null track number as an empty segment token', () => {
+    expect(
+      resolveOrganizationPath('{Track} - {Title}', {
+        ...ORGANIZATION_TRACK,
+        track: null,
+      }),
+    ).toBe('/Time.mp3');
+  });
+});
+
+describe('sanitizeFilenameSegment', () => {
+  it('replaces filesystem-illegal characters with a dash', () => {
+    expect(sanitizeFilenameSegment('Rock & Roll: Vol. 2?')).toBe(
+      'Rock & Roll- Vol. 2-',
+    );
+  });
+
+  it('leaves an already-safe value untouched', () => {
+    expect(sanitizeFilenameSegment('Pink Floyd')).toBe('Pink Floyd');
   });
 });

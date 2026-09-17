@@ -10,11 +10,13 @@ import {
   useFolderArtworkPaste,
   useMusicLibraryTrackSource,
   useMusicImportTrackSource,
+  useMusicImportDiscardConfirm,
 } from 'frontend/hooks/music';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
 import { BatchEditGrid } from './BatchEditGrid';
 import { TrackEditorSidebar } from './TrackEditorSidebar';
+import { OrganizeImportView } from './OrganizeImportView';
 import {
   ColumnResizeHandle,
   clampColumnWidths,
@@ -183,7 +185,13 @@ export function MusicLibraryView({
   if (importBatch) {
     // A staged import batch doesn't depend on the real music index, so it
     // renders even if that index has never been scanned.
-    return withDropTarget(<ImportBatchEditView batch={importBatch} />);
+    return withDropTarget(
+      importBatch.step === 'organizing' ? (
+        <OrganizeImportView batch={importBatch} />
+      ) : (
+        <ImportBatchEditView batch={importBatch} />
+      ),
+    );
   }
 
   if (error) {
@@ -277,23 +285,8 @@ function ImportBatchEditView({ batch }: { batch: T.MusicImportBatch }) {
     [batch.tracks],
   );
 
-  const [discardConfirmPending, setDiscardConfirmPendingState] =
-    React.useState(false);
-  const discardConfirmPendingRef = React.useRef(false);
-  function setDiscardConfirmPending(value: boolean) {
-    discardConfirmPendingRef.current = value;
-    setDiscardConfirmPendingState(value);
-  }
-
-  const handleDiscardOrEscape = React.useCallback(() => {
-    if (discardConfirmPendingRef.current) {
-      void dispatch(A.discardMusicImportBatch(batch.batchId));
-    } else {
-      setDiscardConfirmPending(true);
-    }
-  }, [dispatch, batch.batchId]);
-
-  Hooks.useEscape(handleDiscardOrEscape, true);
+  const { discardConfirmPending, handleDiscardOrEscape } =
+    useMusicImportDiscardConfirm(batch.batchId);
 
   function handleContinueClick() {
     void dispatch(
@@ -324,7 +317,7 @@ function ImportBatchEditView({ batch }: { batch: T.MusicImportBatch }) {
           </button>
           <button
             type="button"
-            className="musicImportContinueButton"
+            className="musicImportPrimaryButton"
             onClick={handleContinueClick}
           >
             Continue

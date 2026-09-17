@@ -242,7 +242,7 @@
   white-space: nowrap;
 }
 
-.musicImportContinueButton {
+.musicImportPrimaryButton {
   font-size: var(--font-size-small);
   font-family: inherit;
   padding: 6px 16px;
@@ -434,6 +434,111 @@
 
   &:hover {
     background: var(--selection-hover);
+  }
+}
+
+.musicOrganizeBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--music-gap);
+  padding: var(--music-padding-v) var(--music-padding-h);
+  overflow-y: auto;
+}
+
+.musicOrganizeTemplateSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-bottom: var(--music-padding-v);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.musicOrganizePresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.musicOrganizePresetButton {
+  font-size: var(--font-size-small);
+  font-family: 'Roboto Mono', monospace;
+  padding: 4px 10px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--text-body);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--selection-hover);
+  }
+
+  &.active {
+    border-color: var(--primary-color);
+    background: var(--accent-wash);
+    color: var(--accent-strong);
+  }
+}
+
+.musicOrganizeTemplateInput {
+  font-size: var(--music-item-font-size);
+  font-family: 'Roboto Mono', monospace;
+  padding: 6px 8px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--line-strong);
+  background: var(--modal-bg);
+  color: var(--text-body);
+}
+
+.musicOrganizeTokenHint {
+  font-size: var(--font-size-small);
+  color: var(--text-label);
+}
+
+.musicOrganizePreviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.musicOrganizePreviewRow {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) auto minmax(160px, 2fr) auto;
+  align-items: center;
+  gap: var(--music-gap);
+  padding: 4px 0;
+  font-size: var(--music-item-font-size);
+}
+
+.musicOrganizePreviewSource {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.musicOrganizePreviewArrow {
+  color: var(--muted);
+}
+
+.musicOrganizePreviewDest {
+  font-family: 'Roboto Mono', monospace;
+  padding: 4px 6px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--line-strong);
+  background: var(--modal-bg);
+  color: var(--text-body);
+}
+
+.musicOrganizePreviewResetButton {
+  border: none;
+  background: none;
+  color: var(--text-label);
+  cursor: pointer;
+  padding: 2px 4px;
+
+  &:hover {
+    color: var(--text-body);
   }
 }
 

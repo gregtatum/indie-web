@@ -1,15 +1,21 @@
 # Drag-and-drop import & organize — design & implementation plan
 
-Status: Phases 0, 1, and 2 done (`task check` passes, including new
-`route-music-staged-batch.test.ts` and `MusicImport.test.tsx`). Phase 2 also
-wired up the import batch-edit screen's rendering (which Phase 1 had left
-unwired) and generalized `BatchEditGrid`/`TrackEditorSidebar`/
-`TrackEditorPanel` behind a shared `MusicTrackSource` so the import and
-selection-based batch-edit flows share one implementation — **still needs a
-real-browser visual confirmation**, not yet done. Phase 3 (organize screen)
-up next. Phases below are the intended checkpoints; each should land, pass
-`task check`, and get a visual confirmation in a real browser before moving
-to the next.
+Status: Phases 0, 1, 2, and 3 done (`task check` passes, including new
+`route-music-staged-batch.test.ts`, `MusicImport.test.tsx`, and unit tests
+for `resolveOrganizationPath`/`sanitizeFilenameSegment` in
+`shared-music.test.ts`). Phase 2 also wired up the import batch-edit
+screen's rendering (which Phase 1 had left unwired) and generalized
+`BatchEditGrid`/`TrackEditorSidebar`/`TrackEditorPanel` behind a shared
+`MusicTrackSource` so the import and selection-based batch-edit flows share
+one implementation. Phase 3 added `OrganizeImportView.tsx` (presets, custom
+template input, live per-track preview, per-track path override) and a
+shared `useMusicImportDiscardConfirm` hook (now used by both the batch-edit
+and organize screens) in `frontend/hooks/music.tsx`. "Back to edit"
+persists immediately; free-text template edits are debounced (400ms) before
+persisting — **none of this has a real-browser visual confirmation yet**.
+Phase 4 (commit) up next. Phases below are the intended checkpoints; each
+should land, pass `task check`, and get a visual confirmation in a real
+browser before moving to the next.
 
 All frontend tests for this feature live in one file,
 `src/frontend/test/MusicImport.test.tsx`, nested by phase — not a new
