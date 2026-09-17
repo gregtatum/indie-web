@@ -443,6 +443,10 @@ export function applyIndexedTrackChanges(
       updated.album = value || null;
     } else if (frameId === 'TCON') {
       updated.genre = value || null;
+    } else if (frameId === 'TYER') {
+      updated.year = value || null;
+    } else if (frameId === 'TCOM') {
+      updated.composer = value || null;
     } else if (frameId === 'TRCK') {
       const num = parseInt(value.split('/')[0], 10);
       updated.track = isNaN(num) ? null : num;

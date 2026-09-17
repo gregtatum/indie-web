@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { $, T } from 'frontend';
+import { $, A, T } from 'frontend';
 import { resolveOrganizationPath } from 'shared/music';
 import {
   buildMp3WithTags,
@@ -277,6 +277,62 @@ describe('drag-and-drop import & organize', () => {
         const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
         expect(manifest.step).toBe('organizing');
       });
+    }, 30_000);
+
+    it('propagates a bulk-edited year into the resolved organize path', async () => {
+      const { store } = await dropTracks([
+        {
+          fileName: 'a.mp3',
+          tags: {
+            title: 'Song A',
+            artist: 'Wilco',
+            albumArtist: 'Wilco',
+            album: 'A.M.',
+            genre: 'Rock',
+            track: 1,
+          },
+        },
+        {
+          fileName: 'b.mp3',
+          tags: {
+            title: 'Song B',
+            artist: 'Wilco',
+            albumArtist: 'Wilco',
+            album: 'A.M.',
+            genre: 'Rock',
+            track: 2,
+          },
+        },
+      ]);
+      const batch = $.getMusicImportBatch(store.getState());
+      const paths = batch?.tracks.map((t) => t.path) as string[];
+
+      await act(async () => {
+        store.dispatch(A.setMusicSelectedTracks(paths));
+      });
+
+      const yearInput = (await screen.findByLabelText(
+        'Year',
+      )) as HTMLInputElement;
+      await waitFor(() => {
+        expect(yearInput.disabled).toBe(false);
+      });
+      fireEvent.change(yearInput, { target: { value: '2014' } });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        await waitForNetworkIdle();
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+        await waitForNetworkIdle();
+      });
+      await screen.findByText(/Organize ·/);
+
+      const destInput = screen.getByRole('textbox', {
+        name: 'Destination path for Song A',
+      }) as HTMLInputElement;
+      expect(destInput.value).toContain('2014');
     }, 30_000);
   });
 
