@@ -117,7 +117,7 @@ export function parseHeaderRequest(
   }
   let metadata: unknown;
   try {
-    metadata = JSON.parse(metaHeader);
+    metadata = JSON.parse(decodeURIComponent(metaHeader));
   } catch {
     throw new ClientError('Invalid JSON in the File-Store-Request.');
   }

@@ -27,6 +27,65 @@ export function artworkFileFromDrop(
   return { file };
 }
 
+async function readAllDirectoryEntries(
+  reader: FileSystemDirectoryReader,
+): Promise<FileSystemEntry[]> {
+  const entries: FileSystemEntry[] = [];
+  // readEntries only returns a batch at a time — call it until it's empty.
+  for (;;) {
+    const batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+      reader.readEntries(resolve, reject),
+    );
+    if (batch.length === 0) {
+      break;
+    }
+    entries.push(...batch);
+  }
+  return entries;
+}
+
+async function collectFilesFromEntry(entry: FileSystemEntry): Promise<File[]> {
+  if (entry.isFile) {
+    const file = await new Promise<File>((resolve, reject) =>
+      (entry as FileSystemFileEntry).file(resolve, reject),
+    );
+    return [file];
+  }
+  if (entry.isDirectory) {
+    const entries = await readAllDirectoryEntries(
+      (entry as FileSystemDirectoryEntry).createReader(),
+    );
+    const nested = await Promise.all(entries.map(collectFilesFromEntry));
+    return nested.flat();
+  }
+  return [];
+}
+
+/**
+ * Flattens a drop's files, recursing into any dropped folders (e.g. an album
+ * folder dragged straight from Finder) via the FileSystem Entry API so
+ * non-MP3 siblings — cover art, playlists, `.DS_Store` — don't block the
+ * drop. Falls back to `dataTransfer.files` when entries aren't available
+ * (older browsers, or a test's synthetic DataTransfer).
+ */
+export async function collectFilesFromDataTransfer(
+  dataTransfer: DataTransfer | null,
+): Promise<File[]> {
+  if (!dataTransfer) {
+    return [];
+  }
+  const entries = Array.from(dataTransfer.items ?? [])
+    .map((item) => item.webkitGetAsEntry?.())
+    .filter((entry): entry is FileSystemEntry => entry !== null);
+
+  if (entries.length === 0) {
+    return Array.from(dataTransfer.files ?? []);
+  }
+
+  const nested = await Promise.all(entries.map(collectFilesFromEntry));
+  return nested.flat();
+}
+
 /**
  * Pull an image off the async clipboard. Mirrors `artworkFileFromDrop`: it takes
  * the first image the clipboard offers. Returns null when the clipboard holds no

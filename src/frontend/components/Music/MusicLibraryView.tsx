@@ -12,6 +12,7 @@ import {
   useMusicLibraryTrackSource,
   useMusicImportTrackSource,
   useMusicImportDiscardConfirm,
+  collectFilesFromDataTransfer,
 } from 'frontend/hooks/music';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TrackContextMenu, TrackContextMenuHandle } from './TrackContextMenu';
@@ -71,10 +72,11 @@ export function MusicLibraryView({
   const importDropping = Hooks.useFileDrop(
     importDropRef,
     (event) => {
-      const { files } = event.dataTransfer ?? {};
-      if (files?.length) {
-        void dispatch(A.startMusicImportBatch(files));
-      }
+      void collectFilesFromDataTransfer(event.dataTransfer).then((files) => {
+        if (files.length) {
+          void dispatch(A.startMusicImportBatch(files));
+        }
+      });
     },
     (event) =>
       !$.getDraggedFiles(getState())?.length &&

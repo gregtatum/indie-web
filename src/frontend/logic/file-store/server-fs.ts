@@ -64,7 +64,11 @@ export class ServerFS extends FileStore {
       method: 'POST',
       headers: {
         'Content-Type': 'application/octet-stream',
-        'File-Store-Request': JSON.stringify({ path, mode }),
+        // Headers must be ByteString, so a path outside Latin1 (e.g. CJK
+        // characters or a smart quote) would otherwise throw.
+        'File-Store-Request': encodeURIComponent(
+          JSON.stringify({ path, mode }),
+        ),
       },
       // Ensure the content doesn't get stringified by node-fetch.
       body: await contents.arrayBuffer(),
@@ -89,7 +93,7 @@ export class ServerFS extends FileStore {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'File-Store-Request': JSON.stringify({ path }),
+        'File-Store-Request': encodeURIComponent(JSON.stringify({ path })),
       },
       body: null, // or omit this field entirely
     });
@@ -103,7 +107,9 @@ export class ServerFS extends FileStore {
       throw new Error('Missing File-Store-Response header');
     }
 
-    const metadata = JSON.parse(headerResponse) as T.FileMetadata;
+    const metadata = JSON.parse(
+      decodeURIComponent(headerResponse),
+    ) as T.FileMetadata;
     const blob = await response.blob();
 
     const blobFile = { metadata, blob };

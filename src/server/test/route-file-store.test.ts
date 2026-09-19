@@ -8,7 +8,7 @@ import type { TestServer } from './helpers.ts';
 
 // Helpers for the File-Store-Request header pattern.
 function fileStoreHeader(data: Record<string, string>): string {
-  return JSON.stringify(data);
+  return encodeURIComponent(JSON.stringify(data));
 }
 
 async function listFiles(baseUrl: string, path: string) {
@@ -214,6 +214,17 @@ describe('POST /file-store/save-blob', () => {
       assert.equal(res.status, 400);
     }),
   );
+
+  it(
+    'saves a file whose path has characters outside Latin1',
+    withLogs([], async () => {
+      const path = '/AKIRA アキラ Soundtrack/track ’1.mp3';
+      const res = await saveBlob(server.baseUrl, path, 'audio bytes');
+      assert.equal(res.status, 200);
+      const meta = await res.json();
+      assert.equal(meta.path, path);
+    }),
+  );
 });
 
 describe('POST /file-store/load-blob', () => {
@@ -237,7 +248,7 @@ describe('POST /file-store/load-blob', () => {
 
       const metaHeader = res.headers.get('File-Store-Response');
       assert.ok(metaHeader, 'File-Store-Response header should be present');
-      const meta = JSON.parse(metaHeader);
+      const meta = JSON.parse(decodeURIComponent(metaHeader));
       assert.equal(meta.type, 'file');
       assert.equal(meta.name, 'data.txt');
 
@@ -270,6 +281,28 @@ describe('POST /file-store/load-blob', () => {
     withLogs(['Resolved path:', '[400err ]'], async () => {
       const res = await loadBlob(server.baseUrl, '/../../etc/passwd');
       assert.equal(res.status, 400);
+    }),
+  );
+
+  it(
+    'loads a file whose path has characters outside Latin1',
+    withLogs([], async () => {
+      const path = '/AKIRA アキラ Soundtrack/track ’1.mp3';
+      await mkdir(join(server.mountDir, 'AKIRA アキラ Soundtrack'), {
+        recursive: true,
+      });
+      await writeFile(
+        join(server.mountDir, 'AKIRA アキラ Soundtrack', 'track ’1.mp3'),
+        'audio bytes',
+      );
+
+      const res = await loadBlob(server.baseUrl, path);
+      assert.equal(res.status, 200);
+
+      const metaHeader = res.headers.get('File-Store-Response');
+      assert.ok(metaHeader, 'File-Store-Response header should be present');
+      const meta = JSON.parse(decodeURIComponent(metaHeader));
+      assert.equal(meta.path, path);
     }),
   );
 });

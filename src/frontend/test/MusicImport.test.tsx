@@ -32,6 +32,44 @@ function makeDataTransfer(files: File[]): DataTransfer {
   } as unknown as DataTransfer;
 }
 
+function fileEntry(file: File): FileSystemFileEntry {
+  return {
+    isFile: true,
+    isDirectory: false,
+    name: file.name,
+    file: (success: (file: File) => void) => success(file),
+  } as unknown as FileSystemFileEntry;
+}
+
+function dirEntry(name: string, children: FileSystemEntry[]): FileSystemEntry {
+  let read = false;
+  return {
+    isFile: false,
+    isDirectory: true,
+    name,
+    createReader: () => ({
+      readEntries: (success: (entries: FileSystemEntry[]) => void) => {
+        success(read ? [] : children);
+        read = true;
+      },
+    }),
+  } as unknown as FileSystemEntry;
+}
+
+function makeFolderDataTransfer(entries: FileSystemEntry[]): DataTransfer {
+  return {
+    files: [],
+    types: ['Files'],
+    items: entries.map((entry) => ({
+      kind: 'file',
+      webkitGetAsEntry: () => entry,
+    })),
+    setData: () => {},
+    getData: () => '',
+    clearData: () => {},
+  } as unknown as DataTransfer;
+}
+
 /**
  * Covers the whole drag-and-drop import & organize feature (see
  * ORGANIZE_IMPORT_PLAN.md) in one file, nested by phase, rather than one
@@ -186,6 +224,55 @@ describe('drag-and-drop import & organize', () => {
 
       const stagingRoot = join(getServer().mountDir, '.music-staging');
       await expect(readdir(stagingRoot)).rejects.toThrow();
+    });
+
+    it('recurses into a dropped folder, staging its MP3s and ignoring everything else', async () => {
+      const { store } = await renderMusicApp({ server: getServer() });
+      const zone = await dropZone();
+
+      const track = new File(
+        [
+          new Uint8Array(
+            buildMp3WithTags({ title: 'Kaneda', artist: 'Geinoh' }),
+          ),
+        ],
+        'kaneda.mp3',
+        { type: 'audio/mpeg' },
+      );
+      const cover = new File(['not audio'], 'cover.jpg', {
+        type: 'image/jpeg',
+      });
+      const folder = dirEntry('AKIRA Ambient Soundtrack', [
+        fileEntry(track),
+        fileEntry(cover),
+        dirEntry('Artwork', [fileEntry(cover)]),
+      ]);
+
+      await act(async () => {
+        fireEvent.drop(zone, {
+          dataTransfer: makeFolderDataTransfer([folder]),
+        });
+        await waitForNetworkIdle();
+      });
+
+      await screen.findByText(/Staged 1 track/);
+
+      // Staging auto-selects the first track, which mounts the sidebar editor
+      // and kicks off its own (separate) tag-loading fetch.
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
+      const batch = $.getMusicImportBatch(store.getState());
+      expect(batch?.tracks).toHaveLength(1);
+      expect(batch?.tracks[0].title).toBe('Kaneda');
+
+      const stagingRoot = join(getServer().mountDir, '.music-staging');
+      const [batchDir] = await readdir(stagingRoot);
+      expect(await readdir(join(stagingRoot, batchDir))).toEqual([
+        'batch.json',
+        'kaneda.mp3',
+      ]);
     });
   });
 

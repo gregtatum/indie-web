@@ -151,7 +151,10 @@ export function fileStoreRoute(mountPath: MountPath) {
     const fileMetadata = getFileMetadata(clientPath, stats);
 
     response.setHeader('Content-Type', 'application/octet-stream');
-    response.setHeader('File-Store-Response', JSON.stringify(fileMetadata));
+    response.setHeader(
+      'File-Store-Response',
+      encodeURIComponent(JSON.stringify(fileMetadata)),
+    );
 
     const stream = createReadStream(resolvedPath);
     stream.pipe(response);
