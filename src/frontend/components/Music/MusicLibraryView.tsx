@@ -198,25 +198,30 @@ export function MusicLibraryView({
     };
   }, [server.url]);
 
+  function renderImportDropOverlay() {
+    if (!importDropping || !dropOverlayRect) {
+      return null;
+    }
+    return Hooks.overlayPortal(
+      <div
+        className="musicImportDropOverlay"
+        aria-hidden="true"
+        style={{
+          top: dropOverlayRect.top,
+          left: dropOverlayRect.left,
+          width: dropOverlayRect.width,
+          height: dropOverlayRect.height,
+        }}
+      >
+        <div className="musicImportDropOverlayInner">Drop MP3s to import</div>
+      </div>,
+    );
+  }
+
   function withDropTarget(children: React.ReactNode) {
     return (
       <div className="musicLibraryView" ref={importDropRef}>
-        {importDropping && dropOverlayRect
-          ? Hooks.overlayPortal(
-              <div
-                className="musicImportDropOverlay"
-                aria-hidden="true"
-                style={{
-                  top: dropOverlayRect.top + 10,
-                  left: dropOverlayRect.left + 10,
-                  width: dropOverlayRect.width - 20,
-                  height: dropOverlayRect.height - 20,
-                }}
-              >
-                Drop MP3s to import
-              </div>,
-            )
-          : null}
+        {renderImportDropOverlay()}
         {children}
       </div>
     );
@@ -251,26 +256,31 @@ export function MusicLibraryView({
     );
   }
 
-  return withDropTarget(
-    <div className="musicLibraryBody">
-      <Splitter
-        direction="horizontal"
-        className="musicLibrarySidebarSplitter"
-        defaultOffset={400}
-        constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
-        start={<AlbumHero />}
-        end={
-          <Splitter
-            direction="vertical"
-            className="musicLibrarySplitter"
-            start={<FilterPanels />}
-            end={<TracksView />}
-            persistLocalStorage="musicLibrarySplitterOffset"
-          />
-        }
-        persistLocalStorage="musicLibrarySidebarSplitterOffset"
-      />
-    </div>,
+  return (
+    <div className="musicLibraryView">
+      <div className="musicLibraryBody">
+        <Splitter
+          direction="horizontal"
+          className="musicLibrarySidebarSplitter"
+          defaultOffset={400}
+          constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
+          start={<AlbumHero />}
+          end={
+            <div className="musicLibrarySplitterDropTarget" ref={importDropRef}>
+              {renderImportDropOverlay()}
+              <Splitter
+                direction="vertical"
+                className="musicLibrarySplitter"
+                start={<FilterPanels />}
+                end={<TracksView />}
+                persistLocalStorage="musicLibrarySplitterOffset"
+              />
+            </div>
+          }
+          persistLocalStorage="musicLibrarySidebarSplitterOffset"
+        />
+      </div>
+    </div>
   );
 }
 

@@ -46,7 +46,14 @@ describe('drag-and-drop import & organize', () => {
 
   async function dropZone(): Promise<HTMLElement> {
     return waitFor(() => {
-      const el = document.querySelector<HTMLElement>('.musicLibraryView');
+      // The normal library view (album hero + track list) scopes the drop
+      // target to just the track-list side, via .musicLibrarySplitterDropTarget.
+      // Other states (error, staged import batch, batch edit) don't render an
+      // album hero, so they keep the whole .musicLibraryView as the drop target.
+      const el =
+        document.querySelector<HTMLElement>(
+          '.musicLibrarySplitterDropTarget',
+        ) ?? document.querySelector<HTMLElement>('.musicLibraryView');
       if (!el) {
         throw new Error('.musicLibraryView not rendered yet');
       }
