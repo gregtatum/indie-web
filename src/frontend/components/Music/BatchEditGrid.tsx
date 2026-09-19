@@ -582,6 +582,18 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
       }
     }
 
+    function handleDeleteSelected() {
+      const removeTracks = trackSourceRef.current.removeTracks;
+      if (!removeTracks) {
+        return;
+      }
+      const paths = $.getMusicSelectedTrackPaths(getState());
+      if (paths.length === 0) {
+        return;
+      }
+      removeTracks(paths);
+    }
+
     function handleKeyDown(event: KeyboardEvent) {
       if (document.activeElement !== gridRef.current) {
         return;
@@ -589,6 +601,12 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
       const currentColumns = columnsRef.current;
       const currentColumn = cursorColumnRef.current;
       switch (getKeyboardString(event)) {
+        case 'Delete':
+        case 'Meta+Delete':
+        case 'Meta+Backspace':
+          event.preventDefault();
+          handleDeleteSelected();
+          break;
         case 'ArrowUp':
           event.preventDefault();
           moveRowFocus(-1, false);

@@ -446,6 +446,9 @@ export function useMusicImportTrackSource(
       updateTracks: (nextTracks: T.TrackMetadata[]) => {
         dispatch(A.setMusicImportBatchTracks(batchId, nextTracks));
       },
+      removeTracks: (paths: string[]) => {
+        void dispatch(A.removeMusicImportBatchTracks(batchId, paths));
+      },
     }),
     [dispatch, batchId, tracks],
   );

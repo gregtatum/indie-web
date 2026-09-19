@@ -2015,6 +2015,65 @@ export function addToMusicImportBatch(
   };
 }
 
+export function removeMusicImportBatchTracks(
+  batchId: string,
+  paths: string[],
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const batch = $.getMusicImportBatch(getState());
+    if (!batch || batch.batchId !== batchId || paths.length === 0) {
+      return;
+    }
+    const fileStore = $.getCurrentFS(getState());
+    const server = $.getCurrentServer(getState());
+
+    const removed: string[] = [];
+    for (const path of paths) {
+      try {
+        await fileStore.delete(path);
+        removed.push(path);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    if (removed.length === 0) {
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${server.url}/music/staged-batch/remove-tracks`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchId, trackPaths: removed }),
+        },
+      );
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+    } catch (error) {
+      console.error(error);
+    }
+
+    const removedSet = new Set(removed);
+    dispatch(
+      Plain.setMusicImportBatchTracks(
+        batchId,
+        batch.tracks.filter((track) => !removedSet.has(track.path)),
+      ),
+    );
+    dispatch(
+      Plain.setMusicSelectedTracks(
+        $.getMusicSelectedTrackPaths(getState()).filter(
+          (path) => !removedSet.has(path),
+        ),
+      ),
+    );
+    void dispatch(refreshMusicStagedBatchSummaries());
+  };
+}
+
 export function refreshMusicStagedBatchSummaries(): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const server = $.getCurrentServer(getState());

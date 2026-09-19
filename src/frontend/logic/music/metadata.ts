@@ -463,6 +463,7 @@ export function applyIndexedTrackChanges(
 export interface MusicTrackSource {
   tracks: TrackMetadata[];
   updateTracks: (tracks: TrackMetadata[]) => void;
+  removeTracks?: (paths: string[]) => void;
 }
 
 export type BatchEditColumnKey =

@@ -28,6 +28,7 @@ import {
   readStagedBatchManifest,
   removeEmbeddedArtworkFromTrack,
   removeOutdatedFolderArtwork,
+  removeStagedBatchTracks,
   scanTrackFiles,
   serializeTagBlocks,
   sniffImageMimeType,
@@ -230,6 +231,29 @@ export function musicRoute(mountPath: MountPath) {
       };
       await writeStagedBatchManifest(mountPath, updated);
       return updated;
+    },
+  );
+
+  route.post(
+    '/staged-batch/remove-tracks',
+    async (req): Promise<T.StagedBatchManifest> => {
+      const { batchId, trackPaths } = req.body as {
+        batchId: string;
+        trackPaths: string[];
+      };
+      assertValidBatchId(batchId);
+      if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
+        throw new ClientError('Missing or empty trackPaths array.');
+      }
+      const manifest = await removeStagedBatchTracks(
+        mountPath,
+        batchId,
+        trackPaths,
+      );
+      if (!manifest) {
+        throw new NotFoundError('Staged batch not found.');
+      }
+      return manifest;
     },
   );
 

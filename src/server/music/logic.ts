@@ -425,6 +425,24 @@ export async function createStagedBatch(
   return manifest;
 }
 
+export async function removeStagedBatchTracks(
+  mountPath: MountPath,
+  batchId: string,
+  trackPaths: string[],
+): Promise<T.StagedBatchManifest | null> {
+  const existing = await readStagedBatchManifest(mountPath, batchId);
+  if (!existing) {
+    return null;
+  }
+  const removeSet = new Set(trackPaths);
+  const manifest: T.StagedBatchManifest = {
+    ...existing,
+    trackPaths: existing.trackPaths.filter((path) => !removeSet.has(path)),
+  };
+  await writeStagedBatchManifest(mountPath, manifest);
+  return manifest;
+}
+
 export async function writeStagedBatchManifest(
   mountPath: MountPath,
   manifest: T.StagedBatchManifest,

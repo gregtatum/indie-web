@@ -401,4 +401,17 @@ describe('<BatchEditGrid> with real server', () => {
       screen.getByRole('listbox', { name: 'Tracks' }),
     );
   }, 30_000);
+
+  it('ignores the Delete key — deleting via keyboard is import-only', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    fireEvent.keyDown(document.body, { key: 'Delete' });
+
+    getCellText('Song A');
+    expect(await fetchIndexTrack('/a.mp3')).toBeTruthy();
+  }, 30_000);
 });

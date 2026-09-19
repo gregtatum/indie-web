@@ -376,6 +376,42 @@ describe('drag-and-drop import & organize', () => {
       ).toBeTruthy();
     }, 30_000);
 
+    it('removes the selected track on Delete, staging file and all', async () => {
+      const { store } = await dropTracks([
+        { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
+        { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
+      ]);
+      const batch = $.getMusicImportBatch(store.getState());
+      const batchId = batch?.batchId as string;
+      const kanedaPath = batch?.tracks.find((t) => t.title === 'Kaneda')
+        ?.path as string;
+
+      await act(async () => {
+        store.dispatch(A.setMusicSelectedTracks([kanedaPath]));
+      });
+      const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+      grid.focus();
+
+      await act(async () => {
+        fireEvent.keyDown(document.body, { key: 'Delete' });
+        await waitForNetworkIdle();
+      });
+
+      await waitForImportBatch(store, 1);
+      expect($.getMusicImportBatch(store.getState())?.tracks[0].title).toBe(
+        'Time',
+      );
+      expect(
+        screen.queryByText('Kaneda', { selector: '.musicBatchEditCellText' }),
+      ).toBeNull();
+      expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
+
+      const stagedFiles = await readdir(
+        join(getServer().mountDir, '.music-staging', batchId),
+      );
+      expect(stagedFiles.sort()).toEqual(['a.mp3', 'batch.json']);
+    }, 30_000);
+
     it('discards the staged batch via the header button, deleting the staging folder', async () => {
       const { store } = await dropTrack('time.mp3', {
         title: 'Time',
