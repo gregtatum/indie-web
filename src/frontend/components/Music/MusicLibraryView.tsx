@@ -81,6 +81,34 @@ export function MusicLibraryView({
       Array.from(event.dataTransfer?.types ?? []).includes('Files'),
   );
 
+  // The overlay is portaled into #overlayContainer so it can't be occluded by
+  // .musicTracksHeader's local stacking context, so its position has to be
+  // computed from the drop target's rect rather than via CSS inset.
+  const [dropOverlayRect, setDropOverlayRect] = React.useState<null | {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  }>(null);
+
+  React.useEffect(() => {
+    if (!importDropping) {
+      return;
+    }
+    const el = importDropRef.current;
+    if (!el) {
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const docRect = document.body.getBoundingClientRect();
+    setDropOverlayRect({
+      top: rect.top - docRect.top,
+      left: rect.left - docRect.left,
+      width: rect.width,
+      height: rect.height,
+    });
+  }, [importDropping]);
+
   const wasBatchEditingRef = React.useRef(batchEditTrackPaths !== null);
   React.useEffect(() => {
     const wasBatchEditing = wasBatchEditingRef.current;
@@ -173,11 +201,22 @@ export function MusicLibraryView({
   function withDropTarget(children: React.ReactNode) {
     return (
       <div className="musicLibraryView" ref={importDropRef}>
-        {importDropping ? (
-          <div className="musicImportDropOverlay" aria-hidden="true">
-            Drop MP3s to import
-          </div>
-        ) : null}
+        {importDropping && dropOverlayRect
+          ? Hooks.overlayPortal(
+              <div
+                className="musicImportDropOverlay"
+                aria-hidden="true"
+                style={{
+                  top: dropOverlayRect.top + 10,
+                  left: dropOverlayRect.left + 10,
+                  width: dropOverlayRect.width - 20,
+                  height: dropOverlayRect.height - 20,
+                }}
+              >
+                Drop MP3s to import
+              </div>,
+            )
+          : null}
         {children}
       </div>
     );
