@@ -18,7 +18,6 @@ import {
   getFileMetadata,
   getFolderMetadata,
   getMetadata,
-  parseHeaderRequest,
 } from './logic.ts';
 
 const ignoredFiles = new Set(['.DS_Store']);
@@ -107,11 +106,9 @@ export function fileStoreRoute(mountPath: MountPath) {
   });
 
   route.post('/save-blob', async (request): Promise<T.FileMetadata> => {
-    const metadata = parseHeaderRequest(request.header('File-Store-Request'));
-
-    const clientPath = metadata.path;
-    if (!clientPath) {
-      throw new ClientError('Invalid or missing path in metadata.');
+    const clientPath = request.query.path;
+    if (typeof clientPath !== 'string') {
+      throw new ClientError('Invalid or missing path in the query string.');
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
@@ -134,11 +131,9 @@ export function fileStoreRoute(mountPath: MountPath) {
   });
 
   route.post('/load-blob', async (request, response): Promise<void> => {
-    const metadata = parseHeaderRequest(request.header('File-Store-Request'));
-
-    const clientPath = metadata.path;
-    if (!clientPath) {
-      throw new ClientError('Invalid or missing path in metadata.');
+    const clientPath = request.body?.path;
+    if (typeof clientPath !== 'string') {
+      throw new ClientError('Invalid or missing path in the request body.');
     }
 
     const resolvedPath = mountPath.resolve(clientPath);
@@ -151,6 +146,9 @@ export function fileStoreRoute(mountPath: MountPath) {
     const fileMetadata = getFileMetadata(clientPath, stats);
 
     response.setHeader('Content-Type', 'application/octet-stream');
+    // Only use File-Store-Response here because the response body is already
+    // the binary file, so metadata can't ride along in it. Headers must be
+    // ByteString, hence the percent-encoding.
     response.setHeader(
       'File-Store-Response',
       encodeURIComponent(JSON.stringify(fileMetadata)),

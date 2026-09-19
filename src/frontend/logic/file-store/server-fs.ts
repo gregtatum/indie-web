@@ -60,16 +60,10 @@ export class ServerFS extends FileStore {
       typeof pathOrMetadata === 'string' ? pathOrMetadata : pathOrMetadata.path;
 
     log('saveBlob request', { path, mode });
-    const response = await fetch(`${this.apiBaseUrl}/save-blob`, {
+    const query = new URLSearchParams({ path, mode }).toString();
+    const response = await fetch(`${this.apiBaseUrl}/save-blob?${query}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        // Headers must be ByteString, so a path outside Latin1 (e.g. CJK
-        // characters or a smart quote) would otherwise throw.
-        'File-Store-Request': encodeURIComponent(
-          JSON.stringify({ path, mode }),
-        ),
-      },
+      headers: { 'Content-Type': 'application/octet-stream' },
       // Ensure the content doesn't get stringified by node-fetch.
       body: await contents.arrayBuffer(),
     });
@@ -91,11 +85,8 @@ export class ServerFS extends FileStore {
     log('loadBlob requested', path);
     const response = await fetch(`${this.apiBaseUrl}/load-blob`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'File-Store-Request': encodeURIComponent(JSON.stringify({ path })),
-      },
-      body: null, // or omit this field entirely
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
     });
 
     if (!response.ok) {
@@ -107,6 +98,10 @@ export class ServerFS extends FileStore {
       throw new Error('Missing File-Store-Response header');
     }
 
+    // Header values are ByteString, so a raw path/filename outside Latin1
+    // (CJK, curly quotes, emoji, …) throws when the browser tries to read
+    // it — the server percent-encodes the JSON to dodge that, so decode it
+    // back here.
     const metadata = JSON.parse(
       decodeURIComponent(headerResponse),
     ) as T.FileMetadata;

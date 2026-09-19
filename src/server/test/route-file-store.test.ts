@@ -6,11 +6,6 @@ import { fileStoreRoute } from '../file-store/route.ts';
 import { createTestServer, withLogs } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
 
-// Helpers for the File-Store-Request header pattern.
-function fileStoreHeader(data: Record<string, string>): string {
-  return encodeURIComponent(JSON.stringify(data));
-}
-
 async function listFiles(baseUrl: string, path: string) {
   return fetch(`${baseUrl}/file-store/list-files`, {
     method: 'POST',
@@ -25,12 +20,10 @@ async function saveBlob(
   body: string | Buffer,
   mode = 'overwrite',
 ) {
-  return fetch(`${baseUrl}/file-store/save-blob`, {
+  const query = new URLSearchParams({ path, mode }).toString();
+  return fetch(`${baseUrl}/file-store/save-blob?${query}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      'File-Store-Request': fileStoreHeader({ path, mode }),
-    },
+    headers: { 'Content-Type': 'application/octet-stream' },
     body: body as BodyInit,
   });
 }
@@ -38,9 +31,8 @@ async function saveBlob(
 async function loadBlob(baseUrl: string, path: string) {
   return fetch(`${baseUrl}/file-store/load-blob`, {
     method: 'POST',
-    headers: {
-      'File-Store-Request': fileStoreHeader({ path }),
-    },
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
   });
 }
 
@@ -196,7 +188,7 @@ describe('POST /file-store/save-blob', () => {
   );
 
   it(
-    'returns 400 when File-Store-Request header is missing',
+    'returns 400 when the path query param is missing',
     withLogs(['[400err ]'], async () => {
       const res = await fetch(`${server.baseUrl}/file-store/save-blob`, {
         method: 'POST',
@@ -267,10 +259,12 @@ describe('POST /file-store/load-blob', () => {
   );
 
   it(
-    'returns 400 when File-Store-Request header is missing',
+    'returns 400 when the path is missing from the request body',
     withLogs(['[400err ]'], async () => {
       const res = await fetch(`${server.baseUrl}/file-store/load-blob`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
       assert.equal(res.status, 400);
     }),

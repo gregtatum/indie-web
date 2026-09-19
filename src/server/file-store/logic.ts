@@ -2,7 +2,6 @@ import { execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
 import { basename } from 'node:path';
 import { promises as fs, type Stats } from 'node:fs';
-import { ClientError } from '../route-utils.ts';
 import type { T } from '../index.ts';
 
 const execFile = promisify(execFileCallback);
@@ -107,29 +106,4 @@ export function getFileMetadata(
     isDownloadable: true,
     hash: '',
   };
-}
-
-export function parseHeaderRequest(
-  metaHeader?: string,
-): Record<string, string> {
-  if (!metaHeader) {
-    throw new ClientError('No File-Store-Request was provided.');
-  }
-  let metadata: unknown;
-  try {
-    metadata = JSON.parse(decodeURIComponent(metaHeader));
-  } catch {
-    throw new ClientError('Invalid JSON in the File-Store-Request.');
-  }
-  if (!metadata || typeof metadata !== 'object') {
-    throw new ClientError('Expected the File-Store-Request to be an object.');
-  }
-  for (const [key, value] of Object.entries(metadata)) {
-    if (typeof key !== 'string' || typeof value !== 'string') {
-      throw new ClientError(
-        'Expected all keys and values of the File-Store-Request to be strings.',
-      );
-    }
-  }
-  return metadata as Record<string, string>;
 }
