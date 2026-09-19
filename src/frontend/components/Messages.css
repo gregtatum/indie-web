@@ -15,14 +15,19 @@
   align-items: center;
   gap: 10px;
   padding: 8px 8px 8px 14px;
-  background: var(--accent-wash);
-  color: var(--ink);
-  border: 1px solid var(--accent);
+  background: #262626;
+  color: #fff;
   border-radius: var(--button-border-radius);
-  box-shadow: 0 4px 16px #00000026;
+  box-shadow: 0 4px 16px #00000040;
   margin: 7px;
   font-size: var(--font-size-small);
   animation: fadein 200ms;
+}
+
+@media (min-width: 900px) {
+  .messagesMessage {
+    padding: 12px 12px 12px 18px;
+  }
 }
 
 .messagesMessageText {
@@ -45,7 +50,7 @@
 }
 
 .messagesDismissButton:hover {
-  background: #0001;
+  background: #ffffff26;
   opacity: 1;
 }
 
@@ -57,4 +62,5 @@
 .messagesDismissButton > img {
   width: var(--icon-size);
   height: var(--icon-size);
+  filter: invert(1);
 }
