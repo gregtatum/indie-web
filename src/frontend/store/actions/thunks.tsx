@@ -1837,15 +1837,20 @@ export function startMusicImportBatch(
       file.name.toLowerCase().endsWith('.mp3'),
     );
     const rejectedCount = allFiles.length - mp3Files.length;
-    if (rejectedCount > 0) {
-      dispatch(
-        addMessage({
-          message: `Only .mp3 files can be imported — skipped ${rejectedCount} file${rejectedCount === 1 ? '' : 's'}.`,
-          timeout: true,
-        }),
-      );
-    }
+    // Reported once staging settles, so it doesn't compete with the
+    // in-progress "Staging…" message for attention.
+    const reportRejectedFiles = () => {
+      if (rejectedCount > 0) {
+        dispatch(
+          addMessage({
+            message: `Only .mp3 files can be imported — skipped ${rejectedCount} file${rejectedCount === 1 ? '' : 's'}.`,
+            timeout: true,
+          }),
+        );
+      }
+    };
     if (mp3Files.length === 0) {
+      reportRejectedFiles();
       return;
     }
 
@@ -1897,13 +1902,8 @@ export function startMusicImportBatch(
         dispatch(Plain.setMusicSelectedTracks([scanData.tracks[0].path]));
       }
       void dispatch(refreshMusicStagedBatchSummaries());
-      dispatch(
-        addMessage({
-          message: `Staged ${scanData.tracks.length} track(s) for import.`,
-          generation: messageGeneration,
-          timeout: true,
-        }),
-      );
+      dispatch(Plain.dismissMessage(messageGeneration));
+      reportRejectedFiles();
     } catch (error) {
       console.error(error);
       dispatch(
@@ -1913,6 +1913,7 @@ export function startMusicImportBatch(
           timeout: true,
         }),
       );
+      reportRejectedFiles();
     }
   };
 }

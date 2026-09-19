@@ -98,8 +98,10 @@ describe('drag-and-drop import & organize', () => {
   async function dropTrack(
     fileName: string,
     tags: Parameters<typeof buildMp3WithTags>[0],
+    existingStore?: Awaited<ReturnType<typeof renderMusicApp>>['store'],
   ) {
-    const { store } = await renderMusicApp({ server: getServer() });
+    const store =
+      existingStore ?? (await renderMusicApp({ server: getServer() })).store;
     const zone = await dropZone();
     const file = new File([new Uint8Array(buildMp3WithTags(tags))], fileName, {
       type: 'audio/mpeg',
@@ -108,7 +110,7 @@ describe('drag-and-drop import & organize', () => {
       fireEvent.drop(zone, { dataTransfer: makeDataTransfer([file]) });
       await waitForNetworkIdle();
     });
-    await screen.findByText(/Staged 1 track/);
+    await waitForImportBatch(store, 1);
     return { store };
   }
 
@@ -117,8 +119,10 @@ describe('drag-and-drop import & organize', () => {
       fileName: string;
       tags: Parameters<typeof buildMp3WithTags>[0];
     }>,
+    existingStore?: Awaited<ReturnType<typeof renderMusicApp>>['store'],
   ) {
-    const { store } = await renderMusicApp({ server: getServer() });
+    const store =
+      existingStore ?? (await renderMusicApp({ server: getServer() })).store;
     const zone = await dropZone();
     const dataTransfer = makeDataTransfer(
       files.map(
@@ -132,7 +136,7 @@ describe('drag-and-drop import & organize', () => {
       fireEvent.drop(zone, { dataTransfer });
       await waitForNetworkIdle();
     });
-    await screen.findByText(new RegExp(`Staged ${files.length} track`));
+    await waitForImportBatch(store, files.length);
     await act(async () => {
       await waitForNetworkIdle();
     });
@@ -148,6 +152,17 @@ describe('drag-and-drop import & organize', () => {
       await waitForNetworkIdle();
     });
     await screen.findByText(/Found \d+ tracks\./);
+  }
+
+  async function waitForImportBatch(
+    store: Awaited<ReturnType<typeof renderMusicApp>>['store'],
+    trackCount: number,
+  ) {
+    await waitFor(() => {
+      expect($.getMusicImportBatch(store.getState())?.tracks).toHaveLength(
+        trackCount,
+      );
+    });
   }
 
   async function scanStagedTrack(
@@ -186,7 +201,7 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      await screen.findByText(/Staged 1 track/);
+      await waitForImportBatch(store, 1);
 
       // Staging auto-selects the first track, which mounts the sidebar editor
       // and kicks off its own (separate) tag-loading fetch.
@@ -255,7 +270,7 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      await screen.findByText(/Staged 1 track/);
+      await waitForImportBatch(store, 1);
 
       // Staging auto-selects the first track, which mounts the sidebar editor
       // and kicks off its own (separate) tag-loading fetch.
@@ -637,23 +652,26 @@ describe('drag-and-drop import & organize', () => {
     it('moves staged tracks to their resolved destinations and patches the library without a rescan', async () => {
       const { store } = await renderMusicApp({ server: getServer() });
       await scanLibrary();
-      await dropTracks([
-        {
-          fileName: 'a.mp3',
-          tags: {
-            title: 'Time',
-            artist: 'Pink Floyd',
-            albumArtist: 'Pink Floyd',
-            album: 'The Dark Side of the Moon',
-            genre: 'Rock',
-            track: 4,
+      await dropTracks(
+        [
+          {
+            fileName: 'a.mp3',
+            tags: {
+              title: 'Time',
+              artist: 'Pink Floyd',
+              albumArtist: 'Pink Floyd',
+              album: 'The Dark Side of the Moon',
+              genre: 'Rock',
+              track: 4,
+            },
           },
-        },
-        {
-          fileName: 'b.mp3',
-          tags: { title: 'Kaneda', artist: 'Geinoh', genre: 'Soundtrack' },
-        },
-      ]);
+          {
+            fileName: 'b.mp3',
+            tags: { title: 'Kaneda', artist: 'Geinoh', genre: 'Soundtrack' },
+          },
+        ],
+        store,
+      );
       const batch = $.getMusicImportBatch(store.getState());
       const batchId = batch?.batchId as string;
 
@@ -707,7 +725,7 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
 
     it('flags colliding destinations without moving them, letting the rest commit and allowing a retry', async () => {
-      await renderMusicApp({ server: getServer() });
+      const { store } = await renderMusicApp({ server: getServer() });
       await scanLibrary();
       const dupTags: Parameters<typeof buildMp3WithTags>[0] = {
         title: 'Same',
@@ -716,14 +734,17 @@ describe('drag-and-drop import & organize', () => {
         genre: 'Rock',
         track: 1,
       };
-      await dropTracks([
-        { fileName: 'dup1.mp3', tags: dupTags },
-        { fileName: 'dup2.mp3', tags: dupTags },
-        {
-          fileName: 'solo.mp3',
-          tags: { title: 'Unique', artist: 'Solo', genre: 'Jazz', track: 2 },
-        },
-      ]);
+      await dropTracks(
+        [
+          { fileName: 'dup1.mp3', tags: dupTags },
+          { fileName: 'dup2.mp3', tags: dupTags },
+          {
+            fileName: 'solo.mp3',
+            tags: { title: 'Unique', artist: 'Solo', genre: 'Jazz', track: 2 },
+          },
+        ],
+        store,
+      );
 
       await continueToOrganize();
       await clickDone();
