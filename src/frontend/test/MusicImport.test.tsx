@@ -336,6 +336,46 @@ describe('drag-and-drop import & organize', () => {
       expect(await screen.findByRole('heading', { name: 'Time' })).toBeTruthy();
     }, 30_000);
 
+    it('adds a second drop to the batch instead of starting a new one', async () => {
+      const { store } = await dropTrack('a.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+      const firstBatchId = $.getMusicImportBatch(store.getState())?.batchId;
+
+      const zone = await dropZone();
+      const file = new File(
+        [
+          new Uint8Array(
+            buildMp3WithTags({ title: 'Kaneda', artist: 'Geinoh' }),
+          ),
+        ],
+        'b.mp3',
+        { type: 'audio/mpeg' },
+      );
+      await act(async () => {
+        fireEvent.drop(zone, { dataTransfer: makeDataTransfer([file]) });
+        await waitForNetworkIdle();
+      });
+      await waitForImportBatch(store, 2);
+
+      const batch = $.getMusicImportBatch(store.getState());
+      expect(batch?.batchId).toBe(firstBatchId);
+      expect(batch?.tracks.map((t) => t.title).sort()).toEqual([
+        'Kaneda',
+        'Time',
+      ]);
+      // The grid itself must pick up the new row, not just the store.
+      expect(
+        await screen.findByText('Kaneda', {
+          selector: '.musicBatchEditCellText',
+        }),
+      ).toBeTruthy();
+      expect(
+        screen.getByText('Time', { selector: '.musicBatchEditCellText' }),
+      ).toBeTruthy();
+    }, 30_000);
+
     it('discards the staged batch via the header button, deleting the staging folder', async () => {
       const { store } = await dropTrack('time.mp3', {
         title: 'Time',
@@ -460,6 +500,29 @@ describe('drag-and-drop import & organize', () => {
         name: `Destination path for ${title}`,
       }) as HTMLInputElement;
     }
+
+    it('ignores a file drop while organizing', async () => {
+      const { store } = await dropAndContinue('time.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+
+      const zone = await dropZone();
+      const file = new File(
+        [new Uint8Array(buildMp3WithTags({ title: 'Kaneda' }))],
+        'kaneda.mp3',
+        { type: 'audio/mpeg' },
+      );
+      await act(async () => {
+        fireEvent.drop(zone, { dataTransfer: makeDataTransfer([file]) });
+        await waitForNetworkIdle();
+      });
+
+      const batch = $.getMusicImportBatch(store.getState());
+      expect(batch?.tracks).toHaveLength(1);
+      expect(batch?.tracks[0].title).toBe('Time');
+      expect(screen.queryByText(/Staging/)).toBeNull();
+    }, 30_000);
 
     it('previews the default preset and switches to another preset', async () => {
       await dropAndContinue('time.mp3', {

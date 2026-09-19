@@ -143,6 +143,34 @@ describe('drag-and-drop import staging', () => {
     assert.ok(!remaining.includes('batch-3'));
   });
 
+  it('posting to an existing batchId merges trackPaths instead of overwriting', async () => {
+    const pathA = await stageTrack(server, 'batch-4', 'a.mp3', {
+      title: 'Track A',
+    });
+
+    const created = await fetch(`${server.baseUrl}/music/staged-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ batchId: 'batch-4', trackPaths: [pathA] }),
+    });
+    const manifest = (await created.json()) as T.StagedBatchManifest;
+
+    const pathB = await stageTrack(server, 'batch-4', 'b.mp3', {
+      title: 'Track B',
+    });
+    const added = await fetch(`${server.baseUrl}/music/staged-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ batchId: 'batch-4', trackPaths: [pathB] }),
+    });
+    assert.equal(added.status, 200);
+    const updated = (await added.json()) as T.StagedBatchManifest;
+    assert.deepEqual(updated.trackPaths, [pathA, pathB]);
+    // Everything but trackPaths carries over from the original manifest.
+    assert.equal(updated.createdAt, manifest.createdAt);
+    assert.equal(updated.step, manifest.step);
+  });
+
   it(
     'rejects a batchId that is not a safe path segment',
     withLogs(['[400err ]'], async () => {

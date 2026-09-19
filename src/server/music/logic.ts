@@ -407,13 +407,20 @@ export async function createStagedBatch(
     throw new Error('Unexpected: staged batch path escaped the mount.');
   }
   await fs.mkdir(dir.fullDir, { recursive: true });
-  const manifest: T.StagedBatchManifest = {
-    batchId,
-    createdAt: new Date().toISOString(),
-    step: 'editing',
-    trackPaths,
-    template: null,
-  };
+
+  const existing = await readStagedBatchManifest(mountPath, batchId);
+  const manifest: T.StagedBatchManifest = existing
+    ? {
+        ...existing,
+        trackPaths: [...new Set([...existing.trackPaths, ...trackPaths])],
+      }
+    : {
+        batchId,
+        createdAt: new Date().toISOString(),
+        step: 'editing',
+        trackPaths,
+        template: null,
+      };
   await writeStagedBatchManifest(mountPath, manifest);
   return manifest;
 }

@@ -140,6 +140,19 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
     tracks.filter((t) => trackPaths.includes(t.path)).map((t) => t.path),
   );
 
+  React.useEffect(() => {
+    setRowOrder((order) => {
+      const trackPathSet = new Set(trackPaths);
+      const kept = order.filter((path) => trackPathSet.has(path));
+      const keptSet = new Set(kept);
+      const added = trackPaths.filter((path) => !keptSet.has(path));
+      if (added.length === 0 && kept.length === order.length) {
+        return order;
+      }
+      return [...kept, ...added];
+    });
+  }, [trackPaths]);
+
   const [visibleColumns, setVisibleColumns] =
     React.useState<Set<BatchEditColumnKey>>(loadVisibleColumns);
   React.useEffect(() => {

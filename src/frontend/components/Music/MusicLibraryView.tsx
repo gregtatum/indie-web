@@ -73,7 +73,12 @@ export function MusicLibraryView({
     importDropRef,
     (event) => {
       void collectFilesFromDataTransfer(event.dataTransfer).then((files) => {
-        if (files.length) {
+        if (!files.length) {
+          return;
+        }
+        if (importBatch) {
+          void dispatch(A.addToMusicImportBatch(importBatch.batchId, files));
+        } else {
           void dispatch(A.startMusicImportBatch(files));
         }
       });
@@ -215,7 +220,7 @@ export function MusicLibraryView({
         }}
       >
         <div className="musicImportDropOverlayInner">
-          Add mp3s to your library
+          {importBatch ? 'Add mp3s to this import' : 'Add mp3s to your library'}
         </div>
       </div>,
     );
@@ -229,21 +234,20 @@ export function MusicLibraryView({
       </div>
     );
   }
+  function withoutDropTarget(children: React.ReactNode) {
+    return <div className="musicLibraryView">{children}</div>;
+  }
 
   if (importBatch) {
     // A staged import batch doesn't depend on the real music index, so it
     // renders even if that index has never been scanned.
-    return withDropTarget(
-      importBatch.step === 'organizing' ? (
-        <OrganizeImportView batch={importBatch} />
-      ) : (
-        <ImportBatchEditView batch={importBatch} />
-      ),
-    );
+    return importBatch.step === 'organizing'
+      ? withoutDropTarget(<OrganizeImportView batch={importBatch} />)
+      : withDropTarget(<ImportBatchEditView batch={importBatch} />);
   }
 
   if (error) {
-    return withDropTarget(
+    return withoutDropTarget(
       <div className="musicLibraryViewError">
         <div>{error}</div>
       </div>,
@@ -251,7 +255,7 @@ export function MusicLibraryView({
   }
 
   if (batchEditTrackPaths) {
-    return withDropTarget(
+    return withoutDropTarget(
       <BatchEditView
         trackPaths={batchEditTrackPaths}
         onClose={onCloseBatchEdit}

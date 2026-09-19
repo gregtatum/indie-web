@@ -1806,17 +1806,62 @@ export function uploadFilesWithMessages(
   };
 }
 
-function dedupeStagedFilenames(names: string[]): string[] {
-  const seenCounts = new Map<string, number>();
+function dedupeStagedFilenames(
+  names: string[],
+  takenNames: Iterable<string> = [],
+): string[] {
+  const taken = new Set(takenNames);
   return names.map((name) => {
-    const count = seenCounts.get(name) ?? 0;
-    seenCounts.set(name, count + 1);
-    if (count === 0) {
+    if (!taken.has(name)) {
+      taken.add(name);
       return name;
     }
     const { baseName, extension } = splitOutFileExtension(name);
-    return `${baseName} (${count + 1})${extension}`;
+    let counter = 2;
+    let candidate = `${baseName} (${counter})${extension}`;
+    while (taken.has(candidate)) {
+      counter += 1;
+      candidate = `${baseName} (${counter})${extension}`;
+    }
+    taken.add(candidate);
+    return candidate;
   });
+}
+
+async function uploadAndScanStagedFiles(
+  fileStore: ReturnType<typeof $.getCurrentFS>,
+  server: ReturnType<typeof $.getCurrentServer>,
+  batchId: string,
+  mp3Files: File[],
+  filenames: string[],
+): Promise<T.TrackMetadata[]> {
+  const trackPaths: string[] = [];
+  for (let i = 0; i < mp3Files.length; i++) {
+    const path = `/.music-staging/${batchId}/${filenames[i]}`;
+    await fileStore.saveBlob(path, 'add', mp3Files[i]);
+    trackPaths.push(path);
+  }
+
+  const scanRes = await fetch(`${server.url}/music/music-index/scan-paths`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: trackPaths }),
+  });
+  if (!scanRes.ok) {
+    throw new Error(await scanRes.text());
+  }
+  const scanData = (await scanRes.json()) as T.ScanTrackPathsResponse;
+
+  const manifestRes = await fetch(`${server.url}/music/staged-batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ batchId, trackPaths }),
+  });
+  if (!manifestRes.ok) {
+    throw new Error(await manifestRes.text());
+  }
+
+  return scanData.tracks;
 }
 
 /**
@@ -1861,46 +1906,98 @@ export function startMusicImportBatch(
     );
 
     try {
-      const trackPaths: string[] = [];
-      for (let i = 0; i < mp3Files.length; i++) {
-        const path = `/.music-staging/${batchId}/${filenames[i]}`;
-        await fileStore.saveBlob(path, 'add', mp3Files[i]);
-        trackPaths.push(path);
-      }
-
-      const scanRes = await fetch(
-        `${server.url}/music/music-index/scan-paths`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paths: trackPaths }),
-        },
+      const tracks = await uploadAndScanStagedFiles(
+        fileStore,
+        server,
+        batchId,
+        mp3Files,
+        filenames,
       );
-      if (!scanRes.ok) {
-        throw new Error(await scanRes.text());
-      }
-      const scanData = (await scanRes.json()) as T.ScanTrackPathsResponse;
-
-      const manifestRes = await fetch(`${server.url}/music/staged-batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ batchId, trackPaths }),
-      });
-      if (!manifestRes.ok) {
-        throw new Error(await manifestRes.text());
-      }
 
       dispatch(
         Plain.setMusicImportBatch({
           batchId,
-          tracks: scanData.tracks,
+          tracks,
           step: 'editing',
           template: '',
         }),
       );
-      if (scanData.tracks.length > 0) {
-        dispatch(Plain.setMusicSelectedTracks([scanData.tracks[0].path]));
+      if (tracks.length > 0) {
+        dispatch(Plain.setMusicSelectedTracks([tracks[0].path]));
       }
+      void dispatch(refreshMusicStagedBatchSummaries());
+      dispatch(Plain.dismissMessage(messageGeneration));
+      reportRejectedFiles();
+    } catch (error) {
+      console.error(error);
+      dispatch(
+        addMessage({
+          message: 'There was an error staging the dropped files.',
+          generation: messageGeneration,
+          timeout: true,
+        }),
+      );
+      reportRejectedFiles();
+    }
+  };
+}
+
+export function addToMusicImportBatch(
+  batchId: string,
+  files: FileList | File[],
+): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const batch = $.getMusicImportBatch(getState());
+    if (!batch || batch.batchId !== batchId) {
+      return;
+    }
+    const fileStore = $.getCurrentFS(getState());
+    const server = $.getCurrentServer(getState());
+
+    const allFiles = Array.from(files);
+    const mp3Files = allFiles.filter((file) =>
+      file.name.toLowerCase().endsWith('.mp3'),
+    );
+    const rejectedCount = allFiles.length - mp3Files.length;
+    const reportRejectedFiles = () => {
+      if (rejectedCount > 0) {
+        dispatch(
+          addMessage({
+            message: `Only .mp3 files can be imported — skipped ${rejectedCount} file${rejectedCount === 1 ? '' : 's'}.`,
+            timeout: true,
+          }),
+        );
+      }
+    };
+    if (mp3Files.length === 0) {
+      reportRejectedFiles();
+      return;
+    }
+
+    const takenNames = batch.tracks.map((track) => getPathFileName(track.path));
+    const filenames = dedupeStagedFilenames(
+      mp3Files.map((file) => file.name),
+      takenNames,
+    );
+    const messageGeneration = dispatch(
+      addMessage({ message: `Staging ${mp3Files.length} track(s)…` }),
+    );
+
+    try {
+      const addedTracks = await uploadAndScanStagedFiles(
+        fileStore,
+        server,
+        batchId,
+        mp3Files,
+        filenames,
+      );
+
+      dispatch(
+        Plain.setMusicImportBatchTracks(batchId, [
+          ...batch.tracks,
+          ...addedTracks,
+        ]),
+      );
       void dispatch(refreshMusicStagedBatchSummaries());
       dispatch(Plain.dismissMessage(messageGeneration));
       reportRejectedFiles();
