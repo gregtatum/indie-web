@@ -5,18 +5,26 @@ import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
 import type { MusicTrackSource } from 'frontend/logic/music/metadata';
 
 /**
- * Pick the artwork file out of a drop. Takes the first image; falls back to the
- * first file of any kind so a JPEG/PNG whose MIME type the OS left blank still
- * goes through (the server validates the bytes). Returns null for drops that
- * carry no file at all, e.g. an <img> dragged between browser windows.
+ * Pick the artwork file out of a drop. Only a single image applies cleanly —
+ * a blank MIME type is still allowed through (the server validates the bytes),
+ * but multiple files or a single non-image file are reported as an error so
+ * the caller can tell the user why nothing happened.
  */
 export function artworkFileFromDrop(
   dataTransfer: DataTransfer | null,
-): File | null {
+): { file: File } | { error: string } {
   const files = Array.from(dataTransfer?.files ?? []);
-  return (
-    files.find((file) => file.type.startsWith('image/')) ?? files[0] ?? null
-  );
+  if (files.length === 0) {
+    return { error: 'No image found in the drop.' };
+  }
+  if (files.length > 1) {
+    return { error: 'Drop a single image to set the folder artwork.' };
+  }
+  const [file] = files;
+  if (file.type && !file.type.startsWith('image/')) {
+    return { error: "That doesn't look like an image file." };
+  }
+  return { file };
 }
 
 /**
@@ -225,6 +233,7 @@ export function useFolderArtworkDrop({
   onSaved,
 }: FolderArtworkDropOptions) {
   const ref = React.useRef<HTMLDivElement>(null);
+  const dispatch = Hooks.useDispatch();
   const patchIndex = useMusicIndexFolderArtworkPatch();
 
   const handleSaved = React.useCallback(
@@ -242,15 +251,17 @@ export function useFolderArtworkDrop({
       if (!trackPath) {
         return;
       }
-      const file = artworkFileFromDrop(event.dataTransfer);
-      if (file) {
-        save(trackPath, {
-          data: file,
-          contentType: file.type || 'image/jpeg',
-        });
+      const result = artworkFileFromDrop(event.dataTransfer);
+      if ('error' in result) {
+        dispatch(A.addMessage({ message: result.error, timeout: true }));
+        return;
       }
+      save(trackPath, {
+        data: result.file,
+        contentType: result.file.type || 'image/jpeg',
+      });
     },
-    [save, trackPath],
+    [dispatch, save, trackPath],
   );
 
   const canAcceptDrop = React.useCallback(
