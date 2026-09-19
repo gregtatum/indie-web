@@ -382,13 +382,16 @@ describe('drag-and-drop import & organize', () => {
       const otherPreset = '{Artist}/{AlbumArtist}/{Track} - {Title}';
 
       expect(
-        screen.getByRole('button', { name: defaultPreset }).className,
-      ).toContain('active');
+        (screen.getByLabelText('Naming template') as HTMLInputElement).value,
+      ).toBe(defaultPreset);
       expect(destInput('Time').value).toBe(
         resolveOrganizationPath(defaultPreset, track),
       );
 
-      fireEvent.click(screen.getByRole('button', { name: otherPreset }));
+      fireEvent.change(
+        screen.getByLabelText('Insert a preset filename format'),
+        { target: { value: otherPreset } },
+      );
 
       expect(destInput('Time').value).toBe(
         resolveOrganizationPath(otherPreset, track),
@@ -445,7 +448,10 @@ describe('drag-and-drop import & organize', () => {
       expect(destInput('Time').value).toBe('/Custom/Path.mp3');
 
       // Switching presets doesn't clobber the manual override.
-      fireEvent.click(screen.getByRole('button', { name: otherPreset }));
+      fireEvent.change(
+        screen.getByLabelText('Insert a preset filename format'),
+        { target: { value: otherPreset } },
+      );
       expect(destInput('Time').value).toBe('/Custom/Path.mp3');
 
       fireEvent.click(
@@ -463,7 +469,10 @@ describe('drag-and-drop import & organize', () => {
 
       const chosenPreset = '{Artist}/{AlbumArtist}/{Track} - {Title}';
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: chosenPreset }));
+        fireEvent.change(
+          screen.getByLabelText('Insert a preset filename format'),
+          { target: { value: chosenPreset } },
+        );
         await waitForNetworkIdle();
       });
 
@@ -480,8 +489,8 @@ describe('drag-and-drop import & organize', () => {
       await screen.findByText(/Organize ·/);
 
       expect(
-        screen.getByRole('button', { name: chosenPreset }).className,
-      ).toContain('active');
+        (screen.getByLabelText('Naming template') as HTMLInputElement).value,
+      ).toBe(chosenPreset);
     }, 30_000);
 
     it('discards the staged batch from the organize screen', async () => {

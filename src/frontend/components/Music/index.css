@@ -431,58 +431,102 @@
 .musicOrganizeTemplateSection {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
   padding-bottom: var(--music-padding-v);
   border-bottom: 1px solid var(--border-color);
 }
 
-.musicOrganizePresets {
+.musicOrganizeSectionLabel {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.musicOrganizeTemplateRow {
+  display: flex;
+  gap: 8px;
+}
+
+.musicOrganizeTemplateInput {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--music-item-font-size);
+  font-family: 'Roboto Mono', monospace;
+  padding: 8px 10px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--line-strong);
+  background: var(--modal-bg);
+  color: var(--text-body);
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-tint);
+  }
+}
+
+.musicOrganizePresetsSelect {
+  flex-shrink: 0;
+  font-size: var(--font-size-small);
+  padding: 0 8px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--line-strong);
+  background: var(--modal-bg);
+  color: var(--text-interactive);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent-strong);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-tint);
+  }
+}
+
+.musicOrganizeTokenList {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.musicOrganizePresetButton {
-  font-size: var(--font-size-small);
+.musicOrganizeTokenChip {
   font-family: 'Roboto Mono', monospace;
-  padding: 4px 10px;
-  border-radius: var(--button-border-radius);
-  border: 1px solid var(--line-strong);
-  background: none;
-  color: var(--text-body);
-  cursor: pointer;
-
-  &:hover {
-    background: var(--selection-hover);
-  }
-
-  &.active {
-    border-color: var(--primary-color);
-    background: var(--accent-wash);
-    color: var(--accent-strong);
-  }
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  background: var(--surface-raised);
 }
 
-.musicOrganizeTemplateInput {
-  font-size: var(--music-item-font-size);
-  font-family: 'Roboto Mono', monospace;
-  padding: 6px 8px;
-  border-radius: var(--button-border-radius);
-  border: 1px solid var(--line-strong);
-  background: var(--modal-bg);
-  color: var(--text-body);
+.musicOrganizePreviewSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.musicOrganizeTokenHint {
+.musicOrganizePreviewHeader {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) auto minmax(160px, 2fr) auto;
+  gap: var(--music-gap);
   font-size: var(--font-size-small);
-  color: var(--text-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
 }
 
 .musicOrganizePreviewList {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .musicOrganizePreviewItem {
@@ -506,16 +550,22 @@
 }
 
 .musicOrganizePreviewArrow {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .musicOrganizePreviewDest {
   font-family: 'Roboto Mono', monospace;
-  padding: 4px 6px;
+  padding: 5px 8px;
   border-radius: var(--button-border-radius);
   border: 1px solid var(--line-strong);
   background: var(--modal-bg);
   color: var(--text-body);
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-tint);
+  }
 
   &.error {
     outline: 2px solid var(--error-color);
@@ -532,7 +582,7 @@
 .musicOrganizePreviewResetButton {
   border: none;
   background: none;
-  color: var(--text-label);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 2px 4px;
 

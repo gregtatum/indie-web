@@ -142,89 +142,111 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
       </div>
       <div className="musicBatchEditBody musicOrganizeBody">
         <div className="musicOrganizeTemplateSection">
-          <div className="musicOrganizePresets">
-            {ORGANIZATION_PRESET_TEMPLATES.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                className={
-                  'musicOrganizePresetButton' +
-                  (template === preset ? ' active' : '')
+          <div className="musicOrganizeSectionLabel">Filename format</div>
+          <div className="musicOrganizeTemplateRow">
+            <input
+              className="musicOrganizeTemplateInput"
+              type="text"
+              value={template}
+              onChange={(event) => setTemplate(event.target.value)}
+              aria-label="Naming template"
+            />
+            <select
+              className="musicOrganizePresetsSelect"
+              value=""
+              aria-label="Insert a preset filename format"
+              onChange={(event) => {
+                if (event.target.value) {
+                  selectPreset(event.target.value);
                 }
-                onClick={() => selectPreset(preset)}
-              >
-                {preset}
-              </button>
+              }}
+            >
+              <option value="">Presets</option>
+              {ORGANIZATION_PRESET_TEMPLATES.map((preset) => (
+                <option key={preset} value={preset}>
+                  {preset}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="musicOrganizeTokenList">
+            {ORGANIZATION_TOKENS.map((t) => (
+              <span key={t.token} className="musicOrganizeTokenChip">
+                {t.token}
+              </span>
             ))}
           </div>
-          <input
-            className="musicOrganizeTemplateInput"
-            type="text"
-            value={template}
-            onChange={(event) => setTemplate(event.target.value)}
-            aria-label="Naming template"
-          />
-          <div className="musicOrganizeTokenHint">
-            Tokens: {ORGANIZATION_TOKENS.map((t) => t.token).join(' ')}
-          </div>
         </div>
-        <div className="musicOrganizePreviewList">
-          {batch.tracks.map((track) => {
-            const computedPath = resolveOrganizationPath(template, track);
-            const overridden = overrides.get(track.path);
-            const destPath = overridden ?? computedPath;
-            const hasCollision = collisionPaths.has(track.path);
-            return (
-              <div key={track.path} className="musicOrganizePreviewItem">
-                <div className="musicOrganizePreviewRow">
-                  <span className="musicOrganizePreviewSource">
-                    {track.title ?? track.path}
-                  </span>
-                  <span
-                    className="musicOrganizePreviewArrow"
-                    aria-hidden="true"
-                  >
-                    →
-                  </span>
-                  <input
-                    className={
-                      'musicOrganizePreviewDest' +
-                      (hasCollision ? ' error' : '')
-                    }
-                    type="text"
-                    value={destPath}
-                    aria-label={`Destination path for ${track.title ?? track.path}`}
-                    onChange={(event) => {
-                      setCollisionPaths((prev) => {
-                        if (!prev.has(track.path)) {
-                          return prev;
-                        }
-                        const next = new Set(prev);
-                        next.delete(track.path);
-                        return next;
-                      });
-                      setOverride(track.path, event.target.value, computedPath);
-                    }}
-                  />
-                  {overridden !== undefined ? (
-                    <button
-                      type="button"
-                      className="musicOrganizePreviewResetButton"
-                      aria-label={`Reset ${track.title ?? track.path} to the template path`}
-                      onClick={() => resetOverride(track.path)}
+        <div className="musicOrganizePreviewSection">
+          <div className="musicOrganizeSectionLabel">Preview</div>
+          <div className="musicOrganizePreviewHeader" aria-hidden="true">
+            <span>Current name</span>
+            <span />
+            <span>Destination</span>
+            <span />
+          </div>
+          <div className="musicOrganizePreviewList">
+            {batch.tracks.map((track) => {
+              const computedPath = resolveOrganizationPath(template, track);
+              const overridden = overrides.get(track.path);
+              const destPath = overridden ?? computedPath;
+              const hasCollision = collisionPaths.has(track.path);
+              return (
+                <div key={track.path} className="musicOrganizePreviewItem">
+                  <div className="musicOrganizePreviewRow">
+                    <span className="musicOrganizePreviewSource">
+                      {track.title ?? track.path}
+                    </span>
+                    <span
+                      className="musicOrganizePreviewArrow"
+                      aria-hidden="true"
                     >
-                      ↺
-                    </button>
+                      →
+                    </span>
+                    <input
+                      className={
+                        'musicOrganizePreviewDest' +
+                        (hasCollision ? ' error' : '')
+                      }
+                      type="text"
+                      value={destPath}
+                      aria-label={`Destination path for ${track.title ?? track.path}`}
+                      onChange={(event) => {
+                        setCollisionPaths((prev) => {
+                          if (!prev.has(track.path)) {
+                            return prev;
+                          }
+                          const next = new Set(prev);
+                          next.delete(track.path);
+                          return next;
+                        });
+                        setOverride(
+                          track.path,
+                          event.target.value,
+                          computedPath,
+                        );
+                      }}
+                    />
+                    {overridden !== undefined ? (
+                      <button
+                        type="button"
+                        className="musicOrganizePreviewResetButton"
+                        aria-label={`Reset ${track.title ?? track.path} to the template path`}
+                        onClick={() => resetOverride(track.path)}
+                      >
+                        ↺
+                      </button>
+                    ) : null}
+                  </div>
+                  {hasCollision ? (
+                    <div className="musicOrganizePreviewCollision">
+                      Already exists — change the name or path and retry
+                    </div>
                   ) : null}
                 </div>
-                {hasCollision ? (
-                  <div className="musicOrganizePreviewCollision">
-                    Already exists — change the name or path and retry
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
