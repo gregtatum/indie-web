@@ -530,7 +530,7 @@ function ArtworkDropZone({
       {children}
       {dragging && (
         <div className="artworkDropOverlay" aria-hidden="true">
-          Drop to set album artwork
+          Set the album artwork
         </div>
       )}
     </div>

@@ -201,6 +201,7 @@ export function App() {
   useFilesIndex();
   Hooks.useDetectFirstPointerInteraction();
   Hooks.useDocumentElementInputMode();
+  Hooks.usePreventUnhandledFileDrop();
   return (
     <Router.BrowserRouter>
       <AppRoutes />

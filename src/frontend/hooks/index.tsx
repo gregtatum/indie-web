@@ -56,6 +56,27 @@ export function useDetectFirstPointerInteraction(): void {
 }
 
 /**
+ * Swallows any drag/drop a more specific drop target didn't stopPropagation
+ * on, so missing a drop target doesn't navigate the tab to open the file.
+ */
+export function usePreventUnhandledFileDrop(): void {
+  React.useEffect(() => {
+    function handleDragOver(event: DragEvent) {
+      event.preventDefault();
+    }
+    function handleDrop(event: DragEvent) {
+      event.preventDefault();
+    }
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+    return () => {
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, []);
+}
+
+/**
  * Apply <html data-input-mode="touch"> or <html data-input-mode="mouse"> for CSS rules.
  */
 export function useDocumentElementInputMode(): void {

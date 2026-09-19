@@ -81,9 +81,8 @@ export function MusicLibraryView({
       Array.from(event.dataTransfer?.types ?? []).includes('Files'),
   );
 
-  // The overlay is portaled into #overlayContainer so it can't be occluded by
-  // .musicTracksHeader's local stacking context, so its position has to be
-  // computed from the drop target's rect rather than via CSS inset.
+  // Portaled into #overlayContainer to escape .musicTracksHeader's stacking
+  // context, so position is computed from the target's rect, not CSS inset.
   const [dropOverlayRect, setDropOverlayRect] = React.useState<null | {
     top: number;
     left: number;
@@ -213,7 +212,9 @@ export function MusicLibraryView({
           height: dropOverlayRect.height,
         }}
       >
-        <div className="musicImportDropOverlayInner">Drop MP3s to import</div>
+        <div className="musicImportDropOverlayInner">
+          Add mp3s to your library
+        </div>
       </div>,
     );
   }
@@ -749,7 +750,7 @@ function AlbumHero() {
         )}
         {artworkDragging && (
           <div className="musicAlbumHeroArtworkDropHint" aria-hidden="true">
-            Drop to set album artwork
+            Set the album artwork
           </div>
         )}
       </div>
