@@ -376,6 +376,23 @@ describe('drag-and-drop import & organize', () => {
       ).toBeTruthy();
     }, 30_000);
 
+    it('selects every staged track with Cmd+A', async () => {
+      const { store } = await dropTracks([
+        { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
+        { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
+      ]);
+      const batch = $.getMusicImportBatch(store.getState());
+      const allPaths = batch?.tracks.map((t) => t.path).sort();
+
+      const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+      grid.focus();
+      fireEvent.keyDown(document.body, { key: 'a', metaKey: true });
+
+      expect($.getMusicSelectedTrackPaths(store.getState()).sort()).toEqual(
+        allPaths,
+      );
+    }, 30_000);
+
     it('removes the selected track on Delete, staging file and all', async () => {
       const { store } = await dropTracks([
         { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },

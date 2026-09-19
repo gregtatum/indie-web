@@ -402,6 +402,23 @@ describe('<BatchEditGrid> with real server', () => {
     );
   }, 30_000);
 
+  it('selects every row with Cmd+A', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
+
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    fireEvent.keyDown(document.body, { key: 'a', metaKey: true });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/a.mp3',
+      '/b.mp3',
+    ]);
+  }, 30_000);
+
   it('ignores the Delete key — deleting via keyboard is import-only', async () => {
     await writeAlbumA();
     const { store } = await setup();

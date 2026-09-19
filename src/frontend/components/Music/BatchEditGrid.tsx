@@ -601,6 +601,14 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
       const currentColumns = columnsRef.current;
       const currentColumn = cursorColumnRef.current;
       switch (getKeyboardString(event)) {
+        case 'Meta+A':
+        case 'Control+A': {
+          event.preventDefault();
+          const allPaths = rowOrderRef.current;
+          anchorPathRef.current = focusedPathRef.current ?? allPaths[0] ?? null;
+          dispatch(A.setMusicSelectedTracks(allPaths));
+          break;
+        }
         case 'Delete':
         case 'Meta+Delete':
         case 'Meta+Backspace':
