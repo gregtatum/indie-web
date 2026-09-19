@@ -376,6 +376,86 @@ describe('drag-and-drop import & organize', () => {
       ).toBeTruthy();
     }, 30_000);
 
+    it('defaults to Album, Album Artist (or Artist), Track #, Title order', async () => {
+      const { store } = await dropTracks([
+        {
+          fileName: 'c.mp3',
+          tags: {
+            title: 'Song C',
+            album: 'Zulu',
+            albumArtist: 'Zulu Band',
+            track: 1,
+          },
+        },
+        {
+          fileName: 'a.mp3',
+          tags: {
+            title: 'Song A',
+            album: 'Alpha',
+            albumArtist: 'Alpha Band',
+            track: 2,
+          },
+        },
+        {
+          fileName: 'b.mp3',
+          tags: {
+            title: 'Song B',
+            album: 'Alpha',
+            albumArtist: 'Alpha Band',
+            track: 1,
+          },
+        },
+        {
+          fileName: 'd.mp3',
+          tags: {
+            title: 'Song D',
+            album: 'Alpha',
+            artist: 'Zzz Artist',
+            track: 3,
+          },
+        },
+      ]);
+      await waitForImportBatch(store, 4);
+
+      const titleOrder = screen
+        .getAllByText(/^Song [A-D]$/, {
+          selector: '.musicBatchEditCellText',
+        })
+        .map((el) => el.textContent);
+
+      expect(titleOrder).toEqual(['Song B', 'Song A', 'Song D', 'Song C']);
+    }, 30_000);
+
+    it('breaks a column sort tie using ascending Track #', async () => {
+      await dropTracks([
+        {
+          fileName: 'b.mp3',
+          tags: { title: 'Bravo', artist: 'Same', track: 1 },
+        },
+        {
+          fileName: 'a.mp3',
+          tags: { title: 'Alpha', artist: 'Same', track: 9 },
+        },
+      ]);
+
+      function titleOrder(): string[] {
+        return screen
+          .getAllByText(/^(Alpha|Bravo)$/, {
+            selector: '.musicBatchEditCellText',
+          })
+          .map((el) => el.textContent ?? '');
+      }
+
+      // Sorting by Title first scrambles the row order alphabetically.
+      fireEvent.click(screen.getByRole('columnheader', { name: 'Title' }));
+      expect(titleOrder()).toEqual(['Alpha', 'Bravo']);
+
+      // Every row ties on Artist, so the sort should fall back to ascending
+      // Track # (Bravo's 1, then Alpha's 9) rather than the Title order.
+      fireEvent.click(screen.getByRole('columnheader', { name: 'Artist' }));
+      expect(titleOrder()).toEqual(['Bravo', 'Alpha']);
+    }, 30_000);
+
     it('selects every staged track with Cmd+A', async () => {
       const { store } = await dropTracks([
         { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },

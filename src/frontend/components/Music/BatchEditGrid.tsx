@@ -136,8 +136,29 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
     return map;
   }, [tracks]);
 
+  const [sort, setSort] = React.useState<{
+    column: BatchEditColumnKey;
+    direction: 'asc' | 'desc';
+  } | null>(null);
+
+  function compareDefault(a: string, b: string): number {
+    const trackA = tracksByPath.get(a);
+    const trackB = tracksByPath.get(b);
+    return (
+      (trackA?.album ?? '').localeCompare(trackB?.album ?? '') ||
+      (trackA?.albumArtist || trackA?.artist || '').localeCompare(
+        trackB?.albumArtist || trackB?.artist || '',
+      ) ||
+      trackNumberValue(a) - trackNumberValue(b) ||
+      (trackA?.title ?? '').localeCompare(trackB?.title ?? '')
+    );
+  }
+
   const [rowOrder, setRowOrder] = React.useState<string[]>(() =>
-    tracks.filter((t) => trackPaths.includes(t.path)).map((t) => t.path),
+    tracks
+      .filter((t) => trackPaths.includes(t.path))
+      .map((t) => t.path)
+      .sort(compareDefault),
   );
 
   React.useEffect(() => {
@@ -149,9 +170,12 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
       if (added.length === 0 && kept.length === order.length) {
         return order;
       }
+      if (added.length > 0 && sort === null) {
+        return [...kept, ...added].sort(compareDefault);
+      }
       return [...kept, ...added];
     });
-  }, [trackPaths]);
+  }, [trackPaths, sort]);
 
   const [visibleColumns, setVisibleColumns] =
     React.useState<Set<BatchEditColumnKey>>(loadVisibleColumns);
@@ -192,11 +216,6 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
     }
     return style as React.CSSProperties;
   }, [displayColumnWidths, scrollbarWidth]);
-
-  const [sort, setSort] = React.useState<{
-    column: BatchEditColumnKey;
-    direction: 'asc' | 'desc';
-  } | null>(null);
 
   const [cursorColumn, setCursorColumnState] = React.useState(0);
   const cursorColumnRef = React.useRef(0);
@@ -456,6 +475,11 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
     startEdit();
   }
 
+  function trackNumberValue(path: string): number {
+    const value = tracksByPath.get(path)?.track;
+    return value === null || value === undefined ? Infinity : value;
+  }
+
   function handleHeaderSortClick(column: BatchEditColumn) {
     const direction: 'asc' | 'desc' =
       sort?.column === column.key && sort.direction === 'asc' ? 'desc' : 'asc';
@@ -473,7 +497,10 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
         } else {
           cmp = aValue.localeCompare(bValue);
         }
-        return direction === 'asc' ? cmp : -cmp;
+        if (cmp !== 0) {
+          return direction === 'asc' ? cmp : -cmp;
+        }
+        return trackNumberValue(a) - trackNumberValue(b);
       });
       return next;
     });
