@@ -213,10 +213,10 @@ export function compareTracksDefault(
 }
 
 export const ORGANIZATION_TEMPLATE_PRESETS: readonly string[] = [
-  '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
-  '{Genre}/{Artist}/{AlbumArtist}/{Track} - {Title}',
-  '{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
-  '{Artist}/{AlbumArtist}/{Track} - {Title}',
+  '{Genre}/{AlbumArtist}/{Year} - {Album}/{Track} - {Title}',
+  '{Genre}/{AlbumArtist}/{Album}/{Track} - {Title}',
+  '{AlbumArtist}/{Year} - {Album}/{Track} - {Title}',
+  '{AlbumArtist}/{Album}/{Track} - {Title}',
 ];
 
 export interface OrganizationTrackFields {
