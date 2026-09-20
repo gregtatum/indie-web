@@ -195,6 +195,58 @@ describe('<BatchEditGrid> with real server', () => {
     });
   }, 30_000);
 
+  it('ArrowDown while editing commits and resumes editing the field below', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    fireEvent.click(getCellText('Song A'));
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    fireEvent.keyDown(document.body, { key: 'Enter' });
+
+    const input = await within(grid).findByDisplayValue('Song A');
+    fireEvent.change(input, { target: { value: 'Retitled A' } });
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/b.mp3']);
+    await within(grid).findByDisplayValue('Song B');
+
+    await waitFor(async () => {
+      expect((await fetchIndexTrack('/a.mp3'))?.title).toBe('Retitled A');
+    });
+
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
+  }, 30_000);
+
+  it('ArrowUp while editing commits and resumes editing the field above', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    fireEvent.click(getCellText('Song B'));
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    fireEvent.keyDown(document.body, { key: 'Enter' });
+
+    const input = await within(grid).findByDisplayValue('Song B');
+    fireEvent.change(input, { target: { value: 'Retitled B' } });
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
+    await within(grid).findByDisplayValue('Song A');
+
+    await waitFor(async () => {
+      expect((await fetchIndexTrack('/b.mp3'))?.title).toBe('Retitled B');
+    });
+
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
+  }, 30_000);
+
   it('moves the row selection with Up/Down but only the field with Left/Right', async () => {
     await writeAlbumA();
     const { store } = await setup();

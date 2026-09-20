@@ -276,7 +276,10 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
   }
 
   const cancelEditRef = React.useRef(false);
-  const pendingAdvanceRef = React.useRef(false);
+  const pendingAdvanceRef = React.useRef<{
+    direction: 1 | -1;
+    resumeEdit: boolean;
+  } | null>(null);
   const gridRef = React.useRef<HTMLDivElement | null>(null);
 
   const columnsRef = React.useRef(columns);
@@ -526,7 +529,7 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
     setEditing(null);
     if (cancelEditRef.current) {
       cancelEditRef.current = false;
-      pendingAdvanceRef.current = false;
+      pendingAdvanceRef.current = null;
       return;
     }
     if (current && current.value !== current.initialValue) {
@@ -536,14 +539,18 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
       }
     }
     if (pendingAdvanceRef.current) {
-      pendingAdvanceRef.current = false;
+      const { direction, resumeEdit } = pendingAdvanceRef.current;
+      pendingAdvanceRef.current = null;
       const currentRowOrder = rowOrderRef.current;
       const currentIndex = focusedPathRef.current
         ? currentRowOrder.indexOf(focusedPathRef.current)
         : -1;
-      const nextPath = currentRowOrder[currentIndex + 1];
+      const nextPath = currentRowOrder[currentIndex + direction];
       if (nextPath) {
         selectSingleRow(nextPath);
+        if (resumeEdit) {
+          startEdit();
+        }
       }
     }
   }
@@ -555,7 +562,19 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
         // Without this, the event bubbles to the grid's own keydown handler
         // after focus() below moves onto it, re-triggering "start edit".
         event.stopPropagation();
-        pendingAdvanceRef.current = true;
+        pendingAdvanceRef.current = { direction: 1, resumeEdit: false };
+        gridRef.current?.focus();
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        event.stopPropagation();
+        pendingAdvanceRef.current = { direction: 1, resumeEdit: true };
+        gridRef.current?.focus();
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        event.stopPropagation();
+        pendingAdvanceRef.current = { direction: -1, resumeEdit: true };
         gridRef.current?.focus();
         break;
       case 'Escape':
@@ -943,6 +962,7 @@ function BatchEditRow({
               'musicBatchEditCell',
               column.numeric ? 'musicBatchEditCell-numeric' : '',
               showActiveBox ? 'active' : '',
+              isEditingHere ? 'editing' : '',
               status?.status === 'error' ? 'error' : '',
               status?.status === 'saving' ? 'saving' : '',
             ]

@@ -369,6 +369,10 @@
   }
 }
 
+.musicBatchEditGridBody:focus-within .musicBatchEditCell.active:not(.editing) {
+  background: color-mix(in srgb, white, var(--selection-active) 20%);
+}
+
 .musicBatchEditCell-numeric {
   font-variant-numeric: tabular-nums;
 }
