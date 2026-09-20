@@ -1,19 +1,21 @@
 import * as React from 'react';
 import { T, A, Hooks } from 'frontend';
-import { debounce } from 'shared/utils';
 import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
   resolveOrganizationPath,
 } from 'shared/music';
-import { useMusicImportClose } from 'frontend/hooks/music';
 
-const TEMPLATE_PERSIST_DELAY = 400;
-
-export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
+export function OrganizeImportView({
+  tracks,
+  onBack,
+}: {
+  tracks: T.TrackMetadata[];
+  onBack: () => void;
+}) {
   const dispatch = Hooks.useDispatch();
-  const [template, setTemplateState] = React.useState(
-    () => batch.template || ORGANIZATION_PRESET_TEMPLATES[0],
+  const [template, setTemplate] = React.useState(
+    () => ORGANIZATION_PRESET_TEMPLATES[0],
   );
   const [overrides, setOverrides] = React.useState<Map<string, string>>(
     new Map(),
@@ -22,49 +24,8 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
     new Set(),
   );
   const [committing, setCommitting] = React.useState(false);
-
-  const handleClose = useMusicImportClose(batch.batchId);
-
-  function persistTemplateNow(nextTemplate: string) {
-    persistTemplateDebounced.cancel();
-    void dispatch(
-      A.updateMusicImportBatchStep(batch.batchId, 'organizing', nextTemplate),
-    );
-  }
-
-  const persistTemplateDebounced = React.useMemo(
-    () => debounce(persistTemplateNow, TEMPLATE_PERSIST_DELAY),
-    [dispatch, batch.batchId],
-  );
-  React.useEffect(
-    () => persistTemplateDebounced.cancel,
-    [persistTemplateDebounced],
-  );
-
-  React.useEffect(() => {
-    if (!batch.template) {
-      persistTemplateNow(template);
-    }
-  }, []);
-
-  // Free-text edits are debounced so every keystroke doesn't hit the server;
-  // a preset click or navigating away persists immediately instead.
-  function setTemplate(value: string) {
-    setTemplateState(value);
-    persistTemplateDebounced(value);
-  }
-
-  function selectPreset(preset: string) {
-    setTemplateState(preset);
-    persistTemplateNow(preset);
-  }
-
-  function handleBackClick() {
-    persistTemplateDebounced.cancel();
-    void dispatch(
-      A.updateMusicImportBatchStep(batch.batchId, 'editing', template),
-    );
-  }
+  const [remainingTracks, setRemainingTracks] =
+    React.useState<T.TrackMetadata[]>(tracks);
 
   function setOverride(path: string, value: string, computedPath: string) {
     setOverrides((prev) => {
@@ -89,37 +50,35 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
   async function handleDoneClick() {
     setCommitting(true);
     const destinations: Record<string, string> = {};
-    for (const track of batch.tracks) {
+    for (const track of remainingTracks) {
       destinations[track.path] =
         overrides.get(track.path) ?? resolveOrganizationPath(template, track);
     }
-    const result = await dispatch(
-      A.commitMusicImportBatch(batch.batchId, destinations),
-    );
-    setCollisionPaths(new Set(result.collisions));
+    const result = await dispatch(A.commitStagingPoolTracks(destinations));
+    const collisionSet = new Set(result.collisions);
+    setCollisionPaths(collisionSet);
     setCommitting(false);
+    if (collisionSet.size === 0) {
+      onBack();
+      return;
+    }
+    setRemainingTracks((prev) =>
+      prev.filter((track) => collisionSet.has(track.path)),
+    );
   }
 
   return (
     <div className="musicBatchEditView">
       <div className="musicBatchEditHeader">
         <h2 className="musicBatchEditHeaderTitle">
-          Organize · {batch.tracks.length}{' '}
-          {batch.tracks.length === 1 ? 'track' : 'tracks'}
+          Organize · {remainingTracks.length}{' '}
+          {remainingTracks.length === 1 ? 'track' : 'tracks'}
         </h2>
         <div className="musicImportBatchHeaderActions">
           <button
             type="button"
-            className="musicBatchEditCloseButton"
-            aria-label="Close staged import"
-            onClick={handleClose}
-          >
-            <img src="/svg/xmark.svg" alt="" />
-          </button>
-          <button
-            type="button"
             className="button"
-            onClick={handleBackClick}
+            onClick={onBack}
             disabled={committing}
           >
             Back to edit
@@ -151,7 +110,7 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
               aria-label="Insert a preset filename format"
               onChange={(event) => {
                 if (event.target.value) {
-                  selectPreset(event.target.value);
+                  setTemplate(event.target.value);
                 }
               }}
             >
@@ -180,7 +139,7 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
             <span />
           </div>
           <div className="musicOrganizePreviewList">
-            {batch.tracks.map((track) => {
+            {remainingTracks.map((track) => {
               const computedPath = resolveOrganizationPath(template, track);
               const overridden = overrides.get(track.path);
               const destPath = overridden ?? computedPath;

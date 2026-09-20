@@ -381,8 +381,6 @@ export async function scanTrackFiles(
 
 export const MUSIC_STAGING_DIRNAME = '.music-staging';
 
-const STAGING_BATCHES_DIRNAME = '.batches';
-const BATCH_MANIFEST_EXT = '.json';
 const STAGING_INDEX_FILENAME = '.staging-index.json';
 const STAGING_INDEX_VERSION = 1;
 
@@ -402,22 +400,6 @@ export interface StagingPoolEntry {
   hash: string;
   size: number;
   mtime: string;
-}
-
-function stagingBatchesDir(mountPath: MountPath): string | null {
-  return mountPath.joinOnMount(
-    `${MUSIC_STAGING_DIRNAME}/${STAGING_BATCHES_DIRNAME}`,
-  );
-}
-
-function stagedBatchManifestPath(
-  mountPath: MountPath,
-  batchId: string,
-): string | null {
-  const dir = stagingBatchesDir(mountPath);
-  return dir
-    ? mountPath.joinWithinMount(dir, `${batchId}${BATCH_MANIFEST_EXT}`)
-    : null;
 }
 
 async function hashFile(fullPath: string): Promise<string> {
@@ -551,132 +533,15 @@ export async function dedupeStagedTracks(
   return { paths, duplicateCount };
 }
 
-/**
- * `batchId` is client-generated — the client needs it before uploading.
- */
-export async function createStagedBatch(
+export async function listStagingPoolTracks(
   mountPath: MountPath,
-  batchId: string,
-  trackPaths: string[],
-): Promise<T.StagedBatchManifest> {
-  const existing = await readStagedBatchManifest(mountPath, batchId);
-  const manifest: T.StagedBatchManifest = existing
-    ? {
-        ...existing,
-        trackPaths: [...new Set([...existing.trackPaths, ...trackPaths])],
-      }
-    : {
-        batchId,
-        createdAt: new Date().toISOString(),
-        step: 'editing',
-        trackPaths,
-        template: null,
-      };
-  await writeStagedBatchManifest(mountPath, manifest);
-  return manifest;
-}
-
-export async function removeStagedBatchTracks(
-  mountPath: MountPath,
-  batchId: string,
-  trackPaths: string[],
-): Promise<T.StagedBatchManifest | null> {
-  const existing = await readStagedBatchManifest(mountPath, batchId);
-  if (!existing) {
-    return null;
-  }
-  const removeSet = new Set(trackPaths);
-  const manifest: T.StagedBatchManifest = {
-    ...existing,
-    trackPaths: existing.trackPaths.filter((path) => !removeSet.has(path)),
-  };
-  await writeStagedBatchManifest(mountPath, manifest);
-  return manifest;
-}
-
-export async function writeStagedBatchManifest(
-  mountPath: MountPath,
-  manifest: T.StagedBatchManifest,
-): Promise<void> {
-  const manifestPath = stagedBatchManifestPath(mountPath, manifest.batchId);
-  if (!manifestPath) {
-    throw new Error(
-      'Unexpected: staged batch manifest path escaped the mount.',
-    );
-  }
-  await fs.mkdir(dirname(manifestPath), { recursive: true });
-  await fs.writeFile(manifestPath, JSON.stringify(manifest, null, '\t'));
-}
-
-export async function readStagedBatchManifest(
-  mountPath: MountPath,
-  batchId: string,
-): Promise<T.StagedBatchManifest | null> {
-  const manifestPath = stagedBatchManifestPath(mountPath, batchId);
-  if (!manifestPath) {
-    return null;
-  }
-  try {
-    return JSON.parse(
-      await fs.readFile(manifestPath, 'utf-8'),
-    ) as T.StagedBatchManifest;
-  } catch {
-    return null;
-  }
-}
-
-export async function listStagedBatches(
-  mountPath: MountPath,
-): Promise<T.StagedBatchSummary[]> {
-  await scanStagingPool(mountPath);
-
-  const batchesDir = stagingBatchesDir(mountPath);
-  if (!batchesDir) {
-    return [];
-  }
-  let entries: Dirent[];
-  try {
-    entries = await fs.readdir(batchesDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const summaries: T.StagedBatchSummary[] = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(BATCH_MANIFEST_EXT)) {
-      continue;
-    }
-    const batchId = entry.name.slice(0, -BATCH_MANIFEST_EXT.length);
-    const manifest = await readStagedBatchManifest(mountPath, batchId);
-    if (!manifest) {
-      continue;
-    }
-    summaries.push({
-      batchId: manifest.batchId,
-      createdAt: manifest.createdAt,
-      step: manifest.step,
-      trackCount: manifest.trackPaths.length,
-    });
-  }
-  return summaries;
-}
-
-export async function discardStagedBatch(
-  mountPath: MountPath,
-  batchId: string,
-): Promise<void> {
-  const manifest = await readStagedBatchManifest(mountPath, batchId);
-  if (manifest) {
-    for (const trackPath of manifest.trackPaths) {
-      const fullPath = mountPath.resolve(trackPath);
-      if (fullPath) {
-        await fs.rm(fullPath, { force: true });
-      }
-    }
-  }
-  const manifestPath = stagedBatchManifestPath(mountPath, batchId);
-  if (manifestPath) {
-    await fs.rm(manifestPath, { force: true });
-  }
+): Promise<T.TrackMetadata[]> {
+  const pool = await scanStagingPool(mountPath);
+  const results = await scanTrackFiles(
+    mountPath,
+    pool.map((entry) => entry.path),
+  );
+  return results.flatMap((result) => (result.track ? [result.track] : []));
 }
 
 /**

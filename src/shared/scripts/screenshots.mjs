@@ -131,7 +131,7 @@ const SHOTS = [
     waitFor: '.musicLibraryView',
     settleMs: 1000,
     describe:
-      'Music import: staged batch-edit screen (grid + sidebar + Continue CTA)',
+      'Music import: staging pool edit screen (grid + sidebar + Organize CTA)',
     prepare: (page) => dropImportTracks(page),
   },
   {
@@ -143,23 +143,23 @@ const SHOTS = [
     describe: 'Music import: organize screen (presets + live preview)',
     prepare: async (page) => {
       await dropImportTracks(page);
-      await page.locator('button:has-text("Continue")').click();
+      await page.locator('button:has-text("Organize")').click();
       await page.waitForSelector('.musicOrganizePreviewList', {
         timeout: 5000,
       });
     },
   },
   {
-    name: 'musicimport-resume-banner',
+    name: 'musicimport-staging-banner',
     surface: 'music',
     route: '/music/music/',
     waitFor: '.musicLibraryView',
     settleMs: 1000,
-    describe: 'Music import: resume banner for an abandoned staged batch',
+    describe: 'Music import: staging pool banner on the library view',
     prepare: async (page) => {
       await dropImportTracks(page);
-      await page.reload();
-      await page.waitForSelector('.musicStagedImportsBanner', {
+      await page.locator('button[aria-label="Back to library"]').click();
+      await page.waitForSelector('.musicStagingPoolBanner', {
         timeout: 10_000,
       });
     },

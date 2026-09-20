@@ -238,37 +238,26 @@ function batchEditTrackPaths(
   }
 }
 
-function importBatch(
-  state: T.MusicImportBatch | null = null,
+function stagingPool(
+  state: T.TrackMetadata[] = [],
   action: T.Action,
-): T.MusicImportBatch | null {
+): T.TrackMetadata[] {
   switch (action.type) {
-    case 'set-music-import-batch':
-      return action.batch;
-    case 'set-music-import-batch-step':
-      return state && state.batchId === action.batchId
-        ? { ...state, step: action.step, template: action.template }
-        : state;
-    case 'set-music-import-batch-tracks':
-      return state && state.batchId === action.batchId
-        ? { ...state, tracks: action.tracks }
-        : state;
+    case 'set-music-staging-pool':
+      return action.tracks;
     case 'view-music':
-      return null;
+      return [];
     default:
       return state;
   }
 }
 
-function stagedBatchSummaries(
-  state: T.StagedBatchSummary[] = [],
-  action: T.Action,
-): T.StagedBatchSummary[] {
+function showStagingView(state = false, action: T.Action): boolean {
   switch (action.type) {
-    case 'set-music-staged-batch-summaries':
-      return action.summaries;
+    case 'set-music-show-staging-view':
+      return action.show;
     case 'view-music':
-      return [];
+      return false;
     default:
       return state;
   }
@@ -400,8 +389,8 @@ function playbackServerId(
 const combinedMusicReducer = combineReducers({
   editTrackPath,
   batchEditTrackPaths,
-  importBatch,
-  stagedBatchSummaries,
+  stagingPool,
+  showStagingView,
   editTab,
   panelOrder,
   panelSelections,

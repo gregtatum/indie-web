@@ -484,34 +484,12 @@ export function setMusicBatchEditTrackPaths(paths: string[] | null) {
   return { type: 'set-music-batch-edit-track-paths' as const, paths };
 }
 
-export function setMusicImportBatch(batch: T.MusicImportBatch | null) {
-  return { type: 'set-music-import-batch' as const, batch };
+export function setMusicStagingPool(tracks: T.TrackMetadata[]) {
+  return { type: 'set-music-staging-pool' as const, tracks };
 }
 
-export function setMusicImportBatchTracks(
-  batchId: string,
-  tracks: T.TrackMetadata[],
-) {
-  return { type: 'set-music-import-batch-tracks' as const, batchId, tracks };
-}
-
-export function setMusicImportBatchStep(
-  batchId: string,
-  step: T.StagedBatchStep,
-  template: string,
-) {
-  return {
-    type: 'set-music-import-batch-step' as const,
-    batchId,
-    step,
-    template,
-  };
-}
-
-export function setMusicStagedBatchSummaries(
-  summaries: T.StagedBatchSummary[],
-) {
-  return { type: 'set-music-staged-batch-summaries' as const, summaries };
+export function setMusicShowStagingView(show: boolean) {
+  return { type: 'set-music-show-staging-view' as const, show };
 }
 
 export function setMusicEditTab(tab: T.MusicEditTab) {

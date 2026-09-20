@@ -253,35 +253,7 @@ export interface ScanTrackPathsResponse {
   errors: Array<{ path: string; message: string }>;
 }
 
-export type StagedBatchStep = 'editing' | 'organizing';
-
-/**
- * Written to `.music-staging/.batches/<batchId>.json`.
- */
-export interface StagedBatchManifest {
-  batchId: string;
-  createdAt: string;
-  step: StagedBatchStep;
-  trackPaths: string[];
-  template: string | null;
-}
-
-export interface StagedBatchSummary {
-  batchId: string;
-  createdAt: string;
-  step: StagedBatchStep;
-  trackCount: number;
-}
-
-export interface CreateStagedBatchResponse {
-  manifest: StagedBatchManifest;
-  addedTrackPaths: string[];
-  duplicateCount: number;
-}
-
-export interface MusicImportBatch {
-  batchId: string;
+export interface StagingUploadResponse {
   tracks: TrackMetadata[];
-  step: StagedBatchStep;
-  template: string;
+  duplicateCount: number;
 }

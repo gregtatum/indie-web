@@ -431,36 +431,23 @@ export function useMusicLibraryTrackSource(): MusicTrackSource {
 }
 
 /**
- * A track source backed by a staged drag-and-drop import batch, rather than
+ * A track source backed by the flat drag-and-drop staging pool, rather than
  * the real music index.
  */
-export function useMusicImportTrackSource(
-  batch: T.MusicImportBatch,
-): MusicTrackSource {
+export function useMusicStagingPoolTrackSource(): MusicTrackSource {
   const dispatch = Hooks.useDispatch();
-  const { batchId, tracks } = batch;
+  const tracks = $$.getMusicStagingPool();
 
   return React.useMemo(
     () => ({
       tracks,
       updateTracks: (nextTracks: T.TrackMetadata[]) => {
-        dispatch(A.setMusicImportBatchTracks(batchId, nextTracks));
+        dispatch(A.setMusicStagingPool(nextTracks));
       },
       removeTracks: (paths: string[]) => {
-        void dispatch(A.removeMusicImportBatchTracks(batchId, paths));
+        void dispatch(A.removeMusicStagingPoolTracks(paths));
       },
     }),
-    [dispatch, batchId, tracks],
+    [dispatch, tracks],
   );
-}
-
-export function useMusicImportClose(batchId: string) {
-  const dispatch = Hooks.useDispatch();
-  const handleClose = React.useCallback(() => {
-    void dispatch(A.closeMusicImportBatch(batchId));
-  }, [dispatch, batchId]);
-
-  Hooks.useEscape(handleClose, true);
-
-  return handleClose;
 }

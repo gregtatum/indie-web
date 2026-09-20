@@ -19,17 +19,13 @@ import {
 import {
   MUSIC_INDEX_FILENAME,
   buildNodeId3Tags,
-  createStagedBatch,
   dedupeStagedTracks,
-  discardStagedBatch,
   embedArtworkIntoTrack,
   installScanCrashGuard,
-  listStagedBatches,
+  listStagingPoolTracks,
   performScan,
-  readStagedBatchManifest,
   removeEmbeddedArtworkFromTrack,
   removeOutdatedFolderArtwork,
-  removeStagedBatchTracks,
   scanTrackFiles,
   serializeTagBlocks,
   sniffImageMimeType,
@@ -37,21 +33,11 @@ import {
   updateIndexAfterFolderArtworkRemoval,
   updateIndexAfterFolderArtworkWrite,
   updateIndexAfterTrackTagWrites,
-  writeStagedBatchManifest,
   writeTrackTagsForPath,
 } from './logic.ts';
 import type { EmbedArtworkFailure } from './logic.ts';
 
 export { MUSIC_INDEX_FILENAME };
-
-/** Batch IDs become a path segment on disk, so they're restricted. */
-const BATCH_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
-
-function assertValidBatchId(batchId: unknown): asserts batchId is string {
-  if (typeof batchId !== 'string' || !BATCH_ID_PATTERN.test(batchId)) {
-    throw new ClientError('Invalid batchId.');
-  }
-}
 
 export function musicRoute(mountPath: MountPath) {
   const route = new ApiRoute();
@@ -192,109 +178,25 @@ export function musicRoute(mountPath: MountPath) {
     },
   );
 
-  route.get('/staged-batches', async (): Promise<T.StagedBatchSummary[]> => {
-    return listStagedBatches(mountPath);
+  route.get('/staging-pool', async (): Promise<T.TrackMetadata[]> => {
+    return listStagingPoolTracks(mountPath);
   });
 
-  route.get('/staged-batch', async (req): Promise<T.StagedBatchManifest> => {
-    const { batchId } = req.query;
-    assertValidBatchId(batchId);
-    const manifest = await readStagedBatchManifest(mountPath, batchId);
-    if (!manifest) {
-      throw new NotFoundError('Staged batch not found.');
+  route.post('/staging-pool', async (req): Promise<T.StagingUploadResponse> => {
+    const { trackPaths } = req.body as { trackPaths: string[] };
+    if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
+      throw new ClientError('Missing or empty trackPaths array.');
     }
-    return manifest;
-  });
-
-  /** `batchId` is client-generated so it can upload files before this call. */
-  route.post(
-    '/staged-batch',
-    async (req): Promise<T.CreateStagedBatchResponse> => {
-      const { batchId, trackPaths } = req.body as {
-        batchId: string;
-        trackPaths: string[];
-      };
-      assertValidBatchId(batchId);
-      if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
-        throw new ClientError('Missing or empty trackPaths array.');
-      }
-      const { paths, duplicateCount } = await dedupeStagedTracks(
-        mountPath,
-        trackPaths,
-      );
-      if (paths.length === 0) {
-        const existing = await readStagedBatchManifest(mountPath, batchId);
-        return {
-          manifest: existing ?? {
-            batchId,
-            createdAt: new Date().toISOString(),
-            step: 'editing',
-            trackPaths: [],
-            template: null,
-          },
-          addedTrackPaths: [],
-          duplicateCount,
-        };
-      }
-      const manifest = await createStagedBatch(mountPath, batchId, paths);
-      return { manifest, addedTrackPaths: paths, duplicateCount };
-    },
-  );
-
-  route.post(
-    '/staged-batch/step',
-    async (req): Promise<T.StagedBatchManifest> => {
-      const { batchId, step, template } = req.body as {
-        batchId: string;
-        step: T.StagedBatchStep;
-        template?: string | null;
-      };
-      assertValidBatchId(batchId);
-      const manifest = await readStagedBatchManifest(mountPath, batchId);
-      if (!manifest) {
-        throw new NotFoundError('Staged batch not found.');
-      }
-      if (step !== 'editing' && step !== 'organizing') {
-        throw new ClientError('Invalid step.');
-      }
-      const updated: T.StagedBatchManifest = {
-        ...manifest,
-        step,
-        template: template === undefined ? manifest.template : template,
-      };
-      await writeStagedBatchManifest(mountPath, updated);
-      return updated;
-    },
-  );
-
-  route.post(
-    '/staged-batch/remove-tracks',
-    async (req): Promise<T.StagedBatchManifest> => {
-      const { batchId, trackPaths } = req.body as {
-        batchId: string;
-        trackPaths: string[];
-      };
-      assertValidBatchId(batchId);
-      if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
-        throw new ClientError('Missing or empty trackPaths array.');
-      }
-      const manifest = await removeStagedBatchTracks(
-        mountPath,
-        batchId,
-        trackPaths,
-      );
-      if (!manifest) {
-        throw new NotFoundError('Staged batch not found.');
-      }
-      return manifest;
-    },
-  );
-
-  route.post('/staged-batch/discard', async (req): Promise<{ ok: true }> => {
-    const { batchId } = req.body as { batchId: string };
-    assertValidBatchId(batchId);
-    await discardStagedBatch(mountPath, batchId);
-    return { ok: true };
+    const { paths, duplicateCount } = await dedupeStagedTracks(
+      mountPath,
+      trackPaths,
+    );
+    if (paths.length === 0) {
+      return { tracks: [], duplicateCount };
+    }
+    const results = await scanTrackFiles(mountPath, paths);
+    const tracks = results.flatMap((r) => (r.track ? [r.track] : []));
+    return { tracks, duplicateCount };
   });
 
   /**

@@ -88,7 +88,7 @@ beforeEach(function () {
     status: 200,
   });
   // MusicLibraryView fetches this on mount regardless of the test's focus.
-  fetchMock.get(/\/music\/staged-batches$/, { body: '[]', status: 200 });
+  fetchMock.get(/\/music\/staging-pool$/, { body: '[]', status: 200 });
   (global as any).Blob = Blob;
   (crypto as any).subtle = { digest: simpleDigest256 };
 

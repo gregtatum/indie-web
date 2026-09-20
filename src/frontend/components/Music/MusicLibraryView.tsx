@@ -5,13 +5,11 @@ import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import { persistedState } from 'frontend/logic/persisted-state';
-import { ORGANIZATION_PRESET_TEMPLATES } from 'shared/music';
 import {
   useFolderArtworkDrop,
   useFolderArtworkPaste,
   useMusicLibraryTrackSource,
-  useMusicImportTrackSource,
-  useMusicImportClose,
+  useMusicStagingPoolTrackSource,
   collectFilesFromDataTransfer,
 } from 'frontend/hooks/music';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -66,7 +64,11 @@ export function MusicLibraryView({
   const { dispatch, getState } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
   const batchEditTrackPaths = $$.getMusicBatchEditTrackPaths();
-  const importBatch = $$.getMusicImportBatch();
+  const stagingPool = $$.getMusicStagingPool();
+  const showStagingView = $$.getMusicShowStagingView();
+  const [organizingTracks, setOrganizingTracks] = React.useState<
+    T.TrackMetadata[] | null
+  >(null);
 
   const importDropRef = React.useRef<HTMLDivElement>(null);
   const importDropping = Hooks.useFileDrop(
@@ -76,11 +78,7 @@ export function MusicLibraryView({
         if (!files.length) {
           return;
         }
-        if (importBatch) {
-          void dispatch(A.addToMusicImportBatch(importBatch.batchId, files));
-        } else {
-          void dispatch(A.startMusicImportBatch(files));
-        }
+        void dispatch(A.addFilesToStagingPool(files));
       });
     },
     (event) =>
@@ -135,7 +133,7 @@ export function MusicLibraryView({
   }, [completedScanCount]);
 
   React.useEffect(() => {
-    void dispatch(A.refreshMusicStagedBatchSummaries());
+    void dispatch(A.refreshMusicStagingPool());
   }, [dispatch]);
 
   React.useEffect(() => {
@@ -224,7 +222,9 @@ export function MusicLibraryView({
         }}
       >
         <div className="musicImportDropOverlayInner">
-          {importBatch ? 'Add mp3s to this import' : 'Add mp3s to your library'}
+          {stagingPool.length > 0
+            ? 'Add mp3s to staging'
+            : 'Add mp3s to your library'}
         </div>
       </div>,
     );
@@ -242,18 +242,28 @@ export function MusicLibraryView({
     return <div className="musicLibraryView">{children}</div>;
   }
 
-  if (importBatch) {
-    // A staged import batch doesn't depend on the real music index, so it
-    // renders even if that index has never been scanned.
-    return importBatch.step === 'organizing'
-      ? withoutDropTarget(<OrganizeImportView batch={importBatch} />)
-      : withDropTarget(<ImportBatchEditView batch={importBatch} />);
+  if (showStagingView && stagingPool.length > 0) {
+    // The staging pool doesn't depend on the real music index, so it renders
+    // even if that index has never been scanned.
+    return organizingTracks
+      ? withoutDropTarget(
+          <OrganizeImportView
+            tracks={organizingTracks}
+            onBack={() => setOrganizingTracks(null)}
+          />,
+        )
+      : withDropTarget(
+          <StagingPoolEditView
+            onOrganize={setOrganizingTracks}
+            onCloseView={() => dispatch(A.setMusicShowStagingView(false))}
+          />,
+        );
   }
 
   if (error) {
     return withoutDropTarget(
       <>
-        <StagedImportsBanner />
+        <StagingPoolBanner />
         <div className="musicLibraryViewError">
           <div>{error}</div>
         </div>
@@ -272,7 +282,7 @@ export function MusicLibraryView({
 
   return (
     <div className="musicLibraryView">
-      <StagedImportsBanner />
+      <StagingPoolBanner />
       <div className="musicLibraryBody">
         <Splitter
           direction="horizontal"
@@ -299,66 +309,46 @@ export function MusicLibraryView({
   );
 }
 
-function StagedImportsBanner() {
-  const summaries = $$.getMusicStagedBatchSummaries();
+function StagingPoolBanner() {
+  const dispatch = Hooks.useDispatch();
+  const stagingPool = $$.getMusicStagingPool();
+  const [deleteConfirmPending, setDeleteConfirmPending] = React.useState(false);
 
-  if (summaries.length === 0) {
+  if (stagingPool.length === 0) {
     return null;
   }
 
-  return (
-    <div className="musicStagedImportsBanner">
-      <span className="musicStagedImportsBannerTitle">
-        {summaries.length} incomplete{' '}
-        {summaries.length === 1 ? 'import' : 'imports'}
-      </span>
-      <ul className="musicStagedImportsList">
-        {summaries.map((summary) => (
-          <StagedImportsBannerRow key={summary.batchId} summary={summary} />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function StagedImportsBannerRow({
-  summary,
-}: {
-  summary: T.StagedBatchSummary;
-}) {
-  const dispatch = Hooks.useDispatch();
-  const [discardConfirmPending, setDiscardConfirmPending] =
-    React.useState(false);
-
-  function handleDiscardClick() {
-    if (discardConfirmPending) {
-      void dispatch(A.discardMusicImportBatch(summary.batchId));
+  function handleDeleteClick() {
+    if (deleteConfirmPending) {
+      void dispatch(
+        A.removeMusicStagingPoolTracks(stagingPool.map((t) => t.path)),
+      );
+      setDeleteConfirmPending(false);
     } else {
-      setDiscardConfirmPending(true);
+      setDeleteConfirmPending(true);
     }
   }
 
   return (
-    <li className="musicStagedImportsListItem">
-      <span className="musicStagedImportsListItemLabel">
-        {summary.trackCount} {summary.trackCount === 1 ? 'track' : 'tracks'} ·{' '}
-        {summary.step === 'organizing' ? 'Organizing' : 'Editing'} ·{' '}
-        {new Date(summary.createdAt).toLocaleString()}
+    <div className="musicStagingPoolBanner">
+      <span className="musicStagingPoolBannerLabel">
+        {stagingPool.length} {stagingPool.length === 1 ? 'track' : 'tracks'}{' '}
+        staged
       </span>
       <button
         type="button"
         className="button button-primary"
-        onClick={() => void dispatch(A.resumeMusicImportBatch(summary.batchId))}
+        onClick={() => dispatch(A.setMusicShowStagingView(true))}
       >
         Resume
       </button>
-      {discardConfirmPending ? (
+      {deleteConfirmPending ? (
         <span className="musicImportDiscardWarning">Click again to delete</span>
       ) : null}
-      <button type="button" className="button" onClick={handleDiscardClick}>
+      <button type="button" className="button" onClick={handleDeleteClick}>
         Delete
       </button>
-    </li>
+    </div>
   );
 }
 
@@ -405,48 +395,62 @@ function BatchEditView({
   );
 }
 
-function ImportBatchEditView({ batch }: { batch: T.MusicImportBatch }) {
-  const dispatch = Hooks.useDispatch();
-  const trackSource = useMusicImportTrackSource(batch);
+function StagingPoolEditView({
+  onOrganize,
+  onCloseView,
+}: {
+  onOrganize: (tracks: T.TrackMetadata[]) => void;
+  onCloseView: () => void;
+}) {
+  const trackSource = useMusicStagingPoolTrackSource();
+  const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
   const trackPaths = React.useMemo(
-    () => batch.tracks.map((t) => t.path),
-    [batch.tracks],
+    () => trackSource.tracks.map((t) => t.path),
+    [trackSource.tracks],
   );
 
-  const handleClose = useMusicImportClose(batch.batchId);
+  Hooks.useEscape(onCloseView, true);
 
-  function handleContinueClick() {
-    void dispatch(
-      A.updateMusicImportBatchStep(
-        batch.batchId,
-        'organizing',
-        batch.template || ORGANIZATION_PRESET_TEMPLATES[0],
-      ),
+  // A single selection just means "I'm editing this row" — the auto-select
+  // on drop already puts one track into it — so only a deliberate multi-select
+  // narrows what Organize acts on; anything else organizes the whole pool.
+  const isMultiSelect = selectedTrackPaths.length > 1;
+
+  function handleOrganizeClick() {
+    if (!isMultiSelect) {
+      onOrganize(trackSource.tracks);
+      return;
+    }
+    const selected = trackSource.tracks.filter((track) =>
+      selectedTrackPaths.includes(track.path),
     );
+    onOrganize(selected);
   }
 
   return (
     <div className="musicBatchEditView">
       <div className="musicBatchEditHeader">
         <h2 className="musicBatchEditHeaderTitle">
-          Import · {batch.tracks.length}{' '}
-          {batch.tracks.length === 1 ? 'track' : 'tracks'}
+          Staging · {trackSource.tracks.length}{' '}
+          {trackSource.tracks.length === 1 ? 'track' : 'tracks'}
         </h2>
         <div className="musicImportBatchHeaderActions">
           <button
             type="button"
             className="musicBatchEditCloseButton"
-            aria-label="Close staged import"
-            onClick={handleClose}
+            aria-label="Back to library"
+            onClick={onCloseView}
           >
             <img src="/svg/xmark.svg" alt="" />
           </button>
           <button
             type="button"
             className="button button-primary"
-            onClick={handleContinueClick}
+            onClick={handleOrganizeClick}
           >
-            Continue
+            {isMultiSelect
+              ? `Organize ${selectedTrackPaths.length} selected`
+              : 'Organize'}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { $, A, T } from 'frontend';
 import { resolveOrganizationPath } from 'shared/music';
@@ -71,9 +71,9 @@ function makeFolderDataTransfer(entries: FileSystemEntry[]): DataTransfer {
 }
 
 /**
- * Covers the whole drag-and-drop import & organize feature (see
- * ORGANIZE_IMPORT_PLAN.md) in one file, nested by phase, rather than one
- * file per screen — this is a single feature with one end-to-end flow.
+ * Covers the whole drag-and-drop import & organize feature in one file,
+ * nested by phase, rather than one file per screen — this is a single
+ * feature with one end-to-end flow.
  */
 describe('drag-and-drop import & organize', () => {
   const { getServer } = useMusicTestServer();
@@ -95,6 +95,15 @@ describe('drag-and-drop import & organize', () => {
     });
   }
 
+  async function waitForStagingPool(
+    store: Awaited<ReturnType<typeof renderMusicApp>>['store'],
+    trackCount: number,
+  ) {
+    await waitFor(() => {
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(trackCount);
+    });
+  }
+
   async function dropTrack(
     fileName: string,
     tags: Parameters<typeof buildMp3WithTags>[0],
@@ -110,7 +119,7 @@ describe('drag-and-drop import & organize', () => {
       fireEvent.drop(zone, { dataTransfer: makeDataTransfer([file]) });
       await waitForNetworkIdle();
     });
-    await waitForImportBatch(store, 1);
+    await waitForStagingPool(store, 1);
     return { store };
   }
 
@@ -136,7 +145,7 @@ describe('drag-and-drop import & organize', () => {
       fireEvent.drop(zone, { dataTransfer });
       await waitForNetworkIdle();
     });
-    await waitForImportBatch(store, files.length);
+    await waitForStagingPool(store, files.length);
     await act(async () => {
       await waitForNetworkIdle();
     });
@@ -154,17 +163,6 @@ describe('drag-and-drop import & organize', () => {
     await screen.findByText(/Found \d+ tracks\./);
   }
 
-  async function waitForImportBatch(
-    store: Awaited<ReturnType<typeof renderMusicApp>>['store'],
-    trackCount: number,
-  ) {
-    await waitFor(() => {
-      expect($.getMusicImportBatch(store.getState())?.tracks).toHaveLength(
-        trackCount,
-      );
-    });
-  }
-
   async function scanStagedTrack(
     path: string,
   ): Promise<T.TrackMetadata | undefined> {
@@ -180,8 +178,12 @@ describe('drag-and-drop import & organize', () => {
     return data.tracks[0];
   }
 
+  function backToLibraryButton(): HTMLElement {
+    return screen.getByRole('button', { name: 'Back to library' });
+  }
+
   describe('dropping MP3s onto the library view', () => {
-    it('stages dropped MP3s and populates the import batch', async () => {
+    it('stages dropped MP3s into the pool', async () => {
       const { store } = await renderMusicApp({ server: getServer() });
       const zone = await dropZone();
 
@@ -201,7 +203,7 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      await waitForImportBatch(store, 1);
+      await waitForStagingPool(store, 1);
 
       // Staging auto-selects the first track, which mounts the sidebar editor
       // and kicks off its own (separate) tag-loading fetch.
@@ -209,16 +211,13 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      const batch = $.getMusicImportBatch(store.getState());
-      expect(batch?.tracks).toHaveLength(1);
-      expect(batch?.tracks[0].title).toBe('Time');
-      expect(batch?.tracks[0].artist).toBe('Pink Floyd');
+      const pool = $.getMusicStagingPool(store.getState());
+      expect(pool[0].title).toBe('Time');
+      expect(pool[0].artist).toBe('Pink Floyd');
 
       const stagingRoot = join(getServer().mountDir, '.music-staging');
       const stagedFiles = await readdir(stagingRoot);
       expect(stagedFiles).toContain('time.mp3');
-      const batchManifests = await readdir(join(stagingRoot, '.batches'));
-      expect(batchManifests).toHaveLength(1);
     });
 
     it('rejects non-MP3 files with a message and stages nothing', async () => {
@@ -270,7 +269,7 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      await waitForImportBatch(store, 1);
+      await waitForStagingPool(store, 1);
 
       // Staging auto-selects the first track, which mounts the sidebar editor
       // and kicks off its own (separate) tag-loading fetch.
@@ -278,15 +277,12 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      const batch = $.getMusicImportBatch(store.getState());
-      expect(batch?.tracks).toHaveLength(1);
-      expect(batch?.tracks[0].title).toBe('Kaneda');
+      const pool = $.getMusicStagingPool(store.getState());
+      expect(pool[0].title).toBe('Kaneda');
 
       const stagingRoot = join(getServer().mountDir, '.music-staging');
       const stagedFiles = await readdir(stagingRoot);
       expect(stagedFiles).toContain('kaneda.mp3');
-      const batchManifests = await readdir(join(stagingRoot, '.batches'));
-      expect(batchManifests).toHaveLength(1);
     });
 
     it('suffixes a new drop whose filename collides with a file already in the pool', async () => {
@@ -297,17 +293,12 @@ describe('drag-and-drop import & organize', () => {
         { title: 'Time', artist: 'Pink Floyd' },
         store,
       );
-      // Staging auto-selects the first track, which mounts the sidebar
-      // editor and kicks off its own (separate) tag-loading fetch.
       await act(async () => {
         await waitForNetworkIdle();
       });
 
-      const closeButton = screen.getByRole('button', {
-        name: 'Close staged import',
-      });
       await act(async () => {
-        fireEvent.click(closeButton);
+        fireEvent.click(backToLibraryButton());
         await waitForNetworkIdle();
       });
 
@@ -325,14 +316,14 @@ describe('drag-and-drop import & organize', () => {
         fireEvent.drop(zone, { dataTransfer: makeDataTransfer([file]) });
         await waitForNetworkIdle();
       });
-      await waitForImportBatch(store, 1);
+      await waitForStagingPool(store, 2);
       await act(async () => {
         await waitForNetworkIdle();
       });
 
-      const batch = $.getMusicImportBatch(store.getState());
-      expect(batch?.tracks[0].path).toBe('/.music-staging/time (2).mp3');
-      expect(batch?.tracks[0].title).toBe('Time (Live)');
+      const pool = $.getMusicStagingPool(store.getState());
+      const live = pool.find((t) => t.title === 'Time (Live)');
+      expect(live?.path).toBe('/.music-staging/time (2).mp3');
 
       const stagedFiles = await readdir(
         join(getServer().mountDir, '.music-staging'),
@@ -350,11 +341,8 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      const closeButton = screen.getByRole('button', {
-        name: 'Close staged import',
-      });
       await act(async () => {
-        fireEvent.click(closeButton);
+        fireEvent.click(backToLibraryButton());
         await waitForNetworkIdle();
       });
 
@@ -370,7 +358,7 @@ describe('drag-and-drop import & organize', () => {
       });
 
       await screen.findByText('Skipped 1 duplicate file — already staged.');
-      expect($.getMusicImportBatch(store.getState())).toBeNull();
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(1);
 
       const stagedFiles = await readdir(
         join(getServer().mountDir, '.music-staging'),
@@ -380,7 +368,7 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
   });
 
-  describe('staged batch-edit screen', () => {
+  describe('staging pool edit screen', () => {
     // The virtualizer reads offsetHeight/offsetWidth to decide how many rows
     // to render; jsdom returns 0 for both, so without this it renders nothing.
     beforeEach(() => {
@@ -397,8 +385,7 @@ describe('drag-and-drop import & organize', () => {
         title: 'Time',
         artist: 'Pink Floyd',
       });
-      const batch = $.getMusicImportBatch(store.getState());
-      const stagedPath = batch?.tracks[0].path as string;
+      const stagedPath = $.getMusicStagingPool(store.getState())[0].path;
 
       const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
       fireEvent.click(
@@ -425,12 +412,11 @@ describe('drag-and-drop import & organize', () => {
       expect(await screen.findByRole('heading', { name: 'Time' })).toBeTruthy();
     }, 30_000);
 
-    it('adds a second drop to the batch instead of starting a new one', async () => {
-      const { store } = await dropTrack('a.mp3', {
+    it('adds a second drop to the pool instead of starting a new view', async () => {
+      await dropTrack('a.mp3', {
         title: 'Time',
         artist: 'Pink Floyd',
       });
-      const firstBatchId = $.getMusicImportBatch(store.getState())?.batchId;
 
       const zone = await dropZone();
       const file = new File(
@@ -446,14 +432,8 @@ describe('drag-and-drop import & organize', () => {
         fireEvent.drop(zone, { dataTransfer: makeDataTransfer([file]) });
         await waitForNetworkIdle();
       });
-      await waitForImportBatch(store, 2);
+      await screen.findByRole('heading', { name: 'Staging · 2 tracks' });
 
-      const batch = $.getMusicImportBatch(store.getState());
-      expect(batch?.batchId).toBe(firstBatchId);
-      expect(batch?.tracks.map((t) => t.title).sort()).toEqual([
-        'Kaneda',
-        'Time',
-      ]);
       // The grid itself must pick up the new row, not just the store.
       expect(
         await screen.findByText('Kaneda', {
@@ -466,7 +446,7 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
 
     it('defaults to Album, Album Artist (or Artist), Track #, Title order', async () => {
-      const { store } = await dropTracks([
+      await dropTracks([
         {
           fileName: 'c.mp3',
           tags: {
@@ -504,7 +484,6 @@ describe('drag-and-drop import & organize', () => {
           },
         },
       ]);
-      await waitForImportBatch(store, 4);
 
       const titleOrder = screen
         .getAllByText(/^Song [A-D]$/, {
@@ -550,8 +529,9 @@ describe('drag-and-drop import & organize', () => {
         { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
         { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
       ]);
-      const batch = $.getMusicImportBatch(store.getState());
-      const allPaths = batch?.tracks.map((t) => t.path).sort();
+      const allPaths = $.getMusicStagingPool(store.getState())
+        .map((t) => t.path)
+        .sort();
 
       const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
       grid.focus();
@@ -567,9 +547,9 @@ describe('drag-and-drop import & organize', () => {
         { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
         { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
       ]);
-      const batch = $.getMusicImportBatch(store.getState());
-      const kanedaPath = batch?.tracks.find((t) => t.title === 'Kaneda')
-        ?.path as string;
+      const kanedaPath = $.getMusicStagingPool(store.getState()).find(
+        (t) => t.title === 'Kaneda',
+      )?.path as string;
 
       await act(async () => {
         store.dispatch(A.setMusicSelectedTracks([kanedaPath]));
@@ -582,10 +562,8 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      await waitForImportBatch(store, 1);
-      expect($.getMusicImportBatch(store.getState())?.tracks[0].title).toBe(
-        'Time',
-      );
+      await waitForStagingPool(store, 1);
+      expect($.getMusicStagingPool(store.getState())[0].title).toBe('Time');
       expect(
         screen.queryByText('Kaneda', { selector: '.musicBatchEditCellText' }),
       ).toBeNull();
@@ -598,54 +576,74 @@ describe('drag-and-drop import & organize', () => {
       expect(stagedFiles).not.toContain('b.mp3');
     }, 30_000);
 
-    it('closes the staged batch via the header button without deleting it', async () => {
+    it('leaves the pool intact on disk when going back to the library', async () => {
       const { store } = await dropTrack('time.mp3', {
         title: 'Time',
         artist: 'Pink Floyd',
       });
-      const batchId = $.getMusicImportBatch(store.getState())
-        ?.batchId as string;
       const stagingRoot = join(getServer().mountDir, '.music-staging');
 
-      const closeButton = screen.getByRole('button', {
-        name: 'Close staged import',
-      });
       await act(async () => {
-        fireEvent.click(closeButton);
+        fireEvent.click(backToLibraryButton());
         await waitForNetworkIdle();
       });
 
       await waitFor(() => {
-        expect(screen.queryByText(/Import ·/)).toBeNull();
+        expect(screen.queryByRole('heading', { name: /Staging ·/ })).toBeNull();
       });
-      expect($.getMusicImportBatch(store.getState())).toBeNull();
-
+      // The pool itself is unaffected by leaving the view — it's not tied
+      // to a batch that gets discarded.
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(1);
       expect(await readdir(stagingRoot)).toContain('time.mp3');
-      const manifestPath = join(stagingRoot, '.batches', `${batchId}.json`);
-      await expect(readFile(manifestPath, 'utf8')).resolves.toBeTruthy();
-      await screen.findByText('1 incomplete import');
+
+      await screen.findByText('1 track staged');
     }, 30_000);
 
-    it('persists the organizing step to the manifest when Continue is clicked', async () => {
-      const { store } = await dropTrack('time.mp3', {
-        title: 'Time',
-        artist: 'Pink Floyd',
+    it('reopens the staging view from the library banner', async () => {
+      await dropTrack('time.mp3', { title: 'Time', artist: 'Pink Floyd' });
+      await act(async () => {
+        fireEvent.click(backToLibraryButton());
+        await waitForNetworkIdle();
       });
-      const batch = $.getMusicImportBatch(store.getState());
-      const batchId = batch?.batchId as string;
 
-      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-
-      await waitFor(async () => {
-        const manifestPath = join(
-          getServer().mountDir,
-          '.music-staging',
-          '.batches',
-          `${batchId}.json`,
-        );
-        const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-        expect(manifest.step).toBe('organizing');
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
       });
+
+      await screen.findByRole('heading', { name: 'Staging · 1 track' });
+      expect(
+        screen.getByText('Time', { selector: '.musicBatchEditCellText' }),
+      ).toBeTruthy();
+    }, 30_000);
+
+    it('deletes the whole pool from the library banner, staging files and all', async () => {
+      const { store } = await dropTracks([
+        { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
+        { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
+      ]);
+      const stagingRoot = join(getServer().mountDir, '.music-staging');
+
+      await act(async () => {
+        fireEvent.click(backToLibraryButton());
+        await waitForNetworkIdle();
+      });
+      await screen.findByText('2 tracks staged');
+
+      const deleteButton = screen.getByRole('button', { name: 'Delete' });
+      fireEvent.click(deleteButton);
+      await screen.findByText('Click again to delete');
+      await act(async () => {
+        fireEvent.click(deleteButton);
+        await waitForNetworkIdle();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText(/tracks? staged/)).toBeNull();
+      });
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(0);
+      const stagedFiles = await readdir(stagingRoot);
+      expect(stagedFiles).not.toContain('a.mp3');
+      expect(stagedFiles).not.toContain('b.mp3');
     }, 30_000);
 
     it('propagates a bulk-edited year into the resolved organize path', async () => {
@@ -673,8 +671,7 @@ describe('drag-and-drop import & organize', () => {
           },
         },
       ]);
-      const batch = $.getMusicImportBatch(store.getState());
-      const paths = batch?.tracks.map((t) => t.path) as string[];
+      const paths = $.getMusicStagingPool(store.getState()).map((t) => t.path);
 
       await act(async () => {
         store.dispatch(A.setMusicSelectedTracks(paths));
@@ -693,7 +690,9 @@ describe('drag-and-drop import & organize', () => {
       });
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+        fireEvent.click(
+          screen.getByRole('button', { name: 'Organize 2 selected' }),
+        );
         await waitForNetworkIdle();
       });
       await screen.findByText(/Organize ·/);
@@ -706,13 +705,13 @@ describe('drag-and-drop import & organize', () => {
   });
 
   describe('organize screen', () => {
-    async function dropAndContinue(
+    async function dropAndOrganize(
       fileName: string,
       tags: Parameters<typeof buildMp3WithTags>[0],
     ) {
       const { store } = await dropTrack(fileName, tags);
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Organize' }));
         await waitForNetworkIdle();
       });
       await screen.findByText(/Organize ·/);
@@ -726,7 +725,7 @@ describe('drag-and-drop import & organize', () => {
     }
 
     it('ignores a file drop while organizing', async () => {
-      const { store } = await dropAndContinue('time.mp3', {
+      const { store } = await dropAndOrganize('time.mp3', {
         title: 'Time',
         artist: 'Pink Floyd',
       });
@@ -742,14 +741,12 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      const batch = $.getMusicImportBatch(store.getState());
-      expect(batch?.tracks).toHaveLength(1);
-      expect(batch?.tracks[0].title).toBe('Time');
-      expect(screen.queryByText(/Staging/)).toBeNull();
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(1);
+      expect(screen.queryByText(/Staging \d/)).toBeNull();
     }, 30_000);
 
     it('previews the default preset and switches to another preset', async () => {
-      await dropAndContinue('time.mp3', {
+      await dropAndOrganize('time.mp3', {
         title: 'Time',
         artist: 'Pink Floyd',
         albumArtist: 'Pink Floyd',
@@ -791,7 +788,7 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
 
     it('supports a custom typed template that updates the preview live', async () => {
-      await dropAndContinue('time.mp3', { title: 'Time', artist: 'Floyd' });
+      await dropAndOrganize('time.mp3', { title: 'Time', artist: 'Floyd' });
 
       const track: T.OrganizationTrackFields = {
         genre: null,
@@ -814,7 +811,7 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
 
     it('lets a single track override its destination path independent of the template', async () => {
-      await dropAndContinue('time.mp3', {
+      await dropAndOrganize('time.mp3', {
         title: 'Time',
         artist: 'Floyd',
         albumArtist: 'Pink Floyd',
@@ -856,122 +853,31 @@ describe('drag-and-drop import & organize', () => {
       expect(resetPath).not.toBe(computedPath);
     }, 30_000);
 
-    it('returns to the batch-edit screen via Back to edit, keeping the chosen template', async () => {
-      await dropAndContinue('time.mp3', { title: 'Time', artist: 'Floyd' });
+    it('returns to the edit screen via Back to edit, and Organize starts from the default preset again', async () => {
+      await dropAndOrganize('time.mp3', { title: 'Time', artist: 'Floyd' });
 
-      const chosenPreset = '{Artist}/{AlbumArtist}/{Track} - {Title}';
-      await act(async () => {
-        fireEvent.change(
-          screen.getByLabelText('Insert a preset filename format'),
-          { target: { value: chosenPreset } },
-        );
-        await waitForNetworkIdle();
-      });
+      fireEvent.change(
+        screen.getByLabelText('Insert a preset filename format'),
+        { target: { value: '{Artist}/{AlbumArtist}/{Track} - {Title}' } },
+      );
 
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Back to edit' }));
         await waitForNetworkIdle();
       });
-      await screen.findByText(/Import ·/);
+      await screen.findByRole('heading', { name: /Staging ·/ });
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Organize' }));
         await waitForNetworkIdle();
       });
       await screen.findByText(/Organize ·/);
 
+      // The template is ephemeral UI state, not persisted — each Organize
+      // pass starts fresh from the default preset.
       expect(
         (screen.getByLabelText('Naming template') as HTMLInputElement).value,
-      ).toBe(chosenPreset);
-    }, 30_000);
-
-    it('closes the staged batch from the organize screen without deleting it', async () => {
-      const { store } = await dropAndContinue('time.mp3', {
-        title: 'Time',
-        artist: 'Floyd',
-      });
-      const batchId = $.getMusicImportBatch(store.getState())
-        ?.batchId as string;
-      const stagingRoot = join(getServer().mountDir, '.music-staging');
-
-      const closeButton = screen.getByRole('button', {
-        name: 'Close staged import',
-      });
-      await act(async () => {
-        fireEvent.click(closeButton);
-        await waitForNetworkIdle();
-      });
-
-      await waitFor(() => {
-        expect(screen.queryByText(/Organize ·/)).toBeNull();
-      });
-      expect($.getMusicImportBatch(store.getState())).toBeNull();
-
-      expect(await readdir(stagingRoot)).toContain('time.mp3');
-      const manifestPath = join(stagingRoot, '.batches', `${batchId}.json`);
-      await expect(readFile(manifestPath, 'utf8')).resolves.toBeTruthy();
-      await screen.findByText('1 incomplete import');
-    }, 30_000);
-  });
-
-  describe('resuming or discarding an abandoned staged import', () => {
-    async function abandonBatch(
-      store: Awaited<ReturnType<typeof renderMusicApp>>['store'],
-    ) {
-      await act(async () => {
-        store.dispatch(A.setMusicImportBatch(null));
-        await store.dispatch(A.refreshMusicStagedBatchSummaries());
-      });
-      await screen.findByText('1 incomplete import');
-    }
-
-    it('resumes an abandoned staged batch, restoring its tracks', async () => {
-      const { store } = await dropTrack('time.mp3', {
-        title: 'Time',
-        artist: 'Pink Floyd',
-      });
-      const batchId = $.getMusicImportBatch(store.getState())
-        ?.batchId as string;
-
-      await abandonBatch(store);
-
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
-        await waitForNetworkIdle();
-      });
-
-      await waitForImportBatch(store, 1);
-      const batch = $.getMusicImportBatch(store.getState());
-      expect(batch?.batchId).toBe(batchId);
-      expect(batch?.tracks[0].title).toBe('Time');
-    }, 30_000);
-
-    it('discards an abandoned staged batch from the resume banner', async () => {
-      const { store } = await dropTrack('time.mp3', {
-        title: 'Time',
-        artist: 'Pink Floyd',
-      });
-      const batchId = $.getMusicImportBatch(store.getState())
-        ?.batchId as string;
-      const stagingRoot = join(getServer().mountDir, '.music-staging');
-
-      await abandonBatch(store);
-
-      const discardButton = screen.getByRole('button', { name: 'Delete' });
-      fireEvent.click(discardButton);
-      await screen.findByText('Click again to delete');
-      await act(async () => {
-        fireEvent.click(discardButton);
-        await waitForNetworkIdle();
-      });
-
-      await waitFor(() => {
-        expect(screen.queryByText('1 incomplete import')).toBeNull();
-      });
-      expect(await readdir(stagingRoot)).not.toContain('time.mp3');
-      await expect(
-        readFile(join(stagingRoot, '.batches', `${batchId}.json`), 'utf8'),
-      ).rejects.toThrow();
+      ).toBe('{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}');
     }, 30_000);
   });
 
@@ -985,9 +891,9 @@ describe('drag-and-drop import & organize', () => {
         .mockReturnValue(800);
     });
 
-    async function continueToOrganize() {
+    async function organizeAll() {
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Organize' }));
         await waitForNetworkIdle();
       });
       await screen.findByText(/Organize ·/);
@@ -1023,10 +929,8 @@ describe('drag-and-drop import & organize', () => {
         ],
         store,
       );
-      const batch = $.getMusicImportBatch(store.getState());
-      const batchId = batch?.batchId as string;
 
-      await continueToOrganize();
+      await organizeAll();
       await clickDone();
 
       await waitFor(() => {
@@ -1063,17 +967,7 @@ describe('drag-and-drop import & organize', () => {
         stat(join(getServer().mountDir, expectedPathB)),
       ).resolves.toBeTruthy();
 
-      await expect(
-        readFile(
-          join(
-            getServer().mountDir,
-            '.music-staging',
-            '.batches',
-            `${batchId}.json`,
-          ),
-          'utf8',
-        ),
-      ).rejects.toThrow();
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(0);
 
       const tracks = $.getMusicTracks(store.getState());
       expect(tracks.some((t) => t.path === expectedPathA)).toBe(true);
@@ -1105,7 +999,7 @@ describe('drag-and-drop import & organize', () => {
         store,
       );
 
-      await continueToOrganize();
+      await organizeAll();
       await clickDone();
 
       await waitFor(() => {
@@ -1117,6 +1011,7 @@ describe('drag-and-drop import & organize', () => {
       });
       // The non-colliding track committed and dropped out of the preview.
       expect(screen.queryByText('Unique')).toBeNull();
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(2);
 
       const uniquePath = resolveOrganizationPath(
         '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
@@ -1149,6 +1044,7 @@ describe('drag-and-drop import & organize', () => {
       await waitFor(() => {
         expect(screen.queryByText(/Organize ·/)).toBeNull();
       });
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(0);
       await expect(
         stat(join(getServer().mountDir, '/Rock/Dup/Dup/01 - Same (1).mp3')),
       ).resolves.toBeTruthy();
@@ -1167,6 +1063,86 @@ describe('drag-and-drop import & organize', () => {
       );
       await expect(
         stat(join(getServer().mountDir, otherDupPath)),
+      ).resolves.toBeTruthy();
+    }, 30_000);
+
+    it('organizes only a multi-selected subset, leaving the rest staged', async () => {
+      const { store } = await renderMusicApp({ server: getServer() });
+      await scanLibrary();
+      await dropTracks(
+        [
+          {
+            fileName: 'a.mp3',
+            tags: {
+              title: 'Song A',
+              artist: 'Artist',
+              genre: 'Rock',
+              track: 1,
+            },
+          },
+          {
+            fileName: 'b.mp3',
+            tags: {
+              title: 'Song B',
+              artist: 'Artist',
+              genre: 'Rock',
+              track: 2,
+            },
+          },
+          {
+            fileName: 'c.mp3',
+            tags: {
+              title: 'Song C',
+              artist: 'Artist',
+              genre: 'Rock',
+              track: 3,
+            },
+          },
+        ],
+        store,
+      );
+
+      const pool = $.getMusicStagingPool(store.getState());
+      const selectedPaths = pool
+        .filter((t) => t.title !== 'Song C')
+        .map((t) => t.path);
+      await act(async () => {
+        store.dispatch(A.setMusicSelectedTracks(selectedPaths));
+      });
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('button', { name: 'Organize 2 selected' }),
+        );
+        await waitForNetworkIdle();
+      });
+      await screen.findByText('Organize · 2 tracks');
+
+      await clickDone();
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Organize ·/)).toBeNull();
+      });
+
+      // Song C was never selected for organizing, so it's still staged.
+      const remaining = $.getMusicStagingPool(store.getState());
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].title).toBe('Song C');
+
+      const defaultPreset =
+        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+      const pathA = resolveOrganizationPath(defaultPreset, {
+        genre: 'Rock',
+        artist: 'Artist',
+        albumArtist: null,
+        album: null,
+        year: null,
+        title: 'Song A',
+        track: 1,
+        composer: null,
+      });
+      await expect(
+        stat(join(getServer().mountDir, pathA)),
       ).resolves.toBeTruthy();
     }, 30_000);
   });

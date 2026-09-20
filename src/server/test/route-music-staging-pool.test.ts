@@ -38,7 +38,7 @@ describe('drag-and-drop import staging', () => {
   after(() => server.close());
 
   it('a staged track is invisible to a real library scan', async () => {
-    await stageTrack(server, 'batch1-track.mp3', { title: 'Staged' });
+    await stageTrack(server, 'invisible-track.mp3', { title: 'Staged' });
 
     const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
       method: 'POST',
@@ -49,7 +49,7 @@ describe('drag-and-drop import staging', () => {
   });
 
   it('scan-paths resolves a staged track including its year, without writing the index', async () => {
-    const path = await stageTrack(server, 'batch2-track.mp3', {
+    const path = await stageTrack(server, 'scan-paths-track.mp3', {
       title: 'Time',
       artist: 'Pink Floyd',
       year: '1973',
@@ -93,100 +93,35 @@ describe('drag-and-drop import staging', () => {
     }),
   );
 
-  it('round-trips a batch manifest through create, step, and discard', async () => {
-    const path = await stageTrack(server, 'batch3-track.mp3', {
-      title: 'Manifest Track',
+  it('stages a track and lists it in the pool', async () => {
+    const path = await stageTrack(server, 'pool-track.mp3', {
+      title: 'Pool Track',
     });
 
-    const created = await fetch(`${server.baseUrl}/music/staged-batch`, {
+    const created = await fetch(`${server.baseUrl}/music/staging-pool`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ batchId: 'batch-3', trackPaths: [path] }),
+      body: JSON.stringify({ trackPaths: [path] }),
     });
     assert.equal(created.status, 200);
-    const { manifest } = (await created.json()) as T.CreateStagedBatchResponse;
-    assert.equal(manifest.step, 'editing');
-    assert.equal(manifest.template, null);
+    const body = (await created.json()) as T.StagingUploadResponse;
+    assert.equal(body.duplicateCount, 0);
+    assert.equal(body.tracks.length, 1);
+    assert.equal(body.tracks[0].title, 'Pool Track');
 
-    const listed = await fetch(`${server.baseUrl}/music/staged-batches`);
-    const summaries = (await listed.json()) as T.StagedBatchSummary[];
-    assert.ok(
-      summaries.some((s) => s.batchId === 'batch-3' && s.trackCount === 1),
-    );
-
-    const stepped = await fetch(`${server.baseUrl}/music/staged-batch/step`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        batchId: 'batch-3',
-        step: 'organizing',
-        template: '{Artist}/{Title}',
-      }),
-    });
-    assert.equal(stepped.status, 200);
-    const steppedManifest = (await stepped.json()) as T.StagedBatchManifest;
-    assert.equal(steppedManifest.step, 'organizing');
-    assert.equal(steppedManifest.template, '{Artist}/{Title}');
-
-    const discarded = await fetch(
-      `${server.baseUrl}/music/staged-batch/discard`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ batchId: 'batch-3' }),
-      },
-    );
-    assert.equal(discarded.status, 200);
-
-    // The manifest is gone...
-    const summariesAfter = (await (
-      await fetch(`${server.baseUrl}/music/staged-batches`)
-    ).json()) as T.StagedBatchSummary[];
-    assert.ok(!summariesAfter.some((s) => s.batchId === 'batch-3'));
-    // ...and so is the staged track file itself, not just the reference to it.
-    const poolFiles = await readdir(join(server.mountDir, '.music-staging'));
-    assert.ok(!poolFiles.includes('batch3-track.mp3'));
-  });
-
-  it('posting to an existing batchId merges trackPaths instead of overwriting', async () => {
-    const pathA = await stageTrack(server, 'batch4-a.mp3', {
-      title: 'Track A',
-    });
-
-    const created = await fetch(`${server.baseUrl}/music/staged-batch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ batchId: 'batch-4', trackPaths: [pathA] }),
-    });
-    const { manifest } = (await created.json()) as T.CreateStagedBatchResponse;
-
-    const pathB = await stageTrack(server, 'batch4-b.mp3', {
-      title: 'Track B',
-    });
-    const added = await fetch(`${server.baseUrl}/music/staged-batch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ batchId: 'batch-4', trackPaths: [pathB] }),
-    });
-    assert.equal(added.status, 200);
-    const { manifest: updated } =
-      (await added.json()) as T.CreateStagedBatchResponse;
-    assert.deepEqual(updated.trackPaths, [pathA, pathB]);
-    // Everything but trackPaths carries over from the original manifest.
-    assert.equal(updated.createdAt, manifest.createdAt);
-    assert.equal(updated.step, manifest.step);
+    const listed = await fetch(`${server.baseUrl}/music/staging-pool`);
+    assert.equal(listed.status, 200);
+    const tracks = (await listed.json()) as T.TrackMetadata[];
+    assert.ok(tracks.some((t) => t.path === path && t.title === 'Pool Track'));
   });
 
   it(
-    'rejects a batchId that is not a safe path segment',
-    withLogs(['[400err ]'], async () => {
-      const res = await fetch(`${server.baseUrl}/music/staged-batch`, {
+    'rejects an empty trackPaths array',
+    withLogs(['Missing or empty trackPaths array.'], async () => {
+      const res = await fetch(`${server.baseUrl}/music/staging-pool`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batchId: '../escape',
-          trackPaths: ['/x.mp3'],
-        }),
+        body: JSON.stringify({ trackPaths: [] }),
       });
       assert.equal(res.status, 400);
     }),
@@ -197,8 +132,7 @@ describe('drag-and-drop import staging', () => {
     const bytes = buildMp3WithTags(tags);
     await stageTrack(server, 'hashed.mp3', tags);
 
-    // Any staged-batches poll rescans the pool and (re)writes the index.
-    await fetch(`${server.baseUrl}/music/staged-batches`);
+    await fetch(`${server.baseUrl}/music/staging-pool`);
 
     const indexPath = join(
       server.mountDir,
@@ -221,9 +155,11 @@ describe('drag-and-drop import staging', () => {
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, 'dropped-by-hand.mp3'), bytes);
 
-    // No batch manifest references this file — it never went through the
-    // staged-batch API — but a pool poll should still notice and hash it.
-    await fetch(`${server.baseUrl}/music/staged-batches`);
+    const listed = await fetch(`${server.baseUrl}/music/staging-pool`);
+    const tracks = (await listed.json()) as T.TrackMetadata[];
+    assert.ok(
+      tracks.some((t) => t.path === '/.music-staging/dropped-by-hand.mp3'),
+    );
 
     const indexPath = join(dir, '.staging-index.json');
     const index = JSON.parse(await readFile(indexPath, 'utf-8')) as {
@@ -237,58 +173,46 @@ describe('drag-and-drop import staging', () => {
   it('drops a duplicate upload and reports it, keeping the original in place', async () => {
     const tags = { title: 'Dup Source' };
     const existingPath = await stageTrack(server, 'dup-source.mp3', tags);
-    await fetch(`${server.baseUrl}/music/staged-batch`, {
+    await fetch(`${server.baseUrl}/music/staging-pool`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        batchId: 'owner-batch',
-        trackPaths: [existingPath],
-      }),
+      body: JSON.stringify({ trackPaths: [existingPath] }),
     });
 
     const dupPath = await stageTrack(server, 'dup-copy.mp3', tags);
-    const created = await fetch(`${server.baseUrl}/music/staged-batch`, {
+    const created = await fetch(`${server.baseUrl}/music/staging-pool`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ batchId: 'new-batch', trackPaths: [dupPath] }),
+      body: JSON.stringify({ trackPaths: [dupPath] }),
     });
     assert.equal(created.status, 200);
-    const body = (await created.json()) as T.CreateStagedBatchResponse;
+    const body = (await created.json()) as T.StagingUploadResponse;
     assert.equal(body.duplicateCount, 1);
-    assert.deepEqual(body.addedTrackPaths, []);
-    assert.deepEqual(body.manifest.trackPaths, []);
+    assert.deepEqual(body.tracks, []);
 
     const poolFiles = await readdir(join(server.mountDir, '.music-staging'));
     assert.ok(!poolFiles.includes('dup-copy.mp3'));
     assert.ok(poolFiles.includes('dup-source.mp3'));
-
-    const summaries = (await (
-      await fetch(`${server.baseUrl}/music/staged-batches`)
-    ).json()) as T.StagedBatchSummary[];
-    assert.ok(!summaries.some((s) => s.batchId === 'new-batch'));
   });
 
   it('collapses duplicates within the same upload request, keeping the first', async () => {
-    const tags = { title: 'Same Batch Dup' };
-    const pathA = await stageTrack(server, 'batchdup-a.mp3', tags);
-    const pathB = await stageTrack(server, 'batchdup-b.mp3', tags);
+    const tags = { title: 'Same Request Dup' };
+    const pathA = await stageTrack(server, 'reqdup-a.mp3', tags);
+    const pathB = await stageTrack(server, 'reqdup-b.mp3', tags);
 
-    const created = await fetch(`${server.baseUrl}/music/staged-batch`, {
+    const created = await fetch(`${server.baseUrl}/music/staging-pool`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        batchId: 'same-drop-batch',
-        trackPaths: [pathA, pathB],
-      }),
+      body: JSON.stringify({ trackPaths: [pathA, pathB] }),
     });
     assert.equal(created.status, 200);
-    const body = (await created.json()) as T.CreateStagedBatchResponse;
+    const body = (await created.json()) as T.StagingUploadResponse;
     assert.equal(body.duplicateCount, 1);
-    assert.deepEqual(body.addedTrackPaths, [pathA]);
-    assert.deepEqual(body.manifest.trackPaths, [pathA]);
+    assert.equal(body.tracks.length, 1);
+    assert.equal(body.tracks[0].path, pathA);
 
     const poolFiles = await readdir(join(server.mountDir, '.music-staging'));
-    assert.ok(poolFiles.includes('batchdup-a.mp3'));
-    assert.ok(!poolFiles.includes('batchdup-b.mp3'));
+    assert.ok(poolFiles.includes('reqdup-a.mp3'));
+    assert.ok(!poolFiles.includes('reqdup-b.mp3'));
   });
 });
