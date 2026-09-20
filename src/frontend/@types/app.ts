@@ -269,3 +269,4 @@ export type LanguageCoachSection =
 
 export type MusicPanelType = 'genre' | 'artist' | 'album';
 export type MusicEditTab = 'details' | 'artwork' | 'id3';
+export type MusicStagingView = 'staging' | 'organize';

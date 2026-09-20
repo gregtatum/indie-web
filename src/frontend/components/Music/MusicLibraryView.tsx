@@ -65,10 +65,16 @@ export function MusicLibraryView({
   const [error, setError] = React.useState<React.ReactNode>(null);
   const batchEditTrackPaths = $$.getMusicBatchEditTrackPaths();
   const stagingPool = $$.getMusicStagingPool();
-  const showStagingView = $$.getMusicShowStagingView();
-  const [organizingTracks, setOrganizingTracks] = React.useState<
-    T.TrackMetadata[] | null
-  >(null);
+  const stagingView = $$.getMusicStagingView();
+  const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
+  const organizeTracks = React.useMemo(() => {
+    if (stagingView !== 'organize') {
+      return null;
+    }
+    return selectedTrackPaths.length > 1
+      ? stagingPool.filter((track) => selectedTrackPaths.includes(track.path))
+      : stagingPool;
+  }, [stagingView, selectedTrackPaths, stagingPool]);
 
   const importDropRef = React.useRef<HTMLDivElement>(null);
   const importDropping = Hooks.useFileDrop(
@@ -242,20 +248,19 @@ export function MusicLibraryView({
     return <div className="musicLibraryView">{children}</div>;
   }
 
-  if (showStagingView && stagingPool.length > 0) {
+  if (stagingView !== null && stagingPool.length > 0) {
     // The staging pool doesn't depend on the real music index, so it renders
     // even if that index has never been scanned.
-    return organizingTracks
+    return organizeTracks
       ? withoutDropTarget(
           <OrganizeImportView
-            tracks={organizingTracks}
-            onBack={() => setOrganizingTracks(null)}
+            tracks={organizeTracks}
+            onBack={() => dispatch(A.setMusicStagingView('staging'))}
           />,
         )
       : withDropTarget(
           <StagingPoolEditView
-            onOrganize={setOrganizingTracks}
-            onCloseView={() => dispatch(A.setMusicShowStagingView(false))}
+            onCloseView={() => dispatch(A.setMusicStagingView(null))}
           />,
         );
   }
@@ -338,7 +343,7 @@ function StagingPoolBanner() {
       <button
         type="button"
         className="button button-primary"
-        onClick={() => dispatch(A.setMusicShowStagingView(true))}
+        onClick={() => dispatch(A.setMusicStagingView('staging'))}
       >
         Resume
       </button>
@@ -395,13 +400,7 @@ function BatchEditView({
   );
 }
 
-function StagingPoolEditView({
-  onOrganize,
-  onCloseView,
-}: {
-  onOrganize: (tracks: T.TrackMetadata[]) => void;
-  onCloseView: () => void;
-}) {
+function StagingPoolEditView({ onCloseView }: { onCloseView: () => void }) {
   const dispatch = Hooks.useDispatch();
   const trackSource = useMusicStagingPoolTrackSource();
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
@@ -422,14 +421,7 @@ function StagingPoolEditView({
   const isMultiSelect = selectedTrackPaths.length > 1;
 
   function handleOrganizeClick() {
-    if (!isMultiSelect) {
-      onOrganize(trackSource.tracks);
-      return;
-    }
-    const selected = trackSource.tracks.filter((track) =>
-      selectedTrackPaths.includes(track.path),
-    );
-    onOrganize(selected);
+    dispatch(A.setMusicStagingView('organize'));
   }
 
   return (

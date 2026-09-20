@@ -203,8 +203,8 @@ function selectedTrackPaths(state: string[] = [], action: T.Action): string[] {
       return action.selectedTrackPath ? [action.selectedTrackPath] : state;
     case 'set-music-selected-tracks':
       return action.paths;
-    case 'set-music-show-staging-view':
-      return action.show ? state : [];
+    case 'set-music-staging-view':
+      return action.view === null ? [] : state;
     case 'view-music':
       return [];
     default:
@@ -254,12 +254,15 @@ function stagingPool(
   }
 }
 
-function showStagingView(state = false, action: T.Action): boolean {
+function stagingView(
+  state: T.MusicStagingView | null = null,
+  action: T.Action,
+): T.MusicStagingView | null {
   switch (action.type) {
-    case 'set-music-show-staging-view':
-      return action.show;
+    case 'set-music-staging-view':
+      return action.view;
     case 'view-music':
-      return false;
+      return null;
     default:
       return state;
   }
@@ -392,7 +395,7 @@ const combinedMusicReducer = combineReducers({
   editTrackPath,
   batchEditTrackPaths,
   stagingPool,
-  showStagingView,
+  stagingView,
   editTab,
   panelOrder,
   panelSelections,

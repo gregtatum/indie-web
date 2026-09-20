@@ -488,8 +488,8 @@ export function setMusicStagingPool(tracks: T.TrackMetadata[]) {
   return { type: 'set-music-staging-pool' as const, tracks };
 }
 
-export function setMusicShowStagingView(show: boolean) {
-  return { type: 'set-music-show-staging-view' as const, show };
+export function setMusicStagingView(view: T.MusicStagingView | null) {
+  return { type: 'set-music-staging-view' as const, view };
 }
 
 export function setMusicEditTab(tab: T.MusicEditTab) {

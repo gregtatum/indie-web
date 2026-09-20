@@ -47,8 +47,8 @@ export function getMusicStagingPool(state: State): T.TrackMetadata[] {
   return getMusic(state).stagingPool;
 }
 
-export function getMusicShowStagingView(state: State): boolean {
-  return getMusic(state).showStagingView;
+export function getMusicStagingView(state: State): T.MusicStagingView | null {
+  return getMusic(state).stagingView;
 }
 
 export function getMusicNeedsRescan(state: State): boolean {

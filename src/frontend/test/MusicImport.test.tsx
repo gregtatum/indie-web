@@ -1,4 +1,10 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { act } from 'react';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -611,6 +617,35 @@ describe('drag-and-drop import & organize', () => {
       ).toBeTruthy();
     }, 30_000);
 
+    it('does not force the staging view back open on a plain reload', async () => {
+      await dropTrack('time.mp3', { title: 'Time', artist: 'Pink Floyd' });
+      await act(async () => {
+        fireEvent.click(backToLibraryButton());
+        await waitForNetworkIdle();
+      });
+
+      cleanup();
+      const { store: reloadedStore } = await renderMusicApp({
+        server: getServer(),
+      });
+
+      await waitForStagingPool(reloadedStore, 1);
+      expect(screen.queryByRole('heading', { name: /Staging ·/ })).toBeNull();
+      await screen.findByText('1 track staged');
+    }, 30_000);
+
+    it('restores the staging view on reload when the URL says to', async () => {
+      await dropTrack('time.mp3', { title: 'Time', artist: 'Pink Floyd' });
+
+      cleanup();
+      await renderMusicApp({
+        server: getServer(),
+        search: '?stagingView=staging',
+      });
+
+      await screen.findByRole('heading', { name: 'Staging · 1 track' });
+    }, 30_000);
+
     it('deletes the whole pool from the library banner, staging files and all', async () => {
       const { store } = await dropTracks([
         { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
@@ -738,6 +773,21 @@ describe('drag-and-drop import & organize', () => {
 
       expect($.getMusicStagingPool(store.getState())).toHaveLength(1);
       expect(screen.queryByText(/Staging \d/)).toBeNull();
+    }, 30_000);
+
+    it('restores the organize screen on reload when the URL says to', async () => {
+      await dropAndOrganize('time.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+
+      cleanup();
+      await renderMusicApp({
+        server: getServer(),
+        search: '?stagingView=organize',
+      });
+
+      await screen.findByText(/Organize ·/);
     }, 30_000);
 
     it('previews the default preset and switches to another preset', async () => {

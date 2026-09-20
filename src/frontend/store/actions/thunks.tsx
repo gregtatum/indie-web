@@ -1915,7 +1915,7 @@ export function addFilesToStagingPool(
 
       if (addedTracks.length > 0) {
         dispatch(Plain.setMusicStagingPool([...existingPool, ...addedTracks]));
-        dispatch(Plain.setMusicShowStagingView(true));
+        dispatch(Plain.setMusicStagingView('staging'));
         if (existingPool.length === 0) {
           dispatch(Plain.setMusicSelectedTracks([addedTracks[0].path]));
         }
@@ -1986,9 +1986,6 @@ export function refreshMusicStagingPool(): Thunk<Promise<void>> {
       }
       const tracks = (await res.json()) as T.TrackMetadata[];
       dispatch(Plain.setMusicStagingPool(tracks));
-      if (tracks.length > 0) {
-        dispatch(Plain.setMusicShowStagingView(true));
-      }
     } catch (error) {
       console.error(error);
     }

@@ -48,6 +48,7 @@ export function useMusicUrlSerialization(): {
   const [searchParams, setSearchParams] = useSearchParams();
   useFilterUrlSync(searchParams, setSearchParams);
   useEditModalUrlSync(searchParams, setSearchParams);
+  useStagingViewUrlSync(searchParams, setSearchParams);
   const closeBatchEdit = useBatchEditHistorySync();
   return { isFilesView: searchParams.get('view') === 'files', closeBatchEdit };
 }
@@ -160,6 +161,51 @@ function useFilterUrlSync(
       { replace: true },
     );
   }, [panelSelections, selectedTrackPathsKey, setSearchParams]);
+}
+
+function parseStagingViewFromUrl(
+  raw: string | null,
+): T.MusicStagingView | null {
+  return raw === 'staging' || raw === 'organize' ? raw : null;
+}
+
+function useStagingViewUrlSync(
+  searchParams: URLSearchParams,
+  setSearchParams: SetSearchParams,
+) {
+  const stagingView = $$.getMusicStagingView();
+  const { dispatch } = Hooks.useStore();
+  const isFirstRender = React.useRef(true);
+  const stagingViewRef = React.useRef(stagingView);
+  stagingViewRef.current = stagingView;
+
+  // Initialize the Redux store from the URL on the initial load.
+  React.useEffect(() => {
+    const fromUrl = parseStagingViewFromUrl(searchParams.get('stagingView'));
+    if (fromUrl) {
+      dispatch(A.setMusicStagingView(fromUrl));
+    }
+  }, []);
+
+  // Synchronize the URL from the Redux store.
+  React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (stagingViewRef.current) {
+          params.set('stagingView', stagingViewRef.current);
+        } else {
+          params.delete('stagingView');
+        }
+        return params;
+      },
+      { replace: true },
+    );
+  }, [stagingView, setSearchParams]);
 }
 
 function useEditModalUrlSync(
