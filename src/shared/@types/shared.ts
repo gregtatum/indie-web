@@ -270,3 +270,14 @@ export interface DeleteTracksResponse {
     message: string | null;
   };
 }
+
+export interface AddTracksRequest {
+  tracks: TrackMetadata[];
+}
+
+export interface AddTracksResponse {
+  index: {
+    status: 'updated' | 'skipped' | 'error';
+    message: string | null;
+  };
+}

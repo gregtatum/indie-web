@@ -19,8 +19,11 @@ import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
 import { FileStoreError } from 'frontend/logic/file-store';
 import { IDBError } from 'frontend/logic/file-store/indexeddb-fs';
-import { matchFolderArtworkFilename } from 'shared/music';
-import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
+import { compareTracksDefault, matchFolderArtworkFilename } from 'shared/music';
+import type {
+  AddTracksResponse,
+  WriteFolderArtworkResponse,
+} from 'shared/@types/shared';
 
 function getMetadataFromCache(
   cache: T.ListFilesCache,
@@ -2350,10 +2353,29 @@ export function commitStagingPoolTracks(
       const existingTracks = $.getMusicTracks(getState());
       const needsRescan = $.getMusicNeedsRescan(getState());
       const servedIndexVersion = $.getMusicServedIndexVersion(getState());
+
+      let indexPatched = false;
+      try {
+        const res = await fetch(`${server.url}/music/add-tracks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tracks: movedTracksWithArtwork }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as AddTracksResponse;
+          indexPatched = data.index.status === 'updated';
+        }
+      } catch (error) {
+        console.error('Failed to patch the music index after import.', error);
+      }
+
+      const mergedTracks = [...existingTracks, ...movedTracksWithArtwork].sort(
+        compareTracksDefault,
+      );
       dispatch(
         setMusicTracks(
-          [...existingTracks, ...movedTracksWithArtwork],
-          needsRescan,
+          mergedTracks,
+          indexPatched ? needsRescan : true,
           servedIndexVersion,
         ),
       );

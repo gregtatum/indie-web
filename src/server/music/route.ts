@@ -36,6 +36,7 @@ import {
   updateIndexAfterFolderArtworkRemoval,
   updateIndexAfterFolderArtworkWrite,
   updateIndexAfterTrackDeletion,
+  updateIndexAfterTracksAdded,
   updateIndexAfterTrackTagWrites,
   writeTrackTagsForPath,
 } from './logic.ts';
@@ -678,6 +679,15 @@ export function musicRoute(mountPath: MountPath) {
       );
     }
     return { deleted, errors, index };
+  });
+
+  route.post('/add-tracks', async (req): Promise<T.AddTracksResponse> => {
+    const { tracks } = req.body as T.AddTracksRequest;
+    if (!Array.isArray(tracks) || tracks.length === 0) {
+      throw new ClientError('Missing or empty tracks array.');
+    }
+    const index = await updateIndexAfterTracksAdded(mountPath, tracks);
+    return { index };
   });
 
   return route.router;

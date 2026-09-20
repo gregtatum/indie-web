@@ -216,3 +216,128 @@ describe('drag-and-drop import staging', () => {
     assert.ok(!poolFiles.includes('reqdup-b.mp3'));
   });
 });
+
+describe('POST /music/add-tracks', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+
+  after(() => server.close());
+
+  async function scanPaths(paths: string[]): Promise<T.TrackMetadata[]> {
+    const res = await fetch(`${server.baseUrl}/music/music-index/scan-paths`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths }),
+    });
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as T.ScanTrackPathsResponse;
+    assert.equal(body.errors.length, 0);
+    return body.tracks;
+  }
+
+  it('merges newly moved tracks into an existing index in sorted order', async () => {
+    const dir = join(server.mountDir, 'Artist', 'Album');
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      join(dir, '01 - First.mp3'),
+      buildMp3WithTags({
+        title: 'First',
+        artist: 'Artist',
+        album: 'Album',
+        track: '1',
+      }),
+    );
+
+    const scanRes = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+      method: 'POST',
+    });
+    assert.equal(scanRes.status, 200);
+    const scanned = (await scanRes.json()) as T.MusicIndex;
+    assert.equal(scanned.tracks.length, 1);
+
+    await writeFile(
+      join(dir, '03 - Third.mp3'),
+      buildMp3WithTags({
+        title: 'Third',
+        artist: 'Artist',
+        album: 'Album',
+        track: '3',
+      }),
+    );
+    await writeFile(
+      join(dir, '02 - Second.mp3'),
+      buildMp3WithTags({
+        title: 'Second',
+        artist: 'Artist',
+        album: 'Album',
+        track: '2',
+      }),
+    );
+    const addedTracks = await scanPaths([
+      '/Artist/Album/03 - Third.mp3',
+      '/Artist/Album/02 - Second.mp3',
+    ]);
+
+    const addRes = await fetch(`${server.baseUrl}/music/add-tracks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tracks: addedTracks }),
+    });
+    assert.equal(addRes.status, 200);
+    const addBody = (await addRes.json()) as T.AddTracksResponse;
+    assert.equal(addBody.index.status, 'updated');
+
+    const indexRes = await fetch(`${server.baseUrl}/music/music-index`);
+    const index = (await indexRes.json()) as T.MusicIndex;
+    assert.deepEqual(
+      index.tracks.map((track) => track.title),
+      ['First', 'Second', 'Third'],
+    );
+  });
+
+  it('skips tracks whose paths already exist in the index', async () => {
+    const dir = join(server.mountDir, 'Existing', 'Album');
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      join(dir, 'track.mp3'),
+      buildMp3WithTags({ title: 'Already Indexed' }),
+    );
+
+    const scanRes = await fetch(`${server.baseUrl}/music/music-index/scan`, {
+      method: 'POST',
+    });
+    const before = (await scanRes.json()) as T.MusicIndex;
+    const existingCount = before.tracks.length;
+
+    const tracks = await scanPaths(['/Existing/Album/track.mp3']);
+    const addRes = await fetch(`${server.baseUrl}/music/add-tracks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tracks }),
+    });
+    assert.equal(addRes.status, 200);
+    const addBody = (await addRes.json()) as T.AddTracksResponse;
+    assert.equal(addBody.index.status, 'skipped');
+
+    const indexRes = await fetch(`${server.baseUrl}/music/music-index`);
+    const index = (await indexRes.json()) as T.MusicIndex;
+    assert.equal(index.tracks.length, existingCount);
+  });
+
+  it(
+    'rejects an empty tracks array',
+    withLogs(['Missing or empty tracks array.'], async () => {
+      const res = await fetch(`${server.baseUrl}/music/add-tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tracks: [] }),
+      });
+      assert.equal(res.status, 400);
+    }),
+  );
+});

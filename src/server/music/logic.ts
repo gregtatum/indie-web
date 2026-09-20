@@ -1389,6 +1389,91 @@ export async function updateIndexAfterTrackDeletion(
   }
 }
 
+export async function updateIndexAfterTracksAdded(
+  mountPath: MountPath,
+  addedTracks: T.TrackMetadata[],
+): Promise<{
+  status: 'updated' | 'skipped' | 'error';
+  message: string | null;
+}> {
+  if (addedTracks.length === 0) {
+    return { status: 'skipped', message: 'No tracks were added.' };
+  }
+  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
+  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.add.tmp');
+  if (!indexPath || !tmpPath) {
+    return {
+      status: 'error',
+      message: 'Unexpected: music index path escaped the mount.',
+    };
+  }
+
+  let index: T.MusicIndex;
+  try {
+    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      return { status: 'skipped', message: 'Music index not found.' };
+    }
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to read music index after adding tracks.',
+    };
+  }
+  if (index.version !== MUSIC_INDEX_VERSION) {
+    return {
+      status: 'skipped',
+      message: 'Music index version does not match the server version.',
+    };
+  }
+
+  const existingPaths = new Set(index.tracks.map((track) => track.path));
+  const newTracks = addedTracks.filter(
+    (track) => !existingPaths.has(track.path),
+  );
+  if (newTracks.length === 0) {
+    return {
+      status: 'skipped',
+      message: 'Index already had entries for the added tracks.',
+    };
+  }
+
+  const tracks = [...index.tracks, ...newTracks];
+  tracks.sort(compareTracksDefault);
+
+  const updatedIndex: T.MusicIndex = {
+    ...index,
+    scannedAt: new Date().toISOString(),
+    tracks,
+  };
+  let renamed = false;
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
+    await fs.rename(tmpPath, indexPath);
+    renamed = true;
+    return { status: 'updated', message: null };
+  } catch (error) {
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to write music index after adding tracks.',
+    };
+  } finally {
+    if (!renamed) {
+      await fs.unlink(tmpPath).catch((error: any) => {
+        if (error?.code !== 'ENOENT') {
+          console.error('Failed to clean up temporary music index.', error);
+        }
+      });
+    }
+  }
+}
+
 function isBinary(value: unknown): value is Buffer | Uint8Array {
   return Buffer.isBuffer(value) || ArrayBuffer.isView(value);
 }
