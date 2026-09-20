@@ -19,7 +19,9 @@ import {
 import {
   MUSIC_INDEX_FILENAME,
   buildNodeId3Tags,
+  cleanUpDirectoriesAfterTrackDeletion,
   dedupeStagedTracks,
+  deleteTrackFile,
   embedArtworkIntoTrack,
   installScanCrashGuard,
   listStagingPoolTracks,
@@ -33,6 +35,7 @@ import {
   updateMusicIndexAfterEmbeddedArtworkRemoval,
   updateIndexAfterFolderArtworkRemoval,
   updateIndexAfterFolderArtworkWrite,
+  updateIndexAfterTrackDeletion,
   updateIndexAfterTrackTagWrites,
   writeTrackTagsForPath,
 } from './logic.ts';
@@ -643,6 +646,39 @@ export function musicRoute(mountPath: MountPath) {
       };
     },
   );
+
+  /**
+   * Deletes one or more tracks from disk and patches the durable music index
+   * to match, so a stale entry doesn't resurrect the track on the next load.
+   */
+  route.post('/delete-tracks', async (req): Promise<T.DeleteTracksResponse> => {
+    const { paths } = req.body as T.DeleteTracksRequest;
+    if (!Array.isArray(paths) || paths.length === 0) {
+      throw new ClientError('Missing or empty paths array.');
+    }
+
+    const deleted: string[] = [];
+    const errors: T.DeleteTracksResponse['errors'] = [];
+    for (const clientPath of paths) {
+      const result = await deleteTrackFile(mountPath, clientPath);
+      if ('message' in result) {
+        errors.push(result);
+      } else {
+        deleted.push(result.clientPath);
+      }
+    }
+
+    const index = await updateIndexAfterTrackDeletion(mountPath, deleted);
+    try {
+      await cleanUpDirectoriesAfterTrackDeletion(mountPath, deleted);
+    } catch (error) {
+      console.error(
+        'Failed to clean up directories after track deletion.',
+        error,
+      );
+    }
+    return { deleted, errors, index };
+  });
 
   return route.router;
 }

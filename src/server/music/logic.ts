@@ -1198,6 +1198,197 @@ export async function updateIndexAfterFolderArtworkRemoval(
   }
 }
 
+export interface DeleteTrackSuccess {
+  clientPath: string;
+}
+
+export interface DeleteTrackFailure {
+  path: string;
+  message: string;
+}
+
+async function directoryHasAudioFiles(dirFullPath: string): Promise<boolean> {
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(dirFullPath, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  return entries.some(
+    (entry) =>
+      entry.isFile() && AUDIO_EXTENSIONS.has(extname(entry.name).toLowerCase()),
+  );
+}
+
+async function removeEmptyDirectoriesUpward(
+  mountPath: MountPath,
+  dirClientPath: string,
+): Promise<void> {
+  let currentClientPath = dirClientPath;
+  for (;;) {
+    const dirFullPath = mountPath.resolve(
+      currentClientPath,
+      /* expectedFolder */ true,
+    );
+    if (!dirFullPath || mountPath.isEqualToMountPath(dirFullPath)) {
+      return;
+    }
+    let entries: string[];
+    try {
+      entries = await fs.readdir(dirFullPath);
+    } catch {
+      return;
+    }
+    if (entries.length > 0) {
+      return;
+    }
+    try {
+      await fs.rmdir(dirFullPath);
+    } catch {
+      return;
+    }
+    const parentClientPath = dirname(currentClientPath);
+    if (parentClientPath === currentClientPath) {
+      return;
+    }
+    currentClientPath = parentClientPath;
+  }
+}
+
+export async function cleanUpDirectoriesAfterTrackDeletion(
+  mountPath: MountPath,
+  deletedClientPaths: string[],
+): Promise<void> {
+  const dirClientPaths = new Set(
+    deletedClientPaths.map((path) => dirname(path)),
+  );
+  for (const dirClientPath of dirClientPaths) {
+    const dirFullPath = mountPath.resolve(
+      dirClientPath,
+      /* expectedFolder */ true,
+    );
+    if (!dirFullPath) {
+      continue;
+    }
+    if (await directoryHasAudioFiles(dirFullPath)) {
+      continue;
+    }
+    await removeOutdatedFolderArtwork(
+      mountPath,
+      dirFullPath,
+      dirClientPath,
+      '',
+    );
+    await removeEmptyDirectoriesUpward(mountPath, dirClientPath);
+  }
+}
+
+export async function deleteTrackFile(
+  mountPath: MountPath,
+  clientPath: string,
+): Promise<DeleteTrackSuccess | DeleteTrackFailure> {
+  const resolvedPath = mountPath.resolve(clientPath);
+  if (!resolvedPath || mountPath.isEqualToMountPath(resolvedPath)) {
+    return { path: clientPath, message: 'Invalid path.' };
+  }
+  if (!AUDIO_EXTENSIONS.has(extname(resolvedPath).toLowerCase())) {
+    return { path: clientPath, message: 'Only audio files can be deleted.' };
+  }
+  try {
+    await fs.rm(resolvedPath);
+    return { clientPath };
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      return { path: clientPath, message: 'File not found.' };
+    }
+    return {
+      path: clientPath,
+      message:
+        error instanceof Error ? error.message : 'Unable to delete file.',
+    };
+  }
+}
+
+export async function updateIndexAfterTrackDeletion(
+  mountPath: MountPath,
+  deletedClientPaths: string[],
+): Promise<{
+  status: 'updated' | 'skipped' | 'error';
+  message: string | null;
+}> {
+  if (deletedClientPaths.length === 0) {
+    return { status: 'skipped', message: 'No tracks were deleted.' };
+  }
+  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
+  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.delete.tmp');
+  if (!indexPath || !tmpPath) {
+    return {
+      status: 'error',
+      message: 'Unexpected: music index path escaped the mount.',
+    };
+  }
+
+  let index: T.MusicIndex;
+  try {
+    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      return { status: 'skipped', message: 'Music index not found.' };
+    }
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to read music index after deleting tracks.',
+    };
+  }
+  if (index.version !== MUSIC_INDEX_VERSION) {
+    return {
+      status: 'skipped',
+      message: 'Music index version does not match the server version.',
+    };
+  }
+
+  const deletedSet = new Set(deletedClientPaths);
+  const tracks = index.tracks.filter((track) => !deletedSet.has(track.path));
+  if (tracks.length === index.tracks.length) {
+    return {
+      status: 'skipped',
+      message: 'Index had no entries for the deleted tracks.',
+    };
+  }
+
+  const updatedIndex: T.MusicIndex = {
+    ...index,
+    scannedAt: new Date().toISOString(),
+    tracks,
+  };
+  let renamed = false;
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
+    await fs.rename(tmpPath, indexPath);
+    renamed = true;
+    return { status: 'updated', message: null };
+  } catch (error) {
+    return {
+      status: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Failed to write music index after deleting tracks.',
+    };
+  } finally {
+    if (!renamed) {
+      await fs.unlink(tmpPath).catch((error: any) => {
+        if (error?.code !== 'ENOENT') {
+          console.error('Failed to clean up temporary music index.', error);
+        }
+      });
+    }
+  }
+}
+
 function isBinary(value: unknown): value is Buffer | Uint8Array {
   return Buffer.isBuffer(value) || ArrayBuffer.isView(value);
 }

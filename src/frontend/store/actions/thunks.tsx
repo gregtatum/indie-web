@@ -2084,19 +2084,33 @@ export function deleteMusicTracks(paths: string[]): Thunk<Promise<void>> {
       return;
     }
 
-    const fileStore = $.getCurrentFS(getState());
-    const deletedPaths: string[] = [];
-    let failureCount = 0;
-
-    for (const track of tracksToDelete) {
-      try {
-        await fileStore.delete(track.path);
-        deletedPaths.push(track.path);
-      } catch (error) {
-        failureCount += 1;
-        console.error(error);
+    const server = $.getCurrentServer(getState());
+    let response: T.DeleteTracksResponse;
+    try {
+      const res = await fetch(`${server.url}/music/delete-tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paths: tracksToDelete.map((track) => track.path),
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(await res.text());
       }
+      response = (await res.json()) as T.DeleteTracksResponse;
+    } catch (error) {
+      console.error(error);
+      dispatch(
+        addMessage({
+          message: 'Could not delete the track(s).',
+          timeout: true,
+        }),
+      );
+      return;
     }
+
+    const { deleted: deletedPaths, errors } = response;
+    const failureCount = errors.length;
 
     if (deletedPaths.length > 0) {
       const deletedSet = new Set(deletedPaths);

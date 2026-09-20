@@ -257,3 +257,16 @@ export interface StagingUploadResponse {
   tracks: TrackMetadata[];
   duplicateCount: number;
 }
+
+export interface DeleteTracksRequest {
+  paths: string[];
+}
+
+export interface DeleteTracksResponse {
+  deleted: string[];
+  errors: Array<{ path: string; message: string }>;
+  index: {
+    status: 'updated' | 'skipped' | 'error';
+    message: string | null;
+  };
+}

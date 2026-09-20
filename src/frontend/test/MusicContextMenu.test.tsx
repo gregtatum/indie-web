@@ -311,8 +311,12 @@ describe('track right-click context menu', () => {
   it('shows "Delete Track" for a single track and deletes it after confirming', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     try {
-      fetchMock.post(`${FAKE_SERVER.url}/file-store/delete`, {
-        body: JSON.stringify({ ok: true }),
+      fetchMock.post(`${FAKE_SERVER.url}/music/delete-tracks`, {
+        body: JSON.stringify({
+          deleted: ['/music/b.mp3'],
+          errors: [],
+          index: { status: 'updated', message: null },
+        }),
         status: 200,
       });
       const { store } = setup();
@@ -345,8 +349,12 @@ describe('track right-click context menu', () => {
   it('shows "Delete Selection" for a multi-track selection and deletes them after confirming', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     try {
-      fetchMock.post(`${FAKE_SERVER.url}/file-store/delete`, {
-        body: JSON.stringify({ ok: true }),
+      fetchMock.post(`${FAKE_SERVER.url}/music/delete-tracks`, {
+        body: JSON.stringify({
+          deleted: ['/music/a.mp3', '/music/b.mp3'],
+          errors: [],
+          index: { status: 'updated', message: null },
+        }),
         status: 200,
       });
       const { store } = setup();
@@ -647,8 +655,12 @@ describe('track list keyboard shortcuts', () => {
   it('cmd+delete deletes the focused track after confirming', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     try {
-      fetchMock.post(`${FAKE_SERVER.url}/file-store/delete`, {
-        body: JSON.stringify({ ok: true }),
+      fetchMock.post(`${FAKE_SERVER.url}/music/delete-tracks`, {
+        body: JSON.stringify({
+          deleted: ['/music/b.mp3'],
+          errors: [],
+          index: { status: 'updated', message: null },
+        }),
         status: 200,
       });
       const { store } = setup();
@@ -676,8 +688,12 @@ describe('track list keyboard shortcuts', () => {
   it('ctrl+delete deletes the focused track after confirming', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     try {
-      fetchMock.post(`${FAKE_SERVER.url}/file-store/delete`, {
-        body: JSON.stringify({ ok: true }),
+      fetchMock.post(`${FAKE_SERVER.url}/music/delete-tracks`, {
+        body: JSON.stringify({
+          deleted: ['/music/b.mp3'],
+          errors: [],
+          index: { status: 'updated', message: null },
+        }),
         status: 200,
       });
       const { store } = setup();
