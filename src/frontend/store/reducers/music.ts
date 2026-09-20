@@ -254,6 +254,20 @@ function stagingPool(
   }
 }
 
+function stagingArtwork(
+  state: Record<string, File> = {},
+  action: T.Action,
+): Record<string, File> {
+  switch (action.type) {
+    case 'set-music-staging-artwork':
+      return action.artwork;
+    case 'view-music':
+      return {};
+    default:
+      return state;
+  }
+}
+
 function stagingView(
   state: T.MusicStagingView | null = null,
   action: T.Action,
@@ -395,6 +409,7 @@ const combinedMusicReducer = combineReducers({
   editTrackPath,
   batchEditTrackPaths,
   stagingPool,
+  stagingArtwork,
   stagingView,
   editTab,
   panelOrder,

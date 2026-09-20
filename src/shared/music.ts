@@ -20,6 +20,36 @@ export const PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION =
 
 export type PreferComposerGroupingValue = 'true' | 'false';
 
+export const FOLDER_ARTWORK_FILENAMES = [
+  'cover.jpg',
+  'cover.png',
+  'folder.jpg',
+  'Folder.jpg',
+  'folder.png',
+  'Folder.png',
+  'front.jpg',
+  'front.png',
+];
+
+const FOLDER_ARTWORK_BASENAMES_LOWER = new Set(
+  FOLDER_ARTWORK_FILENAMES.map((name) => name.toLowerCase()),
+);
+
+export function isFolderArtworkFilename(name: string): boolean {
+  return FOLDER_ARTWORK_BASENAMES_LOWER.has(name.toLowerCase());
+}
+
+export function matchFolderArtworkFilename(names: string[]): string | null {
+  const byLower = new Map(names.map((name) => [name.toLowerCase(), name]));
+  for (const candidate of FOLDER_ARTWORK_FILENAMES) {
+    const actual = byLower.get(candidate.toLowerCase());
+    if (actual) {
+      return actual;
+    }
+  }
+  return null;
+}
+
 /**
  * The dependency-specific native tag values are normalized into this small
  * shape before app-level parsing, so shared code stays independent of

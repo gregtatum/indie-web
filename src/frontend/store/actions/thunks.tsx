@@ -19,6 +19,8 @@ import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
 import { FileStoreError } from 'frontend/logic/file-store';
 import { IDBError } from 'frontend/logic/file-store/indexeddb-fs';
+import { matchFolderArtworkFilename } from 'shared/music';
+import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
 
 function getMetadataFromCache(
   cache: T.ListFilesCache,
@@ -1858,17 +1860,47 @@ async function uploadToStagingPool(
 }
 
 export function addFilesToStagingPool(
-  files: FileList | File[],
+  droppedFiles: Array<{ file: File; sourceFolder: string }>,
 ): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const fileStore = $.getCurrentFS(getState());
     const server = $.getCurrentServer(getState());
 
-    const allFiles = Array.from(files);
-    const mp3Files = allFiles.filter((file) =>
-      file.name.toLowerCase().endsWith('.mp3'),
-    );
-    const rejectedCount = allFiles.length - mp3Files.length;
+    const byFolder = new Map<
+      string,
+      Array<{ file: File; sourceFolder: string }>
+    >();
+    for (const dropped of droppedFiles) {
+      const group = byFolder.get(dropped.sourceFolder) ?? [];
+      group.push(dropped);
+      byFolder.set(dropped.sourceFolder, group);
+    }
+
+    const mp3Files: File[] = [];
+    const mp3SourceFolders: string[] = [];
+    const folderArtworkBySourceFolder = new Map<string, File>();
+    let rejectedCount = 0;
+    for (const [sourceFolder, entries] of byFolder) {
+      const isMp3 = (entry: { file: File }) =>
+        entry.file.name.toLowerCase().endsWith('.mp3');
+      const mp3Entries = entries.filter(isMp3);
+      const otherEntries = entries.filter((entry) => !isMp3(entry));
+      for (const entry of mp3Entries) {
+        mp3Files.push(entry.file);
+        mp3SourceFolders.push(sourceFolder);
+      }
+      const artworkName = matchFolderArtworkFilename(
+        otherEntries.map((entry) => entry.file.name),
+      );
+      const artworkEntry = artworkName
+        ? otherEntries.find((entry) => entry.file.name === artworkName)
+        : undefined;
+      if (artworkEntry) {
+        folderArtworkBySourceFolder.set(sourceFolder, artworkEntry.file);
+      }
+      rejectedCount += otherEntries.length - (artworkEntry ? 1 : 0);
+    }
+
     const reportRejectedFiles = () => {
       if (rejectedCount > 0) {
         dispatch(
@@ -1901,6 +1933,13 @@ export function addFilesToStagingPool(
       mp3Files.map((file) => file.name),
       takenNames,
     );
+    const sourceFolderByStagingPath = new Map<string, string>();
+    for (let i = 0; i < filenames.length; i++) {
+      sourceFolderByStagingPath.set(
+        `/.music-staging/${filenames[i]}`,
+        mp3SourceFolders[i],
+      );
+    }
     const messageGeneration = dispatch(
       addMessage({ message: `Staging ${mp3Files.length} track(s)…` }),
     );
@@ -1915,6 +1954,27 @@ export function addFilesToStagingPool(
 
       if (addedTracks.length > 0) {
         dispatch(Plain.setMusicStagingPool([...existingPool, ...addedTracks]));
+
+        const newArtwork: Record<string, File> = {};
+        for (const track of addedTracks) {
+          const sourceFolder = sourceFolderByStagingPath.get(track.path);
+          const artworkFile =
+            sourceFolder !== undefined
+              ? folderArtworkBySourceFolder.get(sourceFolder)
+              : undefined;
+          if (artworkFile) {
+            newArtwork[track.path] = artworkFile;
+          }
+        }
+        if (Object.keys(newArtwork).length > 0) {
+          dispatch(
+            Plain.setMusicStagingArtwork({
+              ...$.getMusicStagingArtwork(getState()),
+              ...newArtwork,
+            }),
+          );
+        }
+
         dispatch(Plain.setMusicStagingView('staging'));
         if (existingPool.length === 0) {
           dispatch(Plain.setMusicSelectedTracks([addedTracks[0].path]));
@@ -1973,7 +2033,25 @@ export function removeMusicStagingPoolTracks(
         ),
       ),
     );
+    dispatch(
+      Plain.setMusicStagingArtwork(
+        withoutKeys($.getMusicStagingArtwork(getState()), removedSet),
+      ),
+    );
   };
+}
+
+function withoutKeys<Value>(
+  record: Record<string, Value>,
+  keys: Set<string>,
+): Record<string, Value> {
+  const next: Record<string, Value> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (!keys.has(key)) {
+      next[key] = value;
+    }
+  }
+  return next;
 }
 
 export function refreshMusicStagingPool(): Thunk<Promise<void>> {
@@ -2031,6 +2109,26 @@ async function findMusicImportCollisions(
   return collisions;
 }
 
+async function writeStagedFolderArtwork(
+  server: ReturnType<typeof $.getCurrentServer>,
+  trackPath: string,
+  artworkFile: File,
+): Promise<string | null> {
+  const res = await fetch(
+    `${server.url}/music/artwork?path=${encodeURIComponent(trackPath)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': artworkFile.type || 'image/jpeg' },
+      body: await artworkFile.arrayBuffer(),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+  const data = (await res.json()) as WriteFolderArtworkResponse;
+  return data.folderArtworkPath ?? null;
+}
+
 export interface MusicImportCommitResult {
   /** Source paths (still staged) that were not moved. */
   collisions: string[];
@@ -2041,6 +2139,7 @@ export function commitStagingPoolTracks(
 ): Thunk<Promise<MusicImportCommitResult>> {
   return async (dispatch, getState) => {
     const fileStore = $.getCurrentFS(getState());
+    const server = $.getCurrentServer(getState());
     const destinationMap = new Map(Object.entries(destinations));
     const collisions = await findMusicImportCollisions(
       fileStore,
@@ -2048,6 +2147,7 @@ export function commitStagingPoolTracks(
     );
 
     const pool = $.getMusicStagingPool(getState());
+    const stagingArtwork = $.getMusicStagingArtwork(getState());
     const tracksToMove = pool.filter(
       (track) => destinationMap.has(track.path) && !collisions.has(track.path),
     );
@@ -2058,6 +2158,7 @@ export function commitStagingPoolTracks(
     const movedTracks: T.TrackMetadata[] = [];
     const movedSourcePaths = new Set<string>();
     const stillStagedPaths = new Set(collisions);
+    const artworkByDestFolder = new Map<string, File>();
     for (let i = 0; i < tracksToMove.length; i++) {
       const track = tracksToMove[i];
       const destination = destinationMap.get(track.path);
@@ -2069,6 +2170,10 @@ export function commitStagingPoolTracks(
         await fileStore.move(track.path, destination);
         movedTracks.push({ ...track, path: destination });
         movedSourcePaths.add(track.path);
+        const artworkFile = stagingArtwork[track.path];
+        if (artworkFile) {
+          artworkByDestFolder.set(getDirName(destination), artworkFile);
+        }
       } catch (error) {
         console.error(error);
         stillStagedPaths.add(track.path);
@@ -2081,13 +2186,43 @@ export function commitStagingPoolTracks(
       );
     }
 
-    if (movedTracks.length > 0) {
+    const folderArtworkPathByDestFolder = new Map<string, string>();
+    for (const [destFolder, artworkFile] of artworkByDestFolder) {
+      const trackInFolder = movedTracks.find(
+        (track) => getDirName(track.path) === destFolder,
+      );
+      if (!trackInFolder) {
+        continue;
+      }
+      try {
+        const folderArtworkPath = await writeStagedFolderArtwork(
+          server,
+          trackInFolder.path,
+          artworkFile,
+        );
+        if (folderArtworkPath) {
+          folderArtworkPathByDestFolder.set(destFolder, folderArtworkPath);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    const movedTracksWithArtwork = folderArtworkPathByDestFolder.size
+      ? movedTracks.map((track) => {
+          const folderArtworkPath = folderArtworkPathByDestFolder.get(
+            getDirName(track.path),
+          );
+          return folderArtworkPath ? { ...track, folderArtworkPath } : track;
+        })
+      : movedTracks;
+
+    if (movedTracksWithArtwork.length > 0) {
       const existingTracks = $.getMusicTracks(getState());
       const needsRescan = $.getMusicNeedsRescan(getState());
       const servedIndexVersion = $.getMusicServedIndexVersion(getState());
       dispatch(
         setMusicTracks(
-          [...existingTracks, ...movedTracks],
+          [...existingTracks, ...movedTracksWithArtwork],
           needsRescan,
           servedIndexVersion,
         ),
@@ -2095,6 +2230,11 @@ export function commitStagingPoolTracks(
     }
 
     if (movedSourcePaths.size > 0) {
+      dispatch(
+        Plain.setMusicStagingArtwork(
+          withoutKeys(stagingArtwork, movedSourcePaths),
+        ),
+      );
       dispatch(
         Plain.setMusicStagingPool(
           pool.filter((track) => !movedSourcePaths.has(track.path)),

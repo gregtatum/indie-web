@@ -7,7 +7,7 @@ import {
 } from '@testing-library/react';
 import { act } from 'react';
 import { readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { $, A, T } from 'frontend';
 import { resolveOrganizationPath } from 'shared/music';
 import {
@@ -1020,6 +1020,184 @@ describe('drag-and-drop import & organize', () => {
 
       // No manual rescan needed — the library view already reflects the move.
       await screen.findByText('Time', { selector: '.musicTrackTitle' });
+    }, 30_000);
+
+    it("writes a dropped folder's cover art to the organized destination and sets folderArtworkPath", async () => {
+      const { store } = await renderMusicApp({ server: getServer() });
+      await scanLibrary();
+      const zone = await dropZone();
+
+      const track = new File(
+        [
+          new Uint8Array(
+            buildMp3WithTags({
+              title: 'Time',
+              artist: 'Pink Floyd',
+              albumArtist: 'Pink Floyd',
+              album: 'The Dark Side of the Moon',
+              genre: 'Rock',
+              track: 4,
+            }),
+          ),
+        ],
+        'time.mp3',
+        { type: 'audio/mpeg' },
+      );
+      const cover = new File(
+        [new Uint8Array([0xff, 0xd8, 0xff, 0xe0])],
+        'cover.jpg',
+        { type: 'image/jpeg' },
+      );
+      const folder = dirEntry('The Dark Side of the Moon', [
+        fileEntry(track),
+        fileEntry(cover),
+      ]);
+
+      await act(async () => {
+        fireEvent.drop(zone, {
+          dataTransfer: makeFolderDataTransfer([folder]),
+        });
+        await waitForNetworkIdle();
+      });
+      await waitForStagingPool(store, 1);
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
+      await organizeAll();
+      await clickDone();
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Organize ·/)).toBeNull();
+      });
+
+      const defaultPreset =
+        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+      const expectedPath = resolveOrganizationPath(defaultPreset, {
+        genre: 'Rock',
+        artist: 'Pink Floyd',
+        albumArtist: 'Pink Floyd',
+        album: 'The Dark Side of the Moon',
+        year: null,
+        title: 'Time',
+        track: 4,
+        composer: null,
+      });
+      const expectedFolder = dirname(expectedPath);
+      const expectedFolderArtworkPath = `${expectedFolder}/Folder.jpg`;
+
+      await expect(
+        stat(join(getServer().mountDir, expectedFolderArtworkPath)),
+      ).resolves.toBeTruthy();
+
+      const tracks = $.getMusicTracks(store.getState());
+      const movedTrack = tracks.find((t) => t.path === expectedPath);
+      expect(movedTrack?.folderArtworkPath).toBe(expectedFolderArtworkPath);
+    }, 30_000);
+
+    it('splits a shared folder cover across every distinct destination folder its tracks land in', async () => {
+      const { store } = await renderMusicApp({ server: getServer() });
+      await scanLibrary();
+      const zone = await dropZone();
+
+      const trackA = new File(
+        [
+          new Uint8Array(
+            buildMp3WithTags({
+              title: 'Time',
+              artist: 'Pink Floyd',
+              albumArtist: 'Pink Floyd',
+              album: 'The Dark Side of the Moon',
+              genre: 'Rock',
+              track: 4,
+            }),
+          ),
+        ],
+        'a.mp3',
+        { type: 'audio/mpeg' },
+      );
+      const trackB = new File(
+        [
+          new Uint8Array(
+            buildMp3WithTags({
+              title: 'Kaneda',
+              artist: 'Geinoh',
+              genre: 'Soundtrack',
+            }),
+          ),
+        ],
+        'b.mp3',
+        { type: 'audio/mpeg' },
+      );
+      const cover = new File(
+        [new Uint8Array([0xff, 0xd8, 0xff, 0xe0])],
+        'cover.jpg',
+        { type: 'image/jpeg' },
+      );
+      const folder = dirEntry('Compilation', [
+        fileEntry(trackA),
+        fileEntry(trackB),
+        fileEntry(cover),
+      ]);
+
+      await act(async () => {
+        fireEvent.drop(zone, {
+          dataTransfer: makeFolderDataTransfer([folder]),
+        });
+        await waitForNetworkIdle();
+      });
+      await waitForStagingPool(store, 2);
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
+      await organizeAll();
+      await clickDone();
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Organize ·/)).toBeNull();
+      });
+
+      const defaultPreset =
+        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+      const expectedPathA = resolveOrganizationPath(defaultPreset, {
+        genre: 'Rock',
+        artist: 'Pink Floyd',
+        albumArtist: 'Pink Floyd',
+        album: 'The Dark Side of the Moon',
+        year: null,
+        title: 'Time',
+        track: 4,
+        composer: null,
+      });
+      const expectedPathB = resolveOrganizationPath(defaultPreset, {
+        genre: 'Soundtrack',
+        artist: 'Geinoh',
+        albumArtist: null,
+        album: null,
+        year: null,
+        title: 'Kaneda',
+        track: null,
+        composer: null,
+      });
+      const folderA = dirname(expectedPathA);
+      const folderB = dirname(expectedPathB);
+      expect(folderA).not.toBe(folderB);
+
+      await expect(
+        stat(join(getServer().mountDir, `${folderA}/Folder.jpg`)),
+      ).resolves.toBeTruthy();
+      await expect(
+        stat(join(getServer().mountDir, `${folderB}/Folder.jpg`)),
+      ).resolves.toBeTruthy();
+
+      const tracks = $.getMusicTracks(store.getState());
+      expect(
+        tracks.find((t) => t.path === expectedPathA)?.folderArtworkPath,
+      ).toBe(`${folderA}/Folder.jpg`);
+      expect(
+        tracks.find((t) => t.path === expectedPathB)?.folderArtworkPath,
+      ).toBe(`${folderB}/Folder.jpg`);
     }, 30_000);
 
     it('flags colliding destinations without moving them, letting the rest commit and allowing a retry', async () => {

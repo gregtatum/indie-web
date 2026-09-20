@@ -44,33 +44,37 @@ async function readAllDirectoryEntries(
   return entries;
 }
 
-async function collectFilesFromEntry(entry: FileSystemEntry): Promise<File[]> {
+export interface DroppedFile {
+  file: File;
+  sourceFolder: string;
+}
+
+async function collectFilesFromEntry(
+  entry: FileSystemEntry,
+  parentFolder: string,
+): Promise<DroppedFile[]> {
   if (entry.isFile) {
     const file = await new Promise<File>((resolve, reject) =>
       (entry as FileSystemFileEntry).file(resolve, reject),
     );
-    return [file];
+    return [{ file, sourceFolder: parentFolder }];
   }
   if (entry.isDirectory) {
+    const folder = parentFolder ? `${parentFolder}/${entry.name}` : entry.name;
     const entries = await readAllDirectoryEntries(
       (entry as FileSystemDirectoryEntry).createReader(),
     );
-    const nested = await Promise.all(entries.map(collectFilesFromEntry));
+    const nested = await Promise.all(
+      entries.map((child) => collectFilesFromEntry(child, folder)),
+    );
     return nested.flat();
   }
   return [];
 }
 
-/**
- * Flattens a drop's files, recursing into any dropped folders (e.g. an album
- * folder dragged straight from Finder) via the FileSystem Entry API so
- * non-MP3 siblings — cover art, playlists, `.DS_Store` — don't block the
- * drop. Falls back to `dataTransfer.files` when entries aren't available
- * (older browsers, or a test's synthetic DataTransfer).
- */
 export async function collectFilesFromDataTransfer(
   dataTransfer: DataTransfer | null,
-): Promise<File[]> {
+): Promise<DroppedFile[]> {
   if (!dataTransfer) {
     return [];
   }
@@ -79,10 +83,15 @@ export async function collectFilesFromDataTransfer(
     .filter((entry): entry is FileSystemEntry => entry !== null);
 
   if (entries.length === 0) {
-    return Array.from(dataTransfer.files ?? []);
+    return Array.from(dataTransfer.files ?? []).map((file) => ({
+      file,
+      sourceFolder: '',
+    }));
   }
 
-  const nested = await Promise.all(entries.map(collectFilesFromEntry));
+  const nested = await Promise.all(
+    entries.map((entry) => collectFilesFromEntry(entry, '')),
+  );
   return nested.flat();
 }
 

@@ -13,6 +13,8 @@ import {
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
   buildId3v1TagBuffer,
   compareTracksDefault,
+  isFolderArtworkFilename,
+  matchFolderArtworkFilename,
   nativePrivateTextTagValue,
   parseBooleanTagValue,
   parsePreferComposerGroupingTag,
@@ -21,17 +23,6 @@ import {
 import type { Id3v1TagFields } from '../../shared/music.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
-
-const FOLDER_ARTWORK_FILENAMES = [
-  'cover.jpg',
-  'cover.png',
-  'folder.jpg',
-  'Folder.jpg',
-  'folder.png',
-  'Folder.png',
-  'front.jpg',
-  'front.png',
-];
 
 const AUDIO_EXTENSIONS = new Set([
   '.mp3',
@@ -56,11 +47,6 @@ const FRAME_ID_TO_NODE_ID3: Record<string, string> = {
   TEXT: 'textWriter',
 };
 
-/** Recognized folder-artwork basenames, lower-cased, matched case-insensitively. */
-const FOLDER_ARTWORK_BASENAMES_LOWER = new Set(
-  FOLDER_ARTWORK_FILENAMES.map((name) => name.toLowerCase()),
-);
-
 /**
  * When writing new folder artwork, remove any older folder artwork with all
  * variants from FOLDER_ARTWORK_FILENAMES.
@@ -83,8 +69,10 @@ export async function removeOutdatedFolderArtwork(
     if (!entry.isFile()) {
       continue;
     }
-    const lower = entry.name.toLowerCase();
-    if (lower === keepLower || !FOLDER_ARTWORK_BASENAMES_LOWER.has(lower)) {
+    if (
+      entry.name.toLowerCase() === keepLower ||
+      !isFolderArtworkFilename(entry.name)
+    ) {
       continue;
     }
     const fullPath = mountPath.joinWithinMount(dirFullPath, entry.name);
@@ -244,13 +232,9 @@ async function probeFolderArtworkForDir(
   let folderArtworkPath: string | null = null;
   try {
     const entries = await fs.readdir(dirFullPath);
-    const entryMap = new Map(entries.map((e) => [e.toLowerCase(), e]));
-    for (const name of FOLDER_ARTWORK_FILENAMES) {
-      const actual = entryMap.get(name.toLowerCase());
-      if (actual) {
-        folderArtworkPath = dirClientPath + '/' + actual;
-        break;
-      }
+    const actual = matchFolderArtworkFilename(entries);
+    if (actual) {
+      folderArtworkPath = dirClientPath + '/' + actual;
     }
   } catch {
     // directory unreadable, no folder artwork
