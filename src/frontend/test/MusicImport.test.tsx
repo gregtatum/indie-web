@@ -820,6 +820,68 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
   });
 
+  describe('resuming or discarding an abandoned staged import', () => {
+    async function abandonBatch(
+      store: Awaited<ReturnType<typeof renderMusicApp>>['store'],
+    ) {
+      await act(async () => {
+        store.dispatch(A.setMusicImportBatch(null));
+        await store.dispatch(A.refreshMusicStagedBatchSummaries());
+      });
+      await screen.findByText('1 incomplete import');
+    }
+
+    it('resumes an abandoned staged batch, restoring its tracks', async () => {
+      const { store } = await dropTrack('time.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+      const batchId = $.getMusicImportBatch(store.getState())
+        ?.batchId as string;
+
+      await abandonBatch(store);
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+        await waitForNetworkIdle();
+      });
+
+      await waitForImportBatch(store, 1);
+      const batch = $.getMusicImportBatch(store.getState());
+      expect(batch?.batchId).toBe(batchId);
+      expect(batch?.tracks[0].title).toBe('Time');
+    }, 30_000);
+
+    it('discards an abandoned staged batch from the resume banner', async () => {
+      const { store } = await dropTrack('time.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+      const batchDir = join(
+        getServer().mountDir,
+        '.music-staging',
+        $.getMusicImportBatch(store.getState())?.batchId as string,
+      );
+
+      await abandonBatch(store);
+
+      const discardButton = screen.getByRole('button', {
+        name: 'Discard staged import',
+      });
+      fireEvent.click(discardButton);
+      await screen.findByText('Click again to discard');
+      await act(async () => {
+        fireEvent.click(discardButton);
+        await waitForNetworkIdle();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText('1 incomplete import')).toBeNull();
+      });
+      await expect(readdir(batchDir)).rejects.toThrow();
+    }, 30_000);
+  });
+
   describe('commit ("Done")', () => {
     beforeEach(() => {
       jest

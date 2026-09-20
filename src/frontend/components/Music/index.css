@@ -198,6 +198,50 @@
   overflow: hidden;
 }
 
+.musicStagedImportsBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: var(--music-padding-v) var(--music-padding-h);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-raised);
+  flex-shrink: 0;
+}
+
+.musicStagedImportsBannerTitle {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--text-heading);
+  white-space: nowrap;
+}
+
+.musicStagedImportsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.musicStagedImportsListItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.musicStagedImportsListItemLabel {
+  font-size: var(--font-size-small);
+  color: var(--text-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
 .musicBatchEditView {
   display: flex;
   flex-direction: column;

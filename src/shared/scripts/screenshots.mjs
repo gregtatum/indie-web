@@ -150,6 +150,21 @@ const SHOTS = [
     },
   },
   {
+    name: 'musicimport-resume-banner',
+    surface: 'music',
+    route: '/music/music/',
+    waitFor: '.musicLibraryView',
+    settleMs: 1000,
+    describe: 'Music import: resume banner for an abandoned staged batch',
+    prepare: async (page) => {
+      await dropImportTracks(page);
+      await page.reload();
+      await page.waitForSelector('.musicStagedImportsBanner', {
+        timeout: 10_000,
+      });
+    },
+  },
+  {
     name: 'floppydisk-files',
     surface: 'files',
     route: '/files/folder/',

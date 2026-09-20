@@ -2090,6 +2090,56 @@ export function refreshMusicStagedBatchSummaries(): Thunk<Promise<void>> {
   };
 }
 
+export function resumeMusicImportBatch(batchId: string): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const server = $.getCurrentServer(getState());
+    const messageGeneration = dispatch(
+      addMessage({ message: 'Resuming staged import…' }),
+    );
+    try {
+      const manifestRes = await fetch(
+        `${server.url}/music/staged-batch?batchId=${encodeURIComponent(batchId)}`,
+      );
+      if (!manifestRes.ok) {
+        throw new Error(await manifestRes.text());
+      }
+      const manifest = (await manifestRes.json()) as T.StagedBatchManifest;
+
+      const scanRes = await fetch(
+        `${server.url}/music/music-index/scan-paths`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paths: manifest.trackPaths }),
+        },
+      );
+      if (!scanRes.ok) {
+        throw new Error(await scanRes.text());
+      }
+      const scanData = (await scanRes.json()) as T.ScanTrackPathsResponse;
+
+      dispatch(
+        Plain.setMusicImportBatch({
+          batchId: manifest.batchId,
+          tracks: scanData.tracks,
+          step: manifest.step,
+          template: manifest.template ?? '',
+        }),
+      );
+      dispatch(Plain.dismissMessage(messageGeneration));
+    } catch (error) {
+      console.error(error);
+      dispatch(
+        addMessage({
+          message: 'There was an error resuming the staged import.',
+          generation: messageGeneration,
+          timeout: true,
+        }),
+      );
+    }
+  };
+}
+
 export function discardMusicImportBatch(batchId: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const server = $.getCurrentServer(getState());
@@ -2105,7 +2155,9 @@ export function discardMusicImportBatch(batchId: string): Thunk<Promise<void>> {
     } catch (error) {
       console.error(error);
     }
-    dispatch(Plain.setMusicImportBatch(null));
+    if ($.getMusicImportBatch(getState())?.batchId === batchId) {
+      dispatch(Plain.setMusicImportBatch(null));
+    }
     void dispatch(refreshMusicStagedBatchSummaries());
   };
 }

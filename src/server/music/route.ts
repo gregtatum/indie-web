@@ -195,6 +195,16 @@ export function musicRoute(mountPath: MountPath) {
     return listStagedBatches(mountPath);
   });
 
+  route.get('/staged-batch', async (req): Promise<T.StagedBatchManifest> => {
+    const { batchId } = req.query;
+    assertValidBatchId(batchId);
+    const manifest = await readStagedBatchManifest(mountPath, batchId);
+    if (!manifest) {
+      throw new NotFoundError('Staged batch not found.');
+    }
+    return manifest;
+  });
+
   /** `batchId` is client-generated so it can upload files before this call. */
   route.post('/staged-batch', async (req): Promise<T.StagedBatchManifest> => {
     const { batchId, trackPaths } = req.body as {

@@ -135,6 +135,10 @@ export function MusicLibraryView({
   }, [completedScanCount]);
 
   React.useEffect(() => {
+    void dispatch(A.refreshMusicStagedBatchSummaries());
+  }, [dispatch]);
+
+  React.useEffect(() => {
     const currentServer = server;
     const fetchController = new AbortController();
 
@@ -248,9 +252,12 @@ export function MusicLibraryView({
 
   if (error) {
     return withoutDropTarget(
-      <div className="musicLibraryViewError">
-        <div>{error}</div>
-      </div>,
+      <>
+        <StagedImportsBanner />
+        <div className="musicLibraryViewError">
+          <div>{error}</div>
+        </div>
+      </>,
     );
   }
 
@@ -265,6 +272,7 @@ export function MusicLibraryView({
 
   return (
     <div className="musicLibraryView">
+      <StagedImportsBanner />
       <div className="musicLibraryBody">
         <Splitter
           direction="horizontal"
@@ -287,6 +295,69 @@ export function MusicLibraryView({
           persistLocalStorage="musicLibrarySidebarSplitterOffset"
         />
       </div>
+    </div>
+  );
+}
+
+function StagedImportsBanner() {
+  const dispatch = Hooks.useDispatch();
+  const summaries = $$.getMusicStagedBatchSummaries();
+  const [discardPendingId, setDiscardPendingId] = React.useState<string | null>(
+    null,
+  );
+
+  if (summaries.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="musicStagedImportsBanner">
+      <span className="musicStagedImportsBannerTitle">
+        {summaries.length} incomplete{' '}
+        {summaries.length === 1 ? 'import' : 'imports'}
+      </span>
+      <ul className="musicStagedImportsList">
+        {summaries.map((summary) => (
+          <li key={summary.batchId} className="musicStagedImportsListItem">
+            <span className="musicStagedImportsListItemLabel">
+              {summary.trackCount}{' '}
+              {summary.trackCount === 1 ? 'track' : 'tracks'} ·{' '}
+              {summary.step === 'organizing' ? 'Organizing' : 'Editing'} ·{' '}
+              {new Date(summary.createdAt).toLocaleString()}
+            </span>
+            <button
+              type="button"
+              className="button"
+              onClick={() =>
+                void dispatch(A.resumeMusicImportBatch(summary.batchId))
+              }
+            >
+              Resume
+            </button>
+            {discardPendingId === summary.batchId ? (
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  setDiscardPendingId(null);
+                  void dispatch(A.discardMusicImportBatch(summary.batchId));
+                }}
+              >
+                Click again to discard
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="musicBatchEditCloseButton"
+                aria-label="Discard staged import"
+                onClick={() => setDiscardPendingId(summary.batchId)}
+              >
+                <img src="/svg/xmark.svg" alt="" />
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
