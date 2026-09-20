@@ -1,8 +1,10 @@
 import { ClientError, colors, type MountPath } from '../route-utils.ts';
 import NodeID3 from 'node-id3';
 import type { T } from '../index.ts';
-import { Dirent, promises as fs } from 'node:fs';
+import { Dirent, createReadStream, promises as fs } from 'node:fs';
 import { extname, dirname } from 'node:path';
+import { createHash } from 'node:crypto';
+import { pipeline } from 'node:stream/promises';
 import { parseFile } from 'music-metadata';
 import {
   APP_FRAME_IDS,
@@ -377,21 +379,136 @@ export async function scanTrackFiles(
   return results;
 }
 
-/**
- * `findAudioFiles` skips dot-prefixed entries, so files staged here are
- * invisible to the library until a batch is committed and moved out.
- */
 export const MUSIC_STAGING_DIRNAME = '.music-staging';
 
-const BATCH_MANIFEST_FILENAME = 'batch.json';
+const STAGING_BATCHES_DIRNAME = '.batches';
+const BATCH_MANIFEST_EXT = '.json';
+const STAGING_INDEX_FILENAME = '.staging-index.json';
+const STAGING_INDEX_VERSION = 1;
 
-function stagedBatchDir(
+interface StagingIndexEntry {
+  hash: string;
+  size: number;
+  mtime: string;
+}
+
+interface StagingIndex {
+  version: number;
+  entries: Record<string, StagingIndexEntry>;
+}
+
+export interface StagingPoolEntry {
+  path: string;
+  hash: string;
+  size: number;
+  mtime: string;
+}
+
+function stagingBatchesDir(mountPath: MountPath): string | null {
+  return mountPath.joinOnMount(
+    `${MUSIC_STAGING_DIRNAME}/${STAGING_BATCHES_DIRNAME}`,
+  );
+}
+
+function stagedBatchManifestPath(
   mountPath: MountPath,
   batchId: string,
-): { clientDir: string; fullDir: string } | null {
-  const clientDir = `/${MUSIC_STAGING_DIRNAME}/${batchId}`;
-  const fullDir = mountPath.joinOnMount(`${MUSIC_STAGING_DIRNAME}/${batchId}`);
-  return fullDir ? { clientDir, fullDir } : null;
+): string | null {
+  const dir = stagingBatchesDir(mountPath);
+  return dir
+    ? mountPath.joinWithinMount(dir, `${batchId}${BATCH_MANIFEST_EXT}`)
+    : null;
+}
+
+async function hashFile(fullPath: string): Promise<string> {
+  const hash = createHash('sha256');
+  await pipeline(createReadStream(fullPath), hash);
+  return hash.digest('hex');
+}
+
+function stagingIndexPaths(
+  mountPath: MountPath,
+): { indexPath: string; tmpPath: string } | null {
+  const indexPath = mountPath.joinOnMount(
+    `${MUSIC_STAGING_DIRNAME}/${STAGING_INDEX_FILENAME}`,
+  );
+  const tmpPath = mountPath.joinOnMount(
+    `${MUSIC_STAGING_DIRNAME}/${STAGING_INDEX_FILENAME}.tmp`,
+  );
+  return indexPath && tmpPath ? { indexPath, tmpPath } : null;
+}
+
+async function readStagingIndex(mountPath: MountPath): Promise<StagingIndex> {
+  const paths = stagingIndexPaths(mountPath);
+  if (paths) {
+    try {
+      const raw = JSON.parse(await fs.readFile(paths.indexPath, 'utf-8'));
+      if (raw?.version === STAGING_INDEX_VERSION) {
+        return raw as StagingIndex;
+      }
+    } catch {
+      // No existing index — start fresh.
+    }
+  }
+  return { version: STAGING_INDEX_VERSION, entries: {} };
+}
+
+async function writeStagingIndex(
+  mountPath: MountPath,
+  index: StagingIndex,
+): Promise<void> {
+  const paths = stagingIndexPaths(mountPath);
+  if (!paths) {
+    return;
+  }
+  await fs.writeFile(paths.tmpPath, JSON.stringify(index, null, '\t'));
+  await fs.rename(paths.tmpPath, paths.indexPath);
+}
+
+export async function scanStagingPool(
+  mountPath: MountPath,
+): Promise<StagingPoolEntry[]> {
+  const stagingRoot = mountPath.joinOnMount(MUSIC_STAGING_DIRNAME);
+  if (!stagingRoot) {
+    return [];
+  }
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(stagingRoot, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const index = await readStagingIndex(mountPath);
+  const nextEntries: StagingIndex['entries'] = {};
+  const results: StagingPoolEntry[] = [];
+
+  for (const entry of entries) {
+    if (!entry.isFile() || entry.name.startsWith('.')) {
+      continue;
+    }
+    const fullPath = mountPath.joinWithinMount(stagingRoot, entry.name);
+    if (!fullPath) {
+      continue;
+    }
+    const clientPath = `/${MUSIC_STAGING_DIRNAME}/${entry.name}`;
+    const stats = await fs.stat(fullPath);
+    const mtime = stats.mtime.toISOString();
+    const cached = index.entries[clientPath];
+    const hash =
+      cached && cached.mtime === mtime && cached.size === stats.size
+        ? cached.hash
+        : await hashFile(fullPath);
+
+    nextEntries[clientPath] = { hash, size: stats.size, mtime };
+    results.push({ path: clientPath, hash, size: stats.size, mtime });
+  }
+
+  await writeStagingIndex(mountPath, {
+    version: STAGING_INDEX_VERSION,
+    entries: nextEntries,
+  });
+  return results;
 }
 
 /**
@@ -402,12 +519,6 @@ export async function createStagedBatch(
   batchId: string,
   trackPaths: string[],
 ): Promise<T.StagedBatchManifest> {
-  const dir = stagedBatchDir(mountPath, batchId);
-  if (!dir) {
-    throw new Error('Unexpected: staged batch path escaped the mount.');
-  }
-  await fs.mkdir(dir.fullDir, { recursive: true });
-
   const existing = await readStagedBatchManifest(mountPath, batchId);
   const manifest: T.StagedBatchManifest = existing
     ? {
@@ -447,19 +558,13 @@ export async function writeStagedBatchManifest(
   mountPath: MountPath,
   manifest: T.StagedBatchManifest,
 ): Promise<void> {
-  const dir = stagedBatchDir(mountPath, manifest.batchId);
-  if (!dir) {
-    throw new Error('Unexpected: staged batch path escaped the mount.');
-  }
-  const manifestPath = mountPath.joinWithinMount(
-    dir.fullDir,
-    BATCH_MANIFEST_FILENAME,
-  );
+  const manifestPath = stagedBatchManifestPath(mountPath, manifest.batchId);
   if (!manifestPath) {
     throw new Error(
       'Unexpected: staged batch manifest path escaped the mount.',
     );
   }
+  await fs.mkdir(dirname(manifestPath), { recursive: true });
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, '\t'));
 }
 
@@ -467,14 +572,7 @@ export async function readStagedBatchManifest(
   mountPath: MountPath,
   batchId: string,
 ): Promise<T.StagedBatchManifest | null> {
-  const dir = stagedBatchDir(mountPath, batchId);
-  if (!dir) {
-    return null;
-  }
-  const manifestPath = mountPath.joinWithinMount(
-    dir.fullDir,
-    BATCH_MANIFEST_FILENAME,
-  );
+  const manifestPath = stagedBatchManifestPath(mountPath, batchId);
   if (!manifestPath) {
     return null;
   }
@@ -490,22 +588,25 @@ export async function readStagedBatchManifest(
 export async function listStagedBatches(
   mountPath: MountPath,
 ): Promise<T.StagedBatchSummary[]> {
-  const stagingRoot = mountPath.joinOnMount(MUSIC_STAGING_DIRNAME);
-  if (!stagingRoot) {
+  await scanStagingPool(mountPath);
+
+  const batchesDir = stagingBatchesDir(mountPath);
+  if (!batchesDir) {
     return [];
   }
   let entries: Dirent[];
   try {
-    entries = await fs.readdir(stagingRoot, { withFileTypes: true });
+    entries = await fs.readdir(batchesDir, { withFileTypes: true });
   } catch {
     return [];
   }
   const summaries: T.StagedBatchSummary[] = [];
   for (const entry of entries) {
-    if (!entry.isDirectory()) {
+    if (!entry.isFile() || !entry.name.endsWith(BATCH_MANIFEST_EXT)) {
       continue;
     }
-    const manifest = await readStagedBatchManifest(mountPath, entry.name);
+    const batchId = entry.name.slice(0, -BATCH_MANIFEST_EXT.length);
+    const manifest = await readStagedBatchManifest(mountPath, batchId);
     if (!manifest) {
       continue;
     }
@@ -523,11 +624,19 @@ export async function discardStagedBatch(
   mountPath: MountPath,
   batchId: string,
 ): Promise<void> {
-  const dir = stagedBatchDir(mountPath, batchId);
-  if (!dir) {
-    throw new Error('Unexpected: staged batch path escaped the mount.');
+  const manifest = await readStagedBatchManifest(mountPath, batchId);
+  if (manifest) {
+    for (const trackPath of manifest.trackPaths) {
+      const fullPath = mountPath.resolve(trackPath);
+      if (fullPath) {
+        await fs.rm(fullPath, { force: true });
+      }
+    }
   }
-  await fs.rm(dir.fullDir, { recursive: true, force: true });
+  const manifestPath = stagedBatchManifestPath(mountPath, batchId);
+  if (manifestPath) {
+    await fs.rm(manifestPath, { force: true });
+  }
 }
 
 /**

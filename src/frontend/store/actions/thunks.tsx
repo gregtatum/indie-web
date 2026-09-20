@@ -1828,6 +1828,19 @@ function dedupeStagedFilenames(
   });
 }
 
+async function getStagingPoolTakenNames(
+  fileStore: ReturnType<typeof $.getCurrentFS>,
+): Promise<string[]> {
+  try {
+    const listing = await fileStore.listFiles('/.music-staging');
+    return listing
+      .filter((entry) => entry.type === 'file')
+      .map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+}
+
 async function uploadAndScanStagedFiles(
   fileStore: ReturnType<typeof $.getCurrentFS>,
   server: ReturnType<typeof $.getCurrentServer>,
@@ -1837,7 +1850,7 @@ async function uploadAndScanStagedFiles(
 ): Promise<T.TrackMetadata[]> {
   const trackPaths: string[] = [];
   for (let i = 0; i < mp3Files.length; i++) {
-    const path = `/.music-staging/${batchId}/${filenames[i]}`;
+    const path = `/.music-staging/${filenames[i]}`;
     await fileStore.saveBlob(path, 'add', mp3Files[i]);
     trackPaths.push(path);
   }
@@ -1864,12 +1877,6 @@ async function uploadAndScanStagedFiles(
   return scanData.tracks;
 }
 
-/**
- * Drops dragged-in files into a new drag-and-drop import batch: stages the
- * `.mp3` files under `.music-staging/<batchId>/`, parses their tags, and
- * writes the batch manifest. Non-MP3 files in the drop are reported and
- * skipped rather than failing the whole batch.
- */
 export function startMusicImportBatch(
   files: FileList | File[],
 ): Thunk<Promise<void>> {
@@ -1900,7 +1907,11 @@ export function startMusicImportBatch(
     }
 
     const batchId = crypto.randomUUID();
-    const filenames = dedupeStagedFilenames(mp3Files.map((file) => file.name));
+    const takenNames = await getStagingPoolTakenNames(fileStore);
+    const filenames = dedupeStagedFilenames(
+      mp3Files.map((file) => file.name),
+      takenNames,
+    );
     const messageGeneration = dispatch(
       addMessage({ message: `Staging ${mp3Files.length} track(s)…` }),
     );
@@ -1974,7 +1985,7 @@ export function addToMusicImportBatch(
       return;
     }
 
-    const takenNames = batch.tracks.map((track) => getPathFileName(track.path));
+    const takenNames = await getStagingPoolTakenNames(fileStore);
     const filenames = dedupeStagedFilenames(
       mp3Files.map((file) => file.name),
       takenNames,

@@ -1,7 +1,8 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { musicRoute } from '../music/route.ts';
 import { buildMp3WithTags, createTestServer, withLogs } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
@@ -16,14 +17,13 @@ if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
 
 async function stageTrack(
   server: TestServer,
-  batchId: string,
   filename: string,
   tags: Parameters<typeof buildMp3WithTags>[0],
 ): Promise<string> {
-  const dir = join(server.mountDir, '.music-staging', batchId);
+  const dir = join(server.mountDir, '.music-staging');
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, filename), buildMp3WithTags(tags));
-  return `/.music-staging/${batchId}/${filename}`;
+  return `/.music-staging/${filename}`;
 }
 
 describe('drag-and-drop import staging', () => {
@@ -38,7 +38,7 @@ describe('drag-and-drop import staging', () => {
   after(() => server.close());
 
   it('a staged track is invisible to a real library scan', async () => {
-    await stageTrack(server, 'batch-1', 'track.mp3', { title: 'Staged' });
+    await stageTrack(server, 'batch1-track.mp3', { title: 'Staged' });
 
     const res = await fetch(`${server.baseUrl}/music/music-index/scan`, {
       method: 'POST',
@@ -49,7 +49,7 @@ describe('drag-and-drop import staging', () => {
   });
 
   it('scan-paths resolves a staged track including its year, without writing the index', async () => {
-    const path = await stageTrack(server, 'batch-2', 'track.mp3', {
+    const path = await stageTrack(server, 'batch2-track.mp3', {
       title: 'Time',
       artist: 'Pink Floyd',
       year: '1973',
@@ -83,7 +83,7 @@ describe('drag-and-drop import staging', () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paths: ['/.music-staging/nope/track.mp3'] }),
+          body: JSON.stringify({ paths: ['/.music-staging/nope.mp3'] }),
         },
       );
       assert.equal(res.status, 200);
@@ -94,7 +94,7 @@ describe('drag-and-drop import staging', () => {
   );
 
   it('round-trips a batch manifest through create, step, and discard', async () => {
-    const path = await stageTrack(server, 'batch-3', 'track.mp3', {
+    const path = await stageTrack(server, 'batch3-track.mp3', {
       title: 'Manifest Track',
     });
 
@@ -138,13 +138,18 @@ describe('drag-and-drop import staging', () => {
     );
     assert.equal(discarded.status, 200);
 
-    const stagingDir = join(server.mountDir, '.music-staging');
-    const remaining = await readdir(stagingDir);
-    assert.ok(!remaining.includes('batch-3'));
+    // The manifest is gone...
+    const summariesAfter = (await (
+      await fetch(`${server.baseUrl}/music/staged-batches`)
+    ).json()) as T.StagedBatchSummary[];
+    assert.ok(!summariesAfter.some((s) => s.batchId === 'batch-3'));
+    // ...and so is the staged track file itself, not just the reference to it.
+    const poolFiles = await readdir(join(server.mountDir, '.music-staging'));
+    assert.ok(!poolFiles.includes('batch3-track.mp3'));
   });
 
   it('posting to an existing batchId merges trackPaths instead of overwriting', async () => {
-    const pathA = await stageTrack(server, 'batch-4', 'a.mp3', {
+    const pathA = await stageTrack(server, 'batch4-a.mp3', {
       title: 'Track A',
     });
 
@@ -155,7 +160,7 @@ describe('drag-and-drop import staging', () => {
     });
     const manifest = (await created.json()) as T.StagedBatchManifest;
 
-    const pathB = await stageTrack(server, 'batch-4', 'b.mp3', {
+    const pathB = await stageTrack(server, 'batch4-b.mp3', {
       title: 'Track B',
     });
     const added = await fetch(`${server.baseUrl}/music/staged-batch`, {
@@ -185,4 +190,46 @@ describe('drag-and-drop import staging', () => {
       assert.equal(res.status, 400);
     }),
   );
+
+  it('records a verifiable content hash for a staged track in .staging-index.json', async () => {
+    const tags = { title: 'Hashed Track' };
+    const bytes = buildMp3WithTags(tags);
+    await stageTrack(server, 'hashed.mp3', tags);
+
+    // Any staged-batches poll rescans the pool and (re)writes the index.
+    await fetch(`${server.baseUrl}/music/staged-batches`);
+
+    const indexPath = join(
+      server.mountDir,
+      '.music-staging',
+      '.staging-index.json',
+    );
+    const index = JSON.parse(await readFile(indexPath, 'utf-8')) as {
+      entries: Record<string, { hash: string; size: number }>;
+    };
+    const entry = index.entries['/.music-staging/hashed.mp3'];
+    assert.ok(entry, 'expected an index entry for the staged track');
+    assert.equal(entry.size, bytes.length);
+    assert.equal(entry.hash, createHash('sha256').update(bytes).digest('hex'));
+  });
+
+  it('picks up a file dropped directly into the pool from outside the app', async () => {
+    const tags = { title: 'Manually Dropped' };
+    const bytes = buildMp3WithTags(tags);
+    const dir = join(server.mountDir, '.music-staging');
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'dropped-by-hand.mp3'), bytes);
+
+    // No batch manifest references this file — it never went through the
+    // staged-batch API — but a pool poll should still notice and hash it.
+    await fetch(`${server.baseUrl}/music/staged-batches`);
+
+    const indexPath = join(dir, '.staging-index.json');
+    const index = JSON.parse(await readFile(indexPath, 'utf-8')) as {
+      entries: Record<string, { hash: string }>;
+    };
+    const entry = index.entries['/.music-staging/dropped-by-hand.mp3'];
+    assert.ok(entry, 'expected the manually-dropped file to be indexed');
+    assert.equal(entry.hash, createHash('sha256').update(bytes).digest('hex'));
+  });
 });

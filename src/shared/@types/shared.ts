@@ -256,7 +256,7 @@ export interface ScanTrackPathsResponse {
 export type StagedBatchStep = 'editing' | 'organizing';
 
 /**
- * Written to `.music-staging/<batchId>/batch.json`.
+ * Written to `.music-staging/.batches/<batchId>.json`.
  */
 export interface StagedBatchManifest {
   batchId: string;
