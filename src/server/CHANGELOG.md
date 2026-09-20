@@ -10,6 +10,42 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A staged-import pipeline for adding new music: files (or whole folders)
+  dropped for import are hashed into a `.music-staging` area with automatic
+  duplicate detection, and the staged pool can be listed to resume an
+  in-progress import after a page reload.
+- `POST /delete-tracks` and `POST /add-tracks` on the music API, so deleting
+  or adding tracks patches the durable music index directly instead of
+  requiring a rescan. Deleting a track's last file from a folder now also
+  removes the folder.
+- `POST /artwork/remove`, `POST /artwork/embed`, and
+  `POST /artwork/embedded/remove`, for deleting a folder's artwork image,
+  pushing a folder's artwork into a set of tracks' embedded art, and
+  stripping a track's embedded artwork without touching the folder image.
+- `HEAD /artwork` reports a folder image's size and type without downloading
+  it.
+- `POST /delete` on the file-store API deletes a file or folder
+  (recursively) within the mount.
+- A `force` query parameter on `/music-index/scan` bypasses the cached
+  mtime/size check for a full rescan.
+- The file-store API root now reports a `containerName` when running in
+  Docker, so the client can surface Docker-specific update instructions.
+
+### Changed
+
+- `POST /save-blob` now takes its target path from the query string, and
+  `POST /load-blob` from the request body, instead of both requiring a
+  `File-Store-Request` header.
+- Writing or removing a folder's artwork now patches the durable music index
+  directly instead of leaving it stale until the next scan.
+
+### Fixed
+
+- Dropped files with non-Latin1 characters in their names are now handled
+  correctly.
+
 ## [3.6.0] - 2026-08-20
 
 ### Added
