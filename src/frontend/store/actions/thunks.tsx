@@ -2057,6 +2057,89 @@ export function removeMusicStagingPoolTracks(
   };
 }
 
+/**
+ * Deletes one or more tracks from the music library after a confirm prompt.
+ */
+export function deleteMusicTracks(paths: string[]): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    if (paths.length === 0) {
+      return;
+    }
+    const pathSet = new Set(paths);
+    const tracksToDelete = $.getMusicTracks(getState()).filter((track) =>
+      pathSet.has(track.path),
+    );
+    if (tracksToDelete.length === 0) {
+      return;
+    }
+
+    const confirmMessage =
+      tracksToDelete.length > 1
+        ? `Are you sure you want to delete these ${tracksToDelete.length} tracks?`
+        : `Are you sure you want to delete ${
+            tracksToDelete[0].title ?? getPathFileName(tracksToDelete[0].path)
+          }?`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const fileStore = $.getCurrentFS(getState());
+    const deletedPaths: string[] = [];
+    let failureCount = 0;
+
+    for (const track of tracksToDelete) {
+      try {
+        await fileStore.delete(track.path);
+        deletedPaths.push(track.path);
+      } catch (error) {
+        failureCount += 1;
+        console.error(error);
+      }
+    }
+
+    if (deletedPaths.length > 0) {
+      const deletedSet = new Set(deletedPaths);
+      const remainingTracks = $.getMusicTracks(getState()).filter(
+        (track) => !deletedSet.has(track.path),
+      );
+      dispatch(
+        setMusicTracks(
+          remainingTracks,
+          $.getMusicNeedsRescan(getState()),
+          $.getMusicServedIndexVersion(getState()),
+        ),
+      );
+      dispatch(
+        Plain.setMusicSelectedTracks(
+          $.getMusicSelectedTrackPaths(getState()).filter(
+            (path) => !deletedSet.has(path),
+          ),
+        ),
+      );
+      const playingTrackPath = $.getMusicPlaybackTrackPath(getState());
+      if (playingTrackPath && deletedSet.has(playingTrackPath)) {
+        dispatch(Plain.musicPlaybackStop());
+      }
+    }
+
+    let message: React.ReactNode;
+    if (failureCount > 0) {
+      message = `Deleted ${deletedPaths.length} track(s), ${failureCount} failed.`;
+    } else if (tracksToDelete.length > 1) {
+      message = `Deleted ${deletedPaths.length} tracks.`;
+    } else {
+      message = (
+        <>
+          Deleted <code>{getPathFileName(tracksToDelete[0].path)}</code>
+        </>
+      );
+    }
+
+    dispatch(addMessage({ message, timeout: true }));
+  };
+}
+
 export function refreshMusicStagingPool(): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const server = $.getCurrentServer(getState());

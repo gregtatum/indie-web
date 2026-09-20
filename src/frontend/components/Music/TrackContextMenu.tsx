@@ -18,6 +18,7 @@ export interface TrackContextMenuHandle {
   open(event: React.MouseEvent, trackPath: string): void;
   showInFiles(trackPath: string): void;
   revealInFileManager(trackPath: string): void;
+  deleteTracks(trackPaths: string[]): void;
 }
 
 export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
@@ -87,6 +88,13 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
       [dispatch, getState],
     );
 
+    const deleteTracks = React.useCallback(
+      (trackPaths: string[]) => {
+        void dispatch(A.deleteMusicTracks(trackPaths));
+      },
+      [dispatch],
+    );
+
     React.useImperativeHandle(
       ref,
       () => ({
@@ -119,8 +127,9 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
         },
         showInFiles,
         revealInFileManager,
+        deleteTracks,
       }),
-      [editTracks, batchEdit, showInFiles, revealInFileManager],
+      [editTracks, batchEdit, showInFiles, revealInFileManager, deleteTracks],
     );
 
     const selectedPaths = $$.getMusicSelectedTrackPaths();
@@ -131,6 +140,13 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     const batchEditShortcut = `${shortcutModifier} Shift E`;
     const showInFilesShortcut = `${shortcutModifier} Enter`;
     const revealInFileManagerShortcut = `${shortcutModifier} Shift Enter`;
+    const deleteShortcut = `${shortcutModifier} Delete`;
+    let deleteTargetPaths: string[] = [];
+    if (isMultiSelect) {
+      deleteTargetPaths = selectedPaths;
+    } else if (contextTrackPath) {
+      deleteTargetPaths = [contextTrackPath];
+    }
 
     const buttons: MenuButton[] = [
       {
@@ -201,6 +217,18 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
                   } as MenuButton,
                 ]
               : []),
+          ]
+        : []),
+      ...(deleteTargetPaths.length > 0
+        ? [
+            {
+              key: 'delete',
+              children: isMultiSelect ? 'Delete Selection' : 'Delete Track',
+              shortcut: deleteShortcut,
+              onClick() {
+                deleteTracks(deleteTargetPaths);
+              },
+            } as MenuButton,
           ]
         : []),
     ];

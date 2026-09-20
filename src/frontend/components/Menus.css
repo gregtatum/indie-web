@@ -28,6 +28,18 @@
   overflow: hidden;
 }
 
+/*
+ * Mouse users get a denser menu that matches the row it was opened from (see
+ * --music-padding-v/-h and --music-item-font-size in Music/index.css — those
+ * variables are scoped to .music and don't reach this portaled menu, so the
+ * matching values are repeated here). Touch keeps the larger default above.
+ */
+:root[data-input-mode="mouse"] .menusFile {
+  --spacing-w: 12px;
+  --spacing-h: 8px;
+  font-size: 14px;
+}
+
 .menusFileButton {
   font-size: inherit;
   border: 0;

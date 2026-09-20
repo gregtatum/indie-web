@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import * as React from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -307,6 +307,102 @@ describe('track right-click context menu', () => {
     screen.getByText('⌘ E');
     expect(screen.queryByText('Ctrl E')).toBeNull();
   });
+
+  it('shows "Delete Track" for a single track and deletes it after confirming', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      fetchMock.post(`${FAKE_SERVER.url}/file-store/delete`, {
+        body: JSON.stringify({ ok: true }),
+        status: 200,
+      });
+      const { store } = setup();
+      const trackB = await screen.findByText('Song B');
+      await act(async () => {
+        fireEvent.contextMenu(trackB);
+      });
+      const deleteButton = await screen.findByRole('button', {
+        name: 'Delete Track',
+      });
+      await act(async () => {
+        fireEvent.click(deleteButton);
+      });
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete Song B?',
+      );
+      await waitFor(() => {
+        expect($.getMusicTracks(store.getState()).map((t) => t.path)).toEqual([
+          '/music/a.mp3',
+          '/music/c.mp3',
+        ]);
+      });
+      await screen.findByText('b.mp3', { selector: 'code' });
+    } finally {
+      confirmSpy.mockRestore();
+    }
+  });
+
+  it('shows "Delete Selection" for a multi-track selection and deletes them after confirming', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      fetchMock.post(`${FAKE_SERVER.url}/file-store/delete`, {
+        body: JSON.stringify({ ok: true }),
+        status: 200,
+      });
+      const { store } = setup();
+      await act(async () => {
+        store.dispatch(
+          A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+        );
+      });
+      const trackA = await screen.findByText('Song A');
+      await act(async () => {
+        fireEvent.contextMenu(trackA);
+      });
+      const deleteButton = await screen.findByRole('button', {
+        name: 'Delete Selection',
+      });
+      await act(async () => {
+        fireEvent.click(deleteButton);
+      });
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete these 2 tracks?',
+      );
+      await screen.findByText('Deleted 2 tracks.');
+      expect($.getMusicTracks(store.getState()).map((t) => t.path)).toEqual([
+        '/music/c.mp3',
+      ]);
+    } finally {
+      confirmSpy.mockRestore();
+    }
+  });
+
+  it('does not delete when the confirm prompt is dismissed', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    try {
+      const { store } = setup();
+      const trackB = await screen.findByText('Song B');
+      await act(async () => {
+        fireEvent.contextMenu(trackB);
+      });
+      const deleteButton = await screen.findByRole('button', {
+        name: 'Delete Track',
+      });
+      await act(async () => {
+        fireEvent.click(deleteButton);
+      });
+
+      expect(confirmSpy).toHaveBeenCalled();
+      expect($.getMusicTracks(store.getState()).map((t) => t.path)).toEqual([
+        '/music/a.mp3',
+        '/music/b.mp3',
+        '/music/c.mp3',
+      ]);
+    } finally {
+      confirmSpy.mockRestore();
+    }
+  });
 });
 
 describe('track list keyboard shortcuts', () => {
@@ -546,6 +642,64 @@ describe('track list keyboard shortcuts', () => {
     });
 
     expect(requests).toEqual([]);
+  });
+
+  it('cmd+delete deletes the focused track after confirming', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      fetchMock.post(`${FAKE_SERVER.url}/file-store/delete`, {
+        body: JSON.stringify({ ok: true }),
+        status: 200,
+      });
+      const { store } = setup();
+      const trackB = await screen.findByText('Song B');
+      await act(async () => {
+        fireEvent.click(trackB);
+        focusTrackList();
+        fireEvent.keyDown(document.body, { key: 'Backspace', metaKey: true });
+      });
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete Song B?',
+      );
+      await waitFor(() => {
+        expect($.getMusicTracks(store.getState()).map((t) => t.path)).toEqual([
+          '/music/a.mp3',
+          '/music/c.mp3',
+        ]);
+      });
+    } finally {
+      confirmSpy.mockRestore();
+    }
+  });
+
+  it('ctrl+delete deletes the focused track after confirming', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      fetchMock.post(`${FAKE_SERVER.url}/file-store/delete`, {
+        body: JSON.stringify({ ok: true }),
+        status: 200,
+      });
+      const { store } = setup();
+      const trackB = await screen.findByText('Song B');
+      await act(async () => {
+        fireEvent.click(trackB);
+        focusTrackList();
+        fireEvent.keyDown(document.body, { key: 'Delete', ctrlKey: true });
+      });
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete Song B?',
+      );
+      await waitFor(() => {
+        expect($.getMusicTracks(store.getState()).map((t) => t.path)).toEqual([
+          '/music/a.mp3',
+          '/music/c.mp3',
+        ]);
+      });
+    } finally {
+      confirmSpy.mockRestore();
+    }
   });
 
   it('does not run track shortcuts when another panel has focus', async () => {

@@ -1435,6 +1435,14 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
           }
           return;
         }
+        case 'Meta+Delete':
+        case 'Meta+Backspace':
+        case 'Control+Delete':
+        case 'Control+Backspace': {
+          event.preventDefault();
+          contextMenuRef.current?.deleteTracks(getShortcutTargetPaths());
+          return;
+        }
         default:
           break;
       }
