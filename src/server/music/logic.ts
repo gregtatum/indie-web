@@ -21,6 +21,7 @@ import {
   resolveTagValue,
 } from '../../shared/music.ts';
 import type { Id3v1TagFields } from '../../shared/music.ts';
+import { isIgnorableOsFile } from '../../shared/utils.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
 
@@ -1239,10 +1240,16 @@ async function removeEmptyDirectoriesUpward(
     } catch {
       return;
     }
-    if (entries.length > 0) {
+    if (entries.some((name) => !isIgnorableOsFile(name))) {
       return;
     }
     try {
+      for (const name of entries) {
+        const junkFilePath = mountPath.joinWithinMount(dirFullPath, name);
+        if (junkFilePath) {
+          await fs.rm(junkFilePath, { recursive: true, force: true });
+        }
+      }
       await fs.rmdir(dirFullPath);
     } catch {
       return;

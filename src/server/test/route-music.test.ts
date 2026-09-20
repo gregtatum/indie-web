@@ -1,6 +1,6 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFile, mkdir, rm } from 'node:fs/promises';
+import { writeFile, mkdir, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { MUSIC_INDEX_VERSION } from '../../shared/music.ts';
 import { musicRoute } from '../music/route.ts';
@@ -11,6 +11,14 @@ import {
   MINIMAL_JPEG,
 } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
+import type { T } from '../index.ts';
+
+async function exists(path: string): Promise<boolean> {
+  return stat(path).then(
+    () => true,
+    () => false,
+  );
+}
 
 let describe: (name: string, fn: () => void) => void = nodeDescribe;
 if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
@@ -736,4 +744,82 @@ describe('GET /music/music-index after scan', () => {
       assert.equal(track.title, 'Persisted');
     }),
   );
+});
+
+describe('POST /music/delete-tracks directory cleanup', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+
+  after(() => server.close());
+
+  it('walks empty folders up to the mount root, skipping past macOS/Windows junk files', async () => {
+    const albumDir = join(server.mountDir, 'Kiasmos', '2014 - Kiasmos');
+    await mkdir(albumDir, { recursive: true });
+    await writeFile(
+      join(albumDir, '01 - Lit.mp3'),
+      buildMp3WithTags({ title: 'Lit', artist: 'Kiasmos', album: 'Kiasmos' }),
+    );
+    await writeFile(join(albumDir, '.DS_Store'), 'junk');
+    await writeFile(join(server.mountDir, 'Kiasmos', 'Thumbs.db'), 'junk');
+
+    await fetch(`${server.baseUrl}/music/music-index/scan`, {
+      method: 'POST',
+    });
+
+    const res = await fetch(`${server.baseUrl}/music/delete-tracks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths: ['/Kiasmos/2014 - Kiasmos/01 - Lit.mp3'] }),
+    });
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as T.DeleteTracksResponse;
+    assert.deepEqual(body.deleted, ['/Kiasmos/2014 - Kiasmos/01 - Lit.mp3']);
+
+    assert.equal(await exists(albumDir), false);
+    assert.equal(await exists(join(server.mountDir, 'Kiasmos')), false);
+    assert.equal(await exists(server.mountDir), true);
+  });
+
+  it('stops at a folder that still has other content', async () => {
+    const keepDir = join(server.mountDir, 'Boards of Canada', 'Geogaddi');
+    const deleteDir = join(
+      server.mountDir,
+      'Boards of Canada',
+      'Tomorrows Harvest',
+    );
+    await mkdir(keepDir, { recursive: true });
+    await mkdir(deleteDir, { recursive: true });
+    await writeFile(
+      join(keepDir, '01 - Ready Lets Go.mp3'),
+      buildMp3WithTags({ title: 'Ready Lets Go' }),
+    );
+    await writeFile(
+      join(deleteDir, '01 - Reach for the Dead.mp3'),
+      buildMp3WithTags({ title: 'Reach for the Dead' }),
+    );
+
+    await fetch(`${server.baseUrl}/music/music-index/scan`, {
+      method: 'POST',
+    });
+
+    const res = await fetch(`${server.baseUrl}/music/delete-tracks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paths: [
+          '/Boards of Canada/Tomorrows Harvest/01 - Reach for the Dead.mp3',
+        ],
+      }),
+    });
+    assert.equal(res.status, 200);
+
+    assert.equal(await exists(deleteDir), false);
+    assert.equal(await exists(join(server.mountDir, 'Boards of Canada')), true);
+    assert.equal(await exists(keepDir), true);
+  });
 });

@@ -38,6 +38,24 @@ export function ensureExists<T>(
   return item;
 }
 
+const IGNORABLE_OS_FILENAMES = new Set([
+  '.DS_Store',
+  '.Spotlight-V100',
+  '.Trashes',
+  '.fseventsd',
+  '.TemporaryItems',
+  '.AppleDouble',
+  '.AppleDB',
+  '.AppleDesktop',
+  'Thumbs.db',
+  'ehthumbs.db',
+  'desktop.ini',
+]);
+
+export function isIgnorableOsFile(name: string): boolean {
+  return IGNORABLE_OS_FILENAMES.has(name) || name.startsWith('._');
+}
+
 export function maybeGetProperty(value: any, property: string): string | null {
   if (
     value &&

@@ -19,8 +19,7 @@ import {
   getFolderMetadata,
   getMetadata,
 } from './logic.ts';
-
-const ignoredFiles = new Set(['.DS_Store']);
+import { isIgnorableOsFile } from '../../shared/utils.ts';
 
 interface ListFilesRequest {
   path: string;
@@ -84,7 +83,7 @@ export function fileStoreRoute(mountPath: MountPath) {
     const listing: T.FolderListing = [];
 
     for (const entry of entries) {
-      if (ignoredFiles.has(entry.name)) {
+      if (isIgnorableOsFile(entry.name)) {
         continue;
       }
       const entryPath = mountPath.joinWithinMount(resolvedPath, entry.name);
