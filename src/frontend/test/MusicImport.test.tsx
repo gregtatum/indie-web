@@ -11,6 +11,7 @@ import { dirname, join } from 'node:path';
 import { $, A, T } from 'frontend';
 import { resolveOrganizationPath } from 'shared/music';
 import {
+  buildJpegBytes,
   buildMp3WithTags,
   clearMusicMount,
   renderMusicApp,
@@ -411,6 +412,114 @@ describe('drag-and-drop import & organize', () => {
       await dropTrack('time.mp3', { title: 'Time', artist: 'Pink Floyd' });
 
       expect(await screen.findByRole('heading', { name: 'Time' })).toBeTruthy();
+    }, 30_000);
+
+    it("shows a dropped folder's cover as pending album artwork before organizing, and lets it be embedded", async () => {
+      const { store } = await renderMusicApp({ server: getServer() });
+      const zone = await dropZone();
+
+      const track = new File(
+        [
+          new Uint8Array(
+            buildMp3WithTags({ title: 'Time', artist: 'Pink Floyd' }),
+          ),
+        ],
+        'time.mp3',
+        { type: 'audio/mpeg' },
+      );
+      const cover = new File([new Uint8Array(buildJpegBytes())], 'cover.jpg', {
+        type: 'image/jpeg',
+      });
+      const folder = dirEntry('The Dark Side of the Moon', [
+        fileEntry(track),
+        fileEntry(cover),
+      ]);
+
+      await act(async () => {
+        fireEvent.drop(zone, {
+          dataTransfer: makeFolderDataTransfer([folder]),
+        });
+        await waitForNetworkIdle();
+      });
+      await waitForStagingPool(store, 1);
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
+      expect(await screen.findByRole('heading', { name: 'Time' })).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+      });
+
+      expect(
+        (await screen.findAllByText('Album artwork')).length,
+      ).toBeGreaterThan(0);
+      expect(screen.queryByText('No artwork found')).toBeNull();
+
+      const embedButton = await screen.findByRole('button', {
+        name: 'Embed artwork',
+      });
+      await act(async () => {
+        fireEvent.click(embedButton);
+        await waitForNetworkIdle();
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('button', { name: 'Embed artwork' }),
+        ).toBeNull();
+      });
+
+      const pool = $.getMusicStagingPool(store.getState());
+      expect(pool[0].hasEmbeddedArtwork).toBe(true);
+    }, 30_000);
+
+    it("keeps the dropped folder's pending cover association across a reload", async () => {
+      await renderMusicApp({ server: getServer() });
+      const zone = await dropZone();
+
+      const track = new File(
+        [
+          new Uint8Array(
+            buildMp3WithTags({ title: 'Time', artist: 'Pink Floyd' }),
+          ),
+        ],
+        'time.mp3',
+        { type: 'audio/mpeg' },
+      );
+      const cover = new File([new Uint8Array(buildJpegBytes())], 'cover.jpg', {
+        type: 'image/jpeg',
+      });
+      const folder = dirEntry('The Dark Side of the Moon', [
+        fileEntry(track),
+        fileEntry(cover),
+      ]);
+
+      await act(async () => {
+        fireEvent.drop(zone, {
+          dataTransfer: makeFolderDataTransfer([folder]),
+        });
+        await waitForNetworkIdle();
+      });
+
+      cleanup();
+      const { store } = await renderMusicApp({
+        server: getServer(),
+        search: '?stagingView=staging',
+      });
+      await waitForStagingPool(store, 1);
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
+      const [reloadedTrack] = $.getMusicStagingPool(store.getState());
+      expect(reloadedTrack.folderArtworkPath).toMatch(
+        /^\/\.music-staging\/\.artwork\/.+\/Folder\.jpg$/,
+      );
+      await expect(
+        stat(join(getServer().mountDir, reloadedTrack.folderArtworkPath ?? '')),
+      ).resolves.toBeTruthy();
     }, 30_000);
 
     it('adds a second drop to the pool instead of starting a new view', async () => {

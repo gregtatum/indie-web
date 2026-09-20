@@ -28,6 +28,7 @@ import {
   removeOutdatedFolderArtwork,
   scanTrackFiles,
   serializeTagBlocks,
+  setStagingFolderArtwork,
   sniffImageMimeType,
   updateMusicIndexAfterEmbeddedArtworkRemoval,
   updateIndexAfterFolderArtworkRemoval,
@@ -183,7 +184,10 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   route.post('/staging-pool', async (req): Promise<T.StagingUploadResponse> => {
-    const { trackPaths } = req.body as { trackPaths: string[] };
+    const { trackPaths, folderArtworkPathByPath } = req.body as {
+      trackPaths: string[];
+      folderArtworkPathByPath?: Record<string, string>;
+    };
     if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
       throw new ClientError('Missing or empty trackPaths array.');
     }
@@ -194,8 +198,17 @@ export function musicRoute(mountPath: MountPath) {
     if (paths.length === 0) {
       return { tracks: [], duplicateCount };
     }
+    if (folderArtworkPathByPath) {
+      await setStagingFolderArtwork(mountPath, folderArtworkPathByPath);
+    }
     const results = await scanTrackFiles(mountPath, paths);
-    const tracks = results.flatMap((r) => (r.track ? [r.track] : []));
+    const tracks = results.flatMap((r) => {
+      if (!r.track) {
+        return [];
+      }
+      const folderArtworkPath = folderArtworkPathByPath?.[r.clientPath];
+      return [folderArtworkPath ? { ...r.track, folderArtworkPath } : r.track];
+    });
     return { tracks, duplicateCount };
   });
 

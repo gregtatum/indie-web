@@ -235,7 +235,8 @@ export const TrackEditorPanel = React.forwardRef<
   TrackEditorPanelHandle,
   TrackEditorPanelProps
 >(function TrackEditorPanel({ trackPath, onClose, trackSource }, ref) {
-  const { tracks, updateTracks } = trackSource;
+  const { tracks, updateTracks, removeTracks } = trackSource;
+  const isStagingSource = Boolean(removeTracks);
   const track = tracks.find((t) => t.path === trackPath) ?? null;
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
   const isBulkEdit = selectedTrackPaths.length > 1;
@@ -731,7 +732,8 @@ export const TrackEditorPanel = React.forwardRef<
   const isColocatedSelection =
     editTracks.length > 0 &&
     editTracks.every((t) => getDirName(t.path) === selectionDir);
-  const canEditFolderArtwork = !isBulkEdit || isColocatedSelection;
+  const canEmbedFolderArtwork = !isBulkEdit || isColocatedSelection;
+  const canEditFolderArtwork = !isStagingSource && canEmbedFolderArtwork;
 
   let sharedFolderArtworkPath: string | null = null;
   if (
@@ -760,12 +762,11 @@ export const TrackEditorPanel = React.forwardRef<
     if (isBulkEdit && !isColocatedSelection) {
       return [];
     }
-    const folderDir = getDirName(sharedFolderArtworkPath);
     return tracks
       .filter(
         (t) =>
           !t.hasEmbeddedArtwork &&
-          getDirName(t.path) === folderDir &&
+          t.folderArtworkPath === sharedFolderArtworkPath &&
           t.path.toLowerCase().endsWith('.mp3'),
       )
       .map((t) => t.path);
@@ -1135,6 +1136,7 @@ export const TrackEditorPanel = React.forwardRef<
             }
             hideEmbeddedArtwork={isBulkEdit}
             canEditFolderArtwork={canEditFolderArtwork}
+            canEmbedFolderArtwork={canEmbedFolderArtwork}
             tagsState={
               isBulkEdit
                 ? { status: 'loaded', data: { blocks: [], resolved: {} } }

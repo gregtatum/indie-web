@@ -17,6 +17,7 @@ interface Props {
   emptyMessage?: string;
   hideEmbeddedArtwork?: boolean;
   canEditFolderArtwork?: boolean;
+  canEmbedFolderArtwork?: boolean;
   tagsState: TrackTagsLoadState;
   trackPath: string;
   embeddableTrackPaths: string[];
@@ -640,6 +641,7 @@ function EmbeddedArtworkRow({
   sizeBytes,
   trackPath,
   serverUrl,
+  canEditFolderArtwork,
   onSetAsAlbumArtwork,
   onRemoved,
 }: {
@@ -649,6 +651,7 @@ function EmbeddedArtworkRow({
   sizeBytes: number;
   trackPath: string;
   serverUrl: string;
+  canEditFolderArtwork: boolean;
   onSetAsAlbumArtwork: (folderArtworkPath: string) => void;
   onRemoved: (trackPath: string) => void;
 }) {
@@ -692,12 +695,14 @@ function EmbeddedArtworkRow({
       {expanded && (
         <div className="artworkEmbeddedExpanded">
           <div className="artworkEmbeddedExpandedActions">
-            <SetAsAlbumArtworkButton
-              trackPath={trackPath}
-              serverUrl={serverUrl}
-              format={format}
-              onSaved={onSetAsAlbumArtwork}
-            />
+            {canEditFolderArtwork && (
+              <SetAsAlbumArtworkButton
+                trackPath={trackPath}
+                serverUrl={serverUrl}
+                format={format}
+                onSaved={onSetAsAlbumArtwork}
+              />
+            )}
             <RemoveEmbeddedArtworkButton
               trackPath={trackPath}
               serverUrl={serverUrl}
@@ -722,6 +727,7 @@ export function ArtworkTab({
   emptyMessage = 'No artwork found',
   hideEmbeddedArtwork = false,
   canEditFolderArtwork = false,
+  canEmbedFolderArtwork = canEditFolderArtwork,
   tagsState,
   trackPath,
   embeddableTrackPaths,
@@ -853,7 +859,7 @@ export function ArtworkTab({
       )}
       {folderArtworkUrl &&
         folderArtworkPath &&
-        canEditFolderArtwork &&
+        canEmbedFolderArtwork &&
         embeddableTrackPaths.length > 0 && (
           <EmbedArtworkBanner
             folderArtworkPath={folderArtworkPath}
@@ -885,6 +891,7 @@ export function ArtworkTab({
                     sizeBytes={base64ByteLength(entry.binary)}
                     trackPath={trackPath}
                     serverUrl={serverUrl}
+                    canEditFolderArtwork={canEditFolderArtwork}
                     onSetAsAlbumArtwork={onFolderArtworkWritten}
                     onRemoved={onEmbeddedArtworkRemoved}
                   />

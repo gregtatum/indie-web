@@ -47,10 +47,6 @@ export function getMusicStagingPool(state: State): T.TrackMetadata[] {
   return getMusic(state).stagingPool;
 }
 
-export function getMusicStagingArtwork(state: State): Record<string, File> {
-  return getMusic(state).stagingArtwork;
-}
-
 export function getMusicStagingView(state: State): T.MusicStagingView | null {
   return getMusic(state).stagingView;
 }

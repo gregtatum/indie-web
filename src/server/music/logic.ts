@@ -372,6 +372,7 @@ interface StagingIndexEntry {
   hash: string;
   size: number;
   mtime: string;
+  folderArtworkPath?: string | null;
 }
 
 interface StagingIndex {
@@ -384,6 +385,7 @@ export interface StagingPoolEntry {
   hash: string;
   size: number;
   mtime: string;
+  folderArtworkPath: string | null;
 }
 
 async function hashFile(fullPath: string): Promise<string> {
@@ -465,9 +467,21 @@ export async function scanStagingPool(
       cached && cached.mtime === mtime && cached.size === stats.size
         ? cached.hash
         : await hashFile(fullPath);
+    const folderArtworkPath = cached?.folderArtworkPath ?? null;
 
-    nextEntries[clientPath] = { hash, size: stats.size, mtime };
-    results.push({ path: clientPath, hash, size: stats.size, mtime });
+    nextEntries[clientPath] = {
+      hash,
+      size: stats.size,
+      mtime,
+      folderArtworkPath,
+    };
+    results.push({
+      path: clientPath,
+      hash,
+      size: stats.size,
+      mtime,
+      folderArtworkPath,
+    });
   }
 
   await writeStagingIndex(mountPath, {
@@ -521,11 +535,38 @@ export async function listStagingPoolTracks(
   mountPath: MountPath,
 ): Promise<T.TrackMetadata[]> {
   const pool = await scanStagingPool(mountPath);
+  const folderArtworkByPath = new Map(
+    pool.map((entry) => [entry.path, entry.folderArtworkPath]),
+  );
   const results = await scanTrackFiles(
     mountPath,
     pool.map((entry) => entry.path),
   );
-  return results.flatMap((result) => (result.track ? [result.track] : []));
+  return results.flatMap((result) => {
+    if (!result.track) {
+      return [];
+    }
+    const folderArtworkPath = folderArtworkByPath.get(result.clientPath);
+    return [
+      folderArtworkPath ? { ...result.track, folderArtworkPath } : result.track,
+    ];
+  });
+}
+
+export async function setStagingFolderArtwork(
+  mountPath: MountPath,
+  folderArtworkPathByPath: Record<string, string>,
+): Promise<void> {
+  const index = await readStagingIndex(mountPath);
+  for (const [path, folderArtworkPath] of Object.entries(
+    folderArtworkPathByPath,
+  )) {
+    const entry = index.entries[path];
+    if (entry) {
+      entry.folderArtworkPath = folderArtworkPath;
+    }
+  }
+  await writeStagingIndex(mountPath, index);
 }
 
 /**
