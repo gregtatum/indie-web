@@ -273,6 +273,12 @@ export interface StagedBatchSummary {
   trackCount: number;
 }
 
+export interface CreateStagedBatchResponse {
+  manifest: StagedBatchManifest;
+  addedTrackPaths: string[];
+  duplicateCount: number;
+}
+
 export interface MusicImportBatch {
   batchId: string;
   tracks: TrackMetadata[];

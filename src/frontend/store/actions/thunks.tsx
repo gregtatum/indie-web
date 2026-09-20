@@ -1841,29 +1841,24 @@ async function getStagingPoolTakenNames(
   }
 }
 
+interface StagedUploadResult {
+  tracks: T.TrackMetadata[];
+  duplicateCount: number;
+}
+
 async function uploadAndScanStagedFiles(
   fileStore: ReturnType<typeof $.getCurrentFS>,
   server: ReturnType<typeof $.getCurrentServer>,
   batchId: string,
   mp3Files: File[],
   filenames: string[],
-): Promise<T.TrackMetadata[]> {
+): Promise<StagedUploadResult> {
   const trackPaths: string[] = [];
   for (let i = 0; i < mp3Files.length; i++) {
     const path = `/.music-staging/${filenames[i]}`;
     await fileStore.saveBlob(path, 'add', mp3Files[i]);
     trackPaths.push(path);
   }
-
-  const scanRes = await fetch(`${server.url}/music/music-index/scan-paths`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paths: trackPaths }),
-  });
-  if (!scanRes.ok) {
-    throw new Error(await scanRes.text());
-  }
-  const scanData = (await scanRes.json()) as T.ScanTrackPathsResponse;
 
   const manifestRes = await fetch(`${server.url}/music/staged-batch`, {
     method: 'POST',
@@ -1873,8 +1868,24 @@ async function uploadAndScanStagedFiles(
   if (!manifestRes.ok) {
     throw new Error(await manifestRes.text());
   }
+  const { addedTrackPaths, duplicateCount } =
+    (await manifestRes.json()) as T.CreateStagedBatchResponse;
 
-  return scanData.tracks;
+  if (addedTrackPaths.length === 0) {
+    return { tracks: [], duplicateCount };
+  }
+
+  const scanRes = await fetch(`${server.url}/music/music-index/scan-paths`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: addedTrackPaths }),
+  });
+  if (!scanRes.ok) {
+    throw new Error(await scanRes.text());
+  }
+  const scanData = (await scanRes.json()) as T.ScanTrackPathsResponse;
+
+  return { tracks: scanData.tracks, duplicateCount };
 }
 
 export function startMusicImportBatch(
@@ -1906,6 +1917,17 @@ export function startMusicImportBatch(
       return;
     }
 
+    const reportDuplicates = (count: number) => {
+      if (count > 0) {
+        dispatch(
+          addMessage({
+            message: `Skipped ${count} duplicate file${count === 1 ? '' : 's'} — already staged.`,
+            timeout: true,
+          }),
+        );
+      }
+    };
+
     const batchId = crypto.randomUUID();
     const takenNames = await getStagingPoolTakenNames(fileStore);
     const filenames = dedupeStagedFilenames(
@@ -1917,7 +1939,7 @@ export function startMusicImportBatch(
     );
 
     try {
-      const tracks = await uploadAndScanStagedFiles(
+      const { tracks, duplicateCount } = await uploadAndScanStagedFiles(
         fileStore,
         server,
         batchId,
@@ -1925,20 +1947,21 @@ export function startMusicImportBatch(
         filenames,
       );
 
-      dispatch(
-        Plain.setMusicImportBatch({
-          batchId,
-          tracks,
-          step: 'editing',
-          template: '',
-        }),
-      );
       if (tracks.length > 0) {
+        dispatch(
+          Plain.setMusicImportBatch({
+            batchId,
+            tracks,
+            step: 'editing',
+            template: '',
+          }),
+        );
         dispatch(Plain.setMusicSelectedTracks([tracks[0].path]));
+        void dispatch(refreshMusicStagedBatchSummaries());
       }
-      void dispatch(refreshMusicStagedBatchSummaries());
       dispatch(Plain.dismissMessage(messageGeneration));
       reportRejectedFiles();
+      reportDuplicates(duplicateCount);
     } catch (error) {
       console.error(error);
       dispatch(
@@ -1985,6 +2008,17 @@ export function addToMusicImportBatch(
       return;
     }
 
+    const reportDuplicates = (count: number) => {
+      if (count > 0) {
+        dispatch(
+          addMessage({
+            message: `Skipped ${count} duplicate file${count === 1 ? '' : 's'} — already staged.`,
+            timeout: true,
+          }),
+        );
+      }
+    };
+
     const takenNames = await getStagingPoolTakenNames(fileStore);
     const filenames = dedupeStagedFilenames(
       mp3Files.map((file) => file.name),
@@ -1995,23 +2029,27 @@ export function addToMusicImportBatch(
     );
 
     try {
-      const addedTracks = await uploadAndScanStagedFiles(
-        fileStore,
-        server,
-        batchId,
-        mp3Files,
-        filenames,
-      );
+      const { tracks: addedTracks, duplicateCount } =
+        await uploadAndScanStagedFiles(
+          fileStore,
+          server,
+          batchId,
+          mp3Files,
+          filenames,
+        );
 
-      dispatch(
-        Plain.setMusicImportBatchTracks(batchId, [
-          ...batch.tracks,
-          ...addedTracks,
-        ]),
-      );
-      void dispatch(refreshMusicStagedBatchSummaries());
+      if (addedTracks.length > 0) {
+        dispatch(
+          Plain.setMusicImportBatchTracks(batchId, [
+            ...batch.tracks,
+            ...addedTracks,
+          ]),
+        );
+        void dispatch(refreshMusicStagedBatchSummaries());
+      }
       dispatch(Plain.dismissMessage(messageGeneration));
       reportRejectedFiles();
+      reportDuplicates(duplicateCount);
     } catch (error) {
       console.error(error);
       dispatch(

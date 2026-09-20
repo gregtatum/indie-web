@@ -104,7 +104,7 @@ describe('drag-and-drop import staging', () => {
       body: JSON.stringify({ batchId: 'batch-3', trackPaths: [path] }),
     });
     assert.equal(created.status, 200);
-    const manifest = (await created.json()) as T.StagedBatchManifest;
+    const { manifest } = (await created.json()) as T.CreateStagedBatchResponse;
     assert.equal(manifest.step, 'editing');
     assert.equal(manifest.template, null);
 
@@ -158,7 +158,7 @@ describe('drag-and-drop import staging', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ batchId: 'batch-4', trackPaths: [pathA] }),
     });
-    const manifest = (await created.json()) as T.StagedBatchManifest;
+    const { manifest } = (await created.json()) as T.CreateStagedBatchResponse;
 
     const pathB = await stageTrack(server, 'batch4-b.mp3', {
       title: 'Track B',
@@ -169,7 +169,8 @@ describe('drag-and-drop import staging', () => {
       body: JSON.stringify({ batchId: 'batch-4', trackPaths: [pathB] }),
     });
     assert.equal(added.status, 200);
-    const updated = (await added.json()) as T.StagedBatchManifest;
+    const { manifest: updated } =
+      (await added.json()) as T.CreateStagedBatchResponse;
     assert.deepEqual(updated.trackPaths, [pathA, pathB]);
     // Everything but trackPaths carries over from the original manifest.
     assert.equal(updated.createdAt, manifest.createdAt);
@@ -231,5 +232,63 @@ describe('drag-and-drop import staging', () => {
     const entry = index.entries['/.music-staging/dropped-by-hand.mp3'];
     assert.ok(entry, 'expected the manually-dropped file to be indexed');
     assert.equal(entry.hash, createHash('sha256').update(bytes).digest('hex'));
+  });
+
+  it('drops a duplicate upload and reports it, keeping the original in place', async () => {
+    const tags = { title: 'Dup Source' };
+    const existingPath = await stageTrack(server, 'dup-source.mp3', tags);
+    await fetch(`${server.baseUrl}/music/staged-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        batchId: 'owner-batch',
+        trackPaths: [existingPath],
+      }),
+    });
+
+    const dupPath = await stageTrack(server, 'dup-copy.mp3', tags);
+    const created = await fetch(`${server.baseUrl}/music/staged-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ batchId: 'new-batch', trackPaths: [dupPath] }),
+    });
+    assert.equal(created.status, 200);
+    const body = (await created.json()) as T.CreateStagedBatchResponse;
+    assert.equal(body.duplicateCount, 1);
+    assert.deepEqual(body.addedTrackPaths, []);
+    assert.deepEqual(body.manifest.trackPaths, []);
+
+    const poolFiles = await readdir(join(server.mountDir, '.music-staging'));
+    assert.ok(!poolFiles.includes('dup-copy.mp3'));
+    assert.ok(poolFiles.includes('dup-source.mp3'));
+
+    const summaries = (await (
+      await fetch(`${server.baseUrl}/music/staged-batches`)
+    ).json()) as T.StagedBatchSummary[];
+    assert.ok(!summaries.some((s) => s.batchId === 'new-batch'));
+  });
+
+  it('collapses duplicates within the same upload request, keeping the first', async () => {
+    const tags = { title: 'Same Batch Dup' };
+    const pathA = await stageTrack(server, 'batchdup-a.mp3', tags);
+    const pathB = await stageTrack(server, 'batchdup-b.mp3', tags);
+
+    const created = await fetch(`${server.baseUrl}/music/staged-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        batchId: 'same-drop-batch',
+        trackPaths: [pathA, pathB],
+      }),
+    });
+    assert.equal(created.status, 200);
+    const body = (await created.json()) as T.CreateStagedBatchResponse;
+    assert.equal(body.duplicateCount, 1);
+    assert.deepEqual(body.addedTrackPaths, [pathA]);
+    assert.deepEqual(body.manifest.trackPaths, [pathA]);
+
+    const poolFiles = await readdir(join(server.mountDir, '.music-staging'));
+    assert.ok(poolFiles.includes('batchdup-a.mp3'));
+    assert.ok(!poolFiles.includes('batchdup-b.mp3'));
   });
 });

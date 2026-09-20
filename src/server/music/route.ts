@@ -20,6 +20,7 @@ import {
   MUSIC_INDEX_FILENAME,
   buildNodeId3Tags,
   createStagedBatch,
+  dedupeStagedTracks,
   discardStagedBatch,
   embedArtworkIntoTrack,
   installScanCrashGuard,
@@ -206,17 +207,39 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /** `batchId` is client-generated so it can upload files before this call. */
-  route.post('/staged-batch', async (req): Promise<T.StagedBatchManifest> => {
-    const { batchId, trackPaths } = req.body as {
-      batchId: string;
-      trackPaths: string[];
-    };
-    assertValidBatchId(batchId);
-    if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
-      throw new ClientError('Missing or empty trackPaths array.');
-    }
-    return createStagedBatch(mountPath, batchId, trackPaths);
-  });
+  route.post(
+    '/staged-batch',
+    async (req): Promise<T.CreateStagedBatchResponse> => {
+      const { batchId, trackPaths } = req.body as {
+        batchId: string;
+        trackPaths: string[];
+      };
+      assertValidBatchId(batchId);
+      if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
+        throw new ClientError('Missing or empty trackPaths array.');
+      }
+      const { paths, duplicateCount } = await dedupeStagedTracks(
+        mountPath,
+        trackPaths,
+      );
+      if (paths.length === 0) {
+        const existing = await readStagedBatchManifest(mountPath, batchId);
+        return {
+          manifest: existing ?? {
+            batchId,
+            createdAt: new Date().toISOString(),
+            step: 'editing',
+            trackPaths: [],
+            template: null,
+          },
+          addedTrackPaths: [],
+          duplicateCount,
+        };
+      }
+      const manifest = await createStagedBatch(mountPath, batchId, paths);
+      return { manifest, addedTrackPaths: paths, duplicateCount };
+    },
+  );
 
   route.post(
     '/staged-batch/step',

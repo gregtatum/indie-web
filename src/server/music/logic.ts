@@ -511,6 +511,46 @@ export async function scanStagingPool(
   return results;
 }
 
+export async function dedupeStagedTracks(
+  mountPath: MountPath,
+  candidatePaths: string[],
+): Promise<{ paths: string[]; duplicateCount: number }> {
+  const candidateSet = new Set(candidatePaths);
+  const pool = await scanStagingPool(mountPath);
+  const poolHashByPath = new Map(pool.map((entry) => [entry.path, entry.hash]));
+
+  const seenHashes = new Set<string>();
+  for (const entry of pool) {
+    if (!candidateSet.has(entry.path)) {
+      seenHashes.add(entry.hash);
+    }
+  }
+
+  const paths: string[] = [];
+  let duplicateCount = 0;
+  for (const path of candidatePaths) {
+    const hash = poolHashByPath.get(path);
+    if (hash && seenHashes.has(hash)) {
+      const fullPath = mountPath.resolve(path);
+      if (fullPath) {
+        await fs.rm(fullPath, { force: true });
+      }
+      duplicateCount += 1;
+      continue;
+    }
+    if (hash) {
+      seenHashes.add(hash);
+    }
+    paths.push(path);
+  }
+
+  if (duplicateCount > 0) {
+    await scanStagingPool(mountPath);
+  }
+
+  return { paths, duplicateCount };
+}
+
 /**
  * `batchId` is client-generated — the client needs it before uploading.
  */

@@ -340,6 +340,44 @@ describe('drag-and-drop import & organize', () => {
       expect(stagedFiles).toContain('time.mp3');
       expect(stagedFiles).toContain('time (2).mp3');
     }, 30_000);
+
+    it('skips a byte-identical duplicate of an already-staged file', async () => {
+      const tags = { title: 'Time', artist: 'Pink Floyd' };
+      const { store } = await renderMusicApp({ server: getServer() });
+      await scanLibrary();
+      await dropTrack('time.mp3', tags, store);
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
+      const closeButton = screen.getByRole('button', {
+        name: 'Close staged import',
+      });
+      await act(async () => {
+        fireEvent.click(closeButton);
+        await waitForNetworkIdle();
+      });
+
+      const zone = await dropZone();
+      const file = new File(
+        [new Uint8Array(buildMp3WithTags(tags))],
+        'time-copy.mp3',
+        { type: 'audio/mpeg' },
+      );
+      await act(async () => {
+        fireEvent.drop(zone, { dataTransfer: makeDataTransfer([file]) });
+        await waitForNetworkIdle();
+      });
+
+      await screen.findByText('Skipped 1 duplicate file — already staged.');
+      expect($.getMusicImportBatch(store.getState())).toBeNull();
+
+      const stagedFiles = await readdir(
+        join(getServer().mountDir, '.music-staging'),
+      );
+      expect(stagedFiles).toContain('time.mp3');
+      expect(stagedFiles).not.toContain('time-copy.mp3');
+    }, 30_000);
   });
 
   describe('staged batch-edit screen', () => {
@@ -1057,8 +1095,8 @@ describe('drag-and-drop import & organize', () => {
       };
       await dropTracks(
         [
-          { fileName: 'dup1.mp3', tags: dupTags },
-          { fileName: 'dup2.mp3', tags: dupTags },
+          { fileName: 'dup1.mp3', tags: { ...dupTags, composer: 'One' } },
+          { fileName: 'dup2.mp3', tags: { ...dupTags, composer: 'Two' } },
           {
             fileName: 'solo.mp3',
             tags: { title: 'Unique', artist: 'Solo', genre: 'Jazz', track: 2 },
