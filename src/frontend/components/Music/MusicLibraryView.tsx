@@ -10,6 +10,7 @@ import {
   useFolderArtworkPaste,
   useMusicLibraryTrackSource,
   useMusicStagingPoolTrackSource,
+  useDiscardStagingPool,
   collectFilesFromDataTransfer,
 } from 'frontend/hooks/music';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -256,6 +257,7 @@ export function MusicLibraryView({
           <OrganizeImportView
             tracks={organizeTracks}
             onBack={() => dispatch(A.setMusicStagingView('staging'))}
+            onClose={() => dispatch(A.setMusicStagingView(null))}
           />,
         )
       : withDropTarget(
@@ -317,21 +319,10 @@ export function MusicLibraryView({
 function StagingPoolBanner() {
   const dispatch = Hooks.useDispatch();
   const stagingPool = $$.getMusicStagingPool();
-  const [deleteConfirmPending, setDeleteConfirmPending] = React.useState(false);
+  const { discardConfirmPending, handleDiscardClick } = useDiscardStagingPool();
 
   if (stagingPool.length === 0) {
     return null;
-  }
-
-  function handleDeleteClick() {
-    if (deleteConfirmPending) {
-      void dispatch(
-        A.removeMusicStagingPoolTracks(stagingPool.map((t) => t.path)),
-      );
-      setDeleteConfirmPending(false);
-    } else {
-      setDeleteConfirmPending(true);
-    }
   }
 
   return (
@@ -340,18 +331,20 @@ function StagingPoolBanner() {
         {stagingPool.length} {stagingPool.length === 1 ? 'track' : 'tracks'}{' '}
         staged
       </span>
+      {discardConfirmPending ? (
+        <span className="musicImportDiscardWarning">
+          Click again to discard
+        </span>
+      ) : null}
+      <button type="button" className="button" onClick={handleDiscardClick}>
+        Discard
+      </button>
       <button
         type="button"
         className="button button-primary"
         onClick={() => dispatch(A.setMusicStagingView('staging'))}
       >
         Resume
-      </button>
-      {deleteConfirmPending ? (
-        <span className="musicImportDiscardWarning">Click again to delete</span>
-      ) : null}
-      <button type="button" className="button" onClick={handleDeleteClick}>
-        Delete
       </button>
     </div>
   );
@@ -409,6 +402,8 @@ function StagingPoolEditView({ onCloseView }: { onCloseView: () => void }) {
     [trackSource.tracks],
   );
 
+  const { discardConfirmPending, handleDiscardClick } = useDiscardStagingPool();
+
   Hooks.useEscape(() => {
     if (selectedTrackPaths.length > 0) {
       dispatch(A.setMusicSelectedTracks([]));
@@ -420,7 +415,7 @@ function StagingPoolEditView({ onCloseView }: { onCloseView: () => void }) {
   // A single selection just means "I'm editing this row".
   const isMultiSelect = selectedTrackPaths.length > 1;
 
-  function handleOrganizeClick() {
+  function handleNextClick() {
     dispatch(A.setMusicStagingView('organize'));
   }
 
@@ -432,6 +427,23 @@ function StagingPoolEditView({ onCloseView }: { onCloseView: () => void }) {
           {trackSource.tracks.length === 1 ? 'track' : 'tracks'}
         </h2>
         <div className="musicImportBatchHeaderActions">
+          {discardConfirmPending ? (
+            <span className="musicImportDiscardWarning">
+              Click again to discard
+            </span>
+          ) : null}
+          <button type="button" className="button" onClick={handleDiscardClick}>
+            Discard
+          </button>
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={handleNextClick}
+          >
+            {isMultiSelect
+              ? `Next ${selectedTrackPaths.length} selected`
+              : 'Next'}
+          </button>
           <button
             type="button"
             className="musicBatchEditCloseButton"
@@ -439,15 +451,6 @@ function StagingPoolEditView({ onCloseView }: { onCloseView: () => void }) {
             onClick={onCloseView}
           >
             <img src="/svg/xmark.svg" alt="" />
-          </button>
-          <button
-            type="button"
-            className="button button-primary"
-            onClick={handleOrganizeClick}
-          >
-            {isMultiSelect
-              ? `Organize ${selectedTrackPaths.length} selected`
-              : 'Organize'}
           </button>
         </div>
       </div>

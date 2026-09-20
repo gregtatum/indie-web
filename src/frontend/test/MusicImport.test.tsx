@@ -768,11 +768,11 @@ describe('drag-and-drop import & organize', () => {
       });
       await screen.findByText('2 tracks staged');
 
-      const deleteButton = screen.getByRole('button', { name: 'Delete' });
-      fireEvent.click(deleteButton);
-      await screen.findByText('Click again to delete');
+      const discardButton = screen.getByRole('button', { name: 'Discard' });
+      fireEvent.click(discardButton);
+      await screen.findByText('Click again to discard');
       await act(async () => {
-        fireEvent.click(deleteButton);
+        fireEvent.click(discardButton);
         await waitForNetworkIdle();
       });
 
@@ -830,7 +830,7 @@ describe('drag-and-drop import & organize', () => {
 
       await act(async () => {
         fireEvent.click(
-          screen.getByRole('button', { name: 'Organize 2 selected' }),
+          screen.getByRole('button', { name: 'Next 2 selected' }),
         );
         await waitForNetworkIdle();
       });
@@ -850,7 +850,7 @@ describe('drag-and-drop import & organize', () => {
     ) {
       const { store } = await dropTrack(fileName, tags);
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Organize' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
         await waitForNetworkIdle();
       });
       await screen.findByText(/Organize ·/);
@@ -1007,7 +1007,7 @@ describe('drag-and-drop import & organize', () => {
       expect(resetPath).not.toBe(computedPath);
     }, 30_000);
 
-    it('returns to the edit screen via Back to edit, and Organize starts from the default preset again', async () => {
+    it('returns to the staging screen via Back, and Next starts from the default preset again', async () => {
       await dropAndOrganize('time.mp3', { title: 'Time', artist: 'Floyd' });
 
       fireEvent.change(
@@ -1016,13 +1016,13 @@ describe('drag-and-drop import & organize', () => {
       );
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Back to edit' }));
+        fireEvent.click(screen.getByRole('button', { name: '← Back' }));
         await waitForNetworkIdle();
       });
       await screen.findByRole('heading', { name: /Staging ·/ });
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Organize' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
         await waitForNetworkIdle();
       });
       await screen.findByText(/Organize ·/);
@@ -1035,7 +1035,7 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
   });
 
-  describe('commit ("Done")', () => {
+  describe('commit ("Save")', () => {
     beforeEach(() => {
       jest
         .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
@@ -1047,7 +1047,7 @@ describe('drag-and-drop import & organize', () => {
 
     async function organizeAll() {
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Organize' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
         await waitForNetworkIdle();
       });
       await screen.findByText(/Organize ·/);
@@ -1055,7 +1055,7 @@ describe('drag-and-drop import & organize', () => {
 
     async function clickDone() {
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
         await waitForNetworkIdle();
       });
     }
@@ -1444,7 +1444,7 @@ describe('drag-and-drop import & organize', () => {
 
       await act(async () => {
         fireEvent.click(
-          screen.getByRole('button', { name: 'Organize 2 selected' }),
+          screen.getByRole('button', { name: 'Next 2 selected' }),
         );
         await waitForNetworkIdle();
       });

@@ -460,3 +460,23 @@ export function useMusicStagingPoolTrackSource(): MusicTrackSource {
     [dispatch, tracks],
   );
 }
+
+export function useDiscardStagingPool() {
+  const dispatch = Hooks.useDispatch();
+  const stagingPool = $$.getMusicStagingPool();
+  const [discardConfirmPending, setDiscardConfirmPending] =
+    React.useState(false);
+
+  function handleDiscardClick() {
+    if (discardConfirmPending) {
+      void dispatch(
+        A.removeMusicStagingPoolTracks(stagingPool.map((t) => t.path)),
+      );
+      setDiscardConfirmPending(false);
+    } else {
+      setDiscardConfirmPending(true);
+    }
+  }
+
+  return { discardConfirmPending, handleDiscardClick };
+}

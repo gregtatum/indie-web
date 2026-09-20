@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { T, A, Hooks } from 'frontend';
+import { useDiscardStagingPool } from 'frontend/hooks/music';
 import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
@@ -9,11 +10,14 @@ import {
 export function OrganizeImportView({
   tracks,
   onBack,
+  onClose,
 }: {
   tracks: T.TrackMetadata[];
   onBack: () => void;
+  onClose: () => void;
 }) {
   const dispatch = Hooks.useDispatch();
+  const { discardConfirmPending, handleDiscardClick } = useDiscardStagingPool();
   const [template, setTemplate] = React.useState(
     () => ORGANIZATION_PRESET_TEMPLATES[0],
   );
@@ -81,7 +85,20 @@ export function OrganizeImportView({
             onClick={onBack}
             disabled={committing}
           >
-            Back to edit
+            ← Back
+          </button>
+          {discardConfirmPending ? (
+            <span className="musicImportDiscardWarning">
+              Click again to discard
+            </span>
+          ) : null}
+          <button
+            type="button"
+            className="button"
+            onClick={handleDiscardClick}
+            disabled={committing}
+          >
+            Discard
           </button>
           <button
             type="button"
@@ -89,7 +106,16 @@ export function OrganizeImportView({
             onClick={() => void handleDoneClick()}
             disabled={committing}
           >
-            {committing ? 'Organizing…' : 'Done'}
+            {committing ? 'Organizing…' : 'Save'}
+          </button>
+          <button
+            type="button"
+            className="musicBatchEditCloseButton"
+            aria-label="Back to library"
+            onClick={onClose}
+            disabled={committing}
+          >
+            <img src="/svg/xmark.svg" alt="" />
           </button>
         </div>
       </div>
