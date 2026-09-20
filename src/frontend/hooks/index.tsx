@@ -615,13 +615,15 @@ export function useEscape(dismiss: () => void, isOpen: boolean) {
   const keyHandler = React.useRef<null | ((event: KeyboardEvent) => void)>(
     null,
   );
+  const dismissRef = React.useRef(dismiss);
+  dismissRef.current = dismiss;
   React.useEffect(() => {
     if (!isOpen) {
       return () => {};
     }
     keyHandler.current = (event) => {
       if (event.key === 'Escape') {
-        dismiss();
+        dismissRef.current();
       }
     };
     document.addEventListener('keydown', keyHandler.current);

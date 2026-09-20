@@ -402,6 +402,7 @@ function StagingPoolEditView({
   onOrganize: (tracks: T.TrackMetadata[]) => void;
   onCloseView: () => void;
 }) {
+  const dispatch = Hooks.useDispatch();
   const trackSource = useMusicStagingPoolTrackSource();
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
   const trackPaths = React.useMemo(
@@ -409,11 +410,15 @@ function StagingPoolEditView({
     [trackSource.tracks],
   );
 
-  Hooks.useEscape(onCloseView, true);
+  Hooks.useEscape(() => {
+    if (selectedTrackPaths.length > 0) {
+      dispatch(A.setMusicSelectedTracks([]));
+    } else {
+      onCloseView();
+    }
+  }, true);
 
-  // A single selection just means "I'm editing this row" — the auto-select
-  // on drop already puts one track into it — so only a deliberate multi-select
-  // narrows what Organize acts on; anything else organizes the whole pool.
+  // A single selection just means "I'm editing this row".
   const isMultiSelect = selectedTrackPaths.length > 1;
 
   function handleOrganizeClick() {

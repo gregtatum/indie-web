@@ -203,6 +203,8 @@ function selectedTrackPaths(state: string[] = [], action: T.Action): string[] {
       return action.selectedTrackPath ? [action.selectedTrackPath] : state;
     case 'set-music-selected-tracks':
       return action.paths;
+    case 'set-music-show-staging-view':
+      return action.show ? state : [];
     case 'view-music':
       return [];
     default:

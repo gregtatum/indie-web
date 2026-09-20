@@ -70,11 +70,6 @@ function makeFolderDataTransfer(entries: FileSystemEntry[]): DataTransfer {
   } as unknown as DataTransfer;
 }
 
-/**
- * Covers the whole drag-and-drop import & organize feature in one file,
- * nested by phase, rather than one file per screen — this is a single
- * feature with one end-to-end flow.
- */
 describe('drag-and-drop import & organize', () => {
   const { getServer } = useMusicTestServer();
 

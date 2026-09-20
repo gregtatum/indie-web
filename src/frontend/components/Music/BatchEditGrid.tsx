@@ -441,7 +441,6 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
       void commitEdit([path], columnDef, status.value);
       return;
     }
-    setCursorColumn(columnIndex);
     if (event.metaKey || event.ctrlKey) {
       const currentPaths = $.getMusicSelectedTrackPaths(getState());
       const isSelected = currentPaths.includes(path);
@@ -450,10 +449,13 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
         : [...currentPaths, path];
       if (!isSelected) {
         anchorPathRef.current = path;
+        setFocusedPath(path);
+      } else if (focusedPathRef.current === path) {
+        setFocusedPath(next[0] ?? null);
       }
-      setFocusedPath(path);
       dispatch(A.setMusicSelectedTracks(next));
     } else if (event.shiftKey && anchorPathRef.current !== null) {
+      setCursorColumn(columnIndex);
       const anchorIndex = rowOrder.indexOf(anchorPathRef.current);
       const targetIndex = rowOrder.indexOf(path);
       const [start, end] =
@@ -463,6 +465,7 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
       setFocusedPath(path);
       dispatch(A.setMusicSelectedTracks(rowOrder.slice(start, end + 1)));
     } else {
+      setCursorColumn(columnIndex);
       selectSingleRow(path);
     }
   }
@@ -949,6 +952,8 @@ function BatchEditRow({
         const isActiveColumn = columnIndex === cursorColumn;
         const showActiveBox = isFocused && isActiveColumn;
         const isEditingHere = editing !== null && isFocused && isActiveColumn;
+        const isBatchTarget =
+          editing !== null && isActiveColumn && isSelected && !isFocused;
         const statusKey = `${path}:${column.frameId}`;
         const status = cellStatus.get(statusKey);
         const value = isEditingHere
@@ -983,7 +988,9 @@ function BatchEditRow({
                 inputMode={column.numeric ? 'numeric' : 'text'}
               />
             ) : (
-              <span className="musicBatchEditCellText">{value || ' '}</span>
+              !isBatchTarget && (
+                <span className="musicBatchEditCellText">{value || ' '}</span>
+              )
             )}
             {status?.status === 'saving' ? (
               <span className="musicBatchEditCellSaving" aria-hidden="true" />
