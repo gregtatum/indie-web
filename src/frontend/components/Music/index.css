@@ -298,6 +298,16 @@
   background: var(--surface-raised);
 }
 
+.musicBatchEditSidebar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--music-padding-h);
+  color: var(--text-label);
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
 .musicBatchEditGrid {
   display: flex;
   flex-direction: column;

@@ -12,6 +12,14 @@ export function TrackEditorSidebar({ trackSource }: TrackEditorSidebarProps) {
   const trackPath =
     selectedTrackPaths.length === 1 ? selectedTrackPaths[0] : null;
 
+  if (selectedTrackPaths.length === 0) {
+    return (
+      <div className="musicBatchEditSidebar musicBatchEditSidebar-empty">
+        Nothing selected
+      </div>
+    );
+  }
+
   return (
     <div className="musicBatchEditSidebar">
       <TrackEditorPanel
