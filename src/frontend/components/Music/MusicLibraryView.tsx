@@ -11,7 +11,7 @@ import {
   useFolderArtworkPaste,
   useMusicLibraryTrackSource,
   useMusicImportTrackSource,
-  useMusicImportDiscardConfirm,
+  useMusicImportClose,
   collectFilesFromDataTransfer,
 } from 'frontend/hooks/music';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -300,11 +300,7 @@ export function MusicLibraryView({
 }
 
 function StagedImportsBanner() {
-  const dispatch = Hooks.useDispatch();
   const summaries = $$.getMusicStagedBatchSummaries();
-  const [discardPendingId, setDiscardPendingId] = React.useState<string | null>(
-    null,
-  );
 
   if (summaries.length === 0) {
     return null;
@@ -318,47 +314,51 @@ function StagedImportsBanner() {
       </span>
       <ul className="musicStagedImportsList">
         {summaries.map((summary) => (
-          <li key={summary.batchId} className="musicStagedImportsListItem">
-            <span className="musicStagedImportsListItemLabel">
-              {summary.trackCount}{' '}
-              {summary.trackCount === 1 ? 'track' : 'tracks'} ·{' '}
-              {summary.step === 'organizing' ? 'Organizing' : 'Editing'} ·{' '}
-              {new Date(summary.createdAt).toLocaleString()}
-            </span>
-            <button
-              type="button"
-              className="button"
-              onClick={() =>
-                void dispatch(A.resumeMusicImportBatch(summary.batchId))
-              }
-            >
-              Resume
-            </button>
-            {discardPendingId === summary.batchId ? (
-              <button
-                type="button"
-                className="button"
-                onClick={() => {
-                  setDiscardPendingId(null);
-                  void dispatch(A.discardMusicImportBatch(summary.batchId));
-                }}
-              >
-                Click again to discard
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="musicBatchEditCloseButton"
-                aria-label="Discard staged import"
-                onClick={() => setDiscardPendingId(summary.batchId)}
-              >
-                <img src="/svg/xmark.svg" alt="" />
-              </button>
-            )}
-          </li>
+          <StagedImportsBannerRow key={summary.batchId} summary={summary} />
         ))}
       </ul>
     </div>
+  );
+}
+
+function StagedImportsBannerRow({
+  summary,
+}: {
+  summary: T.StagedBatchSummary;
+}) {
+  const dispatch = Hooks.useDispatch();
+  const [discardConfirmPending, setDiscardConfirmPending] =
+    React.useState(false);
+
+  function handleDiscardClick() {
+    if (discardConfirmPending) {
+      void dispatch(A.discardMusicImportBatch(summary.batchId));
+    } else {
+      setDiscardConfirmPending(true);
+    }
+  }
+
+  return (
+    <li className="musicStagedImportsListItem">
+      <span className="musicStagedImportsListItemLabel">
+        {summary.trackCount} {summary.trackCount === 1 ? 'track' : 'tracks'} ·{' '}
+        {summary.step === 'organizing' ? 'Organizing' : 'Editing'} ·{' '}
+        {new Date(summary.createdAt).toLocaleString()}
+      </span>
+      <button
+        type="button"
+        className="button button-primary"
+        onClick={() => void dispatch(A.resumeMusicImportBatch(summary.batchId))}
+      >
+        Resume
+      </button>
+      {discardConfirmPending ? (
+        <span className="musicImportDiscardWarning">Click again to delete</span>
+      ) : null}
+      <button type="button" className="button" onClick={handleDiscardClick}>
+        Delete
+      </button>
+    </li>
   );
 }
 
@@ -413,8 +413,7 @@ function ImportBatchEditView({ batch }: { batch: T.MusicImportBatch }) {
     [batch.tracks],
   );
 
-  const { discardConfirmPending, handleDiscardOrEscape } =
-    useMusicImportDiscardConfirm(batch.batchId);
+  const handleClose = useMusicImportClose(batch.batchId);
 
   function handleContinueClick() {
     void dispatch(
@@ -434,16 +433,11 @@ function ImportBatchEditView({ batch }: { batch: T.MusicImportBatch }) {
           {batch.tracks.length === 1 ? 'track' : 'tracks'}
         </h2>
         <div className="musicImportBatchHeaderActions">
-          {discardConfirmPending ? (
-            <span className="musicImportDiscardWarning">
-              Click again to discard
-            </span>
-          ) : null}
           <button
             type="button"
             className="musicBatchEditCloseButton"
-            aria-label="Discard staged import"
-            onClick={handleDiscardOrEscape}
+            aria-label="Close staged import"
+            onClick={handleClose}
           >
             <img src="/svg/xmark.svg" alt="" />
           </button>

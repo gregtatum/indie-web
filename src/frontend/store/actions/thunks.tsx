@@ -2140,6 +2140,15 @@ export function resumeMusicImportBatch(batchId: string): Thunk<Promise<void>> {
   };
 }
 
+export function closeMusicImportBatch(batchId: string): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    if ($.getMusicImportBatch(getState())?.batchId === batchId) {
+      dispatch(Plain.setMusicImportBatch(null));
+    }
+    void dispatch(refreshMusicStagedBatchSummaries());
+  };
+}
+
 export function discardMusicImportBatch(batchId: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     const server = $.getCurrentServer(getState());

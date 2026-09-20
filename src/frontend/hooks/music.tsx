@@ -454,29 +454,13 @@ export function useMusicImportTrackSource(
   );
 }
 
-/**
- * The click-twice (or Escape-twice) confirm used to discard a staged import
- * batch, shared by the batch-edit and organize screens.
- */
-export function useMusicImportDiscardConfirm(batchId: string) {
+export function useMusicImportClose(batchId: string) {
   const dispatch = Hooks.useDispatch();
-  const [discardConfirmPending, setDiscardConfirmPendingState] =
-    React.useState(false);
-  const discardConfirmPendingRef = React.useRef(false);
-  function setDiscardConfirmPending(value: boolean) {
-    discardConfirmPendingRef.current = value;
-    setDiscardConfirmPendingState(value);
-  }
-
-  const handleDiscardOrEscape = React.useCallback(() => {
-    if (discardConfirmPendingRef.current) {
-      void dispatch(A.discardMusicImportBatch(batchId));
-    } else {
-      setDiscardConfirmPending(true);
-    }
+  const handleClose = React.useCallback(() => {
+    void dispatch(A.closeMusicImportBatch(batchId));
   }, [dispatch, batchId]);
 
-  Hooks.useEscape(handleDiscardOrEscape, true);
+  Hooks.useEscape(handleClose, true);
 
-  return { discardConfirmPending, handleDiscardOrEscape };
+  return handleClose;
 }

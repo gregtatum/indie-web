@@ -6,7 +6,7 @@ import {
   ORGANIZATION_TOKENS,
   resolveOrganizationPath,
 } from 'shared/music';
-import { useMusicImportDiscardConfirm } from 'frontend/hooks/music';
+import { useMusicImportClose } from 'frontend/hooks/music';
 
 const TEMPLATE_PERSIST_DELAY = 400;
 
@@ -23,8 +23,7 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
   );
   const [committing, setCommitting] = React.useState(false);
 
-  const { discardConfirmPending, handleDiscardOrEscape } =
-    useMusicImportDiscardConfirm(batch.batchId);
+  const handleClose = useMusicImportClose(batch.batchId);
 
   function persistTemplateNow(nextTemplate: string) {
     persistTemplateDebounced.cancel();
@@ -109,16 +108,11 @@ export function OrganizeImportView({ batch }: { batch: T.MusicImportBatch }) {
           {batch.tracks.length === 1 ? 'track' : 'tracks'}
         </h2>
         <div className="musicImportBatchHeaderActions">
-          {discardConfirmPending ? (
-            <span className="musicImportDiscardWarning">
-              Click again to discard
-            </span>
-          ) : null}
           <button
             type="button"
             className="musicBatchEditCloseButton"
-            aria-label="Discard staged import"
-            onClick={handleDiscardOrEscape}
+            aria-label="Close staged import"
+            onClick={handleClose}
           >
             <img src="/svg/xmark.svg" alt="" />
           </button>

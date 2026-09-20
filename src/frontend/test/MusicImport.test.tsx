@@ -509,30 +509,33 @@ describe('drag-and-drop import & organize', () => {
       expect(stagedFiles.sort()).toEqual(['a.mp3', 'batch.json']);
     }, 30_000);
 
-    it('discards the staged batch via the header button, deleting the staging folder', async () => {
+    it('closes the staged batch via the header button without deleting it', async () => {
       const { store } = await dropTrack('time.mp3', {
         title: 'Time',
         artist: 'Pink Floyd',
       });
-      const batch = $.getMusicImportBatch(store.getState());
-      const batchDir = join(
-        getServer().mountDir,
-        '.music-staging',
-        batch?.batchId as string,
-      );
+      const batchId = $.getMusicImportBatch(store.getState())
+        ?.batchId as string;
+      const batchDir = join(getServer().mountDir, '.music-staging', batchId);
 
-      const discardButton = screen.getByRole('button', {
-        name: 'Discard staged import',
+      const closeButton = screen.getByRole('button', {
+        name: 'Close staged import',
       });
-      fireEvent.click(discardButton);
-      await screen.findByText('Click again to discard');
-      fireEvent.click(discardButton);
+      await act(async () => {
+        fireEvent.click(closeButton);
+        await waitForNetworkIdle();
+      });
 
       await waitFor(() => {
         expect(screen.queryByText(/Import ·/)).toBeNull();
       });
+      expect($.getMusicImportBatch(store.getState())).toBeNull();
 
-      await expect(readdir(batchDir)).rejects.toThrow();
+      expect((await readdir(batchDir)).sort()).toEqual([
+        'batch.json',
+        'time.mp3',
+      ]);
+      await screen.findByText('1 incomplete import');
     }, 30_000);
 
     it('persists the organizing step to the manifest when Continue is clicked', async () => {
@@ -794,29 +797,33 @@ describe('drag-and-drop import & organize', () => {
       ).toBe(chosenPreset);
     }, 30_000);
 
-    it('discards the staged batch from the organize screen', async () => {
+    it('closes the staged batch from the organize screen without deleting it', async () => {
       const { store } = await dropAndContinue('time.mp3', {
         title: 'Time',
         artist: 'Floyd',
       });
-      const batch = $.getMusicImportBatch(store.getState());
-      const batchDir = join(
-        getServer().mountDir,
-        '.music-staging',
-        batch?.batchId as string,
-      );
+      const batchId = $.getMusicImportBatch(store.getState())
+        ?.batchId as string;
+      const batchDir = join(getServer().mountDir, '.music-staging', batchId);
 
-      const discardButton = screen.getByRole('button', {
-        name: 'Discard staged import',
+      const closeButton = screen.getByRole('button', {
+        name: 'Close staged import',
       });
-      fireEvent.click(discardButton);
-      await screen.findByText('Click again to discard');
-      fireEvent.click(discardButton);
+      await act(async () => {
+        fireEvent.click(closeButton);
+        await waitForNetworkIdle();
+      });
 
       await waitFor(() => {
         expect(screen.queryByText(/Organize ·/)).toBeNull();
       });
-      await expect(readdir(batchDir)).rejects.toThrow();
+      expect($.getMusicImportBatch(store.getState())).toBeNull();
+
+      expect((await readdir(batchDir)).sort()).toEqual([
+        'batch.json',
+        'time.mp3',
+      ]);
+      await screen.findByText('1 incomplete import');
     }, 30_000);
   });
 
@@ -865,11 +872,9 @@ describe('drag-and-drop import & organize', () => {
 
       await abandonBatch(store);
 
-      const discardButton = screen.getByRole('button', {
-        name: 'Discard staged import',
-      });
+      const discardButton = screen.getByRole('button', { name: 'Delete' });
       fireEvent.click(discardButton);
-      await screen.findByText('Click again to discard');
+      await screen.findByText('Click again to delete');
       await act(async () => {
         fireEvent.click(discardButton);
         await waitForNetworkIdle();
