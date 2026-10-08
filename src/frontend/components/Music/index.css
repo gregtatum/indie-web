@@ -706,6 +706,51 @@
   display: block;
 }
 
+.musicAlbumHeroArtworkEdit {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #000000a6;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+
+  &:hover {
+    background: #000000d9;
+  }
+}
+
+.musicAlbumHeroArtwork:hover .musicAlbumHeroArtworkEdit,
+.musicAlbumHeroArtworkEdit:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .musicAlbumHeroArtworkEdit {
+    opacity: 1;
+  }
+}
+
+.musicAlbumHeroArtworkEditIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: #fff;
+  mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  /* webpackIgnore: true */
+  mask-image: url('/svg/pencil.svg');
+}
+
 .musicAlbumHeroArtworkPlaceholder {
   display: block;
   width: 100%;
@@ -938,7 +983,7 @@
 
   transform: translateX(
     /* Combine the offset for this width, plus the gap */
-    calc( var(--resize-offset) - var(--music-gap) / 2)
+    calc(var(--resize-offset) - var(--music-gap) / 2)
   );
   top: calc(-1 * var(--music-padding-v));
   bottom: calc(-1 * var(--music-padding-v));
@@ -968,7 +1013,9 @@
     background: var(--selection-active);
     color: #fff;
 
-    & .musicTrackNumber img { filter: invert(1); }
+    & .musicTrackNumber img {
+      filter: invert(1);
+    }
   }
 
   &:focus-within .musicTrack.selected:hover {
@@ -1015,7 +1062,10 @@
   align-items: center;
   justify-content: flex-end;
 
-  & img { width: 10px; height: 10px; }
+  & img {
+    width: 10px;
+    height: 10px;
+  }
 }
 
 .musicTrackTitle {
@@ -1158,8 +1208,13 @@
   border-radius: 50%;
   opacity: 0.75;
 
-  &:hover { opacity: 1; }
-  &:disabled { opacity: 0.3; cursor: default; }
+  &:hover {
+    opacity: 1;
+  }
+  &:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
 
   & img {
     width: 22px;
@@ -1194,7 +1249,9 @@
   flex-shrink: 0;
   width: 32px;
 
-  &:last-child { text-align: right; }
+  &:last-child {
+    text-align: right;
+  }
 }
 
 .musicPlaybackSeek {

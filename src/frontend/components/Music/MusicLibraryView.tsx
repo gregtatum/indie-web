@@ -797,6 +797,13 @@ function AlbumHero() {
     totalDuration > 0 ? formatAlbumDuration(totalDuration) : null,
   ].filter(Boolean) as string[];
 
+  function editAlbumArtwork() {
+    const trackPaths = orderedTracks.map((track) => track.path);
+    dispatch(A.setMusicSelectedTracks(trackPaths));
+    dispatch(A.setMusicEditTrackPath(trackPaths[0]));
+    dispatch(A.setMusicEditTab('artwork'));
+  }
+
   function playTracks(tracks: T.TrackMetadata[]) {
     if (tracks.length === 0) {
       return;
@@ -823,6 +830,14 @@ function AlbumHero() {
             aria-hidden="true"
           />
         )}
+        <button
+          type="button"
+          className="musicAlbumHeroArtworkEdit"
+          aria-label={`Edit artwork for ${title}`}
+          onClick={editAlbumArtwork}
+        >
+          <span className="musicAlbumHeroArtworkEditIcon" aria-hidden="true" />
+        </button>
         {artworkDragging && (
           <div className="musicAlbumHeroArtworkDropHint" aria-hidden="true">
             Set the album artwork

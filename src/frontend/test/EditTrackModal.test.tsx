@@ -739,9 +739,6 @@ describe('<EditTrackModal> with real server', () => {
 
     expect(await within(dialog).findByText('Unsaved selection')).toBeTruthy();
     expect(within(dialog).queryByText(/Folder\.jpg/)).toBeNull();
-    expect(
-      within(dialog).queryByRole('button', { name: /Album A.*Artist A/ }),
-    ).toBeNull();
 
     await act(async () => {
       fireEvent.keyDown(document.body, { key: 'z', metaKey: true });

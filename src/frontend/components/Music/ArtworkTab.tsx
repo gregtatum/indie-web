@@ -349,31 +349,13 @@ function useItunesArtworkSearch(initialQuery: string) {
   return { query, setQuery, status, results, search };
 }
 
-function ItunesArtworkSearchToggleButton({
-  open,
-  onToggle,
-}: {
-  open: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className="artworkItunesSearchBtn"
-      aria-pressed={open}
-      onClick={onToggle}
-    >
-      <SearchIcon />
-      Search iTunes for artwork
-    </button>
-  );
-}
-
 function ItunesArtworkSearchPanel({
   initialQuery,
+  autoSearch,
   onStage,
 }: {
   initialQuery: string;
+  autoSearch: boolean;
   onStage: (artwork: PendingArtwork) => void;
 }) {
   const dispatch = Hooks.useDispatch();
@@ -385,14 +367,14 @@ function ItunesArtworkSearchPanel({
   const searchedOnMount = React.useRef(false);
 
   React.useEffect(() => {
-    if (searchedOnMount.current) {
+    if (!autoSearch || searchedOnMount.current) {
       return;
     }
     searchedOnMount.current = true;
     if (initialQuery.trim()) {
       search(initialQuery);
     }
-  }, [initialQuery, search]);
+  }, [autoSearch, initialQuery, search]);
 
   async function stageResult(result: ItunesArtworkResult) {
     setDownloadingUrl(result.artworkUrl);
@@ -437,15 +419,13 @@ function ItunesArtworkSearchPanel({
         />
         <button
           type="submit"
-          className="artworkSaveFolderBtn"
+          className="artworkItunesSearchBtn"
           disabled={status === 'loading' || !query.trim()}
         >
-          {status === 'loading' ? 'Searching…' : 'Search'}
+          <SearchIcon />
+          {status === 'loading' ? 'Searching…' : 'Search iTunes for artwork'}
         </button>
       </form>
-      <div className="artworkItunesSearchNote">
-        Results and artwork come from Apple’s iTunes Search API.
-      </div>
       {status === 'error' && (
         <div className="artworkSectionError">
           Couldn’t reach iTunes.{' '}
@@ -1003,7 +983,6 @@ export function ArtworkTab({
   const navigate = Router.useNavigate();
   const version = $$.getMusicFolderArtworkVersion();
   const activeTab = $$.getMusicEditTab();
-  const [itunesSearchOpen, setItunesSearchOpen] = React.useState(false);
   const itunesInitialQuery = [artistHint, albumHint].filter(Boolean).join(' ');
 
   useFolderArtworkPaste({
@@ -1011,10 +990,6 @@ export function ArtworkTab({
     canEdit: canEditFolderArtwork,
     isActive: () => activeTab === 'artwork',
   });
-
-  React.useEffect(() => {
-    setItunesSearchOpen(false);
-  }, [trackPath]);
 
   const hasPendingArtwork = pendingArtwork !== null;
   React.useEffect(() => {
@@ -1066,24 +1041,6 @@ export function ArtworkTab({
       .map((tag) => ({ value: tag.value, binary: tag.binary! }))
       .filter((entry) => !entry.value.startsWith('-->'));
   }, [hideEmbeddedArtwork, tagsState]);
-
-  const isEmptyState =
-    !folderArtworkUrl &&
-    tagsState.status !== 'loading' &&
-    (embeddedArtwork.length === 0 || tagsState.status === 'error');
-  const autoSearchedTrackPath = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    if (
-      activeTab === 'artwork' &&
-      isEmptyState &&
-      canEditFolderArtwork &&
-      !emptyMessage &&
-      autoSearchedTrackPath.current !== trackPath
-    ) {
-      autoSearchedTrackPath.current = trackPath;
-      setItunesSearchOpen(true);
-    }
-  }, [activeTab, isEmptyState, canEditFolderArtwork, emptyMessage, trackPath]);
 
   const navigateToFile = React.useCallback(
     (filePath: string) => {
@@ -1150,21 +1107,16 @@ export function ArtworkTab({
                     onSaved={onFolderArtworkWritten}
                     label="Add artwork file"
                   />
-                  <ItunesArtworkSearchToggleButton
-                    open={itunesSearchOpen}
-                    onToggle={() => setItunesSearchOpen((open) => !open)}
-                  />
                 </div>
               )}
             </div>
           </div>
-          {canEditFolderArtwork && itunesSearchOpen && (
+          {canEditFolderArtwork && (
             <ItunesArtworkSearchPanel
+              key={trackPath}
               initialQuery={itunesInitialQuery}
-              onStage={(artwork) => {
-                onStageArtwork(artwork);
-                setItunesSearchOpen(false);
-              }}
+              autoSearch={activeTab === 'artwork' && !emptyMessage}
+              onStage={onStageArtwork}
             />
           )}
         </div>
@@ -1198,10 +1150,6 @@ export function ArtworkTab({
                   serverUrl={serverUrl}
                   onSaved={onFolderArtworkWritten}
                 />
-                <ItunesArtworkSearchToggleButton
-                  open={itunesSearchOpen}
-                  onToggle={() => setItunesSearchOpen((open) => !open)}
-                />
                 <RemoveFolderArtworkButton
                   trackPath={trackPath}
                   serverUrl={serverUrl}
@@ -1209,13 +1157,12 @@ export function ArtworkTab({
               </>
             )}
           </AlbumArtwork>
-          {canEditFolderArtwork && itunesSearchOpen && (
+          {canEditFolderArtwork && (
             <ItunesArtworkSearchPanel
+              key={trackPath}
               initialQuery={itunesInitialQuery}
-              onStage={(artwork) => {
-                onStageArtwork(artwork);
-                setItunesSearchOpen(false);
-              }}
+              autoSearch={false}
+              onStage={onStageArtwork}
             />
           )}
         </div>
