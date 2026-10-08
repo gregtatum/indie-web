@@ -10,6 +10,7 @@ import {
 import { getDirName, getPathFileName, getKeyboardString } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
 import type { EmbedFolderArtworkResponse } from 'shared/@types/shared';
+import { Tooltip } from 'frontend/components/Tooltip';
 import { memoizeLatest } from 'shared/utils';
 
 export interface PendingArtwork {
@@ -714,7 +715,7 @@ function EmbedArtworkBanner({
   let buttonLabel: React.ReactNode = (
     <>
       <EmbedIcon />
-      Embed artwork
+      Embed
     </>
   );
   if (status === 'saving') {
@@ -727,17 +728,22 @@ function EmbedArtworkBanner({
 
   return (
     <div className="artworkEmbedBanner">
-      <InfoIcon />
-      <div className="artworkEmbedBannerText">
-        <strong>The album artwork isn’t saved inside {tracksLabel}.</strong>
-        <span>
-          Embedding it keeps each file portable, so another player or app can
-          show the artwork without this folder.
-        </span>
+      <div className="artworkEmbedBannerHeader">
+        <Tooltip text="Embedding it keeps each file portable, so another player or app can show the artwork without this folder.">
+          <span
+            className="artworkEmbedBannerInfo"
+            tabIndex={0}
+            aria-label="Why embed artwork"
+          >
+            <InfoIcon />
+          </span>
+        </Tooltip>
+        <strong>The artwork isn’t embedded inside {tracksLabel}.</strong>
       </div>
       <button
         type="button"
         className="artworkEmbedBannerButton"
+        aria-label="Embed artwork"
         disabled={status === 'saving' || status === 'saved'}
         onClick={embed}
       >
@@ -821,6 +827,7 @@ function AlbumArtwork({
   trackPath,
   serverUrl,
   canEditFolderArtwork,
+  banner,
   children,
 }: {
   src: string;
@@ -832,6 +839,7 @@ function AlbumArtwork({
   trackPath: string;
   serverUrl: string;
   canEditFolderArtwork: boolean;
+  banner?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const [dimensions, setDimensions] = React.useState<string | null>(null);
@@ -904,6 +912,7 @@ function AlbumArtwork({
           </a>
         )}
         {children && <div className="artworkAlbumActions">{children}</div>}
+        {banner}
       </div>
     </div>
   );
@@ -1200,6 +1209,16 @@ export function ArtworkTab({
             trackPath={trackPath}
             serverUrl={serverUrl}
             canEditFolderArtwork={canEditFolderArtwork}
+            banner={
+              canEmbedFolderArtwork && embeddableTrackPaths.length > 0 ? (
+                <EmbedArtworkBanner
+                  folderArtworkPath={folderArtworkPath}
+                  trackPaths={embeddableTrackPaths}
+                  onEmbedded={onTracksEmbedded}
+                  serverUrl={serverUrl}
+                />
+              ) : null
+            }
           >
             {canEditFolderArtwork && (
               <>
@@ -1225,17 +1244,6 @@ export function ArtworkTab({
           )}
         </div>
       )}
-      {folderArtworkUrl &&
-        folderArtworkPath &&
-        canEmbedFolderArtwork &&
-        embeddableTrackPaths.length > 0 && (
-          <EmbedArtworkBanner
-            folderArtworkPath={folderArtworkPath}
-            trackPaths={embeddableTrackPaths}
-            onEmbedded={onTracksEmbedded}
-            serverUrl={serverUrl}
-          />
-        )}
       {!hideEmbeddedArtwork && embeddedArtwork.length > 0 && (
         <>
           <div className="artworkDivider" />

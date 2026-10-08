@@ -611,9 +611,7 @@ describe('<EditTrackModal> with real server', () => {
 
     const dialog = getDialog('Album A');
     expect(
-      within(dialog).getByText(
-        'The album artwork isn’t saved inside 3 tracks.',
-      ),
+      within(dialog).getByText('The artwork isn’t embedded inside 3 tracks.'),
     ).toBeTruthy();
     await act(async () => {
       fireEvent.click(
@@ -902,7 +900,10 @@ describe('<EditTrackModal> with real server', () => {
     const reason =
       'Embedding it keeps each file portable, so another player or app can ' +
       'show the artwork without this folder.';
-    expect(await within(dialog).findByText(reason)).toBeTruthy();
+    fireEvent.mouseEnter(
+      await within(dialog).findByLabelText('Why embed artwork'),
+    );
+    expect((await screen.findByRole('tooltip')).textContent).toBe(reason);
 
     await act(async () => {
       fireEvent.click(

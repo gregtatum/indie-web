@@ -554,39 +554,38 @@
 }
 
 .artworkEmbedBanner {
+  margin-top: 4px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 8px 12px;
   border: 1px solid var(--light-border);
   border-radius: var(--button-border-radius);
   background: var(--surface-raised);
 }
 
-.artworkEmbedBannerIcon {
-  flex: 0 0 auto;
-  display: block;
-  margin-top: 1px;
-  color: var(--text-label);
-}
-
-.artworkEmbedBannerText {
-  flex: 1 1 auto;
-  min-width: 0;
+.artworkEmbedBannerHeader {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 8px;
   font-size: var(--font-size-small);
   color: var(--text-body);
 }
 
-.artworkEmbedBannerText span {
+.artworkEmbedBannerInfo {
+  display: inline-flex;
+  cursor: help;
+}
+
+.artworkEmbedBannerIcon {
+  flex: 0 0 auto;
+  display: block;
   color: var(--text-label);
 }
 
 .artworkEmbedBannerButton {
   flex: 0 0 auto;
-  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 6px;
