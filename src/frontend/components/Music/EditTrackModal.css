@@ -427,6 +427,11 @@
   border: 1px solid var(--light-border);
 }
 
+.artworkSectionImageLoading {
+  aspect-ratio: 1 / 1;
+  background: var(--artwork-bg);
+}
+
 .artworkSectionError {
   font-size: var(--font-size-small);
   color: var(--text-label);

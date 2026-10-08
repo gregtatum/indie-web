@@ -747,6 +747,41 @@ function EmbedArtworkBanner({
   );
 }
 
+function SizedArtworkImage({
+  src,
+  alt,
+  onLoad,
+  onError,
+}: {
+  src: string;
+  alt?: string;
+  onLoad?: (img: HTMLImageElement) => void;
+  onError?: () => void;
+}) {
+  const [loaded, setLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    setLoaded(false);
+  }, [src]);
+
+  return (
+    <img
+      className={
+        loaded
+          ? 'artworkSectionImage'
+          : 'artworkSectionImage artworkSectionImageLoading'
+      }
+      src={src}
+      alt={alt}
+      onLoad={(event) => {
+        setLoaded(true);
+        onLoad?.(event.currentTarget);
+      }}
+      onError={onError}
+    />
+  );
+}
+
 function ArtworkDropZone({
   trackPath,
   serverUrl,
@@ -834,13 +869,11 @@ function AlbumArtwork({
         {imgError ? (
           <div className="artworkSectionError">Unable to load image</div>
         ) : (
-          <img
-            className="artworkSectionImage"
+          <SizedArtworkImage
             src={src}
-            onLoad={(event) => {
-              const img = event.currentTarget;
-              setDimensions(`${img.naturalWidth} × ${img.naturalHeight}`);
-            }}
+            onLoad={(img) =>
+              setDimensions(`${img.naturalWidth} × ${img.naturalHeight}`)
+            }
             onError={() => setImgError(true)}
           />
         )}
@@ -1097,8 +1130,7 @@ export function ArtworkTab({
               canEdit={canEditFolderArtwork}
             >
               {pendingArtwork ? (
-                <img
-                  className="artworkSectionImage"
+                <SizedArtworkImage
                   src={pendingArtwork.previewUrl}
                   alt="Selected artwork"
                 />
