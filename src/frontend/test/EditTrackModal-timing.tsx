@@ -708,7 +708,7 @@ describe('edit track modal — loading and error states', () => {
 
     const dialog = getDialog('Song A');
     expect(
-      within(dialog).getByRole('button', { name: /Change album artwork/ }),
+      within(dialog).getByRole('button', { name: /Change artwork file/ }),
     ).toBeTruthy();
 
     const input = dialog.querySelector(
@@ -759,7 +759,7 @@ describe('edit track modal — loading and error states', () => {
       'input[type="file"]',
     ) as HTMLInputElement;
     expect(
-      within(dialog).getByRole('button', { name: /Add album artwork/ }),
+      within(dialog).getByRole('button', { name: /Add artwork file/ }),
     ).toBeTruthy();
 
     const file = new File(['bytes'], 'cover.jpg', { type: 'image/jpeg' });

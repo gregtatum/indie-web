@@ -570,7 +570,7 @@ describe('<EditTrackModal> with real server', () => {
     ).toBeNull();
     // …but the folder image is now editable, just like a single-track edit.
     expect(
-      screen.getByRole('button', { name: /Change album artwork/ }),
+      screen.getByRole('button', { name: /Change artwork file/ }),
     ).toBeTruthy();
     // Every track already carries the art, so nothing is left to embed.
     expect(screen.queryByRole('button', { name: 'Embed artwork' })).toBeNull();
@@ -661,12 +661,109 @@ describe('<EditTrackModal> with real server', () => {
 
     expect(await screen.findByText('Mixed folder artwork')).toBeTruthy();
     expect(
-      screen.queryByRole('button', { name: /Change album artwork/ }),
+      screen.queryByRole('button', { name: /Change artwork file/ }),
     ).toBeNull();
     expect(
-      screen.queryByRole('button', { name: /Add album artwork/ }),
+      screen.queryByRole('button', { name: /Add artwork file/ }),
     ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Embed artwork' })).toBeNull();
+  }, 30_000);
+
+  it('stages a picked iTunes search result and applies it on save', async () => {
+    await writeTrack('a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      album: 'Album A',
+    });
+    await setup();
+
+    const thumbnailUrl =
+      'https://is1-ssl.mzstatic.com/image/thumb/fake/100x100bb.jpg';
+    const artworkUrl =
+      'https://is1-ssl.mzstatic.com/image/thumb/fake/1200x1200bb.jpg';
+    const artworkBytes = buildJpegBytes();
+
+    URL.createObjectURL = () => 'blob:staged-artwork';
+    URL.revokeObjectURL = () => {};
+    const realFetch = global.fetch;
+    (global as any).fetch = (input: unknown, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : (input as URL).toString();
+      if (url.startsWith('https://itunes.apple.com/search')) {
+        expect(url).toContain('term=Artist%20A%20Album%20A');
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              results: [
+                {
+                  artworkUrl100: thumbnailUrl,
+                  collectionName: 'Album A',
+                  artistName: 'Artist A',
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+      if (url === artworkUrl) {
+        return Promise.resolve(
+          new Response(new Uint8Array(artworkBytes), {
+            status: 200,
+            headers: { 'Content-Type': 'image/jpeg' },
+          }),
+        );
+      }
+      if (init?.body && typeof (init.body as Blob).arrayBuffer === 'function') {
+        // The fetch under test can't stream a Blob body, so send its bytes.
+        return (init.body as Blob)
+          .arrayBuffer()
+          .then((buffer) =>
+            realFetch(input as any, { ...init, body: new Uint8Array(buffer) }),
+          );
+      }
+      return realFetch(input as any, init);
+    };
+
+    await openEditModal('Song A');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+
+    const dialog = getDialog('Song A');
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole('button', {
+          name: /Search iTunes for artwork/,
+        }),
+      );
+    });
+
+    const result = await within(dialog).findByRole('button', {
+      name: /Album A.*Artist A/,
+    });
+    await act(async () => {
+      fireEvent.click(result);
+    });
+
+    expect(
+      await within(dialog).findByText(
+        'Selected artwork will be applied when you save.',
+      ),
+    ).toBeTruthy();
+    expect(within(dialog).queryByText(/Folder\.jpg/)).toBeNull();
+    expect(
+      within(dialog).queryByRole('button', { name: /Album A.*Artist A/ }),
+    ).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    });
+    expect(await within(dialog).findByText(/Folder\.jpg/)).toBeTruthy();
+    expect(
+      within(dialog).queryByText(
+        'Selected artwork will be applied when you save.',
+      ),
+    ).toBeNull();
   }, 30_000);
 
   it('shows album artwork and a collapsible embedded row for a single track', async () => {

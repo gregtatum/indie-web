@@ -921,7 +921,7 @@ describe('drag-and-drop import & organize', () => {
       };
 
       const defaultPreset =
-        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+        '{Genre}/{AlbumArtist}/{Year} - {Album}/{Track} - {Title}';
       const otherPreset = '{Artist}/{AlbumArtist}/{Track} - {Title}';
 
       expect(

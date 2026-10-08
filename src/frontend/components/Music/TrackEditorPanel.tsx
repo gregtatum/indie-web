@@ -3,7 +3,7 @@ import { $$, A, Hooks, T } from 'frontend';
 import { Tabs } from 'frontend/components/Tabs';
 import { throttle } from 'shared/utils';
 import { getDirName } from 'frontend/utils';
-import { ArtworkTab } from './ArtworkTab';
+import { ArtworkTab, type PendingArtwork } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
 import {
   DETAIL_FIELDS,
@@ -25,6 +25,7 @@ import type {
   TrackTagsResponse,
   WriteTrackTagsRequest,
   WriteTrackTagsResponse,
+  WriteFolderArtworkResponse,
 } from 'shared/@types/shared';
 import './EditTrackModal.css';
 
@@ -282,6 +283,8 @@ export const TrackEditorPanel = React.forwardRef<
   const [saveNotice, setSaveNotice] = React.useState<SaveNotice | null>(null);
   const [showAllSaveErrors, setShowAllSaveErrors] = React.useState(false);
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
+  const [pendingArtwork, setPendingArtwork] =
+    React.useState<PendingArtwork | null>(null);
   const tagRequestId = React.useRef(0);
   const bulkAbortControllerRef = React.useRef<AbortController | null>(null);
   const bulkTagsByPathRef = React.useRef(new Map<string, TrackTagsResponse>());
@@ -561,7 +564,16 @@ export const TrackEditorPanel = React.forwardRef<
     setSaveNotice(null);
     setShowAllSaveErrors(false);
     setCloseConfirmPending(false);
+    setPendingArtwork(null);
   }, [trackPath, bulkTrackKey, resolvedEditTrackKey, isBulkEdit]);
+
+  React.useEffect(() => {
+    return () => {
+      if (pendingArtwork) {
+        URL.revokeObjectURL(pendingArtwork.previewUrl);
+      }
+    };
+  }, [pendingArtwork]);
 
   // Load the ID3 tab frame values when opening or switching tracks.
   React.useEffect(() => {
@@ -592,7 +604,7 @@ export const TrackEditorPanel = React.forwardRef<
     }
   }, [activeTab, dispatch, isBulkEdit]);
 
-  const isDirty = React.useMemo(() => {
+  const hasTagChanges = React.useMemo(() => {
     for (const key of Object.keys(baselineFormState) as DetailFormValueKey[]) {
       if ((formState[key] ?? '') !== (baselineFormState[key] ?? '')) {
         return true;
@@ -600,6 +612,7 @@ export const TrackEditorPanel = React.forwardRef<
     }
     return false;
   }, [formState, baselineFormState]);
+  const isDirty = hasTagChanges || pendingArtwork !== null;
 
   function handleClose() {
     if (!onClose) {
@@ -641,7 +654,7 @@ export const TrackEditorPanel = React.forwardRef<
     }
 
     const changes = buildDetailChanges(formState, baselineFormState);
-    if (changes.length === 0) {
+    if (changes.length === 0 && !pendingArtwork) {
       return false;
     }
 
@@ -649,6 +662,31 @@ export const TrackEditorPanel = React.forwardRef<
     setSaveNotice(null);
     setShowAllSaveErrors(false);
     try {
+      if (pendingArtwork) {
+        const res = await fetch(
+          `${server.url}/music/artwork?path=${encodeURIComponent(editTracks[0].path)}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': pendingArtwork.contentType },
+            body: pendingArtwork.data,
+          },
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `${res.status}`);
+        }
+        const written =
+          await (res.json() as Promise<WriteFolderArtworkResponse>);
+        if (written.folderArtworkPath) {
+          handleFolderArtworkWritten(written.folderArtworkPath);
+        }
+        setPendingArtwork(null);
+        if (changes.length === 0) {
+          setSaveStatus('idle');
+          setCloseConfirmPending(false);
+          return true;
+        }
+      }
       const body: WriteTrackTagsRequest = { paths: savePaths, changes };
       const res = await fetch(`${server.url}/music/write-track-tags`, {
         method: 'POST',
@@ -853,6 +891,12 @@ export const TrackEditorPanel = React.forwardRef<
       };
     }
   }
+  const artworkArtistHint = sharedAlbumHeader
+    ? sharedAlbumHeader.artist
+    : (track?.albumArtist ?? track?.artist ?? undefined);
+  const artworkAlbumHint = sharedAlbumHeader
+    ? sharedAlbumHeader.album
+    : (track?.album ?? undefined);
   const detailsEditingDisabled = isBulkEdit
     ? bulkTagsState.status === 'loading'
     : tagsState.status !== 'loaded';
@@ -1145,9 +1189,16 @@ export const TrackEditorPanel = React.forwardRef<
             trackPath={editTracks[0].path}
             embeddableTrackPaths={embeddableTrackPaths}
             onFolderArtworkWritten={handleFolderArtworkWritten}
+            pendingArtwork={pendingArtwork}
+            onStageArtwork={(artwork) => {
+              setCloseConfirmPending(false);
+              setPendingArtwork(artwork);
+            }}
             onTracksEmbedded={handleTracksEmbedded}
             onEmbeddedArtworkRemoved={handleEmbeddedArtworkRemoved}
             serverUrl={server.url}
+            artistHint={artworkArtistHint}
+            albumHint={artworkAlbumHint}
           />
         ) : (
           <div className="editTrackModalArtwork">

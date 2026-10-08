@@ -11,6 +11,12 @@ import { getDirName, getPathFileName } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
 import type { EmbedFolderArtworkResponse } from 'shared/@types/shared';
 
+export interface PendingArtwork {
+  data: Blob;
+  contentType: string;
+  previewUrl: string;
+}
+
 interface Props {
   folderArtworkUrl: string | null;
   folderArtworkPath: string | null;
@@ -22,9 +28,13 @@ interface Props {
   trackPath: string;
   embeddableTrackPaths: string[];
   onFolderArtworkWritten: (folderArtworkPath: string) => void;
+  pendingArtwork: PendingArtwork | null;
+  onStageArtwork: (artwork: PendingArtwork | null) => void;
   onTracksEmbedded: (trackPaths: string[]) => void;
   onEmbeddedArtworkRemoved: (trackPath: string) => void;
   serverUrl: string;
+  artistHint?: string;
+  albumHint?: string;
 }
 
 /**
@@ -129,6 +139,26 @@ function PictureIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg
+      className="artworkItunesSearchBtnIcon"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}
+
 function InfoIcon() {
   return (
     <svg
@@ -201,7 +231,7 @@ function ChangeArtworkButton({
   trackPath,
   serverUrl,
   onSaved,
-  label = 'Change album artwork',
+  label = 'Change artwork file',
 }: ArtworkButtonProps & { label?: string }) {
   const { saveStatus, active, save } = useFolderArtworkSave(serverUrl, onSaved);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -239,6 +269,237 @@ function ChangeArtworkButton({
         )}
       </button>
     </>
+  );
+}
+
+interface ItunesArtworkResult {
+  thumbnailUrl: string;
+  artworkUrl: string;
+  collectionName: string | null;
+  artistName: string | null;
+}
+
+interface ItunesSearchApiResult {
+  artworkUrl100?: string;
+  collectionName?: string;
+  artistName?: string;
+}
+
+function resizeItunesArtworkUrl(url: string, size: number): string {
+  return url.replace(/\d+x\d+bb\.jpg$/, `${size}x${size}bb.jpg`);
+}
+
+function useItunesArtworkSearch(initialQuery: string) {
+  const [query, setQuery] = React.useState(initialQuery);
+  const [status, setStatus] = React.useState<
+    'idle' | 'loading' | 'loaded' | 'error'
+  >('idle');
+  const [results, setResults] = React.useState<ItunesArtworkResult[]>([]);
+  const requestId = React.useRef(0);
+
+  const search = React.useCallback((term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed) {
+      setStatus('idle');
+      setResults([]);
+      return;
+    }
+    const id = ++requestId.current;
+    setStatus('loading');
+    const url =
+      'https://itunes.apple.com/search?media=music&entity=album&limit=25' +
+      `&term=${encodeURIComponent(trimmed)}`;
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`${res.status}`);
+        }
+        return res.json() as Promise<{ results: ItunesSearchApiResult[] }>;
+      })
+      .then((data) => {
+        if (id !== requestId.current) {
+          return;
+        }
+        setResults(
+          data.results
+            .filter((entry) => typeof entry.artworkUrl100 === 'string')
+            .map((entry) => {
+              const thumbnailUrl = entry.artworkUrl100 as string;
+              return {
+                thumbnailUrl,
+                artworkUrl: resizeItunesArtworkUrl(thumbnailUrl, 1200),
+                collectionName: entry.collectionName ?? null,
+                artistName: entry.artistName ?? null,
+              };
+            }),
+        );
+        setStatus('loaded');
+      })
+      .catch(() => {
+        if (id !== requestId.current) {
+          return;
+        }
+        setStatus('error');
+      });
+  }, []);
+
+  return { query, setQuery, status, results, search };
+}
+
+function ItunesArtworkSearchToggleButton({
+  open,
+  onToggle,
+}: {
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="artworkItunesSearchBtn"
+      aria-pressed={open}
+      onClick={onToggle}
+    >
+      <SearchIcon />
+      Search iTunes for artwork
+    </button>
+  );
+}
+
+function ItunesArtworkSearchPanel({
+  initialQuery,
+  onStage,
+}: {
+  initialQuery: string;
+  onStage: (artwork: PendingArtwork) => void;
+}) {
+  const dispatch = Hooks.useDispatch();
+  const { query, setQuery, status, results, search } =
+    useItunesArtworkSearch(initialQuery);
+  const [downloadingUrl, setDownloadingUrl] = React.useState<string | null>(
+    null,
+  );
+  const searchedOnMount = React.useRef(false);
+
+  React.useEffect(() => {
+    if (searchedOnMount.current) {
+      return;
+    }
+    searchedOnMount.current = true;
+    if (initialQuery.trim()) {
+      search(initialQuery);
+    }
+  }, [initialQuery, search]);
+
+  async function stageResult(result: ItunesArtworkResult) {
+    setDownloadingUrl(result.artworkUrl);
+    try {
+      const res = await fetch(result.artworkUrl);
+      if (!res.ok) {
+        throw new Error(`${res.status}`);
+      }
+      const blob = await res.blob();
+      setDownloadingUrl(null);
+      onStage({
+        data: blob,
+        contentType: blob.type || 'image/jpeg',
+        previewUrl: URL.createObjectURL(blob),
+      });
+    } catch {
+      setDownloadingUrl(null);
+      dispatch(
+        A.addMessage({
+          message: 'Could not download that artwork from iTunes.',
+          timeout: true,
+        }),
+      );
+    }
+  }
+
+  return (
+    <div className="artworkItunesSearch">
+      <form
+        className="artworkItunesSearchForm"
+        onSubmit={(event) => {
+          event.preventDefault();
+          search(query);
+        }}
+      >
+        <input
+          className="artworkItunesSearchInput"
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Artist and album"
+        />
+        <button
+          type="submit"
+          className="artworkSaveFolderBtn"
+          disabled={status === 'loading' || !query.trim()}
+        >
+          {status === 'loading' ? 'Searching…' : 'Search'}
+        </button>
+      </form>
+      <div className="artworkItunesSearchNote">
+        Results and artwork come from Apple’s iTunes Search API.
+      </div>
+      {status === 'error' && (
+        <div className="artworkSectionError">
+          Couldn’t reach iTunes.{' '}
+          <button
+            type="button"
+            className="artworkSaveFolderBtn"
+            onClick={() => search(query)}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {status === 'loaded' && results.length === 0 && (
+        <div className="artworkMetaLine">No matches on iTunes.</div>
+      )}
+      {results.length > 0 && (
+        <div className="artworkItunesResultsGrid">
+          {results.map((result) => (
+            <button
+              key={result.artworkUrl}
+              type="button"
+              className="artworkItunesResult"
+              disabled={downloadingUrl !== null}
+              title={metaLine([result.collectionName, result.artistName])}
+              onClick={() => stageResult(result)}
+            >
+              <img
+                className="artworkItunesResultImg"
+                src={result.thumbnailUrl}
+                alt=""
+              />
+              <span className="artworkItunesResultLabel">
+                {metaLine([result.collectionName, result.artistName])}
+              </span>
+              {downloadingUrl === result.artworkUrl && (
+                <span className="artworkItunesResultOverlay">Loading…</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PendingArtworkNotice({ onDiscard }: { onDiscard: () => void }) {
+  return (
+    <div className="artworkPendingNotice">
+      <span>Selected artwork will be applied when you save.</span>
+      <button
+        type="button"
+        className="artworkSaveFolderBtn"
+        onClick={onDiscard}
+      >
+        Discard
+      </button>
+    </div>
   );
 }
 
@@ -540,6 +801,7 @@ function ArtworkDropZone({
 
 function AlbumArtwork({
   src,
+  isPending,
   fileName,
   dirName,
   dirHref,
@@ -550,6 +812,7 @@ function AlbumArtwork({
   children,
 }: {
   src: string;
+  isPending: boolean;
   fileName: string;
   dirName: string;
   dirHref: string | null;
@@ -568,6 +831,8 @@ function AlbumArtwork({
   // request fails.
   React.useEffect(() => {
     let cancelled = false;
+    setSizeBytes(null);
+    setDimensions(null);
     fetch(src, { method: 'HEAD' })
       .then((res) => {
         const header = res.ok ? res.headers.get('content-length') : null;
@@ -607,7 +872,7 @@ function AlbumArtwork({
         <div className="artworkAlbumHeading">Album artwork</div>
         <div className="artworkMetaLine">
           {metaLine([
-            fileName,
+            isPending ? 'Unsaved selection' : fileName,
             dimensions,
             sizeBytes ? formatBytes(sizeBytes) : null,
           ])}
@@ -732,21 +997,31 @@ export function ArtworkTab({
   trackPath,
   embeddableTrackPaths,
   onFolderArtworkWritten,
+  pendingArtwork,
+  onStageArtwork,
   onTracksEmbedded,
   onEmbeddedArtworkRemoved,
   serverUrl,
+  artistHint,
+  albumHint,
 }: Props) {
   const dispatch = Hooks.useDispatch();
   const { getState } = Hooks.useStore();
   const navigate = Router.useNavigate();
   const version = $$.getMusicFolderArtworkVersion();
   const activeTab = $$.getMusicEditTab();
+  const [itunesSearchOpen, setItunesSearchOpen] = React.useState(false);
+  const itunesInitialQuery = [artistHint, albumHint].filter(Boolean).join(' ');
 
   useFolderArtworkPaste({
     trackPath,
     canEdit: canEditFolderArtwork,
     isActive: () => activeTab === 'artwork',
   });
+
+  React.useEffect(() => {
+    setItunesSearchOpen(false);
+  }, [trackPath]);
 
   const embeddedArtwork = React.useMemo(() => {
     if (hideEmbeddedArtwork) {
@@ -803,7 +1078,15 @@ export function ArtworkTab({
               serverUrl={serverUrl}
               canEdit={canEditFolderArtwork}
             >
-              <div className="artworkAlbumPlaceholder" aria-hidden="true" />
+              {pendingArtwork ? (
+                <img
+                  className="artworkSectionImage"
+                  src={pendingArtwork.previewUrl}
+                  alt="Selected artwork"
+                />
+              ) : (
+                <div className="artworkAlbumPlaceholder" aria-hidden="true" />
+              )}
             </ArtworkDropZone>
             <div className="artworkAlbumInfo">
               <div className="artworkMetaLine">{emptyMessage}</div>
@@ -813,12 +1096,28 @@ export function ArtworkTab({
                     trackPath={trackPath}
                     serverUrl={serverUrl}
                     onSaved={onFolderArtworkWritten}
-                    label="Add album artwork"
+                    label="Add artwork file"
+                  />
+                  <ItunesArtworkSearchToggleButton
+                    open={itunesSearchOpen}
+                    onToggle={() => setItunesSearchOpen((open) => !open)}
                   />
                 </div>
               )}
             </div>
           </div>
+          {pendingArtwork && (
+            <PendingArtworkNotice onDiscard={() => onStageArtwork(null)} />
+          )}
+          {canEditFolderArtwork && itunesSearchOpen && (
+            <ItunesArtworkSearchPanel
+              initialQuery={itunesInitialQuery}
+              onStage={(artwork) => {
+                onStageArtwork(artwork);
+                setItunesSearchOpen(false);
+              }}
+            />
+          )}
         </div>
       </div>
     );
@@ -831,8 +1130,10 @@ export function ArtworkTab({
           <div className="artworkBlockLabel">Album artwork</div>
           <AlbumArtwork
             src={
-              version ? `${folderArtworkUrl}&v=${version}` : folderArtworkUrl
+              pendingArtwork?.previewUrl ??
+              (version ? `${folderArtworkUrl}&v=${version}` : folderArtworkUrl)
             }
+            isPending={pendingArtwork !== null}
             fileName={getPathFileName(folderArtworkPath)}
             dirName={`${getDirName(folderArtworkPath)}/`}
             dirHref={folderArtworkHref}
@@ -848,6 +1149,10 @@ export function ArtworkTab({
                   serverUrl={serverUrl}
                   onSaved={onFolderArtworkWritten}
                 />
+                <ItunesArtworkSearchToggleButton
+                  open={itunesSearchOpen}
+                  onToggle={() => setItunesSearchOpen((open) => !open)}
+                />
                 <RemoveFolderArtworkButton
                   trackPath={trackPath}
                   serverUrl={serverUrl}
@@ -855,6 +1160,18 @@ export function ArtworkTab({
               </>
             )}
           </AlbumArtwork>
+          {pendingArtwork && (
+            <PendingArtworkNotice onDiscard={() => onStageArtwork(null)} />
+          )}
+          {canEditFolderArtwork && itunesSearchOpen && (
+            <ItunesArtworkSearchPanel
+              initialQuery={itunesInitialQuery}
+              onStage={(artwork) => {
+                onStageArtwork(artwork);
+                setItunesSearchOpen(false);
+              }}
+            />
+          )}
         </div>
       )}
       {folderArtworkUrl &&

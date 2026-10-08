@@ -789,3 +789,131 @@
 .editTrackModalSaveBtn:hover:not(:disabled) {
   background: var(--primary-color-hover);
 }
+
+.artworkItunesSearchBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-small);
+  font-family: inherit;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--primary-color);
+  background: transparent;
+  color: var(--accent-strong);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.artworkItunesSearchBtn:hover {
+  background: var(--accent-tint);
+}
+
+.artworkItunesSearchBtn[aria-pressed='true'] {
+  background: var(--accent-tint);
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+
+.artworkItunesSearchBtnIcon {
+  display: block;
+}
+
+.artworkItunesSearch {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--light-border);
+  border-radius: var(--button-border-radius);
+  background: var(--surface-raised);
+}
+
+.artworkItunesSearchForm {
+  display: flex;
+  gap: 8px;
+}
+
+.artworkItunesSearchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: var(--font-size-small);
+  padding: 6px 10px;
+  border-radius: var(--button-border-radius);
+  border: 1px solid var(--light-border);
+  background: var(--modal-bg);
+  color: var(--text-body);
+}
+
+.artworkItunesSearchNote {
+  font-size: var(--font-size-small);
+  color: var(--text-label);
+}
+
+.artworkItunesResultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.artworkItunesResult {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--light-border);
+  border-radius: var(--button-border-radius);
+  background: var(--modal-bg);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.artworkItunesResult:hover:not(:disabled) {
+  border-color: var(--primary-color);
+}
+
+.artworkItunesResult:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.artworkItunesResultImg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--artwork-bg);
+}
+
+.artworkItunesResultLabel {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--font-size-small);
+  color: var(--text-label);
+}
+
+.artworkItunesResultOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--button-border-radius);
+  background: #00000088;
+  color: #fff;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.artworkPendingNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
