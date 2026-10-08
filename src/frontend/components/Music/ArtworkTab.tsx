@@ -996,6 +996,12 @@ export function ArtworkTab({
     trackPath,
     canEdit: canEditFolderArtwork,
     isActive: () => activeTab === 'artwork',
+    onPasteImage: (blob) =>
+      onStageArtwork({
+        data: blob,
+        contentType: blob.type || 'image/jpeg',
+        previewUrl: URL.createObjectURL(blob),
+      }),
   });
 
   const hasPendingArtwork = pendingArtwork !== null;
@@ -1114,6 +1120,19 @@ export function ArtworkTab({
                     onSaved={onFolderArtworkWritten}
                     label="Add artwork file"
                   />
+                  {pendingArtwork && (
+                    <button
+                      type="button"
+                      className="artworkChangeBtn artworkChangeBtnDanger"
+                      onClick={onUndoArtwork}
+                    >
+                      <span
+                        className="artworkEmbeddedRemoveBtnIcon"
+                        aria-hidden="true"
+                      />
+                      Remove album artwork
+                    </button>
+                  )}
                 </div>
               )}
             </div>

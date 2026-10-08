@@ -351,6 +351,8 @@ interface FolderArtworkPasteOptions {
   canEdit?: boolean;
   isActive?: () => boolean;
   onSaved?: (folderArtworkPath: string) => void;
+  /** When provided, pasted images are handed over instead of written. */
+  onPasteImage?: (blob: Blob) => void;
 }
 
 export function useFolderArtworkPaste({
@@ -358,6 +360,7 @@ export function useFolderArtworkPaste({
   canEdit = true,
   isActive,
   onSaved,
+  onPasteImage,
 }: FolderArtworkPasteOptions) {
   const serverUrl = $$.getCurrentServer().url;
   const patchIndex = useMusicIndexFolderArtworkPatch();
@@ -376,8 +379,16 @@ export function useFolderArtworkPaste({
     isActive,
     saveStatus,
     save,
+    onPasteImage,
   });
-  latest.current = { trackPath, canEdit, isActive, saveStatus, save };
+  latest.current = {
+    trackPath,
+    canEdit,
+    isActive,
+    saveStatus,
+    save,
+    onPasteImage,
+  };
 
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -398,7 +409,12 @@ export function useFolderArtworkPaste({
       const targetPath = current.trackPath;
       artworkBlobFromClipboard()
         .then((blob) => {
-          if (blob) {
+          if (!blob) {
+            return;
+          }
+          if (current.onPasteImage) {
+            current.onPasteImage(blob);
+          } else {
             current.save(targetPath, {
               data: blob,
               contentType: blob.type || 'image/jpeg',
