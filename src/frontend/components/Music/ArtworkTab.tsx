@@ -7,7 +7,7 @@ import {
   useFolderArtworkDrop,
   useFolderArtworkPaste,
 } from 'frontend/hooks/music';
-import { getDirName, getPathFileName } from 'frontend/utils';
+import { getDirName, getPathFileName, getKeyboardString } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
 import type { EmbedFolderArtworkResponse } from 'shared/@types/shared';
 
@@ -29,7 +29,10 @@ interface Props {
   embeddableTrackPaths: string[];
   onFolderArtworkWritten: (folderArtworkPath: string) => void;
   pendingArtwork: PendingArtwork | null;
-  onStageArtwork: (artwork: PendingArtwork | null) => void;
+  canRedoArtwork: boolean;
+  onStageArtwork: (artwork: PendingArtwork) => void;
+  onUndoArtwork: () => void;
+  onRedoArtwork: () => void;
   onTracksEmbedded: (trackPaths: string[]) => void;
   onEmbeddedArtworkRemoved: (trackPath: string) => void;
   serverUrl: string;
@@ -495,6 +498,7 @@ function PendingArtworkNotice({ onDiscard }: { onDiscard: () => void }) {
       <button
         type="button"
         className="artworkSaveFolderBtn"
+        title="Discard (⌘Z)"
         onClick={onDiscard}
       >
         Discard
@@ -998,7 +1002,10 @@ export function ArtworkTab({
   embeddableTrackPaths,
   onFolderArtworkWritten,
   pendingArtwork,
+  canRedoArtwork,
   onStageArtwork,
+  onUndoArtwork,
+  onRedoArtwork,
   onTracksEmbedded,
   onEmbeddedArtworkRemoved,
   serverUrl,
@@ -1022,6 +1029,43 @@ export function ArtworkTab({
   React.useEffect(() => {
     setItunesSearchOpen(false);
   }, [trackPath]);
+
+  const hasPendingArtwork = pendingArtwork !== null;
+  React.useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, [contenteditable="true"]')) {
+        return;
+      }
+      switch (getKeyboardString(event)) {
+        case 'Meta+Z':
+        case 'Control+Z':
+          if (hasPendingArtwork) {
+            event.preventDefault();
+            onUndoArtwork();
+          }
+          break;
+        case 'Meta+Shift+Z':
+        case 'Control+Shift+Z':
+          if (canRedoArtwork) {
+            event.preventDefault();
+            onRedoArtwork();
+          }
+          break;
+        default:
+      }
+    }
+    if ((hasPendingArtwork || canRedoArtwork) && activeTab === 'artwork') {
+      document.addEventListener('keydown', onKeyDown);
+    }
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [
+    hasPendingArtwork,
+    canRedoArtwork,
+    activeTab,
+    onUndoArtwork,
+    onRedoArtwork,
+  ]);
 
   const embeddedArtwork = React.useMemo(() => {
     if (hideEmbeddedArtwork) {
@@ -1106,9 +1150,7 @@ export function ArtworkTab({
               )}
             </div>
           </div>
-          {pendingArtwork && (
-            <PendingArtworkNotice onDiscard={() => onStageArtwork(null)} />
-          )}
+          {pendingArtwork && <PendingArtworkNotice onDiscard={onUndoArtwork} />}
           {canEditFolderArtwork && itunesSearchOpen && (
             <ItunesArtworkSearchPanel
               initialQuery={itunesInitialQuery}
@@ -1160,9 +1202,7 @@ export function ArtworkTab({
               </>
             )}
           </AlbumArtwork>
-          {pendingArtwork && (
-            <PendingArtworkNotice onDiscard={() => onStageArtwork(null)} />
-          )}
+          {pendingArtwork && <PendingArtworkNotice onDiscard={onUndoArtwork} />}
           {canEditFolderArtwork && itunesSearchOpen && (
             <ItunesArtworkSearchPanel
               initialQuery={itunesInitialQuery}

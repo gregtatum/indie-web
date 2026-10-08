@@ -285,6 +285,9 @@ export const TrackEditorPanel = React.forwardRef<
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
   const [pendingArtwork, setPendingArtwork] =
     React.useState<PendingArtwork | null>(null);
+  const [undoneArtwork, setUndoneArtwork] =
+    React.useState<PendingArtwork | null>(null);
+  const artworkPreviewUrls = React.useRef<string[]>([]);
   const tagRequestId = React.useRef(0);
   const bulkAbortControllerRef = React.useRef<AbortController | null>(null);
   const bulkTagsByPathRef = React.useRef(new Map<string, TrackTagsResponse>());
@@ -565,15 +568,16 @@ export const TrackEditorPanel = React.forwardRef<
     setShowAllSaveErrors(false);
     setCloseConfirmPending(false);
     setPendingArtwork(null);
+    setUndoneArtwork(null);
+    revokeArtworkPreviews();
   }, [trackPath, bulkTrackKey, resolvedEditTrackKey, isBulkEdit]);
 
-  React.useEffect(() => {
-    return () => {
-      if (pendingArtwork) {
-        URL.revokeObjectURL(pendingArtwork.previewUrl);
-      }
-    };
-  }, [pendingArtwork]);
+  React.useEffect(() => revokeArtworkPreviews, []);
+
+  function revokeArtworkPreviews() {
+    artworkPreviewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    artworkPreviewUrls.current = [];
+  }
 
   // Load the ID3 tab frame values when opening or switching tracks.
   React.useEffect(() => {
@@ -681,6 +685,8 @@ export const TrackEditorPanel = React.forwardRef<
           handleFolderArtworkWritten(written.folderArtworkPath);
         }
         setPendingArtwork(null);
+        setUndoneArtwork(null);
+        revokeArtworkPreviews();
         if (changes.length === 0) {
           setSaveStatus('idle');
           setCloseConfirmPending(false);
@@ -1190,9 +1196,20 @@ export const TrackEditorPanel = React.forwardRef<
             embeddableTrackPaths={embeddableTrackPaths}
             onFolderArtworkWritten={handleFolderArtworkWritten}
             pendingArtwork={pendingArtwork}
+            canRedoArtwork={undoneArtwork !== null}
             onStageArtwork={(artwork) => {
               setCloseConfirmPending(false);
+              artworkPreviewUrls.current.push(artwork.previewUrl);
+              setUndoneArtwork(null);
               setPendingArtwork(artwork);
+            }}
+            onUndoArtwork={() => {
+              setUndoneArtwork(pendingArtwork);
+              setPendingArtwork(null);
+            }}
+            onRedoArtwork={() => {
+              setPendingArtwork(undoneArtwork);
+              setUndoneArtwork(null);
             }}
             onTracksEmbedded={handleTracksEmbedded}
             onEmbeddedArtworkRemoved={handleEmbeddedArtworkRemoved}

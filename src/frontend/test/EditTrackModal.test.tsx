@@ -756,6 +756,29 @@ describe('<EditTrackModal> with real server', () => {
     ).toBeNull();
 
     await act(async () => {
+      fireEvent.keyDown(document.body, { key: 'z', metaKey: true });
+    });
+    expect(
+      within(dialog).queryByText(/Selected artwork will be applied/),
+    ).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole('button', {
+          name: /Search iTunes for artwork/,
+        }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(
+        await within(dialog).findByRole('button', {
+          name: /Album A.*Artist A/,
+        }),
+      );
+    });
+    await within(dialog).findByText(/Selected artwork will be applied/);
+
+    await act(async () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     });
     expect(await within(dialog).findByText(/Folder\.jpg/)).toBeTruthy();
