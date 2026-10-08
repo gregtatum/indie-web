@@ -327,10 +327,10 @@ function useItunesArtworkSearch(initialQuery: string) {
           data.results
             .filter((entry) => typeof entry.artworkUrl100 === 'string')
             .map((entry) => {
-              const thumbnailUrl = entry.artworkUrl100 as string;
+              const artworkUrl100 = entry.artworkUrl100 as string;
               return {
-                thumbnailUrl,
-                artworkUrl: resizeItunesArtworkUrl(thumbnailUrl, 1200),
+                thumbnailUrl: resizeItunesArtworkUrl(artworkUrl100, 400),
+                artworkUrl: resizeItunesArtworkUrl(artworkUrl100, 1200),
                 collectionName: entry.collectionName ?? null,
                 artistName: entry.artistName ?? null,
               };
@@ -476,6 +476,8 @@ function ItunesArtworkSearchPanel({
                 className="artworkItunesResultImg"
                 src={result.thumbnailUrl}
                 alt=""
+                loading="lazy"
+                decoding="async"
               />
               <span className="artworkItunesResultLabel">
                 {metaLine([result.collectionName, result.artistName])}
