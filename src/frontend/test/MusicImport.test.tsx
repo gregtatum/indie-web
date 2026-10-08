@@ -9,7 +9,10 @@ import { act } from 'react';
 import { readdir, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { $, A, T } from 'frontend';
-import { resolveOrganizationPath } from 'shared/music';
+import {
+  ORGANIZATION_PRESET_TEMPLATES,
+  resolveOrganizationPath,
+} from 'shared/music';
 import {
   buildJpegBytes,
   buildMp3WithTags,
@@ -920,9 +923,8 @@ describe('drag-and-drop import & organize', () => {
         composer: null,
       };
 
-      const defaultPreset =
-        '{Genre}/{AlbumArtist}/{Year} - {Album}/{Track} - {Title}';
-      const otherPreset = '{Artist}/{AlbumArtist}/{Track} - {Title}';
+      const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
+      const otherPreset = ORGANIZATION_PRESET_TEMPLATES[3];
 
       expect(
         (screen.getByLabelText('Naming template') as HTMLInputElement).value,
@@ -982,7 +984,7 @@ describe('drag-and-drop import & organize', () => {
         track: 3,
         composer: null,
       };
-      const otherPreset = '{Artist}/{AlbumArtist}/{Track} - {Title}';
+      const otherPreset = ORGANIZATION_PRESET_TEMPLATES[3];
 
       const input = destInput('Time');
       const computedPath = input.value;
@@ -1012,7 +1014,7 @@ describe('drag-and-drop import & organize', () => {
 
       fireEvent.change(
         screen.getByLabelText('Insert a preset filename format'),
-        { target: { value: '{Artist}/{AlbumArtist}/{Track} - {Title}' } },
+        { target: { value: ORGANIZATION_PRESET_TEMPLATES[3] } },
       );
 
       await act(async () => {
@@ -1031,7 +1033,7 @@ describe('drag-and-drop import & organize', () => {
       // pass starts fresh from the default preset.
       expect(
         (screen.getByLabelText('Naming template') as HTMLInputElement).value,
-      ).toBe('{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}');
+      ).toBe(ORGANIZATION_PRESET_TEMPLATES[0]);
     }, 30_000);
   });
 
@@ -1091,8 +1093,7 @@ describe('drag-and-drop import & organize', () => {
         expect(screen.queryByText(/Organize ·/)).toBeNull();
       });
 
-      const defaultPreset =
-        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+      const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
       const expectedPathA = resolveOrganizationPath(defaultPreset, {
         genre: 'Rock',
         artist: 'Pink Floyd',
@@ -1180,8 +1181,7 @@ describe('drag-and-drop import & organize', () => {
         expect(screen.queryByText(/Organize ·/)).toBeNull();
       });
 
-      const defaultPreset =
-        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+      const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
       const expectedPath = resolveOrganizationPath(defaultPreset, {
         genre: 'Rock',
         artist: 'Pink Floyd',
@@ -1267,8 +1267,7 @@ describe('drag-and-drop import & organize', () => {
         expect(screen.queryByText(/Organize ·/)).toBeNull();
       });
 
-      const defaultPreset =
-        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+      const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
       const expectedPathA = resolveOrganizationPath(defaultPreset, {
         genre: 'Rock',
         artist: 'Pink Floyd',
@@ -1346,7 +1345,7 @@ describe('drag-and-drop import & organize', () => {
       expect($.getMusicStagingPool(store.getState())).toHaveLength(2);
 
       const uniquePath = resolveOrganizationPath(
-        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+        ORGANIZATION_PRESET_TEMPLATES[0],
         {
           genre: 'Jazz',
           artist: 'Solo',
@@ -1381,7 +1380,7 @@ describe('drag-and-drop import & organize', () => {
         stat(join(getServer().mountDir, '/Rock/Dup/Dup/01 - Same (1).mp3')),
       ).resolves.toBeTruthy();
       const otherDupPath = resolveOrganizationPath(
-        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
+        ORGANIZATION_PRESET_TEMPLATES[0],
         {
           genre: 'Rock',
           artist: 'Dup',
@@ -1461,8 +1460,7 @@ describe('drag-and-drop import & organize', () => {
       expect(remaining).toHaveLength(1);
       expect(remaining[0].title).toBe('Song C');
 
-      const defaultPreset =
-        '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}';
+      const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
       const pathA = resolveOrganizationPath(defaultPreset, {
         genre: 'Rock',
         artist: 'Artist',
