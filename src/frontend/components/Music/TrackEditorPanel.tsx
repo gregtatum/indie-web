@@ -771,6 +771,13 @@ export const TrackEditorPanel = React.forwardRef<
     }
   }
 
+  async function handleSaveButton() {
+    const hadPendingArtwork = pendingArtwork !== null;
+    if ((await handleSave()) && hadPendingArtwork) {
+      onClose?.();
+    }
+  }
+
   const selectionDir =
     editTracks.length > 0 ? getDirName(editTracks[0].path) : null;
   const isColocatedSelection =
@@ -1337,7 +1344,7 @@ export const TrackEditorPanel = React.forwardRef<
             (!isBulkEdit && tagsState.status !== 'loaded') ||
             (isBulkEdit && bulkTagsState.status === 'loading')
           }
-          onClick={() => void handleSave()}
+          onClick={() => void handleSaveButton()}
         >
           {saveButtonLabel}
         </button>

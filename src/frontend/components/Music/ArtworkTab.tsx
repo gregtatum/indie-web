@@ -491,22 +491,6 @@ function ItunesArtworkSearchPanel({
   );
 }
 
-function PendingArtworkNotice({ onDiscard }: { onDiscard: () => void }) {
-  return (
-    <div className="artworkPendingNotice">
-      <span>Selected artwork will be applied when you save.</span>
-      <button
-        type="button"
-        className="artworkSaveFolderBtn"
-        title="Discard (⌘Z)"
-        onClick={onDiscard}
-      >
-        Discard
-      </button>
-    </div>
-  );
-}
-
 function RemoveFolderArtworkButton({
   trackPath,
   serverUrl,
@@ -993,7 +977,7 @@ function EmbeddedArtworkRow({
 export function ArtworkTab({
   folderArtworkUrl,
   folderArtworkPath,
-  emptyMessage = 'No artwork found',
+  emptyMessage,
   hideEmbeddedArtwork = false,
   canEditFolderArtwork = false,
   canEmbedFolderArtwork = canEditFolderArtwork,
@@ -1081,6 +1065,24 @@ export function ArtworkTab({
       .filter((entry) => !entry.value.startsWith('-->'));
   }, [hideEmbeddedArtwork, tagsState]);
 
+  const isEmptyState =
+    !folderArtworkUrl &&
+    tagsState.status !== 'loading' &&
+    (embeddedArtwork.length === 0 || tagsState.status === 'error');
+  const autoSearchedTrackPath = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (
+      activeTab === 'artwork' &&
+      isEmptyState &&
+      canEditFolderArtwork &&
+      !emptyMessage &&
+      autoSearchedTrackPath.current !== trackPath
+    ) {
+      autoSearchedTrackPath.current = trackPath;
+      setItunesSearchOpen(true);
+    }
+  }, [activeTab, isEmptyState, canEditFolderArtwork, emptyMessage, trackPath]);
+
   const navigateToFile = React.useCallback(
     (filePath: string) => {
       const fsSlug = $.getCurrentFileStoreSlug(getState());
@@ -1133,7 +1135,11 @@ export function ArtworkTab({
               )}
             </ArtworkDropZone>
             <div className="artworkAlbumInfo">
-              <div className="artworkMetaLine">{emptyMessage}</div>
+              <div className="artworkMetaLine">
+                {pendingArtwork
+                  ? 'Unsaved selection'
+                  : (emptyMessage ?? 'No artwork found')}
+              </div>
               {canEditFolderArtwork && (
                 <div className="artworkAlbumActions">
                   <ChangeArtworkButton
@@ -1150,7 +1156,6 @@ export function ArtworkTab({
               )}
             </div>
           </div>
-          {pendingArtwork && <PendingArtworkNotice onDiscard={onUndoArtwork} />}
           {canEditFolderArtwork && itunesSearchOpen && (
             <ItunesArtworkSearchPanel
               initialQuery={itunesInitialQuery}
@@ -1202,7 +1207,6 @@ export function ArtworkTab({
               </>
             )}
           </AlbumArtwork>
-          {pendingArtwork && <PendingArtworkNotice onDiscard={onUndoArtwork} />}
           {canEditFolderArtwork && itunesSearchOpen && (
             <ItunesArtworkSearchPanel
               initialQuery={itunesInitialQuery}

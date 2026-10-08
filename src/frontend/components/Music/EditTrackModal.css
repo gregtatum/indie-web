@@ -910,10 +910,3 @@
   font-size: var(--font-size-small);
   font-weight: 600;
 }
-
-.artworkPendingNotice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}

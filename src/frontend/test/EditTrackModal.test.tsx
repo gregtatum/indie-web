@@ -730,14 +730,6 @@ describe('<EditTrackModal> with real server', () => {
     });
 
     const dialog = getDialog('Song A');
-    await act(async () => {
-      fireEvent.click(
-        within(dialog).getByRole('button', {
-          name: /Search iTunes for artwork/,
-        }),
-      );
-    });
-
     const result = await within(dialog).findByRole('button', {
       name: /Album A.*Artist A/,
     });
@@ -745,11 +737,7 @@ describe('<EditTrackModal> with real server', () => {
       fireEvent.click(result);
     });
 
-    expect(
-      await within(dialog).findByText(
-        'Selected artwork will be applied when you save.',
-      ),
-    ).toBeTruthy();
+    expect(await within(dialog).findByText('Unsaved selection')).toBeTruthy();
     expect(within(dialog).queryByText(/Folder\.jpg/)).toBeNull();
     expect(
       within(dialog).queryByRole('button', { name: /Album A.*Artist A/ }),
@@ -758,9 +746,7 @@ describe('<EditTrackModal> with real server', () => {
     await act(async () => {
       fireEvent.keyDown(document.body, { key: 'z', metaKey: true });
     });
-    expect(
-      within(dialog).queryByText(/Selected artwork will be applied/),
-    ).toBeNull();
+    expect(within(dialog).queryByText(/Unsaved selection/)).toBeNull();
 
     await act(async () => {
       fireEvent.click(
@@ -776,17 +762,22 @@ describe('<EditTrackModal> with real server', () => {
         }),
       );
     });
-    await within(dialog).findByText(/Selected artwork will be applied/);
+    await within(dialog).findByText(/Unsaved selection/);
 
     await act(async () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     });
-    expect(await within(dialog).findByText(/Folder\.jpg/)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Song A' })).toBeNull();
+    });
+
+    await openEditModal('Song A');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
     expect(
-      within(dialog).queryByText(
-        'Selected artwork will be applied when you save.',
-      ),
-    ).toBeNull();
+      await within(getDialog('Song A')).findByText(/Folder\.jpg/),
+    ).toBeTruthy();
   }, 30_000);
 
   it('shows album artwork and a collapsible embedded row for a single track', async () => {
