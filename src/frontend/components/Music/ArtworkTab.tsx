@@ -10,6 +10,7 @@ import {
 import { getDirName, getPathFileName, getKeyboardString } from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
 import type { EmbedFolderArtworkResponse } from 'shared/@types/shared';
+import { memoizeLatest } from 'shared/utils';
 
 export interface PendingArtwork {
   data: Blob;
@@ -292,6 +293,39 @@ function resizeItunesArtworkUrl(url: string, size: number): string {
   return url.replace(/\d+x\d+bb\.jpg$/, `${size}x${size}bb.jpg`);
 }
 
+const searchItunesArtwork = memoizeLatest(
+  async (term: string): Promise<ItunesArtworkResult[]> => {
+    const url =
+      'https://itunes.apple.com/search?media=music&entity=album&limit=25' +
+      `&term=${encodeURIComponent(term)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`${res.status}`);
+    }
+    const data = (await res.json()) as { results: ItunesSearchApiResult[] };
+    return data.results
+      .filter((entry) => typeof entry.artworkUrl100 === 'string')
+      .map((entry) => {
+        const artworkUrl100 = entry.artworkUrl100 as string;
+        return {
+          thumbnailUrl: resizeItunesArtworkUrl(artworkUrl100, 400),
+          artworkUrl: resizeItunesArtworkUrl(artworkUrl100, 1200),
+          collectionName: entry.collectionName ?? null,
+          artistName: entry.artistName ?? null,
+        };
+      });
+  },
+  20,
+);
+
+const downloadItunesArtwork = memoizeLatest(async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`${res.status}`);
+  }
+  return res.blob();
+}, 5);
+
 function useItunesArtworkSearch(initialQuery: string) {
   const [query, setQuery] = React.useState(initialQuery);
   const [status, setStatus] = React.useState<
@@ -309,40 +343,17 @@ function useItunesArtworkSearch(initialQuery: string) {
     }
     const id = ++requestId.current;
     setStatus('loading');
-    const url =
-      'https://itunes.apple.com/search?media=music&entity=album&limit=25' +
-      `&term=${encodeURIComponent(trimmed)}`;
-    fetch(url)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`${res.status}`);
+    searchItunesArtwork(trimmed)
+      .then((nextResults) => {
+        if (id === requestId.current) {
+          setResults(nextResults);
+          setStatus('loaded');
         }
-        return res.json() as Promise<{ results: ItunesSearchApiResult[] }>;
-      })
-      .then((data) => {
-        if (id !== requestId.current) {
-          return;
-        }
-        setResults(
-          data.results
-            .filter((entry) => typeof entry.artworkUrl100 === 'string')
-            .map((entry) => {
-              const artworkUrl100 = entry.artworkUrl100 as string;
-              return {
-                thumbnailUrl: resizeItunesArtworkUrl(artworkUrl100, 400),
-                artworkUrl: resizeItunesArtworkUrl(artworkUrl100, 1200),
-                collectionName: entry.collectionName ?? null,
-                artistName: entry.artistName ?? null,
-              };
-            }),
-        );
-        setStatus('loaded');
       })
       .catch(() => {
-        if (id !== requestId.current) {
-          return;
+        if (id === requestId.current) {
+          setStatus('error');
         }
-        setStatus('error');
       });
   }, []);
 
@@ -379,11 +390,7 @@ function ItunesArtworkSearchPanel({
   async function stageResult(result: ItunesArtworkResult) {
     setDownloadingUrl(result.artworkUrl);
     try {
-      const res = await fetch(result.artworkUrl);
-      if (!res.ok) {
-        throw new Error(`${res.status}`);
-      }
-      const blob = await res.blob();
+      const blob = await downloadItunesArtwork(result.artworkUrl);
       setDownloadingUrl(null);
       onStage({
         data: blob,

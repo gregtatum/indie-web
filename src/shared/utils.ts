@@ -210,6 +210,32 @@ export function debounce<F extends (...args: any) => void>(
 }
 
 /**
+ * Memoizes an async callback by key, keeping only the `maxEntries` most recently
+ * used promises. Rejected promises are evicted so that later calls retry.
+ */
+export function memoizeLatest<Key, Value>(
+  callback: (key: Key) => Promise<Value>,
+  maxEntries: number,
+): (key: Key) => Promise<Value> {
+  const cache = new Map<Key, Promise<Value>>();
+  return (key) => {
+    const cached = cache.get(key);
+    if (cached) {
+      cache.delete(key);
+      cache.set(key, cached);
+      return cached;
+    }
+    const pending = callback(key);
+    cache.set(key, pending);
+    pending.catch(() => cache.delete(key));
+    if (cache.size > maxEntries) {
+      cache.delete(cache.keys().next().value as Key);
+    }
+    return pending;
+  };
+}
+
+/**
  * Inserts text at a line index in a source text.
  */
 export function insertTextAtLine(
