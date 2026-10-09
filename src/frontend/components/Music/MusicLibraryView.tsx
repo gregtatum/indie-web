@@ -684,33 +684,26 @@ function AlbumHero() {
   const panelSelections = $$.getMusicPanelSelections();
   const folderArtworkVersion = $$.getMusicFolderArtworkVersion();
 
-  // The hero follows the most recent thing you clicked: a track (selected or
-  // playing) or a filter panel. After a track click it shows that track's
-  // album; after a filter click it shows the first album in the filtered list.
-  // Selecting a track always wins over playback. Seeded from any existing
-  // selection, then the last played track, so a fresh reload still shows an
-  // album.
+  // The hero follows the most recent thing you clicked: a track or a filter
+  // panel. After a track click it shows that track's album; after a filter
+  // click it shows the first album in the filtered list. Playback advancing to
+  // the next track does not change it. Seeded from any existing selection,
+  // then the last played track, so a fresh reload still shows an album.
   const heroTrackPathRef = React.useRef<string | null>(
     selectedTrackPath ?? persistedState.musicLastPlayedTrackPath.read(),
   );
   const heroSourceRef = React.useRef<'track' | 'filter'>('track');
   const prevSelectedRef = React.useRef(selectedTrackPath);
-  const prevPlayingRef = React.useRef(playingTrackPath);
   const prevPanelSelectionsRef = React.useRef(panelSelections);
 
   if (panelSelections !== prevPanelSelectionsRef.current) {
     heroSourceRef.current = 'filter';
-  }
-  if (playingTrackPath && playingTrackPath !== prevPlayingRef.current) {
-    heroTrackPathRef.current = playingTrackPath;
-    heroSourceRef.current = 'track';
   }
   if (selectedTrackPath && selectedTrackPath !== prevSelectedRef.current) {
     heroTrackPathRef.current = selectedTrackPath;
     heroSourceRef.current = 'track';
   }
   prevSelectedRef.current = selectedTrackPath;
-  prevPlayingRef.current = playingTrackPath;
   prevPanelSelectionsRef.current = panelSelections;
 
   const tracksByPath = React.useMemo(() => {

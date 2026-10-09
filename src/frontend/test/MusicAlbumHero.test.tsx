@@ -127,32 +127,50 @@ describe('album hero selection', () => {
     expect(heroAlbum()).toBe('Rock Album');
   });
 
-  it('selecting a track sets the hero album, overriding what is playing', async () => {
-    const { store } = setup();
+  it('selecting a track sets the hero album', async () => {
+    setup();
     await screen.findByText('Jazz One', { selector: '.musicTrackTitle' });
 
-    await act(async () => {
-      store.dispatch(A.musicPlaybackLoad('/jazz/1.mp3'));
-    });
+    await clickTrack('Jazz One');
     expect(heroAlbum()).toBe('Jazz Album');
 
-    // Clicking a track on another album wins over the playing track.
     await clickTrack('Rock Two');
     expect(heroAlbum()).toBe('Rock Album');
   });
 
-  it('playback that starts after a selection moves the hero to the playing album', async () => {
+  it('playback advancing keeps the filtered hero when the playing track is filtered out', async () => {
+    const { store } = setup();
+    await screen.findByText('Rock One', { selector: '.musicTrackTitle' });
+
+    await clickTrack('Rock One');
+    await act(async () => {
+      store.dispatch(A.musicPlaybackLoad('/rock/1.mp3'));
+    });
+    const genrePanel = screen.getByRole('listbox', { name: 'genre' });
+    await act(async () => {
+      await userEvent.click(
+        within(genrePanel).getByRole('option', { name: 'Jazz' }),
+      );
+    });
+    expect(heroAlbum()).toBe('Jazz Album');
+
+    await act(async () => {
+      store.dispatch(A.musicPlaybackLoad('/rock/2.mp3'));
+    });
+    expect(heroAlbum()).toBe('Jazz Album');
+  });
+
+  it('playback advancing to another track keeps the selected hero album', async () => {
     const { store } = setup();
     await screen.findByText('Rock One', { selector: '.musicTrackTitle' });
 
     await clickTrack('Rock One');
     expect(heroAlbum()).toBe('Rock Album');
 
-    // Playing is now the most recent action, so the hero follows it.
     await act(async () => {
       store.dispatch(A.musicPlaybackLoad('/jazz/1.mp3'));
     });
-    expect(heroAlbum()).toBe('Jazz Album');
+    expect(heroAlbum()).toBe('Rock Album');
   });
 
   it("clicking an artist filter moves the hero to that artist's album", async () => {

@@ -193,10 +193,6 @@ export function setMusicTracks(
   };
 }
 
-/**
- * Loads a track for playback. If selection is currently following the playing
- * track, advance selection to the newly loaded track too.
- */
 export function musicPlaybackLoad(path: string): Thunk {
   return (dispatch, getState) => {
     const state = getState();
@@ -204,7 +200,10 @@ export function musicPlaybackLoad(path: string): Thunk {
     let selectedTrackPath: string | undefined;
     if (
       selectedPaths.length === 1 &&
-      selectedPaths[0] === $.getMusicPlaybackTrackPath(state)
+      selectedPaths[0] === $.getMusicPlaybackTrackPath(state) &&
+      $.getFilteredMusicTracks(state).some(
+        (track) => track.path === selectedPaths[0],
+      )
     ) {
       selectedTrackPath = path;
     }
