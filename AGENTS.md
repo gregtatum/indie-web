@@ -5,3 +5,5 @@ For all code written, run `task check` for quick agentic-focused testing that li
 For screenshots see `task screenshots -- --help`
 
 Avoid code comments unless absolutely necessary (they usually aren't). The code is the documentation.
+
+Generally, don't add new test files, prefer re-using old ones.
