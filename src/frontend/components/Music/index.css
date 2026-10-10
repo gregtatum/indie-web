@@ -405,6 +405,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.musicBatchEditCell-readOnly {
+  color: var(--muted);
+}
+
 .musicBatchEditCellText {
   display: block;
   overflow: hidden;

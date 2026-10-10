@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { A, T } from 'frontend';
 import {
@@ -64,6 +64,15 @@ describe('<EditTrackModal> with real server', () => {
     const full = join(getServer().mountDir, clientPath);
     await mkdir(dirname(full), { recursive: true });
     await writeFile(full, buildMp3WithTags(tags));
+  }
+
+  async function writeM4aTrack(clientPath: string): Promise<void> {
+    const full = join(getServer().mountDir, clientPath);
+    await mkdir(dirname(full), { recursive: true });
+    await copyFile(
+      join(__dirname, '../../server/test/fixtures/tagged.m4a'),
+      full,
+    );
   }
 
   async function fetchJson<T>(path: string): Promise<T> {
@@ -514,6 +523,64 @@ describe('<EditTrackModal> with real server', () => {
     expect(frameValue(tags, 'TCON')).toBe('New Genre');
   }, 30_000);
 
+  it('edits an m4a track and disables the fields m4a cannot hold', async () => {
+    await writeM4aTrack('song.m4a');
+    await setup();
+
+    await openEditModal('Fixture Title');
+    const titleInput = await waitForEnabledField('Title');
+    expect((screen.getByLabelText('BPM') as HTMLInputElement).disabled).toBe(
+      true,
+    );
+    expect(
+      (
+        within(
+          screen.getByRole('radiogroup', { name: 'Group Artist By' }),
+        ).getByLabelText('Composer') as HTMLInputElement
+      ).disabled,
+    ).toBe(true);
+
+    await act(async () => {
+      fireEvent.change(titleInput, { target: { value: 'Edited M4A Title' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitForNetworkIdle();
+    });
+
+    const tags = (await fetchTrackTags('/song.m4a')).resolved;
+    expect(tags.TIT2).toBe('Edited M4A Title');
+    expect(tags.TCON).toBe('Jazz');
+  }, 30_000);
+
+  it('keeps BPM disabled in a bulk edit of mp3 and m4a, and still writes shared fields to both', async () => {
+    await writeTrack('a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      album: 'Album A',
+      genre: 'Rock',
+    });
+    await writeM4aTrack('b.m4a');
+    const { store } = await setup();
+
+    await openBulkEditModal(store, ['/a.mp3', '/b.m4a'], 'Song A');
+    const genreInput = await waitForEnabledField('Genre');
+    expect((screen.getByLabelText('BPM') as HTMLInputElement).disabled).toBe(
+      true,
+    );
+    await act(async () => {
+      fireEvent.change(genreInput, { target: { value: 'New Genre' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitForNetworkIdle();
+    });
+
+    for (const path of ['/a.mp3', '/b.m4a']) {
+      expect((await fetchTrackTags(path)).resolved.TCON).toBe('New Genre');
+    }
+  }, 30_000);
+
   it('treats a co-located bulk selection as a folder artwork edit', async () => {
     const cover = buildJpegBytes();
     await writeFolderArtwork(getServer(), '/Album A', cover);
@@ -926,6 +993,45 @@ describe('<EditTrackModal> with real server', () => {
     expect(
       await within(dialog).findByText('Embedded in this file'),
     ).toBeTruthy();
+  }, 30_000);
+
+  it('embeds the folder image into mp3 tracks and leaves m4a tracks alone', async () => {
+    await writeFolderArtwork(getServer(), '/Album A', buildJpegBytes());
+    await writeTrack('Album A/1.mp3', {
+      title: 'Nested One',
+      artist: 'Artist A',
+      albumArtist: 'Album Artist A',
+      album: 'Album A',
+    });
+    await writeM4aTrack('Album A/2.m4a');
+    const m4aBefore = await readFile(
+      join(getServer().mountDir, 'Album A/2.m4a'),
+    );
+    await setup();
+
+    await openEditModal('Nested One');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+    const dialog = getDialog('Nested One');
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Embed artwork' }),
+      );
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
+
+    expect(
+      frameValue(await fetchTrackTags('/Album A/1.mp3'), 'APIC'),
+    ).toBeDefined();
+    expect(await readFile(join(getServer().mountDir, 'Album A/2.m4a'))).toEqual(
+      m4aBefore,
+    );
+    expect(
+      within(dialog).queryByRole('button', { name: 'Embed artwork' }),
+    ).toBeNull();
   }, 30_000);
 
   it('re-arms the embed prompt immediately when the just-embedded art is removed', async () => {

@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { $, A, T } from 'frontend';
 import {
@@ -371,6 +371,37 @@ describe('<BatchEditGrid> with real server', () => {
       expect((await fetchIndexTrack('/a.mp3'))?.artist).toBe('New Artist');
     });
     expect((await fetchIndexTrack('/b.mp3'))?.artist).toBe('New Artist');
+  }, 30_000);
+
+  it('bulk-edits an mp3 and an m4a together', async () => {
+    await writeTrack('a.mp3', {
+      title: 'Song A',
+      artist: 'Artist A',
+      album: 'Album A',
+      track: 1,
+    });
+    await copyFile(
+      join(__dirname, '../../server/test/fixtures/tagged.m4a'),
+      join(getServer().mountDir, 'b.m4a'),
+    );
+    const { store } = await setup();
+    await openBatchEdit(store, ['/a.mp3', '/b.m4a'], 'Song A');
+
+    fireEvent.click(getCellText('Artist A'));
+    fireEvent.click(getCellText('Fixture Artist'), { shiftKey: true });
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    fireEvent.keyDown(document.body, { key: 'x' });
+
+    const input = await within(grid).findByDisplayValue('x');
+    fireEvent.change(input, { target: { value: 'New Artist' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
+    expect((await fetchIndexTrack('/a.mp3'))?.artist).toBe('New Artist');
+    expect((await fetchIndexTrack('/b.m4a'))?.artist).toBe('New Artist');
   }, 30_000);
 
   it('sidebar shows the single-track editor when only one row is selected', async () => {

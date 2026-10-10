@@ -19,6 +19,7 @@ import {
 } from 'frontend/logic/music/metadata';
 import {
   defaultPreferComposerGroupingForGenre,
+  getTrackCapabilities,
   serializePreferComposerGroupingTag,
 } from 'shared/music';
 import type {
@@ -47,6 +48,7 @@ const BULK_TAG_FETCH_CONCURRENCY = 6;
 const BULK_PROGRESS_UPDATE_INTERVAL = 150;
 export const BULK_SMALL_LOAD_NOTICE_DELAY = 1500;
 const TEXT_MIXED_PLACEHOLDER = 'Mixed';
+const UNSUPPORTED_FRAME_TITLE = 'Not supported for this file type.';
 const NUMBER_MIXED_PLACEHOLDER = '–';
 const NOT_LOADED_PLACEHOLDER = 'Not loaded';
 
@@ -251,6 +253,14 @@ export const TrackEditorPanel = React.forwardRef<
   }
   const editTracksRef = React.useRef<T.TrackMetadata[]>([]);
   editTracksRef.current = editTracks;
+  const trackCapabilities = editTracks.map((editTrack) =>
+    getTrackCapabilities(editTrack.path),
+  );
+  function isFrameWritable(frameId: string): boolean {
+    return trackCapabilities.every((capabilities) =>
+      capabilities.writableFrameIds.includes(frameId),
+    );
+  }
   // On refresh the URL selection can be restored before the music index has
   // loaded. This key changes when selected paths resolve to TrackMetadata rows,
   // which lets the form reset from real scan values without resetting on every
@@ -818,7 +828,7 @@ export const TrackEditorPanel = React.forwardRef<
         (t) =>
           !t.hasEmbeddedArtwork &&
           t.folderArtworkPath === sharedFolderArtworkPath &&
-          t.path.toLowerCase().endsWith('.mp3'),
+          getTrackCapabilities(t.path).embedsArtwork,
       )
       .map((t) => t.path);
   }, [isBulkEdit, isColocatedSelection, sharedFolderArtworkPath, tracks]);
@@ -1081,7 +1091,11 @@ export const TrackEditorPanel = React.forwardRef<
             className="editTrackModalRadioGroup"
             role="radiogroup"
             aria-label="Group Artist By"
-            title="Controls whether this track is grouped under Album Artist or Composer in the music library."
+            title={
+              isFrameWritable('TXXX')
+                ? 'Controls whether this track is grouped under Album Artist or Composer in the music library.'
+                : UNSUPPORTED_FRAME_TITLE
+            }
           >
             {groupArtistOptions.map((option) => (
               <label className="editTrackModalRadioOption" key={option.value}>
@@ -1090,7 +1104,7 @@ export const TrackEditorPanel = React.forwardRef<
                   name={radioName}
                   value={option.value}
                   checked={radioValue === option.value}
-                  disabled={detailsEditingDisabled}
+                  disabled={detailsEditingDisabled || !isFrameWritable('TXXX')}
                   onChange={(e) =>
                     setGroupArtistBy(e.target.value as 'true' | 'false')
                   }
@@ -1104,9 +1118,14 @@ export const TrackEditorPanel = React.forwardRef<
     };
 
   function addDetailFieldRow(field: (typeof DETAIL_FIELDS)[number]) {
+    const fieldDisabled =
+      detailsEditingDisabled || !isFrameWritable(field.frameId);
+    const fieldTitle = isFrameWritable(field.frameId)
+      ? undefined
+      : UNSUPPORTED_FRAME_TITLE;
     if (isSplitField(field)) {
       detailRows.push(
-        <label key={field.key} className="editTrackModalRow">
+        <label key={field.key} className="editTrackModalRow" title={fieldTitle}>
           <span className="editTrackModalLabel">{field.label}</span>
           <div className="editTrackModalSplitInput">
             <input
@@ -1115,7 +1134,7 @@ export const TrackEditorPanel = React.forwardRef<
               inputMode="numeric"
               value={formState[field.key]}
               placeholder={formPlaceholders[field.key]}
-              disabled={detailsEditingDisabled}
+              disabled={fieldDisabled}
               onChange={(e) => setNumericField(field.key, e.target.value)}
             />
             <span className="editTrackModalSplitSep">of</span>
@@ -1125,7 +1144,7 @@ export const TrackEditorPanel = React.forwardRef<
               inputMode="numeric"
               value={formState[field.totalKey]}
               placeholder={formPlaceholders[field.totalKey]}
-              disabled={detailsEditingDisabled}
+              disabled={fieldDisabled}
               onChange={(e) => setNumericField(field.totalKey, e.target.value)}
             />
           </div>
@@ -1133,7 +1152,7 @@ export const TrackEditorPanel = React.forwardRef<
       );
     } else {
       detailRows.push(
-        <label key={field.key} className="editTrackModalRow">
+        <label key={field.key} className="editTrackModalRow" title={fieldTitle}>
           <span className="editTrackModalLabel">{field.label}</span>
           <input
             className="editTrackModalInput"
@@ -1141,7 +1160,7 @@ export const TrackEditorPanel = React.forwardRef<
             inputMode={field.type === 'number' ? 'numeric' : 'text'}
             value={formState[field.key]}
             placeholder={formPlaceholders[field.key]}
-            disabled={detailsEditingDisabled}
+            disabled={fieldDisabled}
             onChange={(e) =>
               field.type === 'number'
                 ? setNumericField(field.key, e.target.value)

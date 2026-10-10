@@ -11,6 +11,7 @@ import {
   type BatchEditColumnKey,
   type MusicTrackSource,
 } from 'frontend/logic/music/metadata';
+import { getTrackCapabilities } from 'shared/music';
 import type { WriteTrackTagsResponse } from 'shared/@types/shared';
 import {
   ColumnResizeHandle,
@@ -59,6 +60,10 @@ function getCellValue(
   }
   const value = track[column.metadataKey];
   return value === null || value === undefined ? '' : String(value);
+}
+
+function canEditCell(path: string, column: BatchEditColumn): boolean {
+  return getTrackCapabilities(path).writableFrameIds.includes(column.frameId);
 }
 
 function loadVisibleColumns(): Set<BatchEditColumnKey> {
@@ -406,10 +411,12 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
   function startEdit(seedChar?: string) {
     const path = focusedPathRef.current;
     const columnDef = columnsRef.current[cursorColumnRef.current];
-    if (!path || !columnDef) {
+    if (!path || !columnDef || !canEditCell(path, columnDef)) {
       return;
     }
-    const paths = $.getMusicSelectedTrackPaths(getState());
+    const paths = $.getMusicSelectedTrackPaths(getState()).filter(
+      (selectedPath) => canEditCell(selectedPath, columnDef),
+    );
     const aggregate = getAggregateValue(paths, columnDef);
     setEditing({
       value: seedChar ?? aggregate.value,
@@ -966,6 +973,7 @@ function BatchEditRow({
             className={[
               'musicBatchEditCell',
               column.numeric ? 'musicBatchEditCell-numeric' : '',
+              canEditCell(path, column) ? '' : 'musicBatchEditCell-readOnly',
               showActiveBox ? 'active' : '',
               isEditingHere ? 'editing' : '',
               status?.status === 'error' ? 'error' : '',
