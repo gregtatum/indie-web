@@ -163,6 +163,7 @@ export interface WriteFolderArtworkResponse {
    */
   tracksEmbedded?: {
     updatedTracks: string[];
+    skippedTracks: string[];
     errors: Array<{ path: string; message: string }>;
   };
 }
@@ -177,6 +178,7 @@ export interface EmbedFolderArtworkRequest {
 export interface EmbedFolderArtworkResponse {
   /** Track paths whose embedded artwork was rewritten. */
   updated: string[];
+  skipped: string[];
   /**
    * Per-track failures. Every requested track is attempted; a failure here does
    * not stop the rest.
@@ -197,6 +199,19 @@ export interface TrackTagsResponse {
    * and the index never disagree.
    */
   resolved: Record<string, string>;
+}
+
+export type TrackWriteErrorCode =
+  | 'invalid-path'
+  | 'not-found'
+  | 'unsupported-format'
+  | 'unsupported-frame'
+  | 'write-failed';
+
+export interface TrackWriteError {
+  path: string;
+  message: string;
+  code: TrackWriteErrorCode;
 }
 
 export interface TrackTagUpdate {
@@ -226,7 +241,7 @@ export interface WriteTrackTagsResponse {
   /**
    * Per-path write failures for files that were skipped or could not be updated.
    */
-  errors: Array<{ path: string; message: string }>;
+  errors: TrackWriteError[];
   /**
    * Status of the best-effort durable music index patch after file writes.
    * Tag writes are authoritative; an index error means files may be updated

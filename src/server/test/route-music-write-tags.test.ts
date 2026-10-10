@@ -1,15 +1,20 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import type { IAudioMetadata, ITag } from 'music-metadata';
 import { musicRoute } from '../music/route.ts';
-import { ID3V1_TAG_SIZE } from '../../shared/music.ts';
+import {
+  ID3V1_TAG_SIZE,
+  PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
+} from '../../shared/music.ts';
+import { runFfmpeg } from '../music/ffmpeg.ts';
 import type { T } from '../index.ts';
 import {
   createTestServer,
   buildMp3WithTags,
+  copyM4aFixture,
   withLogs,
   AUDIO_PAYLOAD,
   getBytesAfterId3,
@@ -380,10 +385,15 @@ describe('POST /music/write-track-tags — bulk semantics', () => {
       assert.deepEqual(await res.json(), {
         updated: ['/bulk-valid.mp3'],
         errors: [
-          { path: '/missing.mp3', message: 'File not found.' },
+          {
+            path: '/missing.mp3',
+            message: 'File not found.',
+            code: 'not-found',
+          },
           {
             path: '/bulk-note.txt',
-            message: 'Only MP3 files are supported for tag writing.',
+            message: 'Only MP3 and M4A files are supported for tag writing.',
+            code: 'unsupported-format',
           },
         ],
         index: { status: 'skipped', message: 'Music index not found.' },
@@ -599,6 +609,322 @@ describe('POST /music/write-track-tags — tag-less files', () => {
 
       const meta = await parseFile(filePath);
       assert.equal(meta.common.title, 'Now Tagged');
+    }),
+  );
+});
+
+async function writeTrackTagsJson(
+  server: TestServer,
+  paths: string[],
+  changes: T.TrackTagUpdate[],
+) {
+  const res = await writeTrackTags(server, paths, changes);
+  return { status: res.status, body: (await res.json()) as any };
+}
+
+async function assertDecodes(path: string) {
+  await runFfmpeg(['-i', path, '-f', 'null', '-']);
+}
+
+describe('POST /music/write-track-tags — m4a', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  const FIELDS: Array<{
+    frameId: string;
+    value: string;
+    read: (meta: IAudioMetadata) => unknown;
+    expected: unknown;
+  }> = [
+    {
+      frameId: 'TIT2',
+      value: 'My Title',
+      read: (meta) => meta.common.title,
+      expected: 'My Title',
+    },
+    {
+      frameId: 'TPE1',
+      value: 'My Artist',
+      read: (meta) => meta.common.artist,
+      expected: 'My Artist',
+    },
+    {
+      frameId: 'TPE2',
+      value: 'My Album Artist',
+      read: (meta) => meta.common.albumartist,
+      expected: 'My Album Artist',
+    },
+    {
+      frameId: 'TALB',
+      value: 'My Album',
+      read: (meta) => meta.common.album,
+      expected: 'My Album',
+    },
+    {
+      frameId: 'TCOM',
+      value: 'My Composer',
+      read: (meta) => meta.common.composer,
+      expected: ['My Composer'],
+    },
+    {
+      frameId: 'TCON',
+      value: 'Rock',
+      read: (meta) => meta.common.genre,
+      expected: ['Rock'],
+    },
+    {
+      frameId: 'TYER',
+      value: '1999',
+      read: (meta) => meta.common.year,
+      expected: 1999,
+    },
+    {
+      frameId: 'TRCK',
+      value: '5/9',
+      read: (meta) => meta.common.track,
+      expected: { no: 5, of: 9 },
+    },
+    {
+      frameId: 'TPOS',
+      value: '2/3',
+      read: (meta) => meta.common.disk,
+      expected: { no: 2, of: 3 },
+    },
+    {
+      frameId: 'COMM',
+      value: 'My comment',
+      read: (meta) => meta.common.comment?.map((c) => c.text),
+      expected: ['My comment'],
+    },
+  ];
+
+  for (const { frameId, value, read, expected } of FIELDS) {
+    it(
+      `round-trips ${frameId}`,
+      withLogs([], async () => {
+        const filePath = join(server.mountDir, `roundtrip-${frameId}.m4a`);
+        await copyM4aFixture('tagged', filePath);
+
+        const { status, body } = await writeTrackTagsJson(
+          server,
+          [`/roundtrip-${frameId}.m4a`],
+          [{ frameId, value }],
+        );
+        assert.equal(status, 200);
+        assert.deepEqual(body.updated, [`/roundtrip-${frameId}.m4a`]);
+        assert.deepEqual(body.errors, []);
+
+        assert.deepEqual(read(await parseFile(filePath)), expected);
+        await assertDecodes(filePath);
+      }),
+    );
+  }
+
+  it(
+    'keeps the other tags, the duration, and any cover art',
+    withLogs([], async () => {
+      const filePath = join(server.mountDir, 'preserve.m4a');
+      await copyM4aFixture('tagged-with-art', filePath);
+      const before = await parseFile(filePath);
+      assert.equal(before.common.picture?.length, 1);
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/preserve.m4a'],
+        [{ frameId: 'TIT2', value: 'Only The Title' }],
+      );
+      assert.deepEqual(body.errors, []);
+
+      const after = await parseFile(filePath);
+      assert.equal(after.common.title, 'Only The Title');
+      assert.deepEqual(
+        { ...after.common, title: undefined },
+        { ...before.common, title: undefined },
+      );
+      assert.equal(after.format.duration, before.format.duration);
+      await assertDecodes(filePath);
+    }),
+  );
+
+  it(
+    'removes a tag when the value is empty',
+    withLogs([], async () => {
+      const filePath = join(server.mountDir, 'clear.m4a');
+      await copyM4aFixture('tagged', filePath);
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/clear.m4a'],
+        [{ frameId: 'COMM', value: '' }],
+      );
+      assert.deepEqual(body.errors, []);
+
+      const meta = await parseFile(filePath);
+      assert.equal(meta.common.comment, undefined);
+      assert.equal(meta.common.title, 'Fixture Title');
+    }),
+  );
+
+  it(
+    'stores awkward values literally',
+    withLogs([], async () => {
+      const filePath = join(server.mountDir, 'awkward.m4a');
+      await copyM4aFixture('tagged', filePath);
+
+      const title = `-i "quoted" 'single' $(echo hi) ☃ a=b`;
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/awkward.m4a'],
+        [
+          { frameId: 'TIT2', value: title },
+          { frameId: 'TALB', value: '-map 0' },
+        ],
+      );
+      assert.deepEqual(body.errors, []);
+
+      const meta = await parseFile(filePath);
+      assert.equal(meta.common.title, title);
+      assert.equal(meta.common.album, '-map 0');
+    }),
+  );
+
+  it(
+    'writes files whose paths have spaces and unicode',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Björk', 'Post (1995)');
+      await mkdir(dir, { recursive: true });
+      const filePath = join(dir, '01 Hyperballad ♫.m4a');
+      await copyM4aFixture('tagged', filePath);
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/Björk/Post (1995)/01 Hyperballad ♫.m4a'],
+        [{ frameId: 'TIT2', value: 'Hyperballad' }],
+      );
+      assert.deepEqual(body.errors, []);
+      assert.equal((await parseFile(filePath)).common.title, 'Hyperballad');
+      assert.deepEqual(await readdir(dir), ['01 Hyperballad ♫.m4a']);
+    }),
+  );
+
+  it(
+    'leaves a corrupt file untouched and cleans up after itself',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'corrupt');
+      await mkdir(dir);
+      const filePath = join(dir, 'broken.m4a');
+      await copyM4aFixture('corrupt', filePath);
+      const originalBytes = await readFile(filePath);
+
+      const { status, body } = await writeTrackTagsJson(
+        server,
+        ['/corrupt/broken.m4a'],
+        [{ frameId: 'TIT2', value: 'Nope' }],
+      );
+      assert.equal(status, 200);
+      assert.deepEqual(body.updated, []);
+      assert.equal(body.errors.length, 1);
+      assert.equal(body.errors[0].path, '/corrupt/broken.m4a');
+      assert.equal(body.errors[0].code, 'write-failed');
+      assert.match(body.errors[0].message, /^ffmpeg failed/);
+
+      assert.deepEqual(await readFile(filePath), originalBytes);
+      assert.deepEqual(await readdir(dir), ['broken.m4a']);
+    }),
+  );
+
+  it(
+    'rejects frames that M4A cannot hold without writing anything',
+    withLogs([], async () => {
+      const filePath = join(server.mountDir, 'unsupported-frame.m4a');
+      await copyM4aFixture('tagged', filePath);
+      const originalBytes = await readFile(filePath);
+
+      for (const change of [
+        { frameId: 'TBPM', value: '120' },
+        {
+          frameId: 'TXXX',
+          value: 'true',
+          description: PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
+        },
+      ]) {
+        const { body } = await writeTrackTagsJson(
+          server,
+          ['/unsupported-frame.m4a'],
+          [{ frameId: 'TIT2', value: 'Should Not Land' }, change],
+        );
+        assert.deepEqual(body.updated, []);
+        assert.equal(body.errors.length, 1);
+        assert.equal(body.errors[0].code, 'unsupported-frame');
+        assert.match(body.errors[0].message, new RegExp(change.frameId));
+      }
+      assert.deepEqual(await readFile(filePath), originalBytes);
+    }),
+  );
+
+  it(
+    'writes supported tracks in a mixed batch and reports the rest',
+    withLogs([], async () => {
+      await writeFile(
+        join(server.mountDir, 'mixed.mp3'),
+        buildMp3WithTags({ title: 'Old' }),
+      );
+      await copyM4aFixture('tagged', join(server.mountDir, 'mixed.m4a'));
+      await writeFile(join(server.mountDir, 'mixed.flac'), 'not really flac');
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/mixed.mp3', '/mixed.m4a', '/mixed.flac'],
+        [{ frameId: 'TIT2', value: 'Mixed Title' }],
+      );
+      assert.deepEqual(body.updated, ['/mixed.mp3', '/mixed.m4a']);
+      assert.deepEqual(body.errors, [
+        {
+          path: '/mixed.flac',
+          message: 'Only MP3 and M4A files are supported for tag writing.',
+          code: 'unsupported-format',
+        },
+      ]);
+      for (const name of ['mixed.mp3', 'mixed.m4a']) {
+        const meta = await parseFile(join(server.mountDir, name));
+        assert.equal(meta.common.title, 'Mixed Title');
+      }
+    }),
+  );
+
+  it(
+    'keeps the durable index in step with an m4a write',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'indexed');
+      await mkdir(dir);
+      await copyM4aFixture('tagged', join(dir, 'song.m4a'));
+      await fetch(`${server.baseUrl}/music/music-index/scan`, {
+        method: 'POST',
+      });
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/indexed/song.m4a'],
+        [
+          { frameId: 'TIT2', value: 'Indexed Title' },
+          { frameId: 'TRCK', value: '7/9' },
+        ],
+      );
+      assert.deepEqual(body.index, { status: 'updated', message: null });
+
+      const index = await (
+        await fetch(`${server.baseUrl}/music/music-index`)
+      ).json();
+      const track = index.tracks.find(
+        (track: { path: string }) => track.path === '/indexed/song.m4a',
+      );
+      assert.equal(track.title, 'Indexed Title');
+      assert.equal(track.track, 7);
     }),
   );
 });

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, mkdtemp, rm } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -134,6 +134,18 @@ export async function createTestServer(
       await rm(mountDir, { recursive: true, force: true });
     },
   };
+}
+
+export type M4aFixture = 'tagged' | 'tagged-with-art' | 'corrupt';
+
+export async function copyM4aFixture(
+  fixture: M4aFixture,
+  destPath: string,
+): Promise<void> {
+  await copyFile(
+    new URL(`./fixtures/${fixture}.m4a`, import.meta.url),
+    destPath,
+  );
 }
 
 // Minimal 1×1 white JPEG — valid enough for music-metadata to recognise as an image.

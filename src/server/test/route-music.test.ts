@@ -428,10 +428,15 @@ describe('POST /music/music-index/scan incremental behavior', () => {
       assert.deepEqual(writeData, {
         updated: ['/bulk-index-a.mp3', '/bulk-index-b.mp3'],
         errors: [
-          { path: '/missing-bulk-index.mp3', message: 'File not found.' },
+          {
+            path: '/missing-bulk-index.mp3',
+            message: 'File not found.',
+            code: 'not-found',
+          },
           {
             path: '/bulk-index-note.txt',
-            message: 'Only MP3 files are supported for tag writing.',
+            message: 'Only MP3 and M4A files are supported for tag writing.',
+            code: 'unsupported-format',
           },
         ],
         index: { status: 'updated', message: null },

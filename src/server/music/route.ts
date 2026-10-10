@@ -40,7 +40,10 @@ import {
   updateIndexAfterTrackTagWrites,
   writeTrackTagsForPath,
 } from './logic.ts';
-import type { EmbedArtworkFailure } from './logic.ts';
+import type {
+  EmbedArtworkFailure,
+  WriteTrackTagsForPathResult,
+} from './logic.ts';
 
 export { MUSIC_INDEX_FILENAME };
 
@@ -464,6 +467,7 @@ export function musicRoute(mountPath: MountPath) {
         .map((part) => part.trim())
         .filter(Boolean);
       const updatedTracks: string[] = [];
+      const skippedTracks: string[] = [];
       const errors: EmbedArtworkFailure[] = [];
       for (const trackClientPath of trackPaths) {
         const result = await embedArtworkIntoTrack(
@@ -473,11 +477,13 @@ export function musicRoute(mountPath: MountPath) {
         );
         if ('message' in result) {
           errors.push(result);
+        } else if ('skippedPath' in result) {
+          skippedTracks.push(result.skippedPath);
         } else {
           updatedTracks.push(result.clientPath);
         }
       }
-      response.tracksEmbedded = { updatedTracks, errors };
+      response.tracksEmbedded = { updatedTracks, skippedTracks, errors };
     }
 
     await updateIndexAfterFolderArtworkWrite(
@@ -550,6 +556,7 @@ export function musicRoute(mountPath: MountPath) {
       }
 
       const updated: string[] = [];
+      const skipped: string[] = [];
       const errors: EmbedArtworkFailure[] = [];
       for (const trackClientPath of trackPaths) {
         const result = await embedArtworkIntoTrack(
@@ -559,6 +566,8 @@ export function musicRoute(mountPath: MountPath) {
         );
         if ('message' in result) {
           errors.push(result);
+        } else if ('skippedPath' in result) {
+          skipped.push(result.skippedPath);
         } else {
           updated.push(result.clientPath);
         }
@@ -571,7 +580,7 @@ export function musicRoute(mountPath: MountPath) {
         folderArtworkPath,
         updated,
       );
-      return { updated, errors };
+      return { updated, skipped, errors };
     },
   );
 
@@ -601,10 +610,9 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /**
-   * Writes one or more ID3 tag frames to MP3 files in-place.
+   * Writes one or more tag frames to MP3 and M4A files in-place.
    * Accepts { paths, changes: [{ frameId, value }] }. Uses a diff approach —
    * only the specified frames are rewritten; all others are preserved.
-   * Only MP3 (ID3v2.x) files are supported.
    */
   route.post(
     '/write-track-tags',
@@ -619,7 +627,10 @@ export function musicRoute(mountPath: MountPath) {
       // Validate/build the requested tags once up front so a malformed
       // request fails before any file is touched.
       buildNodeId3Tags(changes);
-      const updatedTracks = [] as T.ResultValue<typeof writeTrackTagsForPath>[];
+      const updatedTracks: Extract<
+        WriteTrackTagsForPathResult,
+        { type: 'success' }
+      >[] = [];
       const errors: T.WriteTrackTagsResponse['errors'] = [];
 
       for (const clientPath of paths) {
@@ -629,7 +640,11 @@ export function musicRoute(mountPath: MountPath) {
           changes,
         );
         if (result.type === 'error') {
-          errors.push({ path: clientPath, message: result.message });
+          errors.push({
+            path: clientPath,
+            message: result.message,
+            code: result.code,
+          });
         } else {
           updatedTracks.push(result);
         }

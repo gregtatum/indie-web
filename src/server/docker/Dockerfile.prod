@@ -9,6 +9,8 @@ RUN npm ci --omit=dev
 
 FROM node:24-alpine
 
+RUN apk add --no-cache ffmpeg
+
 WORKDIR /app
 COPY --from=deps /app/src/server/node_modules ./src/server/node_modules
 COPY src/server ./src/server

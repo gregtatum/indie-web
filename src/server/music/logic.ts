@@ -13,6 +13,7 @@ import {
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
   buildId3v1TagBuffer,
   compareTracksDefault,
+  getTrackCapabilities,
   isFolderArtworkFilename,
   matchFolderArtworkFilename,
   nativePrivateTextTagValue,
@@ -21,6 +22,7 @@ import {
   resolveTagValue,
 } from '../../shared/music.ts';
 import type { Id3v1TagFields } from '../../shared/music.ts';
+import { writeM4aTags } from './ffmpeg.ts';
 import { isIgnorableOsFile } from '../../shared/utils.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
@@ -790,36 +792,60 @@ async function backfillId3v1Tag(resolvedPath: string): Promise<void> {
   }
 }
 
+export type WriteTrackTagsForPathResult =
+  | {
+      type: 'success';
+      clientPath: string;
+      resolvedPath: string;
+      id3v23Backfills: T.TrackTagUpdate[];
+    }
+  | { type: 'error'; message: string; code: T.TrackWriteErrorCode };
+
 export async function writeTrackTagsForPath(
   mountPath: MountPath,
   clientPath: string,
   changes: T.TrackTagUpdate[],
-): T.AsyncResult<{
-  clientPath: string;
-  resolvedPath: string;
-  id3v23Backfills: T.TrackTagUpdate[];
-}> {
+): Promise<WriteTrackTagsForPathResult> {
   try {
     const resolvedPath = mountPath.resolve(clientPath);
     if (!resolvedPath) {
-      return { type: 'error', message: 'Invalid path.' };
+      return { type: 'error', message: 'Invalid path.', code: 'invalid-path' };
     }
-    if (extname(resolvedPath).toLowerCase() !== '.mp3') {
+    const extension = extname(resolvedPath).toLowerCase();
+    const { writableFrameIds } = getTrackCapabilities(resolvedPath);
+    if (writableFrameIds.length === 0) {
       return {
         type: 'error',
-        message: 'Only MP3 files are supported for tag writing.',
+        message: 'Only MP3 and M4A files are supported for tag writing.',
+        code: 'unsupported-format',
+      };
+    }
+    const unsupported = changes.find(
+      ({ frameId }) => !writableFrameIds.includes(frameId),
+    );
+    if (unsupported) {
+      return {
+        type: 'error',
+        message: `${unsupported.frameId} cannot be written to ${extension} files.`,
+        code: 'unsupported-frame',
       };
     }
     try {
       await fs.stat(resolvedPath);
     } catch (err: any) {
       if (err?.code === 'ENOENT') {
-        return { type: 'error', message: 'File not found.' };
+        return { type: 'error', message: 'File not found.', code: 'not-found' };
       }
       return {
         type: 'error',
         message: err instanceof Error ? err.message : 'Unable to read file.',
+        code: 'write-failed',
       };
+    }
+
+    if (extension === '.m4a') {
+      await writeM4aTags(resolvedPath, changes);
+      return { type: 'success', clientPath, resolvedPath, id3v23Backfills: [] };
     }
 
     const id3v23Backfills = await computeId3v23Backfills(resolvedPath, changes);
@@ -827,7 +853,7 @@ export async function writeTrackTagsForPath(
 
     const result = NodeID3.update(tags, resolvedPath);
     if (result instanceof Error) {
-      return { type: 'error', message: result.message };
+      return { type: 'error', message: result.message, code: 'write-failed' };
     }
     await backfillId3v1Tag(resolvedPath);
     return {
@@ -840,6 +866,7 @@ export async function writeTrackTagsForPath(
     return {
       type: 'error',
       message: error instanceof Error ? error.message : 'Unable to write tags.',
+      code: 'write-failed',
     };
   }
 }
@@ -850,7 +877,7 @@ export async function writeTrackTagsForPath(
  */
 export async function updateIndexAfterTrackTagWrites(
   mountPath: MountPath,
-  updatedTracks: T.ResultValue<typeof writeTrackTagsForPath>[],
+  updatedTracks: Extract<WriteTrackTagsForPathResult, { type: 'success' }>[],
   changes: T.WriteTrackTagsRequest['changes'],
 ): Promise<T.WriteTrackTagsResponse['index']> {
   if (updatedTracks.length === 0) {
@@ -1622,6 +1649,10 @@ export interface EmbedArtworkFailure {
   message: string;
 }
 
+export interface EmbedArtworkSkipped {
+  skippedPath: string;
+}
+
 export interface RemoveEmbeddedArtworkSuccess {
   clientPath: string;
   resolvedPath: string;
@@ -1633,7 +1664,7 @@ export async function embedArtworkIntoTrack(
   mountPath: MountPath,
   clientPath: string,
   imageBuffer: Buffer,
-): Promise<EmbedArtworkSuccess | EmbedArtworkFailure> {
+): Promise<EmbedArtworkSuccess | EmbedArtworkSkipped | EmbedArtworkFailure> {
   const pathForError = clientPath;
   let errorPath = pathForError;
   try {
@@ -1647,7 +1678,11 @@ export async function embedArtworkIntoTrack(
     }
     errorPath = normalizedClientPath;
 
-    if (extname(resolvedPath).toLowerCase() !== '.mp3') {
+    const capabilities = getTrackCapabilities(resolvedPath);
+    if (!capabilities.embedsArtwork) {
+      if (capabilities.writableFrameIds.length > 0) {
+        return { skippedPath: normalizedClientPath };
+      }
       return {
         path: normalizedClientPath,
         message: 'Only MP3 files are supported for artwork embedding.',

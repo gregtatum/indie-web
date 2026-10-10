@@ -369,6 +369,51 @@ export const APP_FRAME_IDS = [
   'COMM',
 ] as const;
 
+export const M4A_WRITABLE_FRAME_IDS = [
+  'TIT2',
+  'TPE1',
+  'TPE2',
+  'TALB',
+  'TCOM',
+  'TRCK',
+  'TPOS',
+  'TYER',
+  'TCON',
+  'COMM',
+] as const;
+
+export interface TrackCapabilities {
+  writableFrameIds: readonly string[];
+  embedsArtwork: boolean;
+}
+
+const MP3_CAPABILITIES: TrackCapabilities = {
+  writableFrameIds: [...APP_FRAME_IDS, 'TEXT', 'TXXX'],
+  embedsArtwork: true,
+};
+
+const M4A_CAPABILITIES: TrackCapabilities = {
+  writableFrameIds: M4A_WRITABLE_FRAME_IDS,
+  embedsArtwork: false,
+};
+
+const NO_CAPABILITIES: TrackCapabilities = {
+  writableFrameIds: [],
+  embedsArtwork: false,
+};
+
+export function getTrackCapabilities(path: string): TrackCapabilities {
+  const extension = path.slice(path.lastIndexOf('.')).toLowerCase();
+  switch (extension) {
+    case '.mp3':
+      return MP3_CAPABILITIES;
+    case '.m4a':
+      return M4A_CAPABILITIES;
+    default:
+      return NO_CAPABILITIES;
+  }
+}
+
 /**
  * "TAG" + title(30) + artist(30) + album(30) + year(4) + comment(28) + zero
  * byte + track byte + genre byte.

@@ -9,6 +9,7 @@ import type { T } from '../index.ts';
 import {
   createTestServer,
   buildMp3WithTags,
+  copyM4aFixture,
   withLogs,
   getBytesAfterId3,
   MINIMAL_JPEG,
@@ -325,6 +326,7 @@ describe('POST /music/artwork — embed into tracks', () => {
       const json = (await res.json()) as T.WriteFolderArtworkResponse;
       assert.deepEqual(json.tracksEmbedded, {
         updatedTracks: ['/Embed/Album/01.mp3', '/Embed/Album/02.mp3'],
+        skippedTracks: [],
         errors: [],
       });
 
@@ -349,6 +351,31 @@ describe('POST /music/artwork — embed into tracks', () => {
           `${name} audio payload is untouched`,
         );
       }
+    }),
+  );
+
+  it(
+    'reports m4a tracks as skipped when uploading and embedding',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Embed', 'M4a');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, 'ok.mp3'), buildMp3WithTags({ title: 'OK' }));
+      await copyM4aFixture('tagged', join(dir, 'song.m4a'));
+      const m4aBefore = await readFile(join(dir, 'song.m4a'));
+
+      const res = await postFolderArtwork(server, {
+        path: '/Embed/M4a/ok.mp3',
+        embedInTracks: ['/Embed/M4a/ok.mp3', '/Embed/M4a/song.m4a'],
+        body: MINIMAL_JPEG,
+      });
+      assert.equal(res.status, 200);
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
+      assert.deepEqual(json.tracksEmbedded, {
+        updatedTracks: ['/Embed/M4a/ok.mp3'],
+        skippedTracks: ['/Embed/M4a/song.m4a'],
+        errors: [],
+      });
+      assert.deepEqual(await readFile(join(dir, 'song.m4a')), m4aBefore);
     }),
   );
 
@@ -466,6 +493,32 @@ describe('POST /music/artwork/embed — embed an existing folder image', () => {
           `${name} audio payload is untouched`,
         );
       }
+    }),
+  );
+
+  it(
+    'skips m4a tracks without touching them',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Sync', 'Mixed');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, 'Folder.jpg'), LARGE_JPEG);
+      await writeFile(join(dir, '01.mp3'), buildMp3WithTags({ title: 'Song' }));
+      await copyM4aFixture('tagged', join(dir, '02.m4a'));
+      const m4aBefore = await readFile(join(dir, '02.m4a'));
+
+      const res = await embed({
+        folderArtworkPath: '/Sync/Mixed/Folder.jpg',
+        trackPaths: ['/Sync/Mixed/01.mp3', '/Sync/Mixed/02.m4a'],
+      });
+      assert.equal(res.status, 200);
+      const json = (await res.json()) as T.EmbedFolderArtworkResponse;
+      assert.deepEqual(json.updated, ['/Sync/Mixed/01.mp3']);
+      assert.deepEqual(json.skipped, ['/Sync/Mixed/02.m4a']);
+      assert.deepEqual(json.errors, []);
+
+      assert.deepEqual(await readFile(join(dir, '02.m4a')), m4aBefore);
+      const meta = await parseFile(join(dir, '01.mp3'));
+      assert.equal(meta.common.picture?.length, 1);
     }),
   );
 

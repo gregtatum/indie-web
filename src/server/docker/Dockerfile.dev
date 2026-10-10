@@ -1,4 +1,6 @@
-FROM node:24
+FROM node:24-alpine
+
+RUN apk add --no-cache ffmpeg
 
 # The build.context is assumed to be the repo's root directory.
 
