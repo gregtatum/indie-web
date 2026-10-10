@@ -67,10 +67,13 @@ tasks:
 
   start-music-server:
     desc: Start the server in development mode, serving the music folder
-    dir: src/server
+    dir: src/server/docker
+    env:
+      MOUNT_DIR: ../../../music
+      HOST_PORT: "6544"
     cmds:
-      - '[ -d "node_modules" ] || npm install'
-      - MOUNT_PATH=../../music PORT=6544 npm run start-dev
+      - docker compose build
+      - docker compose up
 
   screenshots:
     desc: |
