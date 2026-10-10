@@ -26,6 +26,7 @@ export type MusicPlaybackResume = {
 export type MusicTrackColumnWidths = {
   artist: number;
   album: number;
+  referenceWidth: number | null;
 };
 
 export type MusicBatchEditColumnWidths = Partial<
@@ -284,7 +285,11 @@ export const persistedState = {
       const artist = getNumberProp(value, 'artist');
       const album = getNumberProp(value, 'album');
       if (artist !== null && album !== null) {
-        return { artist, album };
+        return {
+          artist,
+          album,
+          referenceWidth: getNumberProp(value, 'referenceWidth'),
+        };
       }
       return null;
     },

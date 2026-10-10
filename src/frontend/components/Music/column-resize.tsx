@@ -23,6 +23,34 @@ export function clampColumnWidths<K extends string>(
   return result;
 }
 
+export function layoutColumns<K extends string>(
+  order: K[],
+  stored: Record<K, number>,
+  referenceWidth: number,
+  availableWidth: number,
+  minWidth: number,
+  flexMinWidth: number,
+): Record<K, number> {
+  const scale = referenceWidth > 0 ? availableWidth / referenceWidth : 1;
+  const result = { ...stored };
+  for (const key of order) {
+    result[key] = Math.max(minWidth, stored[key] * scale);
+  }
+
+  const total = order.reduce((sum, key) => sum + result[key], 0);
+  const excess = total - (availableWidth - flexMinWidth);
+  if (excess <= 0) {
+    return result;
+  }
+
+  const slack = order.reduce((sum, key) => sum + result[key] - minWidth, 0);
+  for (const key of order) {
+    const share = slack > 0 ? (result[key] - minWidth) / slack : 0;
+    result[key] = Math.max(minWidth, result[key] - excess * share);
+  }
+  return result;
+}
+
 export function resizeColumnsOnDrag<K extends string>(
   order: K[],
   prev: Record<K, number>,
@@ -69,8 +97,10 @@ export function resizeColumnsOnDrag<K extends string>(
 
 export function ColumnResizeHandle({
   onDrag,
+  onDragEnd,
 }: {
   onDrag: (dx: number) => void;
+  onDragEnd?: () => void;
 }) {
   const onMouseDown: React.MouseEventHandler = (event) => {
     event.preventDefault();
@@ -85,6 +115,7 @@ export function ColumnResizeHandle({
       document.body.style.cursor = '';
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
+      onDragEnd?.();
     }
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);

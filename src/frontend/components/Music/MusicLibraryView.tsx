@@ -20,7 +20,7 @@ import { TrackEditorSidebar } from './TrackEditorSidebar';
 import { OrganizeImportView } from './OrganizeImportView';
 import {
   ColumnResizeHandle,
-  clampColumnWidths,
+  layoutColumns,
   resizeColumnsOnDrag,
 } from './column-resize';
 
@@ -473,39 +473,78 @@ function StagingPoolEditView({ onCloseView }: { onCloseView: () => void }) {
 
 type ConfigurableColumns = 'artist' | 'album';
 type ColumnWidths = Record<ConfigurableColumns, number>;
+type StoredColumnWidths = ColumnWidths & { referenceWidth: number | null };
 const COL_MIN_WIDTH = 60;
 const TRACK_MIN_WIDTH = 100; // matches .musicTracksHeaderTitle { min-width: 100px }
 const TRACK_COLUMN_WIDTH = 24; // matches --column-track CSS variable
 const MUSIC_GAP = 12; // matches --music-gap CSS variable
-const MUSIC_PADDING_H = 12; // matches --music-padding-h CSS variable
 const CONFIGURABLE_COLUMNS: ConfigurableColumns[] = ['artist', 'album'];
 
-function loadColumnWidths(): ColumnWidths {
-  const columnWidths = persistedState.musicTrackColumnWidths.read();
-  if (columnWidths) {
+function loadColumnWidths(): StoredColumnWidths {
+  const stored = persistedState.musicTrackColumnWidths.read();
+  if (stored) {
     return {
-      artist: Math.max(COL_MIN_WIDTH, columnWidths.artist),
-      album: Math.max(COL_MIN_WIDTH, columnWidths.album),
+      artist: Math.max(COL_MIN_WIDTH, stored.artist),
+      album: Math.max(COL_MIN_WIDTH, stored.album),
+      referenceWidth: stored.referenceWidth,
     };
   }
-  return { artist: 160, album: 160 };
-}
-
-function useColumnWidths() {
-  const [columnWidths, setColumnWidths] =
-    React.useState<ColumnWidths>(loadColumnWidths);
-
-  React.useEffect(() => {
-    // TODO - Let's debounce this to something like 500ms.
-    persistedState.musicTrackColumnWidths.write(columnWidths);
-  }, [columnWidths]);
-
-  return { columnWidths, setColumnWidths };
+  return { artist: 160, album: 160, referenceWidth: null };
 }
 
 function TracksView() {
-  const { columnWidths, setColumnWidths } = useColumnWidths();
+  const [stored, setStored] =
+    React.useState<StoredColumnWidths>(loadColumnWidths);
+  const [availableWidth, setAvailableWidth] = React.useState<number | null>(
+    null,
+  );
   const [scrollbarWidth, setScrollbarWidth] = React.useState(0);
+  const storedRef = React.useRef(stored);
+  storedRef.current = stored;
+  const availableWidthRef = React.useRef(availableWidth);
+  availableWidthRef.current = availableWidth;
+
+  function computeColumnWidths(
+    widths: StoredColumnWidths,
+    available: number | null,
+  ): ColumnWidths {
+    if (available === null) {
+      return widths;
+    }
+    return layoutColumns(
+      CONFIGURABLE_COLUMNS,
+      widths,
+      widths.referenceWidth ?? available,
+      available,
+      COL_MIN_WIDTH,
+      TRACK_MIN_WIDTH,
+    );
+  }
+
+  const columnWidths = computeColumnWidths(stored, availableWidth);
+
+  function onColumnDrag(columnKey: ConfigurableColumns, dx: number) {
+    setStored((prev) => {
+      const available = availableWidthRef.current;
+      if (available === null) {
+        return prev;
+      }
+      const resized = resizeColumnsOnDrag(
+        CONFIGURABLE_COLUMNS,
+        computeColumnWidths(prev, available),
+        columnKey,
+        dx,
+        COL_MIN_WIDTH,
+        available,
+        TRACK_MIN_WIDTH,
+      );
+      return { ...resized, referenceWidth: available };
+    });
+  }
+
+  function onColumnDragEnd() {
+    persistedState.musicTrackColumnWidths.write(storedRef.current);
+  }
 
   return (
     <div
@@ -518,7 +557,11 @@ function TracksView() {
         } as React.CSSProperties
       }
     >
-      <TracksHeader setColumnWidths={setColumnWidths} />
+      <TracksHeader
+        onAvailableWidthChange={setAvailableWidth}
+        onColumnDrag={onColumnDrag}
+        onColumnDragEnd={onColumnDragEnd}
+      />
       <Tracks onScrollbarWidthChange={setScrollbarWidth} />
     </div>
   );
@@ -526,51 +569,43 @@ function TracksView() {
 
 interface ColumnHeaderProps {
   columnKey: ConfigurableColumns;
-  columnOrder: ConfigurableColumns[];
   label: string;
-  setColumnWidths: React.Dispatch<React.SetStateAction<ColumnWidths>>;
-  maxAvailableWidth: number;
+  onColumnDrag: (columnKey: ConfigurableColumns, dx: number) => void;
+  onColumnDragEnd: () => void;
 }
 
 function ColumnHeader({
   columnKey,
-  columnOrder,
   label,
-  setColumnWidths,
-  maxAvailableWidth,
+  onColumnDrag,
+  onColumnDragEnd,
 }: ColumnHeaderProps) {
-  function dragHandler(dx: number) {
-    setColumnWidths((prev) =>
-      resizeColumnsOnDrag(
-        columnOrder,
-        prev,
-        columnKey,
-        dx,
-        COL_MIN_WIDTH,
-        maxAvailableWidth,
-        TRACK_MIN_WIDTH,
-      ),
-    );
-  }
-
   return (
     <div
       className="musicTracksHeaderCell"
       style={{ flex: `0 0 var(--column-${columnKey})` }}
     >
-      <ColumnResizeHandle onDrag={dragHandler} />
+      <ColumnResizeHandle
+        onDrag={(dx) => onColumnDrag(columnKey, dx)}
+        onDragEnd={onColumnDragEnd}
+      />
       <div className="musicTracksHeaderCellText">{label}</div>
     </div>
   );
 }
 
 interface TracksHeaderProps {
-  setColumnWidths: React.Dispatch<React.SetStateAction<ColumnWidths>>;
+  onAvailableWidthChange: (width: number) => void;
+  onColumnDrag: (columnKey: ConfigurableColumns, dx: number) => void;
+  onColumnDragEnd: () => void;
 }
 
-function TracksHeader({ setColumnWidths }: TracksHeaderProps) {
+function TracksHeader({
+  onAvailableWidthChange,
+  onColumnDrag,
+  onColumnDragEnd,
+}: TracksHeaderProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [maxAvailableWidth, setMaxAvailableWidth] = React.useState(400);
 
   React.useEffect(() => {
     const el = containerRef.current;
@@ -579,26 +614,16 @@ function TracksHeader({ setColumnWidths }: TracksHeaderProps) {
     }
     const numCols = CONFIGURABLE_COLUMNS.length + 2; // +1 for Title, +1 for TrackNumber
     const observer = new ResizeObserver(([entry]) => {
-      const width = entry.contentRect.width;
-      const newMax =
-        width -
-        2 * MUSIC_PADDING_H -
-        (numCols - 1) * MUSIC_GAP -
-        TRACK_COLUMN_WIDTH;
-      setMaxAvailableWidth(newMax);
-      setColumnWidths((prev) =>
-        clampColumnWidths(
-          CONFIGURABLE_COLUMNS,
-          prev,
-          newMax,
-          COL_MIN_WIDTH,
-          TRACK_MIN_WIDTH,
-        ),
+      // contentRect already excludes the header padding, including the scrollbar.
+      onAvailableWidthChange(
+        entry.contentRect.width -
+          (numCols - 1) * MUSIC_GAP -
+          TRACK_COLUMN_WIDTH,
       );
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [onAvailableWidthChange]);
 
   return (
     <div className="musicTracksHeader" ref={containerRef}>
@@ -608,17 +633,15 @@ function TracksHeader({ setColumnWidths }: TracksHeaderProps) {
       </div>
       <ColumnHeader
         columnKey="artist"
-        columnOrder={CONFIGURABLE_COLUMNS}
         label="Artist"
-        setColumnWidths={setColumnWidths}
-        maxAvailableWidth={maxAvailableWidth}
+        onColumnDrag={onColumnDrag}
+        onColumnDragEnd={onColumnDragEnd}
       />
       <ColumnHeader
         columnKey="album"
-        columnOrder={CONFIGURABLE_COLUMNS}
         label="Album"
-        setColumnWidths={setColumnWidths}
-        maxAvailableWidth={maxAvailableWidth}
+        onColumnDrag={onColumnDrag}
+        onColumnDragEnd={onColumnDragEnd}
       />
     </div>
   );
