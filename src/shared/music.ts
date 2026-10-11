@@ -395,7 +395,7 @@ const MP3_CAPABILITIES: TrackCapabilities = {
 
 const M4A_CAPABILITIES: TrackCapabilities = {
   writableFrameIds: M4A_WRITABLE_FRAME_IDS,
-  embedsArtwork: false,
+  embedsArtwork: true,
 };
 
 const NO_CAPABILITIES: TrackCapabilities = {

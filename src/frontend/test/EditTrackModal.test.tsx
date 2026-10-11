@@ -995,7 +995,7 @@ describe('<EditTrackModal> with real server', () => {
     ).toBeTruthy();
   }, 30_000);
 
-  it('embeds the folder image into mp3 tracks and leaves m4a tracks alone', async () => {
+  it('embeds the folder image into both mp3 and m4a tracks', async () => {
     await writeFolderArtwork(getServer(), '/Album A', buildJpegBytes());
     await writeTrack('Album A/1.mp3', {
       title: 'Nested One',
@@ -1004,9 +1004,6 @@ describe('<EditTrackModal> with real server', () => {
       album: 'Album A',
     });
     await writeM4aTrack('Album A/2.m4a');
-    const m4aBefore = await readFile(
-      join(getServer().mountDir, 'Album A/2.m4a'),
-    );
     await setup();
 
     await openEditModal('Nested One');
@@ -1026,9 +1023,10 @@ describe('<EditTrackModal> with real server', () => {
     expect(
       frameValue(await fetchTrackTags('/Album A/1.mp3'), 'APIC'),
     ).toBeDefined();
-    expect(await readFile(join(getServer().mountDir, 'Album A/2.m4a'))).toEqual(
-      m4aBefore,
+    const m4aBytes = await readFile(
+      join(getServer().mountDir, 'Album A/2.m4a'),
     );
+    expect(m4aBytes.includes(Buffer.from('covr'))).toBe(true);
     expect(
       within(dialog).queryByRole('button', { name: 'Embed artwork' }),
     ).toBeNull();

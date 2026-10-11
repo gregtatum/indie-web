@@ -22,7 +22,12 @@ import {
   resolveTagValue,
 } from '../../shared/music.ts';
 import type { Id3v1TagFields } from '../../shared/music.ts';
-import { M4aUnsupportedError, writeM4aTags } from './m4a.ts';
+import {
+  M4aUnsupportedError,
+  removeM4aArtwork,
+  writeM4aArtwork,
+  writeM4aTags,
+} from './m4a.ts';
 import { isIgnorableOsFile } from '../../shared/utils.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
@@ -1660,14 +1665,10 @@ export interface EmbedArtworkFailure {
   message: string;
 }
 
-export interface EmbedArtworkSkipped {
-  skippedPath: string;
-}
-
 export interface RemoveEmbeddedArtworkSuccess {
   clientPath: string;
   resolvedPath: string;
-  /** Count of APIC picture frames stripped from the leading tag. */
+  /** Count of pictures stripped, APIC frames in MP3 or covr images in M4A. */
   removed: number;
 }
 
@@ -1675,7 +1676,7 @@ export async function embedArtworkIntoTrack(
   mountPath: MountPath,
   clientPath: string,
   imageBuffer: Buffer,
-): Promise<EmbedArtworkSuccess | EmbedArtworkSkipped | EmbedArtworkFailure> {
+): Promise<EmbedArtworkSuccess | EmbedArtworkFailure> {
   const pathForError = clientPath;
   let errorPath = pathForError;
   try {
@@ -1691,12 +1692,9 @@ export async function embedArtworkIntoTrack(
 
     const capabilities = getTrackCapabilities(resolvedPath);
     if (!capabilities.embedsArtwork) {
-      if (capabilities.writableFrameIds.length > 0) {
-        return { skippedPath: normalizedClientPath };
-      }
       return {
         path: normalizedClientPath,
-        message: 'Only MP3 files are supported for artwork embedding.',
+        message: 'Only MP3 and M4A files are supported for artwork embedding.',
       };
     }
 
@@ -1724,6 +1722,11 @@ export async function embedArtworkIntoTrack(
         path: normalizedClientPath,
         message: err instanceof Error ? err.message : 'Unable to read file.',
       };
+    }
+
+    if (extname(resolvedPath).toLowerCase() === '.m4a') {
+      await writeM4aArtwork(resolvedPath, { mimeType, data: imageBuffer });
+      return { clientPath: normalizedClientPath, resolvedPath, mimeType };
     }
 
     const result = NodeID3.update(
@@ -1770,10 +1773,11 @@ export async function removeEmbeddedArtworkFromTrack(
     }
     errorPath = normalizedClientPath;
 
-    if (extname(resolvedPath).toLowerCase() !== '.mp3') {
+    const extension = extname(resolvedPath).toLowerCase();
+    if (extension !== '.mp3' && extension !== '.m4a') {
       return {
         path: normalizedClientPath,
-        message: 'Only MP3 files are supported for artwork removal.',
+        message: 'Only MP3 and M4A files are supported for artwork removal.',
       };
     }
 
@@ -1787,6 +1791,11 @@ export async function removeEmbeddedArtworkFromTrack(
         path: normalizedClientPath,
         message: err instanceof Error ? err.message : 'Unable to read file.',
       };
+    }
+
+    if (extension === '.m4a') {
+      const removed = await removeM4aArtwork(resolvedPath);
+      return { clientPath: normalizedClientPath, resolvedPath, removed };
     }
 
     const current = NodeID3.read(resolvedPath) as {

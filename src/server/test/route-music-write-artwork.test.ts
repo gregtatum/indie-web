@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { writeFile, readFile, mkdir, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
+import { runFfmpeg } from '../music/ffmpeg.ts';
 import { musicRoute } from '../music/route.ts';
 import type { T } from '../index.ts';
 import {
@@ -15,6 +16,26 @@ import {
   MINIMAL_JPEG,
 } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
+import {
+  assertDecodesCleanly,
+  assertOnlyTheseAtomsChanged,
+  snapshotM4a,
+} from './m4a-oracle.ts';
+
+async function makeImage(path: string) {
+  await runFfmpeg([
+    '-f',
+    'lavfi',
+    '-i',
+    'testsrc=s=640x640',
+    '-frames:v',
+    '1',
+    '-update',
+    '1',
+    path,
+  ]);
+  return readFile(path);
+}
 
 let describe: (name: string, fn: () => void) => void = nodeDescribe;
 if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
@@ -326,7 +347,6 @@ describe('POST /music/artwork — embed into tracks', () => {
       const json = (await res.json()) as T.WriteFolderArtworkResponse;
       assert.deepEqual(json.tracksEmbedded, {
         updatedTracks: ['/Embed/Album/01.mp3', '/Embed/Album/02.mp3'],
-        skippedTracks: [],
         errors: [],
       });
 
@@ -355,13 +375,13 @@ describe('POST /music/artwork — embed into tracks', () => {
   );
 
   it(
-    'reports m4a tracks as skipped when uploading and embedding',
+    'embeds into m4a tracks when uploading, changing only the cover',
     withLogs([], async () => {
       const dir = join(server.mountDir, 'Embed', 'M4a');
       await mkdir(dir, { recursive: true });
       await writeFile(join(dir, 'ok.mp3'), buildMp3WithTags({ title: 'OK' }));
-      await copyM4aFixture('tagged', join(dir, 'song.m4a'));
-      const m4aBefore = await readFile(join(dir, 'song.m4a'));
+      await copyM4aFixture('itunes-padded', join(dir, 'song.m4a'));
+      const before = await snapshotM4a(join(dir, 'song.m4a'));
 
       const res = await postFolderArtwork(server, {
         path: '/Embed/M4a/ok.mp3',
@@ -371,11 +391,17 @@ describe('POST /music/artwork — embed into tracks', () => {
       assert.equal(res.status, 200);
       const json = (await res.json()) as T.WriteFolderArtworkResponse;
       assert.deepEqual(json.tracksEmbedded, {
-        updatedTracks: ['/Embed/M4a/ok.mp3'],
-        skippedTracks: ['/Embed/M4a/song.m4a'],
+        updatedTracks: ['/Embed/M4a/ok.mp3', '/Embed/M4a/song.m4a'],
         errors: [],
       });
-      assert.deepEqual(await readFile(join(dir, 'song.m4a')), m4aBefore);
+
+      const after = await snapshotM4a(join(dir, 'song.m4a'));
+      assertOnlyTheseAtomsChanged(before, after, ['covr']);
+      const meta = await parseFile(join(dir, 'song.m4a'));
+      assert.equal(meta.common.picture?.length, 1);
+      assert.equal(meta.common.picture?.[0].format, 'image/jpeg');
+      assert.deepEqual(Buffer.from(meta.common.picture![0].data), MINIMAL_JPEG);
+      await assertDecodesCleanly(join(dir, 'song.m4a'));
     }),
   );
 
@@ -405,7 +431,7 @@ describe('POST /music/artwork — embed into tracks', () => {
       const byPath = Object.fromEntries(
         (json.tracksEmbedded?.errors ?? []).map((e) => [e.path, e.message]),
       );
-      assert.match(byPath['/Embed/Partial/note.txt'], /Only MP3 files/);
+      assert.match(byPath['/Embed/Partial/note.txt'], /Only MP3 and M4A files/);
       assert.match(byPath['/Embed/Partial/missing.mp3'], /File not found/);
 
       const meta = await parseFile(join(dir, 'ok.mp3'));
@@ -497,26 +523,39 @@ describe('POST /music/artwork/embed — embed an existing folder image', () => {
   );
 
   it(
-    'skips m4a tracks without touching them',
+    'embeds the folder image into m4a tracks, replacing an existing cover',
     withLogs([], async () => {
       const dir = join(server.mountDir, 'Sync', 'Mixed');
       await mkdir(dir, { recursive: true });
       await writeFile(join(dir, 'Folder.jpg'), LARGE_JPEG);
       await writeFile(join(dir, '01.mp3'), buildMp3WithTags({ title: 'Song' }));
-      await copyM4aFixture('tagged', join(dir, '02.m4a'));
-      const m4aBefore = await readFile(join(dir, '02.m4a'));
+      await copyM4aFixture('itunes-tight', join(dir, '02.m4a'));
+      const m4aPath = join(dir, '02.m4a');
 
-      const res = await embed({
-        folderArtworkPath: '/Sync/Mixed/Folder.jpg',
-        trackPaths: ['/Sync/Mixed/01.mp3', '/Sync/Mixed/02.m4a'],
-      });
-      assert.equal(res.status, 200);
-      const json = (await res.json()) as T.EmbedFolderArtworkResponse;
-      assert.deepEqual(json.updated, ['/Sync/Mixed/01.mp3']);
-      assert.deepEqual(json.skipped, ['/Sync/Mixed/02.m4a']);
-      assert.deepEqual(json.errors, []);
+      const bigImage = await makeImage(join(dir, 'big.jpg'));
+      for (const image of [MINIMAL_JPEG, bigImage]) {
+        await writeFile(join(dir, 'Folder.jpg'), image);
+        const before = await snapshotM4a(m4aPath);
+        const res = await embed({
+          folderArtworkPath: '/Sync/Mixed/Folder.jpg',
+          trackPaths: ['/Sync/Mixed/01.mp3', '/Sync/Mixed/02.m4a'],
+        });
+        assert.equal(res.status, 200);
+        const json = (await res.json()) as T.EmbedFolderArtworkResponse;
+        assert.deepEqual(json.updated, [
+          '/Sync/Mixed/01.mp3',
+          '/Sync/Mixed/02.m4a',
+        ]);
+        assert.deepEqual(json.errors, []);
 
-      assert.deepEqual(await readFile(join(dir, '02.m4a')), m4aBefore);
+        assertOnlyTheseAtomsChanged(before, await snapshotM4a(m4aPath), [
+          'covr',
+        ]);
+        const meta = await parseFile(m4aPath);
+        assert.equal(meta.common.picture?.length, 1);
+        assert.deepEqual(Buffer.from(meta.common.picture![0].data), image);
+        await assertDecodesCleanly(m4aPath);
+      }
       const meta = await parseFile(join(dir, '01.mp3'));
       assert.equal(meta.common.picture?.length, 1);
     }),
@@ -699,6 +738,57 @@ describe('POST /music/artwork/embedded/remove — strip embedded pictures', () =
   );
 
   it(
+    'removes an m4a cover and restores the original tags exactly',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Strip', 'M4a');
+      await mkdir(dir, { recursive: true });
+      const path = join(dir, '01.m4a');
+      await copyM4aFixture('itunes-padded', path);
+      const original = await snapshotM4a(path);
+      const pngImage = await makeImage(join(dir, 'Folder.png'));
+      const embedRes = await fetch(`${server.baseUrl}/music/artwork/embed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folderArtworkPath: '/Strip/M4a/Folder.png',
+          trackPaths: ['/Strip/M4a/01.m4a'],
+        }),
+      });
+      assert.deepEqual((await embedRes.json()).updated, ['/Strip/M4a/01.m4a']);
+      const embedded = await parseFile(path);
+      assert.equal(embedded.common.picture?.[0].format, 'image/png');
+      assert.deepEqual(Buffer.from(embedded.common.picture![0].data), pngImage);
+
+      const res = await removeEmbedded('/Strip/M4a/01.m4a');
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { ok: true });
+
+      const after = await snapshotM4a(path);
+      assertOnlyTheseAtomsChanged(original, after, []);
+      assert.deepEqual([...after.ilst], [...original.ilst]);
+      assert.equal((await parseFile(path)).common.picture?.length ?? 0, 0);
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'leaves an m4a without a cover byte for byte unchanged',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Strip', 'M4aBare');
+      await mkdir(dir, { recursive: true });
+      const path = join(dir, '01.m4a');
+      await copyM4aFixture('tagged', path);
+      const bytes = await readFile(path);
+
+      const res = await removeEmbedded('/Strip/M4aBare/01.m4a');
+
+      assert.equal(res.status, 200);
+      assert.deepEqual(await readFile(path), bytes);
+      assert.deepEqual(await readdir(dir), ['01.m4a']);
+    }),
+  );
+
+  it(
     'returns 400 when the path query parameter is missing',
     withLogs(['Missing path query parameter.'], async () => {
       const res = await fetch(
@@ -712,7 +802,7 @@ describe('POST /music/artwork/embedded/remove — strip embedded pictures', () =
   it(
     'returns 400 for a non-MP3 path',
     withLogs(
-      ['Only MP3 files are supported for artwork removal.'],
+      ['Only MP3 and M4A files are supported for artwork removal.'],
       async () => {
         const dir = join(server.mountDir, 'Strip', 'NotAudio');
         await mkdir(dir, { recursive: true });

@@ -172,6 +172,8 @@ export async function assertDecodesCleanly(path: string): Promise<void> {
     'error',
     '-i',
     path,
+    '-map',
+    '0:a',
     '-f',
     'null',
     '-',

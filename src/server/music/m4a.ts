@@ -24,6 +24,8 @@ type M4aFrameId = (typeof M4A_WRITABLE_FRAME_IDS)[number];
 const COPY_CHUNK_BYTES = 1024 * 1024;
 const MIN_ATOM_BYTES = 8;
 const MAX_UINT32 = 0xffffffff;
+const COVER_FLAG_JPEG = 13;
+const COVER_FLAG_PNG = 14;
 
 const ATOM_TYPES = {
   TIT2: '©nam', // title
@@ -46,6 +48,8 @@ const OFFSET_CONTAINERS = new Set([
   'minf', // media information (handler-specific)
   'stbl', // sample table, parent of stco/co64 chunk offsets
 ]);
+
+class NothingToChange extends Error {}
 
 export class M4aUnsupportedError extends Error {
   readonly code = 'unsupported-format';
@@ -284,10 +288,7 @@ function buildItem(change: T.TrackTagUpdate): Buffer {
  * item, so the old genre cannot contradict the new one.
  */
 function applyChanges(ilst: Buffer, changes: T.TrackTagUpdate[]): Buffer {
-  let items = childAtoms(ilst).map((atom) => ({
-    type: atom.type,
-    bytes: ilst.subarray(atom.start, atom.end),
-  }));
+  let items = readItems(ilst);
   for (const change of changes) {
     const type = ATOM_TYPES[change.frameId as M4aFrameId];
     if (!type) {
@@ -295,20 +296,40 @@ function applyChanges(ilst: Buffer, changes: T.TrackTagUpdate[]): Buffer {
     }
     const dropped = type === '©gen' ? new Set(['gnre']) : new Set<string>();
     items = items.filter((item) => !dropped.has(item.type));
-    if (change.value === '') {
-      items = items.filter((item) => item.type !== type);
-      continue;
-    }
-    const replacement = { type, bytes: buildItem(change) };
-    const first = items.findIndex((item) => item.type === type);
-    if (first === -1) {
-      items.push(replacement);
-    } else {
-      items[first] = replacement;
-      items = items.filter((item, i) => item.type !== type || i === first);
-    }
+    items =
+      change.value === ''
+        ? items.filter((item) => item.type !== type)
+        : replaceItem(items, { type, bytes: buildItem(change) });
   }
+  return writeItems(items);
+}
+
+interface IlstItem {
+  type: string;
+  bytes: Buffer;
+}
+
+function readItems(ilst: Buffer): IlstItem[] {
+  return childAtoms(ilst).map((atom) => ({
+    type: atom.type,
+    bytes: ilst.subarray(atom.start, atom.end),
+  }));
+}
+
+function writeItems(items: IlstItem[]): Buffer {
   return makeAtom('ilst', ...items.map((item) => item.bytes));
+}
+
+function replaceItem(items: IlstItem[], replacement: IlstItem): IlstItem[] {
+  const first = items.findIndex((item) => item.type === replacement.type);
+  if (first === -1) {
+    return [...items, replacement];
+  }
+  const replaced = [...items];
+  replaced[first] = replacement;
+  return replaced.filter(
+    (item, i) => item.type !== replacement.type || i === first,
+  );
 }
 
 /**
@@ -427,7 +448,7 @@ async function copyRange(
 }
 
 /**
- * Edits the tags of an m4a file without touching its audio. Only the moov atom
+ * Edits the ilst of an m4a file without touching its audio. Only the moov atom
  * is read into memory, since that is where the tags and the sample table live.
  * The audio in mdat is never loaded, and everything outside moov is streamed
  * from the old file to the new one in chunks of at most one megabyte. Memory
@@ -438,9 +459,9 @@ async function copyRange(
  * temporary file is removed. The cost is that the whole file is copied, even
  * for a small edit.
  */
-export async function writeM4aTags(
+async function rewriteIlst(
   resolvedPath: string,
-  changes: T.TrackTagUpdate[],
+  edit: (ilst: Buffer) => Buffer,
 ): Promise<void> {
   const tmpPath = `${resolvedPath}.${randomUUID()}.tmp`;
   const source = await fs.open(resolvedPath, 'r');
@@ -470,9 +491,7 @@ export async function writeM4aTags(
     }
 
     let moov = editChild(oldMoov, 'udta', (udta) =>
-      editChild(udta, 'meta', (meta) =>
-        editIlstInMeta(meta, (ilst) => applyChanges(ilst, changes)),
-      ),
+      editChild(udta, 'meta', (meta) => editIlstInMeta(meta, edit)),
     );
 
     const following = atoms[moovIndex + 1];
@@ -514,8 +533,55 @@ export async function writeM4aTags(
   } catch (error) {
     await dest?.close().catch(() => {});
     await fs.rm(tmpPath, { force: true });
+    if (error instanceof NothingToChange) {
+      return;
+    }
     throw error;
   } finally {
     await source.close();
   }
+}
+
+export async function writeM4aTags(
+  resolvedPath: string,
+  changes: T.TrackTagUpdate[],
+): Promise<void> {
+  await rewriteIlst(resolvedPath, (ilst) => applyChanges(ilst, changes));
+}
+
+/**
+ * Sets the cover art, which lives in the covr item of the ilst. The data atom
+ * inside it is flagged as a JPEG or a PNG. Any existing cover is replaced.
+ */
+export async function writeM4aArtwork(
+  resolvedPath: string,
+  image: { mimeType: 'image/jpeg' | 'image/png'; data: Buffer },
+): Promise<void> {
+  const flags =
+    image.mimeType === 'image/png' ? COVER_FLAG_PNG : COVER_FLAG_JPEG;
+  const bytes = makeAtom('covr', makeDataAtom(flags, image.data));
+  await rewriteIlst(resolvedPath, (ilst) =>
+    writeItems(replaceItem(readItems(ilst), { type: 'covr', bytes })),
+  );
+}
+
+/**
+ * Removes the cover art and returns how many pictures were removed. A file
+ * without any cover is left alone.
+ */
+export async function removeM4aArtwork(resolvedPath: string): Promise<number> {
+  let removed = 0;
+  await rewriteIlst(resolvedPath, (ilst) => {
+    const items = readItems(ilst);
+    for (const item of items.filter(({ type }) => type === 'covr')) {
+      removed += childAtoms(item.bytes).filter(
+        (atom) => atom.type === 'data',
+      ).length;
+    }
+    if (removed === 0) {
+      throw new NothingToChange();
+    }
+    return writeItems(items.filter(({ type }) => type !== 'covr'));
+  });
+  return removed;
 }

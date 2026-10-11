@@ -163,7 +163,6 @@ export interface WriteFolderArtworkResponse {
    */
   tracksEmbedded?: {
     updatedTracks: string[];
-    skippedTracks: string[];
     errors: Array<{ path: string; message: string }>;
   };
 }
@@ -178,7 +177,6 @@ export interface EmbedFolderArtworkRequest {
 export interface EmbedFolderArtworkResponse {
   /** Track paths whose embedded artwork was rewritten. */
   updated: string[];
-  skipped: string[];
   /**
    * Per-track failures. Every requested track is attempted; a failure here does
    * not stop the rest.

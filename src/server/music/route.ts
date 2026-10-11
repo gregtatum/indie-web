@@ -467,7 +467,6 @@ export function musicRoute(mountPath: MountPath) {
         .map((part) => part.trim())
         .filter(Boolean);
       const updatedTracks: string[] = [];
-      const skippedTracks: string[] = [];
       const errors: EmbedArtworkFailure[] = [];
       for (const trackClientPath of trackPaths) {
         const result = await embedArtworkIntoTrack(
@@ -477,13 +476,11 @@ export function musicRoute(mountPath: MountPath) {
         );
         if ('message' in result) {
           errors.push(result);
-        } else if ('skippedPath' in result) {
-          skippedTracks.push(result.skippedPath);
         } else {
           updatedTracks.push(result.clientPath);
         }
       }
-      response.tracksEmbedded = { updatedTracks, skippedTracks, errors };
+      response.tracksEmbedded = { updatedTracks, errors };
     }
 
     await updateIndexAfterFolderArtworkWrite(
@@ -556,7 +553,6 @@ export function musicRoute(mountPath: MountPath) {
       }
 
       const updated: string[] = [];
-      const skipped: string[] = [];
       const errors: EmbedArtworkFailure[] = [];
       for (const trackClientPath of trackPaths) {
         const result = await embedArtworkIntoTrack(
@@ -566,8 +562,6 @@ export function musicRoute(mountPath: MountPath) {
         );
         if ('message' in result) {
           errors.push(result);
-        } else if ('skippedPath' in result) {
-          skipped.push(result.skippedPath);
         } else {
           updated.push(result.clientPath);
         }
@@ -580,12 +574,12 @@ export function musicRoute(mountPath: MountPath) {
         folderArtworkPath,
         updated,
       );
-      return { updated, skipped, errors };
+      return { updated, errors };
     },
   );
 
   /**
-   * Strips every embedded picture (APIC) frame from a single MP3, leaving the
+   * Strips every embedded picture from a single MP3 or M4A, leaving the
    * album's folder artwork file untouched.
    */
   route.post('/artwork/embedded/remove', async (req): Promise<{ ok: true }> => {
