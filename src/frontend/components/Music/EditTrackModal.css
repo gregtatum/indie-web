@@ -904,3 +904,11 @@
   font-size: var(--font-size-small);
   font-weight: 600;
 }
+
+.editTrackModalPathLink {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-small);
+  color: var(--accent-strong);
+  text-decoration: underline;
+}

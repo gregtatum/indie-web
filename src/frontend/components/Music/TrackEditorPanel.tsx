@@ -1,8 +1,9 @@
 import * as React from 'react';
+import * as Router from 'react-router-dom';
 import { $$, A, Hooks, T } from 'frontend';
 import { Tabs } from 'frontend/components/Tabs';
 import { throttle } from 'shared/utils';
-import { getDirName } from 'frontend/utils';
+import { getDirName, getPathFileName } from 'frontend/utils';
 import { ArtworkTab, type PendingArtwork } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
 import {
@@ -234,6 +235,26 @@ function buildDetailChanges(
   return changes;
 }
 
+function getCommonFolder(paths: string[]): string | null {
+  if (paths.length === 0) {
+    return null;
+  }
+  const common = getDirName(paths[0]).split('/');
+  for (const path of paths.slice(1)) {
+    const parts = getDirName(path).split('/');
+    let length = 0;
+    while (
+      length < common.length &&
+      length < parts.length &&
+      common[length] === parts[length]
+    ) {
+      length++;
+    }
+    common.length = length;
+  }
+  return common.join('/') || '/';
+}
+
 export const TrackEditorPanel = React.forwardRef<
   TrackEditorPanelHandle,
   TrackEditorPanelProps
@@ -271,6 +292,8 @@ export const TrackEditorPanel = React.forwardRef<
   const server = $$.getCurrentServer();
   const activeTab = $$.getMusicEditTab();
   const folderArtworkVersion = $$.getMusicFolderArtworkVersion();
+  const fsSlug = $$.getCurrentFileStoreSlug();
+  const navigate = Router.useNavigate();
   const dispatch = Hooks.useDispatch();
 
   const [formState, setFormState] = React.useState<DetailFieldValues>(
@@ -1060,6 +1083,34 @@ export const TrackEditorPanel = React.forwardRef<
 
   const detailRows: React.ReactNode[] = [];
 
+  let pathRow: React.ReactNode = null;
+  const pathFolder = getCommonFolder(editTracks.map((t) => t.path));
+  if (pathFolder && pathFolder !== '/') {
+    const pathHref = `/${fsSlug}/folder${pathFolder}`;
+    const fileName = isBulkEdit ? null : getPathFileName(editTracks[0].path);
+    pathRow = (
+      <div key="path" className="editTrackModalRow">
+        <span className="editTrackModalLabel">Path</span>
+        <a
+          className="editTrackModalPathLink"
+          href={pathHref}
+          onClick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+              return;
+            }
+            e.preventDefault();
+            if (fileName) {
+              dispatch(A.changeFileFocus(pathFolder, fileName));
+            }
+            navigate(pathHref);
+          }}
+        >
+          {fileName ? `${pathFolder}/${fileName}` : pathFolder}
+        </a>
+      </div>
+    );
+  }
+
   const radioName = 'preferComposerGrouping';
   const defaultPreferComposerGrouping = defaultPreferComposerGroupingForGenre(
     formState.genre ?? '',
@@ -1183,6 +1234,9 @@ export const TrackEditorPanel = React.forwardRef<
         continue;
       }
       addDetailFieldRow(field);
+    }
+    if (group === 'notes' && pathRow) {
+      detailRows.push(pathRow);
     }
     detailRows.push(...(extraRowsByGroup[group] ?? []));
   }

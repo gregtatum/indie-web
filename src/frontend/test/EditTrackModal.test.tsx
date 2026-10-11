@@ -425,6 +425,31 @@ describe('<EditTrackModal> with real server', () => {
     expect(trackInputs[0].placeholder).toBe('–');
   }, 30_000);
 
+  it('links the Details path to the common folder', async () => {
+    await writeTrack('Rock/Album/a.mp3', { title: 'Song A' });
+    await writeTrack('Rock/Album/b.mp3', { title: 'Song B' });
+    await writeTrack('Rock/Other/c.mp3', { title: 'Song C' });
+    const { store } = await setup();
+
+    await openBulkEditModal(
+      store,
+      ['/Rock/Album/a.mp3', '/Rock/Album/b.mp3', '/Rock/Other/c.mp3'],
+      'Song A',
+    );
+    const link = await screen.findByRole('link', { name: '/Rock' });
+    expect(link.getAttribute('href')).toMatch(/\/folder\/Rock$/);
+  }, 30_000);
+
+  it('hides the Details path when the files share only the root', async () => {
+    await writeTrack('Rock/a.mp3', { title: 'Song A' });
+    await writeTrack('b.mp3', { title: 'Song B' });
+    const { store } = await setup();
+
+    await openBulkEditModal(store, ['/Rock/a.mp3', '/b.mp3'], 'Song A');
+    await waitForEnabledField('Artist');
+    expect(screen.queryByText('Path')).toBeNull();
+  }, 30_000);
+
   it('uses the bulk count header for mixed album edits', async () => {
     await writeAlbumA();
     await writeTrack('c.mp3', {
