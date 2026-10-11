@@ -19,7 +19,15 @@ import {
   AUDIO_PAYLOAD,
   getBytesAfterId3,
 } from './helpers.ts';
-import type { TestServer } from './helpers.ts';
+import type { M4aFixture, TestServer } from './helpers.ts';
+import {
+  FRAME_ATOMS,
+  assertDecodesCleanly,
+  assertOnlyTheseAtomsChanged,
+  changedAtoms,
+  ffprobeTags,
+  snapshotM4a,
+} from './m4a-oracle.ts';
 
 /**
  * Correctness tests for POST /music/write-track-tags.
@@ -696,6 +704,12 @@ describe('POST /music/write-track-tags — m4a', () => {
       expected: { no: 2, of: 3 },
     },
     {
+      frameId: 'TBPM',
+      value: '128',
+      read: (meta) => meta.common.bpm,
+      expected: 128,
+    },
+    {
       frameId: 'COMM',
       value: 'My comment',
       read: (meta) => meta.common.comment?.map((c) => c.text),
@@ -831,7 +845,7 @@ describe('POST /music/write-track-tags — m4a', () => {
       assert.equal(body.errors.length, 1);
       assert.equal(body.errors[0].path, '/corrupt/broken.m4a');
       assert.equal(body.errors[0].code, 'write-failed');
-      assert.match(body.errors[0].message, /^ffmpeg failed/);
+      assert.match(body.errors[0].message, /^Corrupt m4a/);
 
       assert.deepEqual(await readFile(filePath), originalBytes);
       assert.deepEqual(await readdir(dir), ['broken.m4a']);
@@ -846,7 +860,6 @@ describe('POST /music/write-track-tags — m4a', () => {
       const originalBytes = await readFile(filePath);
 
       for (const change of [
-        { frameId: 'TBPM', value: '120' },
         {
           frameId: 'TXXX',
           value: 'true',
@@ -926,5 +939,365 @@ describe('POST /music/write-track-tags — m4a', () => {
       assert.equal(track.title, 'Indexed Title');
       assert.equal(track.track, 7);
     }),
+  );
+});
+
+const M4A_FIDELITY_FIXTURES: M4aFixture[] = [
+  'tagged',
+  'tagged-with-art',
+  'itunes-padded',
+  'itunes-tight',
+  'itunes-moov-last',
+  'itunes-co64',
+  'itunes-gnre',
+];
+
+const M4A_READERS: Record<string, (meta: IAudioMetadata) => unknown> = {
+  TIT2: (meta) => meta.common.title,
+  TPE1: (meta) => meta.common.artist,
+  TPE2: (meta) => meta.common.albumartist,
+  TALB: (meta) => meta.common.album,
+  TCOM: (meta) => meta.common.composer?.[0],
+  COMM: (meta) => meta.common.comment?.[0]?.text,
+  TCON: (meta) => meta.common.genre?.[0],
+  TYER: (meta) => meta.common.year?.toString(),
+  TBPM: (meta) => meta.common.bpm?.toString(),
+  TRCK: (meta) =>
+    meta.common.track.no === null
+      ? undefined
+      : `${meta.common.track.no}/${meta.common.track.of ?? 0}`,
+  TPOS: (meta) =>
+    meta.common.disk.no === null
+      ? undefined
+      : `${meta.common.disk.no}/${meta.common.disk.of ?? 0}`,
+};
+
+function seededRandom(seed: number): () => number {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function randomEdit(random: () => number): T.TrackTagUpdate {
+  const frameIds = Object.keys(M4A_READERS);
+  const frameId = frameIds[Math.floor(random() * frameIds.length)];
+  if (random() < 0.25) {
+    return { frameId, value: '' };
+  }
+  const pair = () =>
+    `${1 + Math.floor(random() * 30)}/${31 + Math.floor(random() * 30)}`;
+  switch (frameId) {
+    case 'TRCK':
+    case 'TPOS':
+      return { frameId, value: pair() };
+    case 'TYER':
+      return { frameId, value: String(1950 + Math.floor(random() * 80)) };
+    case 'TBPM':
+      return { frameId, value: String(1 + Math.floor(random() * 250)) };
+    default: {
+      const alphabet = ['a', 'Z', 'é', '☃', '日本語', '𝄞', ' ', '-', '"'];
+      const length = random() < 0.15 ? 2500 : 1 + Math.floor(random() * 40);
+      let value = '';
+      while (value.length < length) {
+        value += alphabet[Math.floor(random() * alphabet.length)];
+      }
+      return { frameId, value: `x${value}x` };
+    }
+  }
+}
+
+describe('POST /music/write-track-tags — m4a fidelity', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  async function copyFixture(fixture: M4aFixture, name: string) {
+    await copyM4aFixture(fixture, join(server.mountDir, name));
+    return join(server.mountDir, name);
+  }
+
+  async function writeTags(name: string, changes: T.TrackTagUpdate[]) {
+    const { body } = await writeTrackTagsJson(server, [`/${name}`], changes);
+    assert.deepEqual(body.errors, []);
+    assert.deepEqual(body.updated, [`/${name}`]);
+  }
+
+  it(
+    'the oracle detects what an ffmpeg stream copy loses',
+    withLogs([], async () => {
+      const original = await copyFixture('itunes-padded', 'ffmpeg-source.m4a');
+      const rewritten = join(server.mountDir, 'ffmpeg-copy.m4a');
+      await runFfmpeg([
+        '-i',
+        original,
+        '-map',
+        '0',
+        '-c',
+        'copy',
+        '-map_metadata',
+        '0',
+        '-f',
+        'ipod',
+        rewritten,
+      ]);
+      const before = await snapshotM4a(original);
+      const after = await snapshotM4a(rewritten);
+      assert.deepEqual(
+        changedAtoms(before, after).filter((name) =>
+          [
+            '----:com.apple.iTunes:iTunNORM',
+            '----:com.apple.iTunes:iTunSMPB',
+            '----:com.apple.iTunes:iTunMOVI',
+            'rtng',
+            'soar',
+            'apID',
+            'ownr',
+            'tmpo',
+          ].includes(name),
+        ).length,
+        8,
+      );
+      assert.throws(() => assertOnlyTheseAtomsChanged(before, after, ['©nam']));
+    }),
+  );
+
+  for (const fixture of M4A_FIDELITY_FIXTURES) {
+    it(
+      `${fixture}: changes only the requested atoms`,
+      withLogs([], async () => {
+        const name = `${fixture}-edit.m4a`;
+        const path = await copyFixture(fixture, name);
+        const before = await snapshotM4a(path);
+        const changes: T.TrackTagUpdate[] = [
+          { frameId: 'TIT2', value: 'Edited Title ☃' },
+          { frameId: 'TPE1', value: 'Edited Artist' },
+          { frameId: 'TCON', value: 'Rock' },
+          { frameId: 'TBPM', value: '99' },
+          { frameId: 'TRCK', value: '7/14' },
+          { frameId: 'COMM', value: 'Edited comment' },
+        ];
+
+        await writeTags(name, changes);
+
+        const after = await snapshotM4a(path);
+        const requested = changes.map(({ frameId }) => FRAME_ATOMS[frameId]);
+        const expected = before.ilst.has('gnre')
+          ? [...requested, 'gnre']
+          : requested;
+        assertOnlyTheseAtomsChanged(before, after, expected);
+        assert.deepEqual(changedAtoms(before, after), expected.sort());
+        await assertDecodesCleanly(path);
+
+        const meta = await parseFile(path);
+        assert.equal(meta.common.title, 'Edited Title ☃');
+        assert.equal(meta.common.artist, 'Edited Artist');
+        assert.deepEqual(meta.common.genre, ['Rock']);
+        assert.equal(meta.common.bpm, 99);
+        assert.deepEqual(meta.common.track, { no: 7, of: 14 });
+        const probed = await ffprobeTags(path);
+        assert.equal(probed.title, 'Edited Title ☃');
+        assert.equal(probed.artist, 'Edited Artist');
+        assert.equal(probed.genre, 'Rock');
+        assert.equal(probed.comment, 'Edited comment');
+      }),
+    );
+
+    it(
+      `${fixture}: restoring a title restores the ilst`,
+      withLogs([], async () => {
+        const name = `${fixture}-roundtrip.m4a`;
+        const path = await copyFixture(fixture, name);
+        const before = await snapshotM4a(path);
+        const title = (await parseFile(path)).common.title ?? '';
+
+        await writeTags(name, [{ frameId: 'TIT2', value: 'Something Else' }]);
+        await writeTags(name, [{ frameId: 'TIT2', value: title }]);
+
+        const after = await snapshotM4a(path);
+        assert.deepEqual([...after.ilst], [...before.ilst]);
+        assertOnlyTheseAtomsChanged(before, after, []);
+      }),
+    );
+
+    it(
+      `${fixture}: survives growing past any padding and shrinking again`,
+      withLogs([], async () => {
+        const name = `${fixture}-grow.m4a`;
+        const path = await copyFixture(fixture, name);
+        const before = await snapshotM4a(path);
+        const huge = 'long comment ☃ '.repeat(1500);
+
+        await writeTags(name, [{ frameId: 'COMM', value: huge }]);
+        const grown = await snapshotM4a(path);
+        assertOnlyTheseAtomsChanged(before, grown, ['©cmt']);
+        assert.equal((await parseFile(path)).common.comment?.[0]?.text, huge);
+        await assertDecodesCleanly(path);
+
+        await writeTags(name, [{ frameId: 'COMM', value: '' }]);
+        const shrunk = await snapshotM4a(path);
+        assertOnlyTheseAtomsChanged(before, shrunk, ['©cmt']);
+        assert.equal((await parseFile(path)).common.comment, undefined);
+        await assertDecodesCleanly(path);
+      }),
+    );
+
+    it(
+      `${fixture}: seeded random edits keep every invariant`,
+      withLogs([], async () => {
+        const name = `${fixture}-random.m4a`;
+        const path = await copyFixture(fixture, name);
+        const random = seededRandom(
+          [...fixture].reduce((sum, char) => sum * 31 + char.charCodeAt(0), 7),
+        );
+        const model = new Map<string, string>();
+        let before = await snapshotM4a(path);
+
+        for (let round = 0; round < 10; round++) {
+          const changes = Array.from(
+            { length: 1 + Math.floor(random() * 3) },
+            () => randomEdit(random),
+          );
+          const dropped = ['TCON', ...[]];
+          await writeTags(name, changes);
+          for (const { frameId, value } of changes) {
+            model.set(frameId, value);
+          }
+
+          const after = await snapshotM4a(path);
+          const allowed = changes.map(({ frameId }) => FRAME_ATOMS[frameId]);
+          assertOnlyTheseAtomsChanged(
+            before,
+            after,
+            changes.some(({ frameId }) => dropped.includes(frameId))
+              ? [...allowed, 'gnre']
+              : allowed,
+          );
+          await assertDecodesCleanly(path);
+
+          const meta = await parseFile(path);
+          for (const [frameId, value] of model) {
+            assert.equal(
+              M4A_READERS[frameId](meta) ?? '',
+              value,
+              `${frameId} after round ${round}`,
+            );
+          }
+          before = after;
+        }
+      }),
+    );
+  }
+
+  it(
+    'creates the tag atoms for a file that has none',
+    withLogs([], async () => {
+      const source = await copyFixture('tagged', 'tagless-source.m4a');
+      const path = join(server.mountDir, 'tagless.m4a');
+      await runFfmpeg([
+        '-i',
+        source,
+        '-map',
+        '0:a',
+        '-c',
+        'copy',
+        '-map_metadata',
+        '-1',
+        '-fflags',
+        '+bitexact',
+        '-f',
+        'ipod',
+        path,
+      ]);
+      const before = await snapshotM4a(path);
+      assert.equal(before.ilst.size, 0);
+
+      await writeTags('tagless.m4a', [{ frameId: 'TIT2', value: 'Fresh' }]);
+
+      const after = await snapshotM4a(path);
+      assertOnlyTheseAtomsChanged(before, after, ['©nam']);
+      assert.equal((await parseFile(path)).common.title, 'Fresh');
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'refuses fragmented and QuickTime-keyed files without touching them',
+    withLogs([], async () => {
+      const source = await copyFixture('tagged', 'structure-source.m4a');
+      const variants: Record<string, string[]> = {
+        'fragmented.m4a': [
+          '-movflags',
+          'frag_keyframe+empty_moov',
+          '-f',
+          'ipod',
+        ],
+        'keyed.m4a': ['-movflags', 'use_metadata_tags', '-f', 'mov'],
+      };
+      for (const [name, args] of Object.entries(variants)) {
+        const path = join(server.mountDir, name);
+        await runFfmpeg([
+          '-i',
+          source,
+          '-map',
+          '0:a',
+          '-c',
+          'copy',
+          ...args,
+          path,
+        ]);
+        const originalBytes = await readFile(path);
+
+        const { body } = await writeTrackTagsJson(
+          server,
+          [`/${name}`],
+          [{ frameId: 'TIT2', value: 'Nope' }],
+        );
+
+        assert.deepEqual(body.updated, []);
+        assert.equal(body.errors[0].code, 'unsupported-format');
+        assert.deepEqual(await readFile(path), originalBytes);
+        assert.ok(
+          !(await readdir(server.mountDir)).some((f) => f.endsWith('.tmp')),
+        );
+      }
+    }),
+  );
+
+  it(
+    'rejects malformed numbers without writing anything',
+    withLogs(
+      [
+        '[400err ] "TRCK must be numeric, got: "three""',
+        '[400err ] "TBPM must be numeric, got: "12.5""',
+      ],
+      async () => {
+        const path = await copyFixture('itunes-padded', 'bad-numbers.m4a');
+        const originalBytes = await readFile(path);
+
+        for (const change of [
+          { frameId: 'TRCK', value: 'three' },
+          { frameId: 'TBPM', value: '12.5' },
+          { frameId: 'TPOS', value: '70000/2' },
+        ]) {
+          const res = await writeTrackTags(
+            server,
+            ['/bad-numbers.m4a'],
+            [{ frameId: 'TIT2', value: 'Should Not Land' }, change],
+          );
+          assert.ok(
+            res.status === 400 ||
+              (await res.json()).errors[0].code === 'write-failed',
+          );
+        }
+        assert.deepEqual(await readFile(path), originalBytes);
+      },
+    ),
   );
 });

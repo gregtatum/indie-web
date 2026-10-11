@@ -21,3 +21,24 @@ head -c 600 tagged.m4a > corrupt.m4a
 - `tagged.m4a`: AAC with the standard tags above.
 - `tagged-with-art.m4a`: the same, plus an embedded cover.
 - `corrupt.m4a`: truncated before the header finishes, so ffmpeg fails on it.
+
+## iTunes-style fixtures
+
+`itunes-*.m4a` graft a scrubbed iTunes `ilst` (account atoms replaced, cover removed, a synthetic `ownr` and `iTunMOVI` added) onto a tiny ffmpeg-made file with `src/server/test/fixtures/m4a-graft.py`:
+
+```sh
+ffmpeg -f lavfi -i anullsrc=r=8000:cl=mono -t 1 -c:a aac -b:a 8k base-last.m4a
+ffmpeg -i base-last.m4a -c copy -movflags +faststart base-first.m4a
+S="music/<an iTunes purchase>.m4a"
+python3 -I src/server/test/fixtures/m4a-graft.py "$S" base-first.m4a itunes-padded.m4a --moov-first --meta-padding 512 --free-padding 1024
+python3 -I src/server/test/fixtures/m4a-graft.py "$S" base-first.m4a itunes-tight.m4a --moov-first
+python3 -I src/server/test/fixtures/m4a-graft.py "$S" base-last.m4a itunes-moov-last.m4a
+python3 -I src/server/test/fixtures/m4a-graft.py "$S" base-first.m4a itunes-co64.m4a --moov-first --co64
+python3 -I src/server/test/fixtures/m4a-graft.py "$S" base-first.m4a itunes-gnre.m4a --moov-first --meta-padding 512 --gnre
+```
+
+- `itunes-padded.m4a`: `moov` first, padding inside `meta` and after `moov`.
+- `itunes-tight.m4a`: `moov` first, no padding.
+- `itunes-moov-last.m4a`: `moov` after `mdat`.
+- `itunes-co64.m4a`: `moov` first, 64-bit chunk offsets.
+- `itunes-gnre.m4a`: numeric `gnre` genre atom instead of `©gen`.

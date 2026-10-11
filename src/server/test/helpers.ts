@@ -136,7 +136,15 @@ export async function createTestServer(
   };
 }
 
-export type M4aFixture = 'tagged' | 'tagged-with-art' | 'corrupt';
+export type M4aFixture =
+  | 'tagged'
+  | 'tagged-with-art'
+  | 'corrupt'
+  | 'itunes-padded'
+  | 'itunes-tight'
+  | 'itunes-moov-last'
+  | 'itunes-co64'
+  | 'itunes-gnre';
 
 export async function copyM4aFixture(
   fixture: M4aFixture,

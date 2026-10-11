@@ -22,7 +22,7 @@ import {
   resolveTagValue,
 } from '../../shared/music.ts';
 import type { Id3v1TagFields } from '../../shared/music.ts';
-import { writeM4aTags } from './ffmpeg.ts';
+import { M4aUnsupportedError, writeM4aTags } from './m4a.ts';
 import { isIgnorableOsFile } from '../../shared/utils.ts';
 
 export const MUSIC_INDEX_FILENAME = '.music-index.json';
@@ -844,7 +844,18 @@ export async function writeTrackTagsForPath(
     }
 
     if (extension === '.m4a') {
-      await writeM4aTags(resolvedPath, changes);
+      try {
+        await writeM4aTags(resolvedPath, changes);
+      } catch (error) {
+        if (error instanceof M4aUnsupportedError) {
+          return {
+            type: 'error',
+            message: error.message,
+            code: 'unsupported-format',
+          };
+        }
+        throw error;
+      }
       return { type: 'success', clientPath, resolvedPath, id3v23Backfills: [] };
     }
 

@@ -530,7 +530,7 @@ describe('<EditTrackModal> with real server', () => {
     await openEditModal('Fixture Title');
     const titleInput = await waitForEnabledField('Title');
     expect((screen.getByLabelText('BPM') as HTMLInputElement).disabled).toBe(
-      true,
+      false,
     );
     expect(
       (
@@ -553,7 +553,7 @@ describe('<EditTrackModal> with real server', () => {
     expect(tags.TCON).toBe('Jazz');
   }, 30_000);
 
-  it('keeps BPM disabled in a bulk edit of mp3 and m4a, and still writes shared fields to both', async () => {
+  it('writes shared fields to both mp3 and m4a in a bulk edit', async () => {
     await writeTrack('a.mp3', {
       title: 'Song A',
       artist: 'Artist A',
@@ -566,7 +566,7 @@ describe('<EditTrackModal> with real server', () => {
     await openBulkEditModal(store, ['/a.mp3', '/b.m4a'], 'Song A');
     const genreInput = await waitForEnabledField('Genre');
     expect((screen.getByLabelText('BPM') as HTMLInputElement).disabled).toBe(
-      true,
+      false,
     );
     await act(async () => {
       fireEvent.change(genreInput, { target: { value: 'New Genre' } });

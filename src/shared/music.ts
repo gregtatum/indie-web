@@ -379,6 +379,7 @@ export const M4A_WRITABLE_FRAME_IDS = [
   'TPOS',
   'TYER',
   'TCON',
+  'TBPM',
   'COMM',
 ] as const;
 
