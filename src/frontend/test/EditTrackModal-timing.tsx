@@ -305,7 +305,7 @@ describe('edit track modal — loading and error states', () => {
 
     await openEditModal('Song A');
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Tags' }));
     });
     await waitFor(() => {
       expect(screen.getByText(/Error: 500/)).toBeTruthy();
@@ -336,7 +336,7 @@ describe('edit track modal — loading and error states', () => {
 
     await openBulkEditModal(store);
 
-    expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
+    expect(screen.queryByText(/Loading tags/)).toBeNull();
     expect((screen.getByLabelText('Artist') as HTMLInputElement).disabled).toBe(
       true,
     );
@@ -344,12 +344,12 @@ describe('edit track modal — loading and error states', () => {
     await act(async () => {
       jest.advanceTimersByTime(BULK_SMALL_LOAD_NOTICE_DELAY - 1);
     });
-    expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
+    expect(screen.queryByText(/Loading tags/)).toBeNull();
 
     await act(async () => {
       jest.advanceTimersByTime(1);
     });
-    expect(screen.getByText('Loading ID3 tags: 0 / 2')).toBeTruthy();
+    expect(screen.getByText('Loading tags: 0 / 2')).toBeTruthy();
   });
 
   it('skips live tag loading above the bulk cutoff', async () => {
@@ -585,7 +585,7 @@ describe('edit track modal — loading and error states', () => {
     const resetAlbumInput = screen.getByLabelText('Album') as HTMLInputElement;
     expect(resetAlbumInput.value).toBe('Album A');
     expect(resetAlbumInput.disabled).toBe(true);
-    expect(screen.getByText('Loading ID3 tags: 0 / 201')).toBeTruthy();
+    expect(screen.getByText('Loading tags: 0 / 201')).toBeTruthy();
 
     await waitFor(() => {
       expect(signals.length).toBeGreaterThan(0);
@@ -659,7 +659,7 @@ describe('edit track modal — loading and error states', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('Could not load ID3 tags for 1 tracks.'),
+        screen.getByText('Could not load tags for 1 tracks.'),
       ).toBeTruthy();
     });
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();

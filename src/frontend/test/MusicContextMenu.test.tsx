@@ -499,7 +499,7 @@ describe('track list keyboard shortcuts', () => {
     expect($.getMusicEditTab(store.getState())).toBe('details');
   });
 
-  it('cmd+i opens the edit modal on the ID3 tab for one selected track', async () => {
+  it('cmd+i opens the edit modal on the Tags tab for one selected track', async () => {
     const { store } = setup();
     const trackA = await screen.findByText('Song A');
     await act(async () => {

@@ -174,7 +174,7 @@ describe('<EditTrackModal> with real server', () => {
       );
     });
     await waitFor(() => {
-      expect(screen.queryByText(/Loading ID3 tags/)).toBeNull();
+      expect(screen.queryByText(/Loading tags/)).toBeNull();
     });
   }
 
@@ -473,7 +473,7 @@ describe('<EditTrackModal> with real server', () => {
 
     await openBulkEditModal(store, ['/a.mp3', '/b.mp3'], 'Song A');
     const id3Tab = screen.getByRole('tab', {
-      name: 'ID3',
+      name: 'Tags',
     }) as HTMLButtonElement;
     expect(id3Tab.disabled).toBe(true);
     await act(async () => {
@@ -894,7 +894,7 @@ describe('<EditTrackModal> with real server', () => {
       await within(dialog).findByText('Embedded in this file'),
     ).toBeTruthy();
     expect(within(dialog).getByText(/image\/jpeg/)).toBeTruthy();
-    expect(within(dialog).getByText('Embedded in ID3')).toBeTruthy();
+    expect(within(dialog).getByText('Embedded in File')).toBeTruthy();
 
     const toggle = within(dialog).getByRole('button', { expanded: false });
     await act(async () => {

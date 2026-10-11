@@ -622,7 +622,7 @@ describe('<Music> with real server', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Tags' }));
     });
     expect(
       screen
@@ -652,7 +652,7 @@ describe('<Music> with real server', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'ID3' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Tags' }));
     });
     await waitFor(() => {
       expect(

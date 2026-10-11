@@ -973,7 +973,7 @@ function EmbeddedArtworkRow({
               sizeBytes > 0 ? formatBytes(sizeBytes) : null,
             ])}
           </span>
-          <span className="artworkEmbeddedSub">Embedded in ID3</span>
+          <span className="artworkEmbeddedSub">Embedded in File</span>
         </span>
       </button>
       {expanded && (

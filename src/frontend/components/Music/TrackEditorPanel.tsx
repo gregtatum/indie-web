@@ -612,7 +612,7 @@ export const TrackEditorPanel = React.forwardRef<
     artworkPreviewUrls.current = [];
   }
 
-  // Load the ID3 tab frame values when opening or switching tracks.
+  // Load the Tags tab frame values when opening or switching tracks.
   React.useEffect(() => {
     if (isBulkEdit) {
       void loadBulkTrackTags();
@@ -983,7 +983,7 @@ export const TrackEditorPanel = React.forwardRef<
       >
         <div className="editTrackModalIndexNoticeLoading">
           <span className="editTrackModalIndexNoticeText">
-            Loading ID3 tags: {bulkTagsState.loaded} / {bulkTagsState.total}
+            Loading tags: {bulkTagsState.loaded} / {bulkTagsState.total}
           </span>
           <div className="editTrackModalLoadProgress" aria-hidden="true">
             <div
@@ -998,7 +998,7 @@ export const TrackEditorPanel = React.forwardRef<
     detailsNotices.push(
       <div key="bulk-error" className="editTrackModalIndexNotice" role="status">
         <span className="editTrackModalIndexNoticeText">
-          Could not load ID3 tags for {bulkTagsState.failed} tracks.
+          Could not load tags for {bulkTagsState.failed} tracks.
         </span>
         <button
           type="button"
@@ -1305,10 +1305,10 @@ export const TrackEditorPanel = React.forwardRef<
     },
     {
       id: 'id3' as T.MusicEditTab,
-      label: 'ID3',
+      label: 'Tags',
       disabled: isBulkEdit,
       disabledTitle: isBulkEdit
-        ? 'ID3 is disabled for bulk editing'
+        ? 'Tags are disabled for bulk editing'
         : undefined,
       panel: track ? (
         <TagsTab tagsState={tagsState} />
