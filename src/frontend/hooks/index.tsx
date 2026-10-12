@@ -611,28 +611,30 @@ export function useSelectionChange(
 /**
  * Handle dismissing something by hitting escape.
  */
-export function useEscape(dismiss: () => void, isOpen: boolean) {
-  const keyHandler = React.useRef<null | ((event: KeyboardEvent) => void)>(
-    null,
-  );
+export function useEscape(
+  dismiss: () => void,
+  isOpen: boolean,
+  exclusive = false,
+) {
   const dismissRef = React.useRef(dismiss);
   dismissRef.current = dismiss;
   React.useEffect(() => {
     if (!isOpen) {
       return () => {};
     }
-    keyHandler.current = (event) => {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        if (exclusive) {
+          event.stopPropagation();
+        }
         dismissRef.current();
       }
-    };
-    document.addEventListener('keydown', keyHandler.current);
+    }
+    document.addEventListener('keydown', handleKeyDown, exclusive);
     return () => {
-      if (keyHandler.current) {
-        document.removeEventListener('keydown', keyHandler.current);
-      }
+      document.removeEventListener('keydown', handleKeyDown, exclusive);
     };
-  }, [isOpen]);
+  }, [isOpen, exclusive]);
 }
 
 /**

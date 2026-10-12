@@ -446,6 +446,29 @@ describe('filter panel context menu and shortcuts', () => {
     ]);
   });
 
+  it('escape only dismisses the open context menu, not the filter', async () => {
+    const { store } = setup();
+    await filterToRock();
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      fireEvent.contextMenu(screen.getByRole('listbox', { name: 'genre' }));
+    });
+    await screen.findByRole('button', { name: 'Play' });
+
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+    });
+
+    expect(screen.queryByRole('button', { name: 'Play' })).toBeNull();
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual(['Rock']);
+
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+    });
+    expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
+  });
+
   it('enter plays the filtered tracks when a filter panel has focus', async () => {
     const { store } = setup();
     await filterToRock();

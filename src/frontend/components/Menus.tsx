@@ -90,7 +90,7 @@ export function Menu({
 
   const dismiss = () => void setCloseGeneration((n) => n + 1);
 
-  useEscape(dismiss, isOpen);
+  useEscape(dismiss, isOpen, true);
   useDismissOnOutsideClick(clickedElement, divRef, dismiss, isOpen);
 
   // Focus the menu if opened via keyboard.
