@@ -520,6 +520,7 @@ function messages(state: T.Message[] = [], action: T.Action): T.Message[] {
         {
           message: action.message,
           generation: action.generation,
+          progress: action.progress,
         },
       ];
     case 'dismiss-message':

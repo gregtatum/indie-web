@@ -70,9 +70,15 @@ export type View =
   | 'language-coach'
   | 'music';
 
+export interface MessageProgress {
+  loaded: number;
+  total: number;
+}
+
 export type Message = {
   message: React.ReactNode;
   generation: number;
+  progress?: MessageProgress;
 };
 
 export interface DropboxOauth {

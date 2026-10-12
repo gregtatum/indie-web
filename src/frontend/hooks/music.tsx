@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { A, $, $$, Hooks, T } from 'frontend';
-import { getDirName, getKeyboardString } from 'frontend/utils';
+import { getDirName, getGeneration, getKeyboardString } from 'frontend/utils';
 import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
 import { compareTracksDefault } from 'shared/music';
 import {
@@ -466,6 +466,8 @@ export function useMusicLibraryTrackSource(): MusicTrackSource {
   );
 }
 
+const WRITE_TRACK_TAGS_CHUNK_SIZE = 10;
+
 export function useWriteTrackTags() {
   const dispatch = Hooks.useDispatch();
   const { getState } = Hooks.useStore();
@@ -476,21 +478,48 @@ export function useWriteTrackTags() {
 
   return React.useCallback(
     async (paths: string[], changes: T.TrackTagUpdate[]): Promise<boolean> => {
+      const generation = getGeneration();
+      const showProgress = paths.length > WRITE_TRACK_TAGS_CHUNK_SIZE;
+      let written = 0;
       try {
-        const updated = await writeTrackTags(server.url, paths, changes);
-        updateTracksRef.current(
-          $.getMusicTracks(getState()).map((track) =>
-            updated.has(track.path)
-              ? applyIndexedTrackChanges(track, changes)
-              : track,
-          ),
-        );
-        if (updated.size < paths.length) {
-          throw new Error('Not every track was written.');
+        for (
+          let start = 0;
+          start < paths.length;
+          start += WRITE_TRACK_TAGS_CHUNK_SIZE
+        ) {
+          if (showProgress) {
+            dispatch(
+              A.addMessage({
+                message: `Renaming ${written.toLocaleString()} / ${paths.length.toLocaleString()} tracks`,
+                progress: { loaded: written, total: paths.length },
+                generation,
+              }),
+            );
+          }
+          const chunk = paths.slice(start, start + WRITE_TRACK_TAGS_CHUNK_SIZE);
+          const updated = await writeTrackTags(server.url, chunk, changes);
+          updateTracksRef.current(
+            $.getMusicTracks(getState()).map((track) =>
+              updated.has(track.path)
+                ? applyIndexedTrackChanges(track, changes)
+                : track,
+            ),
+          );
+          if (updated.size < chunk.length) {
+            throw new Error('Not every track was written.');
+          }
+          written += chunk.length;
         }
+        dispatch(A.dismissMessage(generation));
         return true;
       } catch {
-        dispatch(A.addMessage({ message: 'Could not rename.', timeout: true }));
+        dispatch(
+          A.addMessage({
+            message: 'Could not rename.',
+            generation,
+            timeout: true,
+          }),
+        );
         return false;
       }
     },

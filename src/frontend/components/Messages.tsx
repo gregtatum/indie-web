@@ -32,9 +32,29 @@ export function Messages() {
 
   return Hooks.overlayPortal(
     <div className="messages">
-      {messages.map(({ message, generation }) => (
+      {messages.map(({ message, generation, progress }) => (
         <div className="messagesMessage" key={generation}>
-          <span className="messagesMessageText">{message}</span>
+          {progress ? (
+            <div className="messagesProgressBody" role="status">
+              <span className="messagesMessageText">{message}</span>
+              <div
+                className="messagesProgressBar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={progress.total}
+                aria-valuenow={progress.loaded}
+              >
+                <div
+                  className="messagesProgressFill"
+                  style={{
+                    width: `${progress.total === 0 ? 0 : (progress.loaded / progress.total) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <span className="messagesMessageText">{message}</span>
+          )}
           <button
             type="button"
             className="messagesDismissButton"

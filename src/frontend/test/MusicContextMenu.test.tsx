@@ -561,6 +561,42 @@ describe('filter panel context menu and shortcuts', () => {
     expect(screen.queryByRole('option', { name: 'Rock' })).toBeNull();
   });
 
+  it('renames a large genre in chunks and reports progress until done', async () => {
+    const manyTracks = Array.from({ length: 25 }, (_, i) => ({
+      ...TRACKS[0],
+      path: `/music/many-${i}.mp3`,
+      title: `Many ${i}`,
+    }));
+    const progressSeen: Array<T.MessageProgress | undefined> = [];
+    const { store } = setup(manyTracks);
+    fetchMock.post(
+      `${FAKE_SERVER.url}/music/write-track-tags`,
+      ({ options }) => {
+        progressSeen.push($.getMessages(store.getState())[0]?.progress);
+        const { paths } = JSON.parse(options.body as string);
+        return {
+          body: JSON.stringify({
+            updated: paths,
+            errors: [],
+            index: { status: 'updated', message: null },
+          }),
+          status: 200,
+        };
+      },
+    );
+    await screen.findByText('Many 0');
+
+    await renamePanelItem('genre', 'Rock', 'Classic Rock');
+
+    await screen.findByRole('option', { name: 'Classic Rock' });
+    expect(progressSeen).toEqual([
+      { loaded: 0, total: 25 },
+      { loaded: 10, total: 25 },
+      { loaded: 20, total: 25 },
+    ]);
+    expect($.getMessages(store.getState())).toEqual([]);
+  });
+
   it('f2 renames every selected panel item to one value and dims the others while editing', async () => {
     fetchMock.post(`${FAKE_SERVER.url}/music/write-track-tags`, {
       body: JSON.stringify({

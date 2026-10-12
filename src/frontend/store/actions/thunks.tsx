@@ -57,8 +57,12 @@ export type PlainActions =
  * These should only be used internally in thunks.
  */
 const PlainInternal = {
-  addMessage(message: React.ReactNode, generation: number) {
-    return { type: 'add-message' as const, message, generation };
+  addMessage(
+    message: React.ReactNode,
+    generation: number,
+    progress?: T.MessageProgress,
+  ) {
+    return { type: 'add-message' as const, message, generation, progress };
   },
 
   dismissAllMessages() {
@@ -970,6 +974,8 @@ export function pasteCopyFile(
 
 interface MessageArgs {
   message: React.ReactNode;
+  // Renders a progress bar in the message.
+  progress?: T.MessageProgress;
   // A unique generation number to identify a message, useful if
   // the message needs dismissing or can be replaced.
   generation?: number | void;
@@ -981,11 +987,12 @@ interface MessageArgs {
 
 export function addMessage({
   message,
+  progress,
   generation = getGeneration(),
   timeout = false,
 }: MessageArgs): Thunk<number> {
   return (dispatch) => {
-    dispatch(PlainInternal.addMessage(message, generation));
+    dispatch(PlainInternal.addMessage(message, generation, progress));
 
     const existingTimeout = pendingMessageTimeouts.get(generation);
     if (existingTimeout !== undefined) {

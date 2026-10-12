@@ -64,3 +64,25 @@
   height: var(--icon-size);
   filter: invert(1);
 }
+
+.messagesProgressBody {
+  display: flex;
+  min-width: 260px;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.messagesProgressBar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #ffffff33;
+}
+
+.messagesProgressFill {
+  height: 100%;
+  border-radius: 3px;
+  background: #fff;
+  transition: width 120ms linear;
+}
