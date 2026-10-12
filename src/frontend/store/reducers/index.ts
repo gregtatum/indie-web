@@ -514,15 +514,18 @@ function editorOnly(
 
 function messages(state: T.Message[] = [], action: T.Action): T.Message[] {
   switch (action.type) {
-    case 'add-message':
-      return [
-        ...state.filter((message) => message.generation !== action.generation),
-        {
-          message: action.message,
-          generation: action.generation,
-          progress: action.progress,
-        },
-      ];
+    case 'add-message': {
+      const added: T.Message = {
+        message: action.message,
+        generation: action.generation,
+        progress: action.progress,
+      };
+      return state.some((message) => message.generation === action.generation)
+        ? state.map((message) =>
+            message.generation === action.generation ? added : message,
+          )
+        : [...state, added];
+    }
     case 'dismiss-message':
       return state.filter(
         (message) => message.generation !== action.generation,

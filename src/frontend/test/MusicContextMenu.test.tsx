@@ -597,6 +597,30 @@ describe('filter panel context menu and shortcuts', () => {
     expect($.getMessages(store.getState())).toEqual([]);
   });
 
+  it('keeps concurrent progress messages in place as each one updates', async () => {
+    const { store } = setup();
+    await screen.findByText('Song A');
+    const addProgress = (generation: number, loaded: number) =>
+      act(async () => {
+        store.dispatch(
+          A.addMessage({
+            message: `Renaming ${loaded}`,
+            progress: { loaded, total: 25 },
+            generation,
+          }),
+        );
+      });
+
+    await addProgress(101, 0);
+    await addProgress(102, 0);
+    await addProgress(101, 10);
+    await addProgress(102, 10);
+
+    expect($.getMessages(store.getState()).map((m) => m.generation)).toEqual([
+      101, 102,
+    ]);
+  });
+
   it('f2 renames every selected panel item to one value and dims the others while editing', async () => {
     fetchMock.post(`${FAKE_SERVER.url}/music/write-track-tags`, {
       body: JSON.stringify({
