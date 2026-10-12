@@ -105,6 +105,14 @@ const SHOTS = [
     describe: 'TapePlayer: filter columns, track list, playback bar',
   },
   {
+    name: 'tapeplayer-loading',
+    surface: 'music',
+    route: '/music/music/',
+    waitFor: '.musicTracksContainer[aria-busy="true"]',
+    settleMs: 200,
+    describe: 'TapePlayer: skeleton placeholders while the index loads',
+  },
+  {
     name: 'tapeplayer-artwork-modal',
     surface: 'music',
     route:

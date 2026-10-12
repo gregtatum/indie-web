@@ -1285,3 +1285,44 @@
   flex: 1;
   min-width: 0;
 }
+
+.musicSkeletonBar {
+  height: 1em;
+  border-radius: 4px;
+  background: var(--border-color);
+  animation: musicSkeletonPulse 2.4s ease-in-out infinite;
+}
+
+.musicAlbumHeroArtwork.musicSkeletonBar {
+  height: auto;
+  border-radius: 8px;
+}
+
+.musicSkeletonHeroTitle {
+  height: 26px;
+  width: 70%;
+}
+
+.musicSkeletonHeroMeta {
+  height: 14px;
+  width: 45%;
+  margin-top: 12px;
+}
+
+.musicSkeletonItem {
+  cursor: default;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.musicSkeletonTrack {
+  cursor: default;
+  pointer-events: none;
+  align-items: center;
+}
+
+@keyframes musicSkeletonPulse {
+  50% {
+    opacity: 0.5;
+  }
+}

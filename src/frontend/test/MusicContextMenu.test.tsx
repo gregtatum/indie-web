@@ -515,6 +515,7 @@ describe('track list keyboard shortcuts', () => {
 
   it('cmd+e opens bulk edit when multiple tracks are selected', async () => {
     const { store } = setup();
+    await screen.findByText('Song A');
     await act(async () => {
       store.dispatch(
         A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
@@ -529,6 +530,7 @@ describe('track list keyboard shortcuts', () => {
 
   it('cmd+shift+e opens batch edit for the selection', async () => {
     const { store } = setup();
+    await screen.findByText('Song A');
     await act(async () => {
       store.dispatch(
         A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),

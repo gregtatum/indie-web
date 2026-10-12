@@ -156,7 +156,7 @@ describe('music URL serialization', () => {
     ];
     setup('', tracks);
 
-    const artistPanel = screen.getByRole('listbox', { name: 'artist' });
+    const artistPanel = await screen.findByRole('listbox', { name: 'artist' });
     fireEvent.click(
       await within(artistPanel).findByRole('option', { name: 'Daft Punk' }),
     );
@@ -178,7 +178,7 @@ describe('music URL serialization', () => {
   it('updates the URL when clicking through filters and track selections', async () => {
     const { getLocation } = setup();
 
-    const genrePanel = screen.getByRole('listbox', { name: 'genre' });
+    const genrePanel = await screen.findByRole('listbox', { name: 'genre' });
     fireEvent.click(
       await within(genrePanel).findByRole('option', { name: 'Indie' }),
     );
@@ -189,7 +189,7 @@ describe('music URL serialization', () => {
       ]);
     });
 
-    const artistPanel = screen.getByRole('listbox', { name: 'artist' });
+    const artistPanel = await screen.findByRole('listbox', { name: 'artist' });
     fireEvent.click(
       await within(artistPanel).findByRole('option', { name: 'Andrew Bird' }),
     );
@@ -200,7 +200,7 @@ describe('music URL serialization', () => {
       expect(params.getAll('artist')).toEqual(['Andrew Bird']);
     });
 
-    const albumPanel = screen.getByRole('listbox', { name: 'album' });
+    const albumPanel = await screen.findByRole('listbox', { name: 'album' });
     fireEvent.click(
       await within(albumPanel).findByRole('option', {
         name: 'The Mysterious Production of Eggs',
@@ -216,7 +216,7 @@ describe('music URL serialization', () => {
       ]);
     });
 
-    const trackPanel = screen.getByRole('listbox', { name: 'Tracks' });
+    const trackPanel = await screen.findByRole('listbox', { name: 'Tracks' });
     fireEvent.click(await within(trackPanel).findByText('Sovay'));
 
     await waitFor(() => {

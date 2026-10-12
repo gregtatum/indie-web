@@ -64,6 +64,9 @@ export function MusicLibraryView({
   const server = $$.getCurrentServer();
   const { dispatch, getState } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
+  const [isLoading, setIsLoading] = React.useState(
+    () => $.getMusicTracks(getState()).length === 0,
+  );
   const batchEditTrackPaths = $$.getMusicBatchEditTrackPaths();
   const stagingPool = $$.getMusicStagingPool();
   const stagingView = $$.getMusicStagingView();
@@ -210,7 +213,11 @@ export function MusicLibraryView({
     }
 
     // loadIndex is infallible as it handles the error.
-    void loadIndex();
+    void loadIndex().then(() => {
+      if (!fetchController.signal.aborted) {
+        setIsLoading(false);
+      }
+    });
 
     return () => {
       // When unmounting the component, cancel the music index fetch.
@@ -301,15 +308,15 @@ export function MusicLibraryView({
           className="musicLibrarySidebarSplitter"
           defaultOffset={400}
           constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
-          start={<AlbumHero />}
+          start={isLoading ? <AlbumHeroSkeleton /> : <AlbumHero />}
           end={
             <div className="musicLibrarySplitterDropTarget" ref={importDropRef}>
               {renderImportDropOverlay()}
               <Splitter
                 direction="vertical"
                 className="musicLibrarySplitter"
-                start={<FilterPanels />}
-                end={<TracksView />}
+                start={<FilterPanels isLoading={isLoading} />}
+                end={<TracksView isLoading={isLoading} />}
                 persistLocalStorage="musicLibrarySplitterOffset"
               />
             </div>
@@ -497,7 +504,7 @@ function loadColumnWidths(): StoredColumnWidths {
   return { artist: 160, album: 160, referenceWidth: null };
 }
 
-function TracksView() {
+function TracksView({ isLoading }: { isLoading: boolean }) {
   const [stored, setStored] =
     React.useState<StoredColumnWidths>(loadColumnWidths);
   const [availableWidth, setAvailableWidth] = React.useState<number | null>(
@@ -567,7 +574,11 @@ function TracksView() {
         onColumnDrag={onColumnDrag}
         onColumnDragEnd={onColumnDragEnd}
       />
-      <Tracks onScrollbarWidthChange={setScrollbarWidth} />
+      {isLoading ? (
+        <TracksSkeleton />
+      ) : (
+        <Tracks onScrollbarWidthChange={setScrollbarWidth} />
+      )}
     </div>
   );
 }
@@ -652,8 +663,86 @@ function TracksHeader({
   );
 }
 
-function FilterPanels() {
+const SKELETON_WIDTHS = [62, 80, 48, 71, 55, 88, 44, 67, 76, 52, 84, 58];
+
+function skeletonWidth(index: number, offset = 0): string {
+  return `${SKELETON_WIDTHS[(index + offset) % SKELETON_WIDTHS.length]}%`;
+}
+
+function FilterPanelsSkeleton() {
+  return (
+    <div className="musicFilterPanels" aria-busy="true">
+      {(['genre', 'artist', 'album'] as const).map((panel, panelIndex) => (
+        <div className="musicFilterPanel" key={panel}>
+          <div className="musicFilterPanelHeader">{panel}</div>
+          <div className="musicFilterPanelList">
+            <div className="musicFilterPanelItem musicSkeletonItem">
+              {getPanelAllLabel(panel)}
+            </div>
+            {SKELETON_WIDTHS.slice(0, 5).map((_, index) => (
+              <div className="musicFilterPanelItem" key={index}>
+                <div
+                  className="musicSkeletonBar"
+                  style={{ width: skeletonWidth(index, panelIndex * 3) }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TracksSkeleton() {
+  return (
+    <div className="musicTracksContainer" aria-busy="true">
+      <div className="musicTracks">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div className="musicTrack musicSkeletonTrack" key={index}>
+            <span className="musicTrackNumber" />
+            <span className="musicTrackTitle">
+              <div
+                className="musicSkeletonBar"
+                style={{ width: skeletonWidth(index) }}
+              />
+            </span>
+            <span className="musicTrackArtist">
+              <div
+                className="musicSkeletonBar"
+                style={{ width: skeletonWidth(index, 4) }}
+              />
+            </span>
+            <span className="musicTrackAlbum">
+              <div
+                className="musicSkeletonBar"
+                style={{ width: skeletonWidth(index, 7) }}
+              />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AlbumHeroSkeleton() {
+  return (
+    <div className="musicAlbumHero" aria-busy="true">
+      <div className="musicAlbumHeroArtwork musicSkeletonBar" />
+      <div className="musicAlbumHeroBody">
+        <div className="musicSkeletonBar musicSkeletonHeroTitle" />
+        <div className="musicSkeletonBar musicSkeletonHeroMeta" />
+      </div>
+    </div>
+  );
+}
+
+function FilterPanels({ isLoading }: { isLoading: boolean }) {
   const panelTracks = $$.getMusicPanelTracks();
+  if (isLoading) {
+    return <FilterPanelsSkeleton />;
+  }
   return (
     <div className="musicFilterPanels">
       <FilterPanel panel="genre" tracks={panelTracks.genre} />
