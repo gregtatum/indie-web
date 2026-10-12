@@ -108,6 +108,10 @@ export function viewMusic(fileStoreServer: T.FileStoreServer, path: string) {
   };
 }
 
+export function fileSaveComplete(path: string) {
+  return { type: 'file-save-complete' as const, path };
+}
+
 export function viewLanguageCoach(
   coachPath: string,
   path: string,

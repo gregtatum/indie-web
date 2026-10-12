@@ -183,6 +183,11 @@ export function MusicLibraryView({
       dispatch(A.setFileManagerRevealLabel(revealLabel));
       dispatch(A.setFileStoreContainerName(containerName));
 
+      if ($.getMusicTracks(getState()).length > 0) {
+        setError(null);
+        return;
+      }
+
       try {
         const res = await fetch(`${currentServer.url}/music/music-index`, {
           signal: fetchController.signal,

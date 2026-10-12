@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileStoreRoute } from '../file-store/route.ts';
-import { createTestServer, withLogs } from './helpers.ts';
+import { musicRoute } from '../music/route.ts';
+import {
+  buildMp3WithTags,
+  createTestServer,
+  MINIMAL_JPEG,
+  withLogs,
+} from './helpers.ts';
 import type { TestServer } from './helpers.ts';
 
 async function listFiles(baseUrl: string, path: string) {
@@ -709,6 +715,247 @@ describe('POST /file-store/compress-folder', () => {
         body: JSON.stringify({ path: '/../../etc' }),
       });
       assert.equal(res.status, 400);
+    }),
+  );
+});
+
+describe('file-store changes keep the music index in sync', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/file-store', fileStoreRoute(mountPath));
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+
+  after(() => server.close());
+
+  async function post(url: string, body: unknown) {
+    const res = await fetch(`${server.baseUrl}${url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    assert.equal(res.status, 200);
+  }
+
+  async function scan() {
+    await post('/music/music-index/scan?force=true', {});
+  }
+
+  async function indexedTracks(): Promise<
+    Array<{
+      path: string;
+      title: string | null;
+      folderArtworkPath: string | null;
+    }>
+  > {
+    const res = await fetch(`${server.baseUrl}/music/music-index`);
+    const { tracks } = await res.json();
+    return tracks.sort((a: { path: string }, b: { path: string }) =>
+      a.path.localeCompare(b.path),
+    );
+  }
+
+  async function indexedPaths() {
+    return (await indexedTracks()).map((track) => track.path);
+  }
+
+  async function writeTrack(path: string, title: string) {
+    await mkdir(join(server.mountDir, path, '..'), { recursive: true });
+    await writeFile(join(server.mountDir, path), buildMp3WithTags({ title }));
+  }
+
+  it(
+    'removes a deleted track and everything under a deleted folder',
+    withLogs([], async () => {
+      await writeTrack('delete/keep.mp3', 'Keep');
+      await writeTrack('delete/single.mp3', 'Single');
+      await writeTrack('delete/album/one.mp3', 'One');
+      await writeTrack('delete/album/two.mp3', 'Two');
+      await scan();
+
+      await post('/file-store/delete', { targetPath: '/delete/single.mp3' });
+      assert.deepEqual(await indexedPaths(), [
+        '/delete/album/one.mp3',
+        '/delete/album/two.mp3',
+        '/delete/keep.mp3',
+      ]);
+
+      await post('/file-store/delete', { targetPath: '/delete/album' });
+      assert.deepEqual(await indexedPaths(), ['/delete/keep.mp3']);
+    }),
+  );
+
+  it(
+    'keeps metadata when a track or folder is renamed',
+    withLogs([], async () => {
+      await writeTrack('rename/old-name.mp3', 'Old Name');
+      await writeTrack('rename/Album/one.mp3', 'One');
+      await scan();
+
+      await post('/file-store/move', {
+        fromPath: '/rename/old-name.mp3',
+        toPath: '/rename/new-name.mp3',
+      });
+      await post('/file-store/move', {
+        fromPath: '/rename/Album',
+        toPath: '/rename/Renamed',
+      });
+
+      const tracks = (await indexedTracks()).filter((track) =>
+        track.path.startsWith('/rename/'),
+      );
+      assert.deepEqual(
+        tracks.map((track) => [track.path, track.title]),
+        [
+          ['/rename/new-name.mp3', 'Old Name'],
+          ['/rename/Renamed/one.mp3', 'One'],
+        ],
+      );
+    }),
+  );
+
+  it(
+    'drops a track renamed to a non-audio file and adds one renamed to audio',
+    withLogs([], async () => {
+      await writeTrack('ext/song.mp3', 'Song');
+      await writeFile(join(server.mountDir, 'ext/hidden.txt'), '');
+      await writeFile(
+        join(server.mountDir, 'ext/later.txt'),
+        buildMp3WithTags({ title: 'Later' }),
+      );
+      await scan();
+
+      await post('/file-store/move', {
+        fromPath: '/ext/song.mp3',
+        toPath: '/ext/song.txt',
+      });
+      await post('/file-store/move', {
+        fromPath: '/ext/later.txt',
+        toPath: '/ext/later.mp3',
+      });
+
+      const tracks = (await indexedTracks()).filter((track) =>
+        track.path.startsWith('/ext/'),
+      );
+      assert.deepEqual(
+        tracks.map((track) => [track.path, track.title]),
+        [['/ext/later.mp3', 'Later']],
+      );
+    }),
+  );
+
+  it(
+    'follows folder artwork when a track moves to another folder',
+    withLogs([], async () => {
+      await writeTrack('art/a/song.mp3', 'Song');
+      await mkdir(join(server.mountDir, 'art/b'), { recursive: true });
+      await writeFile(join(server.mountDir, 'art/b/cover.jpg'), MINIMAL_JPEG);
+      await scan();
+
+      await post('/file-store/move', {
+        fromPath: '/art/a/song.mp3',
+        toPath: '/art/b/song.mp3',
+      });
+
+      const [track] = (await indexedTracks()).filter((t) =>
+        t.path.startsWith('/art/'),
+      );
+      assert.equal(track.path, '/art/b/song.mp3');
+      assert.equal(track.folderArtworkPath, '/art/b/cover.jpg');
+    }),
+  );
+
+  it(
+    'indexes uploaded audio and replaces the entry when it is overwritten',
+    withLogs([], async () => {
+      await writeTrack('upload/existing.mp3', 'Existing');
+      await scan();
+
+      await saveBlob(
+        server.baseUrl,
+        '/upload/new.mp3',
+        buildMp3WithTags({ title: 'New' }),
+        'add',
+      );
+      await saveBlob(
+        server.baseUrl,
+        '/upload/existing.mp3',
+        buildMp3WithTags({ title: 'Replaced' }),
+      );
+
+      const tracks = (await indexedTracks()).filter((track) =>
+        track.path.startsWith('/upload/'),
+      );
+      assert.deepEqual(
+        tracks.map((track) => [track.path, track.title]),
+        [
+          ['/upload/existing.mp3', 'Replaced'],
+          ['/upload/new.mp3', 'New'],
+        ],
+      );
+    }),
+  );
+
+  it(
+    'ignores hidden folders such as the staging pool',
+    withLogs([], async () => {
+      await scan();
+      const before = await indexedPaths();
+
+      await saveBlob(
+        server.baseUrl,
+        '/.music-staging/staged.mp3',
+        buildMp3WithTags({ title: 'Staged' }),
+        'add',
+      );
+
+      assert.deepEqual(await indexedPaths(), before);
+    }),
+  );
+
+  it(
+    'updates folder artwork when it is uploaded or deleted',
+    withLogs([], async () => {
+      await writeTrack('cover/song.mp3', 'Song');
+      await scan();
+
+      await saveBlob(server.baseUrl, '/cover/cover.jpg', MINIMAL_JPEG, 'add');
+      let [track] = (await indexedTracks()).filter((t) =>
+        t.path.startsWith('/cover/'),
+      );
+      assert.equal(track.folderArtworkPath, '/cover/cover.jpg');
+
+      await post('/file-store/delete', { targetPath: '/cover/cover.jpg' });
+      [track] = (await indexedTracks()).filter((t) =>
+        t.path.startsWith('/cover/'),
+      );
+      assert.equal(track.folderArtworkPath, null);
+    }),
+  );
+
+  it(
+    'does not lose entries when many uploads run at once',
+    withLogs([], async () => {
+      await scan();
+      const names = Array.from({ length: 8 }, (_, i) => `/burst/${i}.mp3`);
+      await Promise.all(
+        names.map((name, i) =>
+          saveBlob(
+            server.baseUrl,
+            name,
+            buildMp3WithTags({ title: `Burst ${i}` }),
+            'add',
+          ),
+        ),
+      );
+      const paths = await indexedPaths();
+      assert.deepEqual(
+        paths.filter((path) => path.startsWith('/burst/')),
+        names,
+      );
     }),
   );
 });

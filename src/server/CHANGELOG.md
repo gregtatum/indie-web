@@ -10,6 +10,14 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Deleting, renaming, moving, or uploading files through the file store now
+  patches the music index, so tracks no longer linger or go missing until the
+  next scan. Changes made outside the app still need a scan.
+- Concurrent music index updates are serialized, so simultaneous uploads or
+  edits can no longer overwrite each other's changes.
+
 ## [3.7.0] - 2026-09-20
 
 ### Added

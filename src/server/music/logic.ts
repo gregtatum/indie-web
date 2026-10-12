@@ -2,7 +2,7 @@ import { ClientError, colors, type MountPath } from '../route-utils.ts';
 import NodeID3 from 'node-id3';
 import type { T } from '../index.ts';
 import { Dirent, createReadStream, promises as fs } from 'node:fs';
-import { extname, dirname } from 'node:path';
+import { basename, extname, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 import { parseFile } from 'music-metadata';
@@ -128,6 +128,114 @@ export function installScanCrashGuard(): () => void {
   };
 }
 
+export interface IndexUpdateResult {
+  status: 'updated' | 'skipped' | 'error';
+  message: string | null;
+}
+
+type IndexTransformResult = { tracks: T.TrackMetadata[] } | { skip: string };
+
+const indexWriteQueues = new Map<string, Promise<unknown>>();
+
+function enqueueIndexWrite<R>(
+  indexPath: string,
+  task: () => Promise<R>,
+): Promise<R> {
+  const previous = indexWriteQueues.get(indexPath) ?? Promise.resolve();
+  const next = previous.then(task, task);
+  indexWriteQueues.set(
+    indexPath,
+    next.catch(() => {}),
+  );
+  return next;
+}
+
+async function writeIndexAtomically(
+  indexPath: string,
+  tmpPath: string,
+  index: T.MusicIndex,
+): Promise<void> {
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(index, null, '\t'));
+    await fs.rename(tmpPath, indexPath);
+  } catch (error) {
+    await fs.unlink(tmpPath).catch((unlinkError: any) => {
+      if (unlinkError?.code !== 'ENOENT') {
+        console.error('Failed to clean up temporary music index.', unlinkError);
+      }
+    });
+    throw error;
+  }
+}
+
+/**
+ * Every patch of the durable music index goes through this function so that
+ * concurrent file operations are serialized rather than overwriting each other.
+ * The action describes what happened, e.g. "deleting tracks", for the error
+ * messages.
+ */
+export function updateMusicIndex(
+  mountPath: MountPath,
+  action: string,
+  transform: (
+    index: T.MusicIndex,
+  ) => IndexTransformResult | Promise<IndexTransformResult>,
+): Promise<IndexUpdateResult> {
+  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
+  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.tmp');
+  if (!indexPath || !tmpPath) {
+    return Promise.resolve({
+      status: 'error',
+      message: 'Unexpected: music index path escaped the mount.',
+    });
+  }
+
+  return enqueueIndexWrite(indexPath, async (): Promise<IndexUpdateResult> => {
+    let index: T.MusicIndex;
+    try {
+      index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
+    } catch (error: any) {
+      if (error?.code === 'ENOENT') {
+        return { status: 'skipped', message: 'Music index not found.' };
+      }
+      return {
+        status: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : `Failed to read music index after ${action}.`,
+      };
+    }
+    if (index.version !== MUSIC_INDEX_VERSION) {
+      return {
+        status: 'skipped',
+        message: 'Music index version does not match the server version.',
+      };
+    }
+
+    try {
+      const result = await transform(index);
+      if ('skip' in result) {
+        return { status: 'skipped', message: result.skip };
+      }
+      await writeIndexAtomically(indexPath, tmpPath, {
+        ...index,
+        scannedAt: new Date().toISOString(),
+        tracks: result.tracks,
+      });
+      return { status: 'updated', message: null };
+    } catch (error) {
+      return {
+        status: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : `Failed to write music index after ${action}.`,
+      };
+    }
+  });
+}
+
 /**
  * Core scan implementation shared by the POST and SSE routes.
  * Walks the mount directory, reads metadata (incrementally), writes the index
@@ -221,9 +329,9 @@ export async function performScan(
     tracks,
   };
 
-  // Atomic write: write to a temp file then rename to avoid partial reads.
-  await fs.writeFile(tmpPath, JSON.stringify(index, null, '\t'));
-  await fs.rename(tmpPath, indexPath);
+  await enqueueIndexWrite(indexPath, () =>
+    writeIndexAtomically(indexPath, tmpPath, index),
+  );
 
   return index;
 }
@@ -899,159 +1007,106 @@ export async function updateIndexAfterTrackTagWrites(
   if (updatedTracks.length === 0) {
     return { status: 'skipped', message: 'No tracks were updated.' };
   }
-  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
-  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.write.tmp');
-  if (!indexPath || !tmpPath) {
-    return {
-      status: 'error',
-      message: 'Unexpected: music index path escaped the mount.',
-    };
-  }
-
-  let index: T.MusicIndex;
-  try {
-    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
-  } catch (error: any) {
-    if (error?.code === 'ENOENT') {
-      return { status: 'skipped', message: 'Music index not found.' };
-    }
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to read music index after writing track tags.',
-    };
-  }
-  if (index.version !== MUSIC_INDEX_VERSION) {
-    return {
-      status: 'skipped',
-      message: 'Music index version does not match the server version.',
-    };
-  }
-
   const pathToUpdatedTrack = new Map(
     updatedTracks.map((track) => [track.clientPath, track]),
   );
-  let didUpdateIndex = false;
   const statErrors: Array<{ path: string; message: string }> = [];
+  const statErrorPaths = () => statErrors.map((error) => error.path).join(', ');
 
-  const tracks = await Promise.all(
-    index.tracks.map(async (track) => {
-      const updated = pathToUpdatedTrack.get(track.path);
-      if (!updated) {
-        // This track was not updated.
-        return track;
-      }
-      let stats: Awaited<ReturnType<typeof fs.stat>>;
-      try {
-        stats = await fs.stat(updated.resolvedPath);
-      } catch (error) {
-        statErrors.push({
-          path: updated.clientPath,
-          message:
-            error instanceof Error
-              ? error.message
-              : 'Failed to stat updated track.',
-        });
-        return track;
-      }
-      didUpdateIndex = true;
-      const updatedTrack = { ...track };
-      updatedTrack.size = stats.size;
-      updatedTrack.mtime = stats.mtime.toISOString();
-
-      for (const { frameId, value, description } of [
-        ...updated.id3v23Backfills,
-        ...changes,
-      ]) {
-        switch (frameId) {
-          case 'TIT2':
-            updatedTrack.title = value || null;
-            break;
-          case 'TPE1':
-            updatedTrack.artist = value || null;
-            break;
-          case 'TPE2':
-            updatedTrack.albumArtist = value || null;
-            break;
-          case 'TALB':
-            updatedTrack.album = value || null;
-            break;
-          case 'TCON':
-            updatedTrack.genre = value || null;
-            break;
-          case 'TCOM':
-            updatedTrack.composer = value || null;
-            break;
-          case 'TXXX':
-            if (description === PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION) {
-              updatedTrack.preferComposerGrouping = parseBooleanTagValue(value);
-            }
-            break;
-          case 'TRCK': {
-            const num = parseInt(value.split('/')[0], 10);
-            updatedTrack.track = isNaN(num) ? null : num;
-            break;
+  const result = await updateMusicIndex(
+    mountPath,
+    'writing track tags',
+    async (index) => {
+      let didUpdateIndex = false;
+      const tracks = await Promise.all(
+        index.tracks.map(async (track) => {
+          const updated = pathToUpdatedTrack.get(track.path);
+          if (!updated) {
+            return track;
           }
-          default:
-            break;
-        }
-      }
-      return updatedTrack;
-    }),
-  );
-  if (!didUpdateIndex) {
-    if (statErrors.length > 0) {
-      return {
-        status: 'error',
-        message: `Failed to stat updated tracks: ${statErrors
-          .map((error) => error.path)
-          .join(', ')}`,
-      };
-    }
-    return {
-      status: 'skipped',
-      message: 'No updated tracks were present in the music index.',
-    };
-  }
+          let stats: Awaited<ReturnType<typeof fs.stat>>;
+          try {
+            stats = await fs.stat(updated.resolvedPath);
+          } catch (error) {
+            statErrors.push({
+              path: updated.clientPath,
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to stat updated track.',
+            });
+            return track;
+          }
+          didUpdateIndex = true;
+          const updatedTrack = { ...track };
+          updatedTrack.size = stats.size;
+          updatedTrack.mtime = stats.mtime.toISOString();
 
-  const updatedIndex: T.MusicIndex = {
-    ...index,
-    scannedAt: new Date().toISOString(),
-    tracks,
-  };
-  let renamed = false;
-  try {
-    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
-    await fs.rename(tmpPath, indexPath);
-    renamed = true;
-    if (statErrors.length > 0) {
+          for (const { frameId, value, description } of [
+            ...updated.id3v23Backfills,
+            ...changes,
+          ]) {
+            switch (frameId) {
+              case 'TIT2':
+                updatedTrack.title = value || null;
+                break;
+              case 'TPE1':
+                updatedTrack.artist = value || null;
+                break;
+              case 'TPE2':
+                updatedTrack.albumArtist = value || null;
+                break;
+              case 'TALB':
+                updatedTrack.album = value || null;
+                break;
+              case 'TCON':
+                updatedTrack.genre = value || null;
+                break;
+              case 'TCOM':
+                updatedTrack.composer = value || null;
+                break;
+              case 'TXXX':
+                if (description === PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION) {
+                  updatedTrack.preferComposerGrouping =
+                    parseBooleanTagValue(value);
+                }
+                break;
+              case 'TRCK': {
+                const num = parseInt(value.split('/')[0], 10);
+                updatedTrack.track = isNaN(num) ? null : num;
+                break;
+              }
+              default:
+                break;
+            }
+          }
+          return updatedTrack;
+        }),
+      );
+      if (!didUpdateIndex) {
+        return {
+          skip: 'No updated tracks were present in the music index.',
+        };
+      }
+      return { tracks };
+    },
+  );
+
+  if (statErrors.length > 0) {
+    if (result.status === 'updated') {
       return {
         status: 'error',
-        message: `Some updated tracks could not be patched in the index: ${statErrors
-          .map((error) => error.path)
-          .join(', ')}`,
+        message: `Some updated tracks could not be patched in the index: ${statErrorPaths()}`,
       };
     }
-    return { status: 'updated', message: null };
-  } catch (error) {
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to write music index after writing track tags.',
-    };
-  } finally {
-    if (!renamed) {
-      await fs.unlink(tmpPath).catch((error: any) => {
-        if (error?.code !== 'ENOENT') {
-          console.error('Failed to clean up temporary music index.', error);
-        }
-      });
+    if (result.status === 'skipped') {
+      return {
+        status: 'error',
+        message: `Failed to stat updated tracks: ${statErrorPaths()}`,
+      };
     }
   }
+  return result;
 }
 
 /**
@@ -1064,182 +1119,55 @@ export async function updateIndexAfterFolderArtworkWrite(
   mountPath: MountPath,
   folderArtworkClientPath: string,
   embeddedTrackClientPaths: string[] = [],
-): Promise<{
-  status: 'updated' | 'skipped' | 'error';
-  message: string | null;
-}> {
-  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
-  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.artwork.tmp');
-  if (!indexPath || !tmpPath) {
-    return {
-      status: 'error',
-      message: 'Unexpected: music index path escaped the mount.',
-    };
-  }
-
-  let index: T.MusicIndex;
-  try {
-    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
-  } catch (error: any) {
-    if (error?.code === 'ENOENT') {
-      return { status: 'skipped', message: 'Music index not found.' };
-    }
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to read music index after writing folder artwork.',
-    };
-  }
-  if (index.version !== MUSIC_INDEX_VERSION) {
-    return {
-      status: 'skipped',
-      message: 'Music index version does not match the server version.',
-    };
-  }
-
-  const folderDir = dirname(folderArtworkClientPath);
-  const embedded = new Set(embeddedTrackClientPaths);
-  let changed = false;
-  const tracks = index.tracks.map((track) => {
-    let next = track;
-    if (
-      dirname(track.path) === folderDir &&
-      track.folderArtworkPath !== folderArtworkClientPath
-    ) {
-      next = { ...next, folderArtworkPath: folderArtworkClientPath };
-      changed = true;
-    }
-    if (embedded.has(track.path) && !next.hasEmbeddedArtwork) {
-      next = { ...next, hasEmbeddedArtwork: true };
-      changed = true;
-    }
-    return next;
+): Promise<IndexUpdateResult> {
+  return updateMusicIndex(mountPath, 'writing folder artwork', (index) => {
+    const folderDir = dirname(folderArtworkClientPath);
+    const embedded = new Set(embeddedTrackClientPaths);
+    let changed = false;
+    const tracks = index.tracks.map((track) => {
+      let next = track;
+      if (
+        dirname(track.path) === folderDir &&
+        track.folderArtworkPath !== folderArtworkClientPath
+      ) {
+        next = { ...next, folderArtworkPath: folderArtworkClientPath };
+        changed = true;
+      }
+      if (embedded.has(track.path) && !next.hasEmbeddedArtwork) {
+        next = { ...next, hasEmbeddedArtwork: true };
+        changed = true;
+      }
+      return next;
+    });
+    return changed
+      ? { tracks }
+      : { skip: 'Index already matched the artwork.' };
   });
-
-  if (!changed) {
-    return { status: 'skipped', message: 'Index already matched the artwork.' };
-  }
-
-  const updatedIndex: T.MusicIndex = {
-    ...index,
-    scannedAt: new Date().toISOString(),
-    tracks,
-  };
-  let renamed = false;
-  try {
-    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
-    await fs.rename(tmpPath, indexPath);
-    renamed = true;
-    return { status: 'updated', message: null };
-  } catch (error) {
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to write music index after writing folder artwork.',
-    };
-  } finally {
-    if (!renamed) {
-      await fs.unlink(tmpPath).catch((error: any) => {
-        if (error?.code !== 'ENOENT') {
-          console.error('Failed to clean up temporary music index.', error);
-        }
-      });
-    }
-  }
 }
 
 export async function updateIndexAfterFolderArtworkRemoval(
   mountPath: MountPath,
   folderDirClientPath: string,
-): Promise<{
-  status: 'updated' | 'skipped' | 'error';
-  message: string | null;
-}> {
-  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
-  const tmpPath = mountPath.joinOnMount(
-    MUSIC_INDEX_FILENAME + '.artwork-remove.tmp',
-  );
-  if (!indexPath || !tmpPath) {
-    return {
-      status: 'error',
-      message: 'Unexpected: music index path escaped the mount.',
-    };
-  }
-
-  let index: T.MusicIndex;
-  try {
-    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
-  } catch (error: any) {
-    if (error?.code === 'ENOENT') {
-      return { status: 'skipped', message: 'Music index not found.' };
-    }
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to read music index after removing folder artwork.',
-    };
-  }
-  if (index.version !== MUSIC_INDEX_VERSION) {
-    return {
-      status: 'skipped',
-      message: 'Music index version does not match the server version.',
-    };
-  }
-
-  const folderDir = folderDirClientPath.startsWith('/')
-    ? folderDirClientPath
-    : '/' + folderDirClientPath;
-  let changed = false;
-  const tracks = index.tracks.map((track) => {
-    if (dirname(track.path) === folderDir && track.folderArtworkPath !== null) {
-      changed = true;
-      return { ...track, folderArtworkPath: null };
-    }
-    return track;
+): Promise<IndexUpdateResult> {
+  return updateMusicIndex(mountPath, 'removing folder artwork', (index) => {
+    const folderDir = folderDirClientPath.startsWith('/')
+      ? folderDirClientPath
+      : '/' + folderDirClientPath;
+    let changed = false;
+    const tracks = index.tracks.map((track) => {
+      if (
+        dirname(track.path) === folderDir &&
+        track.folderArtworkPath !== null
+      ) {
+        changed = true;
+        return { ...track, folderArtworkPath: null };
+      }
+      return track;
+    });
+    return changed
+      ? { tracks }
+      : { skip: 'Index had no folder artwork for this directory.' };
   });
-
-  if (!changed) {
-    return {
-      status: 'skipped',
-      message: 'Index had no folder artwork for this directory.',
-    };
-  }
-
-  const updatedIndex: T.MusicIndex = {
-    ...index,
-    scannedAt: new Date().toISOString(),
-    tracks,
-  };
-
-  let renamed = false;
-  try {
-    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
-    await fs.rename(tmpPath, indexPath);
-    renamed = true;
-    return { status: 'updated', message: null };
-  } catch (error) {
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to write music index after removing folder artwork.',
-    };
-  } finally {
-    if (!renamed) {
-      await fs.unlink(tmpPath).catch((error: any) => {
-        if (error?.code !== 'ENOENT') {
-          console.error('Failed to clean up temporary music index.', error);
-        }
-      });
-    }
-  }
 }
 
 export interface DeleteTrackSuccess {
@@ -1362,166 +1290,230 @@ export async function deleteTrackFile(
 export async function updateIndexAfterTrackDeletion(
   mountPath: MountPath,
   deletedClientPaths: string[],
-): Promise<{
-  status: 'updated' | 'skipped' | 'error';
-  message: string | null;
-}> {
+): Promise<IndexUpdateResult> {
   if (deletedClientPaths.length === 0) {
     return { status: 'skipped', message: 'No tracks were deleted.' };
   }
-  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
-  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.delete.tmp');
-  if (!indexPath || !tmpPath) {
-    return {
-      status: 'error',
-      message: 'Unexpected: music index path escaped the mount.',
-    };
-  }
-
-  let index: T.MusicIndex;
-  try {
-    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
-  } catch (error: any) {
-    if (error?.code === 'ENOENT') {
-      return { status: 'skipped', message: 'Music index not found.' };
-    }
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to read music index after deleting tracks.',
-    };
-  }
-  if (index.version !== MUSIC_INDEX_VERSION) {
-    return {
-      status: 'skipped',
-      message: 'Music index version does not match the server version.',
-    };
-  }
-
-  const deletedSet = new Set(deletedClientPaths);
-  const tracks = index.tracks.filter((track) => !deletedSet.has(track.path));
-  if (tracks.length === index.tracks.length) {
-    return {
-      status: 'skipped',
-      message: 'Index had no entries for the deleted tracks.',
-    };
-  }
-
-  const updatedIndex: T.MusicIndex = {
-    ...index,
-    scannedAt: new Date().toISOString(),
-    tracks,
-  };
-  let renamed = false;
-  try {
-    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
-    await fs.rename(tmpPath, indexPath);
-    renamed = true;
-    return { status: 'updated', message: null };
-  } catch (error) {
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to write music index after deleting tracks.',
-    };
-  } finally {
-    if (!renamed) {
-      await fs.unlink(tmpPath).catch((error: any) => {
-        if (error?.code !== 'ENOENT') {
-          console.error('Failed to clean up temporary music index.', error);
-        }
-      });
-    }
-  }
+  return updateMusicIndex(mountPath, 'deleting tracks', (index) => {
+    const deletedSet = new Set(deletedClientPaths);
+    const tracks = index.tracks.filter((track) => !deletedSet.has(track.path));
+    return tracks.length === index.tracks.length
+      ? { skip: 'Index had no entries for the deleted tracks.' }
+      : { tracks };
+  });
 }
 
 export async function updateIndexAfterTracksAdded(
   mountPath: MountPath,
   addedTracks: T.TrackMetadata[],
-): Promise<{
-  status: 'updated' | 'skipped' | 'error';
-  message: string | null;
-}> {
+): Promise<IndexUpdateResult> {
   if (addedTracks.length === 0) {
     return { status: 'skipped', message: 'No tracks were added.' };
   }
-  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
-  const tmpPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME + '.add.tmp');
-  if (!indexPath || !tmpPath) {
-    return {
-      status: 'error',
-      message: 'Unexpected: music index path escaped the mount.',
-    };
-  }
-
-  let index: T.MusicIndex;
-  try {
-    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
-  } catch (error: any) {
-    if (error?.code === 'ENOENT') {
-      return { status: 'skipped', message: 'Music index not found.' };
+  return updateMusicIndex(mountPath, 'adding tracks', (index) => {
+    const existingPaths = new Set(index.tracks.map((track) => track.path));
+    const newTracks = addedTracks.filter(
+      (track) => !existingPaths.has(track.path),
+    );
+    if (newTracks.length === 0) {
+      return { skip: 'Index already had entries for the added tracks.' };
     }
     return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to read music index after adding tracks.',
+      tracks: [...index.tracks, ...newTracks].sort(compareTracksDefault),
     };
-  }
-  if (index.version !== MUSIC_INDEX_VERSION) {
-    return {
-      status: 'skipped',
-      message: 'Music index version does not match the server version.',
-    };
-  }
+  });
+}
 
-  const existingPaths = new Set(index.tracks.map((track) => track.path));
-  const newTracks = addedTracks.filter(
-    (track) => !existingPaths.has(track.path),
-  );
-  if (newTracks.length === 0) {
-    return {
-      status: 'skipped',
-      message: 'Index already had entries for the added tracks.',
-    };
-  }
+function isHiddenClientPath(clientPath: string): boolean {
+  return clientPath.split('/').some((segment) => segment.startsWith('.'));
+}
 
-  const tracks = [...index.tracks, ...newTracks];
-  tracks.sort(compareTracksDefault);
+function isUnderClientPath(clientPath: string, root: string): boolean {
+  return clientPath === root || clientPath.startsWith(root + '/');
+}
 
-  const updatedIndex: T.MusicIndex = {
-    ...index,
-    scannedAt: new Date().toISOString(),
-    tracks,
-  };
-  let renamed = false;
-  try {
-    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
-    await fs.rename(tmpPath, indexPath);
-    renamed = true;
-    return { status: 'updated', message: null };
-  } catch (error) {
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to write music index after adding tracks.',
-    };
-  } finally {
-    if (!renamed) {
-      await fs.unlink(tmpPath).catch((error: any) => {
-        if (error?.code !== 'ENOENT') {
-          console.error('Failed to clean up temporary music index.', error);
-        }
-      });
+function isAudioClientPath(clientPath: string): boolean {
+  return AUDIO_EXTENSIONS.has(extname(clientPath).toLowerCase());
+}
+
+function normalizeClientPath(
+  mountPath: MountPath,
+  clientPath: string,
+): string | null {
+  const resolvedPath = mountPath.resolve(clientPath);
+  return resolvedPath ? mountPath.toClientPath(resolvedPath) : null;
+}
+
+async function reprobeFolderArtwork(
+  mountPath: MountPath,
+  tracks: T.TrackMetadata[],
+  dirs: Set<string>,
+): Promise<{ tracks: T.TrackMetadata[]; changed: boolean }> {
+  const cache = new Map<string, string | null>();
+  let changed = false;
+  const next: T.TrackMetadata[] = [];
+  for (const track of tracks) {
+    const dir = dirname(track.path);
+    const dirFullPath = dirs.has(dir) ? mountPath.resolve(dir) : null;
+    if (!dirFullPath) {
+      next.push(track);
+      continue;
+    }
+    const folderArtworkPath = await probeFolderArtworkForDir(
+      mountPath,
+      dir,
+      dirFullPath,
+      cache,
+    );
+    if (folderArtworkPath === track.folderArtworkPath) {
+      next.push(track);
+    } else {
+      changed = true;
+      next.push({ ...track, folderArtworkPath });
     }
   }
+  return { tracks: next, changed };
+}
+
+/**
+ * Keeps the index aligned after a file or folder is deleted through the generic
+ * file store, rather than through the music routes.
+ */
+export async function updateIndexAfterPathDeleted(
+  mountPath: MountPath,
+  deletedPath: string,
+): Promise<IndexUpdateResult> {
+  const target = normalizeClientPath(mountPath, deletedPath);
+  if (!target || isHiddenClientPath(target)) {
+    return { status: 'skipped', message: 'Path is not part of the index.' };
+  }
+  return updateMusicIndex(mountPath, 'deleting files', (index) => {
+    let changed = false;
+    const tracks: T.TrackMetadata[] = [];
+    for (const track of index.tracks) {
+      if (isUnderClientPath(track.path, target)) {
+        changed = true;
+      } else if (
+        track.folderArtworkPath &&
+        isUnderClientPath(track.folderArtworkPath, target)
+      ) {
+        changed = true;
+        tracks.push({ ...track, folderArtworkPath: null });
+      } else {
+        tracks.push(track);
+      }
+    }
+    return changed
+      ? { tracks }
+      : { skip: 'Index had no entries for the deleted path.' };
+  });
+}
+
+/**
+ * Keeps the index aligned after a file or folder is moved or renamed through
+ * the generic file store. Moves out of hidden folders such as the staging pool
+ * are left to the caller, which already knows the metadata it is adding.
+ */
+export async function updateIndexAfterPathMoved(
+  mountPath: MountPath,
+  fromPath: string,
+  toPath: string,
+): Promise<IndexUpdateResult> {
+  const from = normalizeClientPath(mountPath, fromPath);
+  const to = normalizeClientPath(mountPath, toPath);
+  if (!from || !to || isHiddenClientPath(from)) {
+    return { status: 'skipped', message: 'Path is not part of the index.' };
+  }
+  return updateMusicIndex(mountPath, 'moving files', async (index) => {
+    let changed = false;
+    const dirsToProbe = new Set<string>();
+    const toIsIndexable = !isHiddenClientPath(to);
+    const tracks: T.TrackMetadata[] = [];
+    let movedToDestination = false;
+
+    for (const track of index.tracks) {
+      if (isUnderClientPath(track.path, to)) {
+        changed = true;
+        continue;
+      }
+      if (!isUnderClientPath(track.path, from)) {
+        tracks.push(track);
+        continue;
+      }
+      changed = true;
+      const newPath: string = to + track.path.slice(from.length);
+      if (
+        !toIsIndexable ||
+        (track.path === from && !isAudioClientPath(newPath))
+      ) {
+        continue;
+      }
+      if (dirname(newPath) !== dirname(track.path)) {
+        dirsToProbe.add(dirname(newPath));
+      }
+      movedToDestination ||= newPath === to;
+      tracks.push({ ...track, path: newPath });
+    }
+
+    if (toIsIndexable && !movedToDestination && isAudioClientPath(to)) {
+      const [scanned] = await scanTrackFiles(mountPath, [to]);
+      const toFullPath = mountPath.resolve(to);
+      if (scanned.track && toFullPath && (await fs.stat(toFullPath)).isFile()) {
+        changed = true;
+        tracks.push(scanned.track);
+      }
+    }
+
+    for (const path of [from, to]) {
+      if (isFolderArtworkFilename(basename(path))) {
+        dirsToProbe.add(dirname(path));
+      }
+    }
+    const reprobed = await reprobeFolderArtwork(mountPath, tracks, dirsToProbe);
+    if (!changed && !reprobed.changed) {
+      return { skip: 'Index had no entries for the moved path.' };
+    }
+    return { tracks: reprobed.tracks.sort(compareTracksDefault) };
+  });
+}
+
+/**
+ * Keeps the index aligned after a file is written through the generic file
+ * store: new or replaced audio files are rescanned, and folder artwork images
+ * refresh the artwork of the tracks next to them.
+ */
+export async function updateIndexAfterFileSaved(
+  mountPath: MountPath,
+  savedPath: string,
+): Promise<IndexUpdateResult> {
+  const target = normalizeClientPath(mountPath, savedPath);
+  if (!target || isHiddenClientPath(target)) {
+    return { status: 'skipped', message: 'Path is not part of the index.' };
+  }
+  const isAudio = isAudioClientPath(target);
+  const isArtwork = isFolderArtworkFilename(basename(target));
+  if (!isAudio && !isArtwork) {
+    return { status: 'skipped', message: 'File is not part of the index.' };
+  }
+  return updateMusicIndex(mountPath, 'saving files', async (index) => {
+    let tracks = index.tracks;
+    if (isAudio) {
+      const [scanned] = await scanTrackFiles(mountPath, [target]);
+      if (!scanned.track) {
+        return { skip: 'Saved file could not be scanned.' };
+      }
+      tracks = [
+        ...tracks.filter((track) => track.path !== target),
+        scanned.track,
+      ].sort(compareTracksDefault);
+    }
+    const reprobed = await reprobeFolderArtwork(
+      mountPath,
+      tracks,
+      new Set([dirname(target)]),
+    );
+    return { tracks: reprobed.tracks };
+  });
 }
 
 function isBinary(value: unknown): value is Buffer | Uint8Array {
@@ -1832,100 +1824,38 @@ export async function removeEmbeddedArtworkFromTrack(
 export async function updateMusicIndexAfterEmbeddedArtworkRemoval(
   mountPath: MountPath,
   track: { clientPath: string; resolvedPath: string },
-): Promise<{
-  status: 'updated' | 'skipped' | 'error';
-  message: string | null;
-}> {
-  const indexPath = mountPath.joinOnMount(MUSIC_INDEX_FILENAME);
-  const tmpPath = mountPath.joinOnMount(
-    MUSIC_INDEX_FILENAME + '.artwork-remove.tmp',
-  );
-  if (!indexPath || !tmpPath) {
-    return {
-      status: 'error',
-      message: 'Unexpected: music index path escaped the mount.',
-    };
-  }
-
-  let index: T.MusicIndex;
-  try {
-    index = JSON.parse(await fs.readFile(indexPath, 'utf-8')) as T.MusicIndex;
-  } catch (error: any) {
-    if (error?.code === 'ENOENT') {
-      return { status: 'skipped', message: 'Music index not found.' };
-    }
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to read music index after removing embedded artwork.',
-    };
-  }
-  if (index.version !== MUSIC_INDEX_VERSION) {
-    return {
-      status: 'skipped',
-      message: 'Music index version does not match the server version.',
-    };
-  }
-
-  let stats: Awaited<ReturnType<typeof fs.stat>> | null = null;
-  try {
-    stats = await fs.stat(track.resolvedPath);
-  } catch {
-    // Fall through: the flag is still worth clearing even without fresh stats.
-  }
-
-  let changed = false;
-  const tracks = index.tracks.map((entry) => {
-    if (entry.path !== track.clientPath) {
-      return entry;
-    }
-    let next = entry;
-    if (next.hasEmbeddedArtwork) {
-      next = { ...next, hasEmbeddedArtwork: false };
-      changed = true;
-    }
-    if (stats) {
-      const mtime = stats.mtime.toISOString();
-      if (next.size !== stats.size || next.mtime !== mtime) {
-        next = { ...next, size: stats.size, mtime };
-        changed = true;
+): Promise<IndexUpdateResult> {
+  return updateMusicIndex(
+    mountPath,
+    'removing embedded artwork',
+    async (index) => {
+      let stats: Awaited<ReturnType<typeof fs.stat>> | null = null;
+      try {
+        stats = await fs.stat(track.resolvedPath);
+      } catch {
+        // Fall through: the flag is still worth clearing even without fresh stats.
       }
-    }
-    return next;
-  });
 
-  if (!changed) {
-    return { status: 'skipped', message: 'Index already matched the file.' };
-  }
-
-  const updatedIndex: T.MusicIndex = {
-    ...index,
-    scannedAt: new Date().toISOString(),
-    tracks,
-  };
-  let renamed = false;
-  try {
-    await fs.writeFile(tmpPath, JSON.stringify(updatedIndex, null, '\t'));
-    await fs.rename(tmpPath, indexPath);
-    renamed = true;
-    return { status: 'updated', message: null };
-  } catch (error) {
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to write music index after removing embedded artwork.',
-    };
-  } finally {
-    if (!renamed) {
-      await fs.unlink(tmpPath).catch((error: any) => {
-        if (error?.code !== 'ENOENT') {
-          console.error('Failed to clean up temporary music index.', error);
+      let changed = false;
+      const tracks = index.tracks.map((entry) => {
+        if (entry.path !== track.clientPath) {
+          return entry;
         }
+        let next = entry;
+        if (next.hasEmbeddedArtwork) {
+          next = { ...next, hasEmbeddedArtwork: false };
+          changed = true;
+        }
+        if (stats) {
+          const mtime = stats.mtime.toISOString();
+          if (next.size !== stats.size || next.mtime !== mtime) {
+            next = { ...next, size: stats.size, mtime };
+            changed = true;
+          }
+        }
+        return next;
       });
-    }
-  }
+      return changed ? { tracks } : { skip: 'Index already matched the file.' };
+    },
+  );
 }

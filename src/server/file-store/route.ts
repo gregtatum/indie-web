@@ -20,6 +20,19 @@ import {
   getMetadata,
 } from './logic.ts';
 import { isIgnorableOsFile } from '../../shared/utils.ts';
+import {
+  updateIndexAfterFileSaved,
+  updateIndexAfterPathDeleted,
+  updateIndexAfterPathMoved,
+  type IndexUpdateResult,
+} from '../music/logic.ts';
+
+async function logIndexFailure(update: Promise<IndexUpdateResult>) {
+  const result = await update;
+  if (result.status === 'error') {
+    console.error('Failed to update the music index.', result.message);
+  }
+}
 
 interface ListFilesRequest {
   path: string;
@@ -126,6 +139,7 @@ export function fileStoreRoute(mountPath: MountPath) {
     await writeFile(resolvedPath, buffer);
 
     const stats = await fs.stat(resolvedPath);
+    await logIndexFailure(updateIndexAfterFileSaved(mountPath, clientPath));
     return getFileMetadata(clientPath, stats);
   });
 
@@ -173,6 +187,9 @@ export function fileStoreRoute(mountPath: MountPath) {
         throw new ClientError('Invalid path.');
       }
       await rename(fromResolved, toResolved);
+      await logIndexFailure(
+        updateIndexAfterPathMoved(mountPath, fromPath, toPath),
+      );
       const stats = await fs.stat(toResolved);
       return getMetadata(toPath, stats);
     },
@@ -219,6 +236,7 @@ export function fileStoreRoute(mountPath: MountPath) {
     }
 
     await fs.rm(resolvedPath, { recursive: true });
+    await logIndexFailure(updateIndexAfterPathDeleted(mountPath, targetPath));
     return { ok: true };
   });
 

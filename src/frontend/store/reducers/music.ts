@@ -190,7 +190,9 @@ function tracks(
   switch (action.type) {
     case 'set-music-tracks':
       return action.tracks;
-    case 'view-music':
+    case 'move-file-done':
+    case 'delete-file-done':
+    case 'file-save-complete':
       return [];
     default:
       return state;
@@ -288,8 +290,6 @@ function needsRescan(state = false, action: T.Action): boolean {
   switch (action.type) {
     case 'set-music-tracks':
       return action.needsRescan;
-    case 'view-music':
-      return false;
     default:
       return state;
   }
@@ -302,8 +302,6 @@ function servedIndexVersion(
   switch (action.type) {
     case 'set-music-tracks':
       return action.servedVersion;
-    case 'view-music':
-      return null;
     default:
       return state;
   }
@@ -375,7 +373,7 @@ function playbackQueue(
   }
 }
 
-function playbackServerId(
+function musicServerId(
   state: string | null = null,
   action: T.Action,
 ): string | null {
@@ -410,7 +408,7 @@ const combinedMusicReducer = combineReducers({
   playbackLoadId,
   playbackStatus,
   playbackQueue,
-  playbackServerId,
+  musicServerId,
   folderArtworkSaveStatus,
   folderArtworkEmbedStatus,
   embeddedArtworkRemoveStatus,
@@ -427,12 +425,15 @@ export function musicReducer(
   const next = combinedMusicReducer(state, action);
   if (
     state &&
-    state.playbackServerId !== null &&
-    next.playbackServerId !== state.playbackServerId
+    state.musicServerId !== null &&
+    next.musicServerId !== state.musicServerId
   ) {
-    // Invalidate the currenet music playback when the server changes.
+    // Invalidate the loaded index and playback when the server changes.
     return {
       ...next,
+      tracks: [],
+      needsRescan: false,
+      servedIndexVersion: null,
       playingTrackPath: null,
       playbackLoadId: 0,
       playbackStatus: 'idle',

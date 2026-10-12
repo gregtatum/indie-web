@@ -1691,11 +1691,9 @@ async function extractAndUploadZip(
 
     const writer = new zip.BlobWriter();
 
-    await fileStore.saveBlob(
-      pathJoin(folderPath, entry.filename),
-      'add',
-      await entry.getData(writer),
-    );
+    const path = pathJoin(folderPath, entry.filename);
+    await fileStore.saveBlob(path, 'add', await entry.getData(writer));
+    dispatch(Plain.fileSaveComplete(path));
   }).then(
     () => {
       dispatch(listFiles(folderPath)).catch((error) => console.error(error));
@@ -1767,6 +1765,7 @@ export function uploadFilesWithMessages(
 
       try {
         await fileStore.saveBlob(path, 'add', file);
+        dispatch(Plain.fileSaveComplete(path));
         dispatch(
           addMessage({
             message: (
