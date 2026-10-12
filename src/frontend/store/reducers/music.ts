@@ -192,7 +192,7 @@ function tracks(
       return action.tracks;
     case 'move-file-done':
     case 'delete-file-done':
-    case 'file-save-complete':
+    case 'save-file-done':
       return [];
     default:
       return state;

@@ -85,6 +85,10 @@ const PlainInternal = {
     return { type: 'move-file-done' as const, oldPath, metadata };
   },
 
+  saveFileDone(path: string) {
+    return { type: 'save-file-done' as const, path };
+  },
+
   deleteFileDone(
     metadata: T.FileMetadata | T.FolderMetadata,
     folder: string,
@@ -1693,7 +1697,7 @@ async function extractAndUploadZip(
 
     const path = pathJoin(folderPath, entry.filename);
     await fileStore.saveBlob(path, 'add', await entry.getData(writer));
-    dispatch(Plain.fileSaveComplete(path));
+    dispatch(PlainInternal.saveFileDone(path));
   }).then(
     () => {
       dispatch(listFiles(folderPath)).catch((error) => console.error(error));
@@ -1765,7 +1769,7 @@ export function uploadFilesWithMessages(
 
       try {
         await fileStore.saveBlob(path, 'add', file);
-        dispatch(Plain.fileSaveComplete(path));
+        dispatch(PlainInternal.saveFileDone(path));
         dispatch(
           addMessage({
             message: (

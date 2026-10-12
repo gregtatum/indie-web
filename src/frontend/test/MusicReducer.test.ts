@@ -292,7 +292,7 @@ describe('music index across file view navigation', () => {
 
   it('drops the index when a file is saved, deleted or moved', () => {
     for (const action of [
-      A.fileSaveComplete('/a.mp3'),
+      { type: 'save-file-done', path: '/a.mp3' },
       {
         type: 'delete-file-done',
         metadata: fileMetadata('/a.mp3'),
