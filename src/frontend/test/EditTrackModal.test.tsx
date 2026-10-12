@@ -495,10 +495,10 @@ describe('<EditTrackModal> with real server', () => {
     });
 
     await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
     });
 
     for (const path of ['/a.mp3', '/b.mp3']) {
@@ -661,9 +661,7 @@ describe('<EditTrackModal> with real server', () => {
       }),
     ).toBeNull();
     // …but the folder image is now editable, just like a single-track edit.
-    expect(
-      screen.getByRole('button', { name: /Change artwork file/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Upload artwork/ })).toBeTruthy();
     // Every track already carries the art, so nothing is left to embed.
     expect(screen.queryByRole('button', { name: 'Embed artwork' })).toBeNull();
   }, 30_000);
@@ -750,9 +748,7 @@ describe('<EditTrackModal> with real server', () => {
     });
 
     expect(await screen.findByText('Mixed folder artwork')).toBeTruthy();
-    expect(
-      screen.queryByRole('button', { name: /Change artwork file/ }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: /Upload artwork/ })).toBeNull();
     expect(
       screen.queryByRole('button', { name: /Add artwork file/ }),
     ).toBeNull();

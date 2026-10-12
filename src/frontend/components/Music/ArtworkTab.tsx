@@ -232,11 +232,11 @@ function artworkButtonStatus(
   return null;
 }
 
-function ChangeArtworkButton({
+function UploadArtworkButton({
   trackPath,
   serverUrl,
   onSaved,
-  label = 'Change artwork file',
+  label = 'Upload artwork',
 }: ArtworkButtonProps & { label?: string }) {
   const { saveStatus, active, save } = useFolderArtworkSave(serverUrl, onSaved);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -496,7 +496,7 @@ function RemoveFolderArtworkButton({
   let label: React.ReactNode = (
     <>
       <span className="artworkEmbeddedRemoveBtnIcon" aria-hidden="true" />
-      Remove album artwork
+      Remove artwork
     </>
   );
   if (active && removeStatus === 'saving') {
@@ -1155,7 +1155,7 @@ export function ArtworkTab({
               </div>
               {canEditFolderArtwork && (
                 <div className="artworkAlbumActions">
-                  <ChangeArtworkButton
+                  <UploadArtworkButton
                     trackPath={trackPath}
                     serverUrl={serverUrl}
                     onSaved={onFolderArtworkWritten}
@@ -1171,7 +1171,7 @@ export function ArtworkTab({
                         className="artworkEmbeddedRemoveBtnIcon"
                         aria-hidden="true"
                       />
-                      Remove album artwork
+                      Remove artwork
                     </button>
                   )}
                 </div>
@@ -1222,7 +1222,7 @@ export function ArtworkTab({
           >
             {canEditFolderArtwork && (
               <>
-                <ChangeArtworkButton
+                <UploadArtworkButton
                   trackPath={trackPath}
                   serverUrl={serverUrl}
                   onSaved={onFolderArtworkWritten}
