@@ -708,7 +708,7 @@ describe('edit track modal — loading and error states', () => {
 
     const dialog = getDialog('Song A');
     expect(
-      within(dialog).getByRole('button', { name: /Change artwork file/ }),
+      within(dialog).getByRole('button', { name: /Upload artwork/ }),
     ).toBeTruthy();
 
     const input = dialog.querySelector(

@@ -798,18 +798,15 @@ export const TrackEditorPanel = React.forwardRef<
     }
   }
 
-  async function handleDetailsSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function handleSaveAndClose() {
     if (await handleSave()) {
       onClose?.();
     }
   }
 
-  async function handleSaveButton() {
-    const hadPendingArtwork = pendingArtwork !== null;
-    if ((await handleSave()) && hadPendingArtwork) {
-      onClose?.();
-    }
+  function handleDetailsSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    void handleSaveAndClose();
   }
 
   const selectionDir =
@@ -1418,7 +1415,7 @@ export const TrackEditorPanel = React.forwardRef<
             (!isBulkEdit && tagsState.status !== 'loaded') ||
             (isBulkEdit && bulkTagsState.status === 'loading')
           }
-          onClick={() => void handleSaveButton()}
+          onClick={() => void handleSaveAndClose()}
         >
           {saveButtonLabel}
         </button>

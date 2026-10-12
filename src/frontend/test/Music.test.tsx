@@ -18,6 +18,7 @@ import {
   removeMusicIndex,
   renderMusicApp,
   useMusicTestServer,
+  waitForNetworkIdle,
 } from './utils/music';
 
 const v1Fixture = readFileSync(
@@ -305,12 +306,12 @@ describe('<Music> with real server', () => {
     await act(async () => {
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     });
-    // Save complete when the button is disabled again (isDirty is false).
+    // Saving dismisses the modal.
     await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
     });
     await waitFor(() => {
       expect(screen.queryByText('Loading…')).toBeNull();
@@ -391,10 +392,10 @@ describe('<Music> with real server', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     });
     await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
     });
 
     for (const path of [
@@ -478,14 +479,10 @@ describe('<Music> with real server', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     });
     await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     });
-
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+      await waitForNetworkIdle();
     });
 
     expect(
@@ -534,10 +531,10 @@ describe('<Music> with real server', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     });
     await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
     });
 
     await screen.findByText('Saved Title', { selector: '.musicTrackTitle' });
@@ -594,10 +591,10 @@ describe('<Music> with real server', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     });
     await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
     });
 
     await screen.findByText('After Rescan', { selector: '.musicTrackTitle' });
@@ -661,12 +658,22 @@ describe('<Music> with real server', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     });
     await waitFor(() => {
-      expect(
-        (screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement)
-          .disabled,
-      ).toBe(true);
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
     });
 
+    await act(async () => {
+      fireEvent.contextMenu(
+        await screen.findByText('ID3 New Title', {
+          selector: '.musicTrackTitle',
+        }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    });
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Tags' }));
     });
