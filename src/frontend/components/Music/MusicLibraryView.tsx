@@ -1599,9 +1599,6 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: tracks.length,
     getScrollElement: () => listRef.current,
-    // Must match the height set on .musicTrack in index.css (box-sizing: border-box).
-    // Derived from: padding-v (8px×2) + border-bottom (1px) + line-height.
-    // Estimate the largest plausible size when not using dynamic measurement.
     estimateSize: () => sizeEstimate,
     overscan: 5,
   });

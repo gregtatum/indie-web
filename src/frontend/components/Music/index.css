@@ -1040,9 +1040,9 @@
   box-sizing: border-box;
   display: flex;
   gap: var(--music-gap);
-  padding: var(--music-padding-v) var(--music-padding-h);
+  padding: 0 var(--music-padding-h);
   border-bottom: 1px solid var(--border-color);
-  align-items: baseline;
+  align-items: center;
   cursor: pointer;
 
   &:hover {
