@@ -614,6 +614,20 @@ describe('offline db', () => {
 
     idbfs.close();
   });
+
+  it('removes a deleted file from a cached listing that has no stored blobs', async () => {
+    const idbfs = await openIDBFS('test-db');
+    const folder = '/Alternative/Linkin Park - 2013 - Recharged';
+    const tracks = ['01 Keep.mp3', '02 Doomed (Remix) (1).mp3'].map((name) =>
+      createFileMetadata(`${folder}/${name}`),
+    );
+    await idbfs.addFolderListing(folder, tracks);
+
+    await idbfs.delete(`${folder}/02 Doomed (Remix) (1).mp3`);
+
+    expect(await idbfs.listFiles(folder)).toEqual([tracks[0]]);
+    idbfs.close();
+  });
 });
 
 describe('database test setup', () => {

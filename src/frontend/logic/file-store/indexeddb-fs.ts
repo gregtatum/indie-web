@@ -616,7 +616,8 @@ export class IDBFS extends FileStoreCache {
     const files = tx.objectStore('files');
     const folderListing = await folderListings.get(path);
     if (!folderListing) {
-      throw new Error('Unable to find the folder for deletion: ' + path);
+      await this.#deleteFileFromFolderListing(path, tx);
+      return;
     }
 
     // Surface the folders and files that need deleting.
