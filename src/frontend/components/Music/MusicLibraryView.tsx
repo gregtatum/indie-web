@@ -24,6 +24,42 @@ import {
   resizeColumnsOnDrag,
 } from './column-resize';
 
+interface LoadProgress {
+  loaded: number;
+  total: number | null;
+}
+
+async function readJsonWithProgress(
+  res: Response,
+  onProgress: (progress: LoadProgress) => void,
+): Promise<unknown> {
+  const contentLength = Number(res.headers.get('Content-Length'));
+  const total = contentLength > 0 ? contentLength : null;
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+
+  function addChunk(chunk: Uint8Array) {
+    chunks.push(chunk);
+    loaded += chunk.length;
+    onProgress({ loaded, total });
+  }
+
+  if (typeof res.body?.getReader === 'function') {
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      addChunk(value);
+    }
+  } else {
+    addChunk(new Uint8Array(await res.arrayBuffer()));
+  }
+
+  return new Response(new Blob(chunks as BlobPart[])).json();
+}
+
 function getConnectionErrorMessage(server: T.FileStoreServer): React.ReactNode {
   const { name, url } = server;
   const hostname = URL.parse(url)?.hostname;
@@ -64,6 +100,9 @@ export function MusicLibraryView({
   const server = $$.getCurrentServer();
   const { dispatch, getState } = Hooks.useStore();
   const [error, setError] = React.useState<React.ReactNode>(null);
+  const [loadProgress, setLoadProgress] = React.useState<LoadProgress | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = React.useState(
     () => $.getMusicTracks(getState()).length === 0,
   );
@@ -200,7 +239,11 @@ export function MusicLibraryView({
           return;
         }
         const { index, wasUpgraded, servedVersion } = upgradeMusicIndex(
-          await res.json(),
+          await readJsonWithProgress(res, (progress) => {
+            if (!fetchController.signal.aborted) {
+              setLoadProgress(progress);
+            }
+          }),
         );
         dispatch(A.setMusicTracks(index.tracks, wasUpgraded, servedVersion));
         setError(null);
@@ -316,7 +359,12 @@ export function MusicLibraryView({
                 direction="vertical"
                 className="musicLibrarySplitter"
                 start={<FilterPanels isLoading={isLoading} />}
-                end={<TracksView isLoading={isLoading} />}
+                end={
+                  <TracksView
+                    isLoading={isLoading}
+                    loadProgress={loadProgress}
+                  />
+                }
                 persistLocalStorage="musicLibrarySplitterOffset"
               />
             </div>
@@ -504,7 +552,13 @@ function loadColumnWidths(): StoredColumnWidths {
   return { artist: 160, album: 160, referenceWidth: null };
 }
 
-function TracksView({ isLoading }: { isLoading: boolean }) {
+function TracksView({
+  isLoading,
+  loadProgress,
+}: {
+  isLoading: boolean;
+  loadProgress: LoadProgress | null;
+}) {
   const [stored, setStored] =
     React.useState<StoredColumnWidths>(loadColumnWidths);
   const [availableWidth, setAvailableWidth] = React.useState<number | null>(
@@ -575,7 +629,7 @@ function TracksView({ isLoading }: { isLoading: boolean }) {
         onColumnDragEnd={onColumnDragEnd}
       />
       {isLoading ? (
-        <TracksSkeleton />
+        <TracksSkeleton loadProgress={loadProgress} />
       ) : (
         <Tracks onScrollbarWidthChange={setScrollbarWidth} />
       )}
@@ -694,9 +748,51 @@ function FilterPanelsSkeleton() {
   );
 }
 
-function TracksSkeleton() {
+function formatMegabytes(bytes: number): string {
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
+function LoadingLabel({ progress }: { progress: LoadProgress | null }) {
+  const total = progress?.total ?? null;
+  const fraction =
+    progress && total ? Math.min(progress.loaded / total, 1) : null;
+  return (
+    <div className="musicLoadingLabel" role="status">
+      <div>Loading library…</div>
+      <div
+        className={`musicLoadingBar${fraction === null ? ' indeterminate' : ''}`}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={
+          fraction === null ? undefined : Math.round(fraction * 100)
+        }
+      >
+        <div
+          className="musicLoadingBarFill"
+          style={
+            fraction === null ? undefined : { width: `${fraction * 100}%` }
+          }
+        />
+      </div>
+      {progress && progress.loaded > 0 ? (
+        <div className="musicLoadingBytes">
+          {formatMegabytes(progress.loaded)}
+          {total ? ` / ${formatMegabytes(total)}` : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TracksSkeleton({
+  loadProgress,
+}: {
+  loadProgress: LoadProgress | null;
+}) {
   return (
     <div className="musicTracksContainer" aria-busy="true">
+      <LoadingLabel progress={loadProgress} />
       <div className="musicTracks">
         {Array.from({ length: 6 }, (_, index) => (
           <div className="musicTrack musicSkeletonTrack" key={index}>

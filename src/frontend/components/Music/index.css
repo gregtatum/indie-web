@@ -1326,3 +1326,59 @@
     opacity: 0.5;
   }
 }
+
+.musicLoadingLabel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 220px;
+  padding: 16px 24px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: var(--header-shadow);
+  font-size: var(--music-item-font-size);
+  color: var(--text-heading);
+  animation: fadein 150ms ease-out 500ms both;
+}
+
+.musicLoadingBar {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+.musicLoadingBarFill {
+  height: 100%;
+  background: var(--accent-strong);
+  transition: width 150ms linear;
+}
+
+.musicLoadingBar.indeterminate .musicLoadingBarFill {
+  width: 40%;
+  transition: none;
+  animation: musicLoadingSlide 1.4s ease-in-out infinite;
+}
+
+.musicLoadingBytes {
+  font-size: var(--music-meta-font-size);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes musicLoadingSlide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}

@@ -337,6 +337,9 @@ describe('music URL serialization', () => {
         genre: ['Indie'],
       });
     });
+    await within(
+      await screen.findByRole('listbox', { name: 'genre' }),
+    ).findByRole('option', { name: 'Indie' });
 
     act(() => {
       store.dispatch(
