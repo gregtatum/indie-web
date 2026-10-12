@@ -1590,7 +1590,10 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
 
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (document.activeElement !== listRef.current) {
+      const isFilterPanelFocused = Boolean(
+        document.activeElement?.closest('.musicFilterPanelList'),
+      );
+      if (document.activeElement !== listRef.current && !isFilterPanelFocused) {
         return;
       }
 
@@ -1601,6 +1604,11 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
         : -1;
 
       function getShortcutTargetPaths(): string[] {
+        if (isFilterPanelFocused) {
+          const filteredPaths = currentTracks.map((track) => track.path);
+          dispatch(A.setMusicSelectedTracks(filteredPaths));
+          return filteredPaths;
+        }
         const selectedPaths = $.getMusicSelectedTrackPaths(getState());
         if (selectedPaths.length > 0) {
           return selectedPaths;
@@ -1608,15 +1616,9 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
         return currentPath ? [currentPath] : [];
       }
 
-      switch (getKeyboardString(event)) {
-        case 'Meta+A':
-        case 'Control+A': {
-          event.preventDefault();
-          const allPaths = currentTracks.map((track) => track.path);
-          anchorPathRef.current = currentPath ?? allPaths[0] ?? null;
-          dispatch(A.setMusicSelectedTracks(allPaths));
-          return;
-        }
+      const keyboardString = getKeyboardString(event);
+
+      switch (keyboardString) {
         case 'Meta+E':
         case 'Control+E': {
           event.preventDefault();
@@ -1633,6 +1635,23 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
         case 'Control+Shift+E': {
           event.preventDefault();
           contextMenuRef.current?.batchEdit(getShortcutTargetPaths());
+          return;
+        }
+        default:
+          break;
+      }
+
+      if (isFilterPanelFocused) {
+        return;
+      }
+
+      switch (keyboardString) {
+        case 'Meta+A':
+        case 'Control+A': {
+          event.preventDefault();
+          const allPaths = currentTracks.map((track) => track.path);
+          anchorPathRef.current = currentPath ?? allPaths[0] ?? null;
+          dispatch(A.setMusicSelectedTracks(allPaths));
           return;
         }
         case 'Meta+Enter':

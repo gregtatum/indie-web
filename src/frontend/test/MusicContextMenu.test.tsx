@@ -485,6 +485,44 @@ describe('track list keyboard shortcuts', () => {
     expect($.getMusicEditTab(store.getState())).toBe('details');
   });
 
+  it('cmd+e edits the filtered tracks when a filter panel has focus', async () => {
+    const { store } = setup();
+    await screen.findByText('Song A');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'Jazz' }));
+    });
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      fireEvent.keyDown(document.body, { key: 'e', metaKey: true });
+    });
+
+    await screen.findByRole('dialog');
+    expect($.getMusicEditTrackPath(store.getState())).toBe('/music/c.mp3');
+  });
+
+  it('cmd+e bulk edits every track matching the filter, ignoring the track selection', async () => {
+    const { store } = setup();
+    const trackC = await screen.findByText('Song C');
+
+    await act(async () => {
+      fireEvent.click(trackC);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'Rock' }));
+    });
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      fireEvent.keyDown(document.body, { key: 'e', metaKey: true });
+    });
+
+    await screen.findByRole('dialog', { name: 'Album A' });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+    ]);
+  });
+
   it('ctrl+e opens the details edit modal for one selected track', async () => {
     const { store } = setup();
     const trackA = await screen.findByText('Song A');
