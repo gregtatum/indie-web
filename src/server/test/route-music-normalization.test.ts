@@ -613,6 +613,52 @@ describe('write -> rescan keeps the index and the details panel in agreement', (
       assert.equal(tags.resolved.TPE1, track.artist);
     }),
   );
+
+  it(
+    'keeps the stored index in track order when a track number edit changes the order',
+    withLogs([], async () => {
+      const album = [
+        ['order-a.mp3', 'Order-A', '1'],
+        ['order-b.mp3', 'Order-B', '2'],
+        ['order-c.mp3', 'Order-C', '3'],
+      ];
+      for (const [file, title, track] of album) {
+        await writeFile(
+          join(server.mountDir, file),
+          buildMp3WithNativeBlocks({
+            id3v2Blocks: [
+              {
+                version: 3,
+                frames: [
+                  { id: 'TIT2', text: title },
+                  { id: 'TALB', text: 'Order-Album' },
+                  { id: 'TRCK', text: track },
+                ],
+              },
+            ],
+          }),
+        );
+      }
+      await scan(server);
+
+      const res = await writeTags(
+        server,
+        ['/order-a.mp3'],
+        [{ frameId: 'TRCK', value: '9' }],
+      );
+      assert.deepEqual(res.errors, []);
+
+      const stored: T.MusicIndex = JSON.parse(
+        await readFile(join(server.mountDir, MUSIC_INDEX_FILENAME), 'utf8'),
+      );
+      assert.deepEqual(
+        stored.tracks
+          .filter((t) => t.album === 'Order-Album')
+          .map((t) => t.title),
+        ['Order-B', 'Order-C', 'Order-A'],
+      );
+    }),
+  );
 });
 
 describe('the incremental scan cache is invalidated by a MUSIC_INDEX_VERSION bump', () => {

@@ -1088,7 +1088,7 @@ export async function updateIndexAfterTrackTagWrites(
           skip: 'No updated tracks were present in the music index.',
         };
       }
-      return { tracks };
+      return { tracks: tracks.sort(compareTracksDefault) };
     },
   );
 

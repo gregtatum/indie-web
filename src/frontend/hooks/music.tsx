@@ -2,6 +2,7 @@ import * as React from 'react';
 import { A, $$, Hooks, T } from 'frontend';
 import { getDirName, getKeyboardString } from 'frontend/utils';
 import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
+import { compareTracksDefault } from 'shared/music';
 import type { MusicTrackSource } from 'frontend/logic/music/metadata';
 
 /**
@@ -448,7 +449,13 @@ export function useMusicLibraryTrackSource(): MusicTrackSource {
     () => ({
       tracks,
       updateTracks: (nextTracks: T.TrackMetadata[]) => {
-        dispatch(A.setMusicTracks(nextTracks, needsRescan, servedIndexVersion));
+        dispatch(
+          A.setMusicTracks(
+            [...nextTracks].sort(compareTracksDefault),
+            needsRescan,
+            servedIndexVersion,
+          ),
+        );
       },
     }),
     [dispatch, tracks, needsRescan, servedIndexVersion],

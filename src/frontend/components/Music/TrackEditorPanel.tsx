@@ -288,6 +288,7 @@ export const TrackEditorPanel = React.forwardRef<
   // metadata update after a save.
   const resolvedEditTrackKey = editTracks
     .map((editTrack) => editTrack.path)
+    .sort()
     .join('\u0000');
   const server = $$.getCurrentServer();
   const activeTab = $$.getMusicEditTab();
