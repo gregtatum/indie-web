@@ -66,6 +66,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
           dispatch(
             A.addMessage({
               message: `Scanning… 0 / ${data.count.toLocaleString()} files`,
+              progress: { loaded: 0, total: data.count },
               generation: scanMessageGeneration,
             }),
           );
@@ -78,6 +79,8 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
                 total === null
                   ? 'Scanning…'
                   : `Scanning… ${data.scanCount.toLocaleString()} / ${total.toLocaleString()} files`,
+              progress:
+                total === null ? undefined : { loaded: data.scanCount, total },
               generation: scanMessageGeneration,
             }),
           );

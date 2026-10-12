@@ -533,6 +533,7 @@ export function moveFiles(
                 Moving {i + 1}/{moves.length} items
               </>
             ),
+            progress: { loaded: i, total: moves.length },
             generation: batchGeneration,
           }),
         );
@@ -662,6 +663,7 @@ export function renameFiles(
                 Renaming {i + 1}/{renames.length} items
               </>
             ),
+            progress: { loaded: i, total: renames.length },
             generation: batchGeneration,
           }),
         );
@@ -786,6 +788,7 @@ export function pasteCopyFile(
                 {verb} {i + 1}/{sourcePaths.length} files
               </>
             ),
+            progress: { loaded: i, total: sourcePaths.length },
             generation: batchGeneration,
           }),
         );
@@ -1259,6 +1262,7 @@ export function deleteFiles(
                 Deleting {i + 1}/{files.length} items
               </>
             ),
+            progress: { loaded: i, total: files.length },
             generation: batchGeneration,
           }),
         );
@@ -1687,6 +1691,7 @@ async function extractAndUploadZip(
       addMessage({
         message,
         generation,
+        progress: { loaded: count, total: fileEntries.length },
       }),
     );
   }
@@ -1696,7 +1701,8 @@ async function extractAndUploadZip(
 
     updateMessage(
       <>
-        Adding file {count} of {entries.length} from <code>{file.name}</code>.
+        Adding file {count} of {fileEntries.length} from{' '}
+        <code>{file.name}</code>.
       </>,
     );
 
@@ -1853,12 +1859,14 @@ async function uploadToStagingPool(
   mp3Files: File[],
   filenames: string[],
   folderArtworkPathByPath: Record<string, string>,
+  onProgress: (uploaded: number) => void,
 ): Promise<StagedUploadResult> {
   const trackPaths: string[] = [];
   for (let i = 0; i < mp3Files.length; i++) {
     const path = `/.music-staging/${filenames[i]}`;
     await fileStore.saveBlob(path, 'add', mp3Files[i]);
     trackPaths.push(path);
+    onProgress(i + 1);
   }
 
   const res = await fetch(`${server.url}/music/staging-pool`, {
@@ -1979,9 +1987,11 @@ export function addFilesToStagingPool(
       }
     }
 
-    const messageGeneration = dispatch(
-      addMessage({ message: `Staging ${mp3Files.length} track(s)…` }),
-    );
+    const stagingMessage = (uploaded: number) => ({
+      message: `Staging ${uploaded} / ${mp3Files.length} track(s)…`,
+      progress: { loaded: uploaded, total: mp3Files.length },
+    });
+    const messageGeneration = dispatch(addMessage(stagingMessage(0)));
 
     try {
       const { tracks: addedTracks, duplicateCount } = await uploadToStagingPool(
@@ -1990,6 +2000,13 @@ export function addFilesToStagingPool(
         mp3Files,
         filenames,
         folderArtworkPathByStagingPath,
+        (uploaded) =>
+          dispatch(
+            addMessage({
+              ...stagingMessage(uploaded),
+              generation: messageGeneration,
+            }),
+          ),
       );
 
       if (addedTracks.length > 0) {
@@ -2026,13 +2043,27 @@ export function removeMusicStagingPoolTracks(
     const fileStore = $.getCurrentFS(getState());
 
     const removed: string[] = [];
-    for (const path of paths) {
+    const isBatch = paths.length > 1;
+    let messageGeneration: number | undefined;
+    for (let i = 0; i < paths.length; i++) {
+      if (isBatch) {
+        messageGeneration = dispatch(
+          addMessage({
+            message: `Removing ${i + 1} / ${paths.length} tracks`,
+            progress: { loaded: i, total: paths.length },
+            generation: messageGeneration,
+          }),
+        );
+      }
       try {
-        await fileStore.delete(path);
-        removed.push(path);
+        await fileStore.delete(paths[i]);
+        removed.push(paths[i]);
       } catch (error) {
         console.error(error);
       }
+    }
+    if (messageGeneration !== undefined) {
+      dispatch(Plain.dismissMessage(messageGeneration));
     }
     if (removed.length === 0) {
       return;
@@ -2265,7 +2296,10 @@ export function commitStagingPoolTracks(
     );
 
     const messageGeneration = dispatch(
-      addMessage({ message: `Organizing… 0 / ${tracksToMove.length}` }),
+      addMessage({
+        message: `Organizing… 0 / ${tracksToMove.length}`,
+        progress: { loaded: 0, total: tracksToMove.length },
+      }),
     );
     const movedTracks: T.TrackMetadata[] = [];
     const movedSourcePaths = new Set<string>();
@@ -2299,6 +2333,7 @@ export function commitStagingPoolTracks(
       dispatch(
         addMessage({
           message: `Organizing… ${i + 1} / ${tracksToMove.length}`,
+          progress: { loaded: i + 1, total: tracksToMove.length },
           generation: messageGeneration,
         }),
       );
