@@ -1083,6 +1083,33 @@
   font-size: var(--music-item-font-size);
 }
 
+.musicTrackTitle.editing {
+  overflow: visible;
+  margin: -3px -5px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: var(--modal-bg);
+  color: var(--text-body);
+}
+
+.musicTrackTitleInput {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+
+  &::placeholder {
+    color: var(--muted);
+    font-style: italic;
+  }
+}
+
 .musicTrackArtist {
   flex: 0 0 var(--column-artist);
   font-size: var(--music-item-font-size);

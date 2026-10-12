@@ -7,7 +7,12 @@ import {
 } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
-import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
+import {
+  applyIndexedTrackChanges,
+  getTrackFilterArtist,
+  writeTrackTags,
+} from 'frontend/logic/music/metadata';
+import { getTrackCapabilities } from 'shared/music';
 import { persistedState } from 'frontend/logic/persisted-state';
 import {
   useFolderArtworkDrop,
@@ -1488,6 +1493,22 @@ function FilterPanelItem({
 
 const sizeEstimate = 32;
 
+interface RenamingState {
+  paths: string[];
+  focusedPath: string;
+  value: string;
+  initialValue: string;
+  placeholder: string;
+}
+
+interface TrackRename {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onBlur: () => void;
+}
+
 interface TracksProps {
   onScrollbarWidthChange: (width: number) => void;
 }
@@ -1502,6 +1523,58 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
   const contextMenuRef = useTrackContextMenu();
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
+  const server = $$.getCurrentServer();
+  const trackSource = useMusicLibraryTrackSource();
+  const trackSourceRef = React.useRef(trackSource);
+  trackSourceRef.current = trackSource;
+
+  const [renaming, setRenaming] = React.useState<RenamingState | null>(null);
+  const renamingRef = React.useRef(renaming);
+  renamingRef.current = renaming;
+  const cancelRenameRef = React.useRef(false);
+
+  async function commitRename({ paths, value }: RenamingState) {
+    const changes: T.TrackTagUpdate[] = [{ frameId: 'TIT2', value }];
+    try {
+      const updated = await writeTrackTags(server.url, paths, changes);
+      const { tracks: allTracks, updateTracks } = trackSourceRef.current;
+      updateTracks(
+        allTracks.map((track) =>
+          updated.has(track.path)
+            ? applyIndexedTrackChanges(track, changes)
+            : track,
+        ),
+      );
+      if (updated.size < paths.length) {
+        throw new Error('Not every track was renamed.');
+      }
+    } catch {
+      dispatch(
+        A.addMessage({ message: 'Could not rename the track.', timeout: true }),
+      );
+    }
+  }
+
+  function handleRenameBlur() {
+    const current = renamingRef.current;
+    setRenaming(null);
+    if (cancelRenameRef.current) {
+      cancelRenameRef.current = false;
+    } else if (current && current.value !== current.initialValue) {
+      void commitRename(current);
+    }
+  }
+
+  function handleRenameKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter' || event.key === 'Escape') {
+      event.preventDefault();
+      // Otherwise the event reaches the list's own handler once focus moves
+      // back to it, which would play the track or clear the selection.
+      event.stopPropagation();
+      cancelRenameRef.current = event.key === 'Escape';
+      listRef.current?.focus();
+    }
+  }
 
   React.useEffect(() => {
     const el = listRef.current;
@@ -1717,6 +1790,31 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
         return;
       }
 
+      if (keyboardString === 'F2') {
+        event.preventDefault();
+        const paths = getShortcutTargetPaths().filter((path) =>
+          getTrackCapabilities(path).writableFrameIds.includes('TIT2'),
+        );
+        if (paths.length === 0) {
+          return;
+        }
+        const titles = new Map(
+          trackSourceRef.current.tracks.map((t) => [t.path, t.title ?? '']),
+        );
+        const values = new Set(paths.map((path) => titles.get(path) ?? ''));
+        const value = values.size === 1 ? [...values][0] : '';
+        setRenaming({
+          paths,
+          focusedPath: paths.includes(currentPath ?? '')
+            ? (currentPath as string)
+            : paths[0],
+          value,
+          initialValue: value,
+          placeholder: values.size === 1 ? '' : 'Mixed',
+        });
+        return;
+      }
+
       switch (event.key) {
         case 'ArrowUp': {
           event.preventDefault();
@@ -1883,6 +1981,18 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
                 onContextMenu={(event) =>
                   contextMenuRef.current?.open(event, track.path)
                 }
+                rename={
+                  renaming?.focusedPath === track.path
+                    ? {
+                        value: renaming.value,
+                        placeholder: renaming.placeholder,
+                        onChange: (value) =>
+                          setRenaming({ ...renaming, value }),
+                        onKeyDown: handleRenameKeyDown,
+                        onBlur: handleRenameBlur,
+                      }
+                    : null
+                }
                 offsetTop={virtualItem.start}
               />
             );
@@ -1901,6 +2011,7 @@ function Track({
   onClick,
   onContextMenu,
   onPlay,
+  rename,
   offsetTop,
 }: {
   track: T.TrackMetadata;
@@ -1910,6 +2021,7 @@ function Track({
   onClick: (event: React.MouseEvent) => void;
   onContextMenu: (event: React.MouseEvent) => void;
   onPlay: (path: string) => void;
+  rename: TrackRename | null;
   offsetTop: number;
 }) {
   return (
@@ -1935,7 +2047,23 @@ function Track({
       <span className="musicTrackNumber" aria-hidden="true">
         {isPlaying ? <img src="/svg/play.svg" alt="" /> : (track.track ?? '')}
       </span>
-      <span className="musicTrackTitle">{track.title ?? track.path}</span>
+      {rename ? (
+        <span className="musicTrackTitle editing">
+          <input
+            className="musicTrackTitleInput"
+            autoFocus
+            value={rename.value}
+            placeholder={rename.placeholder}
+            onChange={(event) => rename.onChange(event.target.value)}
+            onKeyDown={rename.onKeyDown}
+            onBlur={rename.onBlur}
+            onClick={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => event.stopPropagation()}
+          />
+        </span>
+      ) : (
+        <span className="musicTrackTitle">{track.title ?? track.path}</span>
+      )}
       <span className="musicTrackArtist">{track.artist}</span>
       <span className="musicTrackAlbum">{track.album}</span>
     </div>

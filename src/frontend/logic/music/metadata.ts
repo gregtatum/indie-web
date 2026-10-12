@@ -2,6 +2,7 @@ import type {
   TrackMetadata,
   TrackTagsResponse,
   TrackTagUpdate,
+  WriteTrackTagsResponse,
 } from 'shared/@types/shared';
 import {
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
@@ -421,6 +422,23 @@ export function detailFieldValues(
   );
 
   return state;
+}
+
+export async function writeTrackTags(
+  serverUrl: string,
+  paths: string[],
+  changes: TrackTagUpdate[],
+): Promise<Set<string>> {
+  const res = await fetch(`${serverUrl}/music/write-track-tags`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths, changes }),
+  });
+  if (!res.ok) {
+    throw new Error(String(res.status));
+  }
+  const data = (await res.json()) as WriteTrackTagsResponse;
+  return new Set(data.updated);
 }
 
 /**

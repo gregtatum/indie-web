@@ -927,6 +927,69 @@ describe('track list keyboard shortcuts', () => {
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
   });
 
+  it('f2 renames the selected track title inline', async () => {
+    fetchMock.post(`${FAKE_SERVER.url}/music/write-track-tags`, {
+      body: JSON.stringify({
+        updated: ['/music/a.mp3'],
+        errors: [],
+        index: { status: 'updated', message: null },
+      }),
+      status: 200,
+    });
+    const { store } = setup();
+    const trackA = await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.click(trackA);
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'F2' });
+    });
+
+    const input = await screen.findByDisplayValue('Song A');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Renamed Song' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+
+    await screen.findByText('Renamed Song');
+    expect(
+      JSON.parse(fetchMock.callHistory.lastCall()?.options.body as string),
+    ).toEqual({
+      paths: ['/music/a.mp3'],
+      changes: [{ frameId: 'TIT2', value: 'Renamed Song' }],
+    });
+    expect(
+      $.getMusicTracks(store.getState()).find((t) => t.path === '/music/a.mp3')
+        ?.title,
+    ).toBe('Renamed Song');
+    expect(
+      fetchMock.callHistory.calls('end:/music/write-track-tags'),
+    ).toHaveLength(1);
+  });
+
+  it('f2 shows Mixed for different titles and escape cancels the rename', async () => {
+    const { store } = setup();
+    await screen.findByText('Song A');
+    await act(async () => {
+      store.dispatch(
+        A.setMusicSelectedTracks(['/music/a.mp3', '/music/b.mp3']),
+      );
+      focusTrackList();
+      fireEvent.keyDown(document.body, { key: 'F2' });
+    });
+
+    const input = await screen.findByPlaceholderText('Mixed');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Nope' } });
+      fireEvent.keyDown(input, { key: 'Escape' });
+    });
+
+    expect(screen.queryByPlaceholderText('Mixed')).toBeNull();
+    expect(screen.queryByText('Nope')).toBeNull();
+    expect(
+      fetchMock.callHistory.calls('end:/music/write-track-tags'),
+    ).toHaveLength(0);
+  });
+
   it('ignores shifted and alt-modified shortcut keys', async () => {
     const { store } = setup();
     await screen.findByText('Song A');

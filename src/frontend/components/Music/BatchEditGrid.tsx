@@ -7,12 +7,12 @@ import {
   BATCH_EDIT_COLUMN_KEYS,
   BATCH_EDIT_COLUMNS,
   applyIndexedTrackChanges,
+  writeTrackTags,
   type BatchEditColumn,
   type BatchEditColumnKey,
   type MusicTrackSource,
 } from 'frontend/logic/music/metadata';
 import { getTrackCapabilities } from 'shared/music';
-import type { WriteTrackTagsResponse } from 'shared/@types/shared';
 import {
   ColumnResizeHandle,
   clampColumnWidths,
@@ -377,16 +377,7 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
       { frameId: columnDef.frameId, value: newValue },
     ];
     try {
-      const res = await fetch(`${server.url}/music/write-track-tags`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paths, changes }),
-      });
-      if (!res.ok) {
-        throw new Error(String(res.status));
-      }
-      const data = (await res.json()) as WriteTrackTagsResponse;
-      const updatedSet = new Set(data.updated);
+      const updatedSet = await writeTrackTags(server.url, paths, changes);
       trackSourceRef.current.updateTracks(
         trackSourceRef.current.tracks.map((t) =>
           updatedSet.has(t.path) ? applyIndexedTrackChanges(t, changes) : t,
