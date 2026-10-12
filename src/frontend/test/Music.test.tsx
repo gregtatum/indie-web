@@ -374,9 +374,7 @@ describe('<Music> with real server', () => {
       fireEvent.contextMenu(await screen.findByText('Bulk Song 1'));
     });
     await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
 
     const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;

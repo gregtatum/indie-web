@@ -112,16 +112,16 @@ function setup(tracks = TRACKS, revealLabel: string | null = 'Show in Finder') {
 }
 
 describe('track right-click context menu', () => {
-  it('shows "Play Track" when no tracks are selected', async () => {
+  it('shows "Play" when no tracks are selected', async () => {
     setup();
     const trackA = await screen.findByText('Song A');
     await act(async () => {
       fireEvent.contextMenu(trackA);
     });
-    await screen.findByRole('button', { name: 'Play Track' });
+    await screen.findByRole('button', { name: 'Play' });
   });
 
-  it('shows "Play Track" when only one track is selected', async () => {
+  it('shows "Play" when only one track is selected', async () => {
     const { store } = setup();
     await act(async () => {
       store.dispatch(A.setMusicSelectedTracks(['/music/a.mp3']));
@@ -130,10 +130,10 @@ describe('track right-click context menu', () => {
     await act(async () => {
       fireEvent.contextMenu(trackA);
     });
-    await screen.findByRole('button', { name: 'Play Track' });
+    await screen.findByRole('button', { name: 'Play' });
   });
 
-  it('shows "Play Selection" when multiple tracks are selected', async () => {
+  it('shows "Play" when multiple tracks are selected', async () => {
     const { store } = setup();
     await act(async () => {
       store.dispatch(
@@ -144,17 +144,17 @@ describe('track right-click context menu', () => {
     await act(async () => {
       fireEvent.contextMenu(trackA);
     });
-    await screen.findByRole('button', { name: 'Play Selection' });
+    await screen.findByRole('button', { name: 'Play' });
   });
 
-  it('clicking "Play Track" loads the right-clicked track and queues all tracks', async () => {
+  it('clicking "Play" loads the right-clicked track and queues all tracks', async () => {
     const { store } = setup();
     const trackB = await screen.findByText('Song B');
     await act(async () => {
       fireEvent.contextMenu(trackB);
     });
     const playButton = await screen.findByRole('button', {
-      name: 'Play Track',
+      name: 'Play',
     });
     await act(async () => {
       fireEvent.click(playButton);
@@ -168,7 +168,7 @@ describe('track right-click context menu', () => {
     ]);
   });
 
-  it('clicking "Play Selection" loads the first selected track and queues only selected tracks', async () => {
+  it('clicking "Play" loads the first selected track and queues only selected tracks', async () => {
     const { store } = setup();
     await act(async () => {
       store.dispatch(
@@ -180,7 +180,7 @@ describe('track right-click context menu', () => {
       fireEvent.contextMenu(trackA);
     });
     const playButton = await screen.findByRole('button', {
-      name: 'Play Selection',
+      name: 'Play',
     });
     await act(async () => {
       fireEvent.click(playButton);
@@ -255,11 +255,11 @@ describe('track right-click context menu', () => {
     await act(async () => {
       fireEvent.contextMenu(trackA);
     });
-    await screen.findByRole('button', { name: 'Play Selection' });
+    await screen.findByRole('button', { name: 'Play' });
     expect(screen.queryByRole('button', { name: 'Show in Files' })).toBeNull();
   });
 
-  it('shows "Edit Selection" for multi-track selection', async () => {
+  it('shows "Edit" for multi-track selection', async () => {
     const { store } = setup();
     await act(async () => {
       store.dispatch(
@@ -270,7 +270,7 @@ describe('track right-click context menu', () => {
     await act(async () => {
       fireEvent.contextMenu(trackA);
     });
-    await screen.findByRole('button', { name: 'Edit Selection' });
+    await screen.findByRole('button', { name: 'Edit' });
   });
 
   it('shows shortcut hints without changing menu item names', async () => {
@@ -284,6 +284,7 @@ describe('track right-click context menu', () => {
     await screen.findByRole('button', { name: 'Edit' });
     await screen.findByRole('button', { name: 'Show in Files' });
     await screen.findByRole('button', { name: 'Show in Finder' });
+    screen.getByText('Enter');
     screen.getByText('Ctrl E');
     screen.getByText('Ctrl Enter');
     screen.getByText('Ctrl Shift Enter');
@@ -303,12 +304,12 @@ describe('track right-click context menu', () => {
       fireEvent.contextMenu(trackA);
     });
 
-    await screen.findByRole('button', { name: 'Edit Selection' });
+    await screen.findByRole('button', { name: 'Edit' });
     screen.getByText('⌘ E');
     expect(screen.queryByText('Ctrl E')).toBeNull();
   });
 
-  it('shows "Delete Track" for a single track and deletes it after confirming', async () => {
+  it('shows "Delete" for a single track and deletes it after confirming', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     try {
       fetchMock.post(`${FAKE_SERVER.url}/music/delete-tracks`, {
@@ -325,7 +326,7 @@ describe('track right-click context menu', () => {
         fireEvent.contextMenu(trackB);
       });
       const deleteButton = await screen.findByRole('button', {
-        name: 'Delete Track',
+        name: 'Delete',
       });
       await act(async () => {
         fireEvent.click(deleteButton);
@@ -346,7 +347,7 @@ describe('track right-click context menu', () => {
     }
   });
 
-  it('shows "Delete Selection" for a multi-track selection and deletes them after confirming', async () => {
+  it('shows "Delete" for a multi-track selection and deletes them after confirming', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     try {
       fetchMock.post(`${FAKE_SERVER.url}/music/delete-tracks`, {
@@ -368,7 +369,7 @@ describe('track right-click context menu', () => {
         fireEvent.contextMenu(trackA);
       });
       const deleteButton = await screen.findByRole('button', {
-        name: 'Delete Selection',
+        name: 'Delete',
       });
       await act(async () => {
         fireEvent.click(deleteButton);
@@ -395,7 +396,7 @@ describe('track right-click context menu', () => {
         fireEvent.contextMenu(trackB);
       });
       const deleteButton = await screen.findByRole('button', {
-        name: 'Delete Track',
+        name: 'Delete',
       });
       await act(async () => {
         fireEvent.click(deleteButton);

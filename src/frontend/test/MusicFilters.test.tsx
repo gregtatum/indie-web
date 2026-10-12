@@ -458,9 +458,7 @@ describe('music URL serialization', () => {
       fireEvent.contextMenu(await screen.findByText('Song A'));
     });
     await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
 
     const genreInput = screen.getByLabelText('Genre') as HTMLInputElement;

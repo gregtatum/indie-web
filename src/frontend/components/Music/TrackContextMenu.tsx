@@ -151,7 +151,8 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     const buttons: MenuButton[] = [
       {
         key: 'play',
-        children: isMultiSelect ? 'Play Selection' : 'Play Track',
+        children: 'Play',
+        shortcut: 'Enter',
         onClick() {
           const tracks = $.getFilteredMusicTracks(getState());
           if (isMultiSelect) {
@@ -170,8 +171,8 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
       ...(isMultiSelect
         ? [
             {
-              key: 'edit-selection',
-              children: 'Edit Selection',
+              key: 'edit-tracks',
+              children: 'Edit',
               shortcut: editShortcut,
               onClick() {
                 editTracks(selectedPaths);
@@ -223,7 +224,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
         ? [
             {
               key: 'delete',
-              children: isMultiSelect ? 'Delete Selection' : 'Delete Track',
+              children: 'Delete',
               shortcut: deleteShortcut,
               onClick() {
                 deleteTracks(deleteTargetPaths);

@@ -169,9 +169,7 @@ describe('<EditTrackModal> with real server', () => {
       fireEvent.contextMenu(track);
     });
     await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
     await waitFor(() => {
       expect(screen.queryByText(/Loading tags/)).toBeNull();
@@ -527,9 +525,7 @@ describe('<EditTrackModal> with real server', () => {
       fireEvent.contextMenu(track);
     });
     await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
 
     const genreInput = await waitForEnabledField('Genre');

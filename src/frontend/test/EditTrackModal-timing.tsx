@@ -160,7 +160,7 @@ async function openBulkEditModal(store: ReturnType<typeof createStore>) {
     fireEvent.contextMenu(track);
   });
   const editButton = await screen.findByRole('button', {
-    name: 'Edit Selection',
+    name: 'Edit',
   });
   await act(async () => {
     fireEvent.click(editButton);
@@ -399,7 +399,7 @@ describe('edit track modal — loading and error states', () => {
       fireEvent.contextMenu(track);
     });
     const editButton = await screen.findByRole('button', {
-      name: 'Edit Selection',
+      name: 'Edit',
     });
     await act(async () => {
       fireEvent.click(editButton);
@@ -487,9 +487,7 @@ describe('edit track modal — loading and error states', () => {
       fireEvent.contextMenu(track);
     });
     await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
 
     expect(
@@ -565,9 +563,7 @@ describe('edit track modal — loading and error states', () => {
       fireEvent.contextMenu(track);
     });
     await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
 
     const albumInput = screen.getByLabelText('Album') as HTMLInputElement;
@@ -647,9 +643,7 @@ describe('edit track modal — loading and error states', () => {
       fireEvent.contextMenu(track);
     });
     await act(async () => {
-      fireEvent.click(
-        await screen.findByRole('button', { name: 'Edit Selection' }),
-      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
     await act(async () => {
       fireEvent.click(
