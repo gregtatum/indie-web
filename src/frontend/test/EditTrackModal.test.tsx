@@ -1053,6 +1053,31 @@ describe('<EditTrackModal> with real server', () => {
     ).toBeNull();
   }, 30_000);
 
+  it('shows artwork embedded in an m4a under "Embedded in this file"', async () => {
+    await writeFolderArtwork(getServer(), '/Album A', buildJpegBytes());
+    await writeM4aTrack('Album A/1.m4a');
+    await setup();
+
+    await openEditModal('Fixture Title');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+    });
+    const dialog = getDialog('Fixture Title');
+    expect(within(dialog).queryByText('Embedded in this file')).toBeNull();
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Embed artwork' }),
+      );
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
+
+    expect(
+      await within(dialog).findByText('Embedded in this file'),
+    ).toBeTruthy();
+  }, 30_000);
+
   it('re-arms the embed prompt immediately when the just-embedded art is removed', async () => {
     const cover = buildJpegBytes();
     await writeFolderArtwork(getServer(), '/Album A', cover);

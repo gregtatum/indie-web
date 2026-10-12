@@ -1092,7 +1092,10 @@ export function ArtworkTab({
     }
     return tagsState.data.blocks
       .flatMap((block) => block.tags)
-      .filter((tag) => tag.id === 'APIC' && tag.binary !== undefined)
+      .filter(
+        (tag) =>
+          (tag.id === 'APIC' || tag.id === 'covr') && tag.binary !== undefined,
+      )
       .map((tag) => ({ value: tag.value, binary: tag.binary! }))
       .filter((entry) => !entry.value.startsWith('-->'));
   }, [hideEmbeddedArtwork, tagsState]);
