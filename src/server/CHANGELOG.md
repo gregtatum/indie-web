@@ -10,6 +10,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-10-12
+
 ### Fixed
 
 - Deleting, renaming, moving, or uploading files through the file store now
@@ -147,7 +149,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 - Initial Docker support for running the server in a container.
 
-[unreleased]: https://github.com/gregtatum/indie-web/compare/v3.7.0...HEAD
+[unreleased]: https://github.com/gregtatum/indie-web/compare/v3.8.0...HEAD
+[3.8.0]: https://github.com/gregtatum/indie-web/compare/v3.7.0...v3.8.0
 [3.7.0]: https://github.com/gregtatum/indie-web/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/gregtatum/indie-web/compare/v3.5.0...v3.6.0
 [3.5.0]: https://github.com/gregtatum/indie-web/compare/v3.4.0...v3.5.0
