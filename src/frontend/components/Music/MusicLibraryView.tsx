@@ -823,7 +823,11 @@ function TracksSkeleton({
       <LoadingLabel progress={loadProgress} />
       <div className="musicTracks">
         {Array.from({ length: 6 }, (_, index) => (
-          <div className="musicTrack musicSkeletonTrack" key={index}>
+          <div
+            className="musicTrack musicSkeletonTrack"
+            key={index}
+            style={{ height: `${sizeEstimate}px` }}
+          >
             <span className="musicTrackNumber" />
             <span className="musicTrackTitle">
               <div
