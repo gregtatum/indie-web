@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { act } from 'react';
 import userEvent from '@testing-library/user-event';
 import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
-import { A } from 'frontend';
+import { A, T } from 'frontend';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
@@ -80,6 +80,50 @@ async function signOutOfDropbox() {
     await userEvent.click(
       await screen.findByRole('button', { name: 'Sign Out' }),
     );
+  });
+}
+
+const MUSIC_STORAGE = {
+  id: 'music-storage',
+  name: 'Music Storage',
+  url: 'http://localhost:6544',
+  storeType: 'music' as const,
+};
+
+const PLAYING_TRACK: T.TrackMetadata = {
+  path: '/music/a.mp3',
+  title: 'Song A',
+  artist: 'Artist A',
+  albumArtist: null,
+  composer: null,
+  album: 'Album A',
+  genre: 'Rock',
+  year: null,
+  preferComposerGrouping: null,
+  track: 1,
+  duration: 180,
+  size: 1024,
+  mtime: '2024-01-01T00:00:00Z',
+  folderArtworkPath: null,
+  hasEmbeddedArtwork: false,
+};
+
+function startPlayingFrom(store: Store, server: T.FileStoreServer) {
+  store.dispatch(A.changeFileStore('server', server));
+  store.dispatch(A.viewMusic(server, '/'));
+  store.dispatch(A.setMusicTracks([PLAYING_TRACK], false));
+  store.dispatch(A.musicPlaybackLoad(PLAYING_TRACK.path));
+  store.dispatch(A.musicPlaybackReady());
+}
+
+async function removeFolderNamed(name: string) {
+  const input = await screen.findByDisplayValue(name);
+  const form = input.closest('form');
+  if (!form) {
+    throw new Error('Expected the folder to be in a form.');
+  }
+  await act(async () => {
+    await userEvent.click(within(form).getByRole('button', { name: 'Remove' }));
   });
 }
 
@@ -263,6 +307,61 @@ describe('Settings', () => {
     expectBrowserFilesDeleted(deleteDatabase);
     expectDropboxCacheDeleted(deleteDatabase);
     await expectOnboardingHomeScreen();
+  });
+
+  it('stops playback when the playing music storage is removed', async () => {
+    const store = createStore();
+    onboard(store);
+    await connectBrowserFiles(store, getIDBFS());
+    addNasStorage(store);
+    store.dispatch(A.addFileStoreServer(MUSIC_STORAGE));
+    startPlayingFrom(store, MUSIC_STORAGE);
+    confirmPrompts();
+
+    await renderSettings(store);
+    screen.getByRole('region', { name: 'Playback controls' });
+
+    await removeFolderNamed('Music Storage');
+
+    expect(screen.queryByDisplayValue('Music Storage')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Playback controls' })).toBe(
+      null,
+    );
+  });
+
+  it('keeps playing when a different storage is removed', async () => {
+    const store = createStore();
+    onboard(store);
+    await connectBrowserFiles(store, getIDBFS());
+    addNasStorage(store);
+    store.dispatch(A.addFileStoreServer(MUSIC_STORAGE));
+    startPlayingFrom(store, MUSIC_STORAGE);
+    confirmPrompts();
+
+    await renderSettings(store);
+
+    await removeFolderNamed('NAS Storage');
+
+    expect(screen.queryByDisplayValue('NAS Storage')).toBeNull();
+    screen.getByRole('region', { name: 'Playback controls' });
+  });
+
+  it('stops playback when the last storage is removed', async () => {
+    const store = createStore();
+    onboard(store);
+    store.dispatch(A.addFileStoreServer(MUSIC_STORAGE));
+    startPlayingFrom(store, MUSIC_STORAGE);
+    confirmPrompts();
+
+    await renderSettings(store);
+    screen.getByRole('region', { name: 'Playback controls' });
+
+    await removeFolderNamed('Music Storage');
+
+    await expectOnboardingHomeScreen();
+    expect(screen.queryByRole('region', { name: 'Playback controls' })).toBe(
+      null,
+    );
   });
 
   it('changes the input mode setting via the radio group', async () => {
