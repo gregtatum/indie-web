@@ -1,9 +1,13 @@
 import * as React from 'react';
-import { A, $$, Hooks, T } from 'frontend';
+import { A, $, $$, Hooks, T } from 'frontend';
 import { getDirName, getKeyboardString } from 'frontend/utils';
 import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
 import { compareTracksDefault } from 'shared/music';
-import type { MusicTrackSource } from 'frontend/logic/music/metadata';
+import {
+  applyIndexedTrackChanges,
+  writeTrackTags,
+  type MusicTrackSource,
+} from 'frontend/logic/music/metadata';
 
 /**
  * Pick the artwork file out of a drop. Only a single image applies cleanly —
@@ -459,6 +463,38 @@ export function useMusicLibraryTrackSource(): MusicTrackSource {
       },
     }),
     [dispatch, tracks, needsRescan, servedIndexVersion],
+  );
+}
+
+export function useWriteTrackTags() {
+  const dispatch = Hooks.useDispatch();
+  const { getState } = Hooks.useStore();
+  const server = $$.getCurrentServer();
+  const trackSource = useMusicLibraryTrackSource();
+  const updateTracksRef = React.useRef(trackSource.updateTracks);
+  updateTracksRef.current = trackSource.updateTracks;
+
+  return React.useCallback(
+    async (paths: string[], changes: T.TrackTagUpdate[]): Promise<boolean> => {
+      try {
+        const updated = await writeTrackTags(server.url, paths, changes);
+        updateTracksRef.current(
+          $.getMusicTracks(getState()).map((track) =>
+            updated.has(track.path)
+              ? applyIndexedTrackChanges(track, changes)
+              : track,
+          ),
+        );
+        if (updated.size < paths.length) {
+          throw new Error('Not every track was written.');
+        }
+        return true;
+      } catch {
+        dispatch(A.addMessage({ message: 'Could not rename.', timeout: true }));
+        return false;
+      }
+    },
+    [server.url, dispatch, getState],
   );
 }
 

@@ -519,6 +519,118 @@ describe('filter panel context menu and shortcuts', () => {
     ]);
   });
 
+  async function renamePanelItem(panel: string, item: string, value: string) {
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: item }));
+    });
+    await act(async () => {
+      screen.getByRole('listbox', { name: panel }).focus();
+      fireEvent.keyDown(document.body, { key: 'F2' });
+    });
+    const input = await screen.findByDisplayValue(item);
+    await act(async () => {
+      fireEvent.change(input, { target: { value } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+  }
+
+  it('f2 renames a genre across every track that has it', async () => {
+    fetchMock.post(`${FAKE_SERVER.url}/music/write-track-tags`, {
+      body: JSON.stringify({
+        updated: ['/music/a.mp3', '/music/b.mp3'],
+        errors: [],
+        index: { status: 'updated', message: null },
+      }),
+      status: 200,
+    });
+    const { store } = setup();
+    await screen.findByText('Song A');
+
+    await renamePanelItem('genre', 'Rock', 'Classic Rock');
+
+    await screen.findByRole('option', { name: 'Classic Rock' });
+    expect(
+      JSON.parse(fetchMock.callHistory.lastCall()?.options.body as string),
+    ).toEqual({
+      paths: ['/music/a.mp3', '/music/b.mp3'],
+      changes: [{ frameId: 'TCON', value: 'Classic Rock' }],
+    });
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual([
+      'Classic Rock',
+    ]);
+    expect(screen.queryByRole('option', { name: 'Rock' })).toBeNull();
+  });
+
+  it('f2 renames every selected panel item to one value and dims the others while editing', async () => {
+    fetchMock.post(`${FAKE_SERVER.url}/music/write-track-tags`, {
+      body: JSON.stringify({
+        updated: ['/music/a.mp3', '/music/b.mp3', '/music/c.mp3'],
+        errors: [],
+        index: { status: 'updated', message: null },
+      }),
+      status: 200,
+    });
+    const { store } = setup();
+    await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'Rock' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'Jazz' }), {
+        metaKey: true,
+      });
+    });
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      fireEvent.keyDown(document.body, { key: 'F2' });
+    });
+
+    const input = await screen.findByDisplayValue('Jazz');
+    expect(
+      screen
+        .getByRole('option', { name: 'Rock' })
+        .classList.contains('renameTarget'),
+    ).toBe(true);
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Jazz Rock' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+
+    await screen.findByRole('option', { name: 'Jazz Rock' });
+    expect(
+      JSON.parse(fetchMock.callHistory.lastCall()?.options.body as string),
+    ).toEqual({
+      paths: ['/music/a.mp3', '/music/b.mp3', '/music/c.mp3'],
+      changes: [{ frameId: 'TCON', value: 'Jazz Rock' }],
+    });
+    expect($.getMusicPanelSelections(store.getState()).genre).toEqual([
+      'Jazz Rock',
+    ]);
+  });
+
+  it('f2 renames an artist by writing the tag it was derived from', async () => {
+    fetchMock.post(`${FAKE_SERVER.url}/music/write-track-tags`, {
+      body: JSON.stringify({
+        updated: ['/music/a.mp3', '/music/c.mp3'],
+        errors: [],
+        index: { status: 'updated', message: null },
+      }),
+      status: 200,
+    });
+    setup();
+    await screen.findByText('Song A');
+
+    await renamePanelItem('artist', 'Artist A', 'Artist Z');
+
+    await screen.findByRole('option', { name: 'Artist Z' });
+    expect(
+      JSON.parse(fetchMock.callHistory.lastCall()?.options.body as string),
+    ).toEqual({
+      paths: ['/music/a.mp3', '/music/c.mp3'],
+      changes: [{ frameId: 'TPE1', value: 'Artist Z' }],
+    });
+  });
+
   it('enter plays the filtered tracks when a filter panel has focus', async () => {
     const { store } = setup();
     await filterToRock();

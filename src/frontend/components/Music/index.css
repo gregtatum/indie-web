@@ -876,6 +876,10 @@
   &:focus-within .musicFilterPanelItem.selected:hover {
     background: var(--selection-active-hover);
   }
+
+  &:focus-within .musicFilterPanelItem.selected.renameTarget {
+    color: transparent;
+  }
 }
 
 .musicFilterPanelHeader {
@@ -917,6 +921,16 @@
     &:hover {
       background: var(--selection-inactive-hover);
     }
+  }
+
+  & .musicRenameInput {
+    box-sizing: border-box;
+    width: calc(100% + 6px);
+    margin: -3px;
+    padding: 3px;
+    border-radius: 4px;
+    background: var(--modal-bg);
+    color: var(--text-body);
   }
 }
 
@@ -1092,7 +1106,7 @@
   color: var(--text-body);
 }
 
-.musicTrackTitleInput {
+.musicRenameInput {
   display: block;
   width: 100%;
   box-sizing: border-box;

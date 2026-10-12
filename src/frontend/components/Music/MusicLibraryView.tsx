@@ -7,17 +7,17 @@ import {
 } from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
+import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
 import {
-  applyIndexedTrackChanges,
-  getTrackFilterArtist,
-  writeTrackTags,
-} from 'frontend/logic/music/metadata';
-import { getTrackCapabilities } from 'shared/music';
+  getTrackCapabilities,
+  shouldPreferComposerGrouping,
+} from 'shared/music';
 import { persistedState } from 'frontend/logic/persisted-state';
 import {
   useFolderArtworkDrop,
   useFolderArtworkPaste,
   useMusicLibraryTrackSource,
+  useWriteTrackTags,
   useMusicStagingPoolTrackSource,
   useDiscardStagingPool,
   collectFilesFromDataTransfer,
@@ -1125,25 +1125,45 @@ function getPanelAllLabel(panel: T.MusicPanelType): string {
   }
 }
 
+function getPanelField(panel: T.MusicPanelType) {
+  switch (panel) {
+    case 'genre':
+      return (t: T.TrackMetadata) => t.genre;
+    case 'artist':
+      return getTrackFilterArtist;
+    case 'album':
+      return (t: T.TrackMetadata) => t.album;
+    default:
+      throw new UnhandledCaseError(panel, 'MusicPanelType');
+  }
+}
+
 function getPanelItems(
   tracks: T.TrackMetadata[],
   panel: T.MusicPanelType,
 ): string[] {
-  let field: (track: T.TrackMetadata) => string | null;
+  return [
+    ...new Set(tracks.map(getPanelField(panel)).filter(Boolean)),
+  ].sort() as string[];
+}
+
+function getPanelFrameId(
+  track: T.TrackMetadata,
+  panel: T.MusicPanelType,
+): T.TrackTagUpdate['frameId'] {
   switch (panel) {
     case 'genre':
-      field = (t) => t.genre;
-      break;
-    case 'artist':
-      field = getTrackFilterArtist;
-      break;
+      return 'TCON';
     case 'album':
-      field = (t) => t.album;
-      break;
+      return 'TALB';
+    case 'artist':
+      if (shouldPreferComposerGrouping(track) && track.composer) {
+        return 'TCOM';
+      }
+      return track.albumArtist ? 'TPE2' : 'TPE1';
     default:
       throw new UnhandledCaseError(panel, 'MusicPanelType');
   }
-  return [...new Set(tracks.map(field).filter(Boolean))].sort() as string[];
 }
 
 function FilterPanel({
@@ -1153,8 +1173,9 @@ function FilterPanel({
   panel: T.MusicPanelType;
   tracks: T.TrackMetadata[];
 }) {
-  const { dispatch } = Hooks.useStore();
+  const { dispatch, getState } = Hooks.useStore();
   const contextMenuRef = useTrackContextMenu();
+  const writeTags = useWriteTrackTags();
   const panelSelections = $$.getMusicPanelSelections();
   const selections = panelSelections[panel] ?? [];
 
@@ -1208,6 +1229,45 @@ function FilterPanel({
       }
     }
   }, [effectiveSelections]);
+
+  const rename = useInlineRename<PanelRenamingState>(
+    listRef,
+    ({ targets, value }) => void commitRename(targets, value),
+  );
+
+  async function commitRename(targets: string[], value: string) {
+    const field = getPanelField(panel);
+    const pathsByFrameId = new Map<T.TrackTagUpdate['frameId'], string[]>();
+    for (const track of tracks) {
+      const frameId = getPanelFrameId(track, panel);
+      if (
+        targets.includes(field(track) ?? '') &&
+        getTrackCapabilities(track.path).writableFrameIds.includes(frameId)
+      ) {
+        pathsByFrameId.set(frameId, [
+          ...(pathsByFrameId.get(frameId) ?? []),
+          track.path,
+        ]);
+      }
+    }
+    let allWritten = pathsByFrameId.size > 0;
+    for (const [frameId, paths] of pathsByFrameId) {
+      allWritten = (await writeTags(paths, [{ frameId, value }])) && allWritten;
+    }
+    if (!allWritten) {
+      return;
+    }
+    const next = [
+      ...new Set(
+        ($.getMusicPanelSelections(getState())[panel] ?? [])
+          .map((selected) => (targets.includes(selected) ? value : selected))
+          .filter(Boolean),
+      ),
+    ];
+    dispatch(
+      A.setMusicPanelSelection(panel, next.length > 0 ? next : undefined),
+    );
+  }
 
   function handleItemClick(value: string, event: React.MouseEvent) {
     if (event.metaKey || event.ctrlKey) {
@@ -1286,6 +1346,24 @@ function FilterPanel({
         currentCursor !== null ? currentItems.indexOf(currentCursor) : -1;
 
       switch (event.key) {
+        case 'F2': {
+          event.preventDefault();
+          if (currentCursor !== null && currentItems.includes(currentCursor)) {
+            const selected = (
+              $.getMusicPanelSelections(getState())[panel] ?? []
+            ).filter((item) => currentItems.includes(item));
+            const targets = selected.includes(currentCursor)
+              ? selected
+              : [currentCursor];
+            rename.start({
+              focused: currentCursor,
+              targets,
+              value: currentCursor,
+              initialValue: currentCursor,
+            });
+          }
+          break;
+        }
         case 'ArrowUp': {
           event.preventDefault();
           // Shift extends the range selection instead of moving the cursor —
@@ -1447,6 +1525,18 @@ function FilterPanel({
             isSelected={effectiveSelections.includes(value)}
             isCursor={value === cursor}
             onClick={(event) => handleItemClick(value, event)}
+            isRenameTarget={rename.state?.targets.includes(value) ?? false}
+            rename={
+              rename.state?.focused === value
+                ? {
+                    value: rename.state.value,
+                    placeholder: '',
+                    onChange: rename.onChange,
+                    onKeyDown: rename.onKeyDown,
+                    onBlur: rename.onBlur,
+                  }
+                : null
+            }
           />
         ))}
       </div>
@@ -1461,6 +1551,8 @@ function FilterPanelItem({
   isSelected,
   isCursor,
   onClick,
+  isRenameTarget,
+  rename,
 }: {
   panel: T.MusicPanelType;
   value: string;
@@ -1468,6 +1560,8 @@ function FilterPanelItem({
   isSelected: boolean;
   isCursor: boolean;
   onClick: (event: React.MouseEvent) => void;
+  isRenameTarget: boolean;
+  rename: InlineRename | null;
 }) {
   const divRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -1479,19 +1573,78 @@ function FilterPanelItem({
 
   return (
     <div
-      className={`musicFilterPanelItem${isSelected ? ' selected' : ''}`}
+      className={`musicFilterPanelItem${isSelected ? ' selected' : ''}${isRenameTarget ? ' renameTarget' : ''}`}
       role="option"
       aria-selected={isSelected}
       id={`music-panel-${panel}-${index}`}
       ref={divRef}
       onClick={onClick}
     >
-      {value}
+      {rename ? (
+        <input
+          className="musicRenameInput"
+          autoFocus
+          value={rename.value}
+          placeholder={rename.placeholder}
+          onChange={(event) => rename.onChange(event.target.value)}
+          onKeyDown={rename.onKeyDown}
+          onBlur={rename.onBlur}
+          onClick={(event) => event.stopPropagation()}
+        />
+      ) : (
+        value
+      )}
     </div>
   );
 }
 
 const sizeEstimate = 32;
+
+function useInlineRename<S extends { value: string; initialValue: string }>(
+  returnFocusRef: React.RefObject<HTMLElement | null>,
+  onCommit: (state: S) => void,
+) {
+  const [state, setState] = React.useState<S | null>(null);
+  const stateRef = React.useRef(state);
+  stateRef.current = state;
+  const onCommitRef = React.useRef(onCommit);
+  onCommitRef.current = onCommit;
+  const cancelRef = React.useRef(false);
+
+  function onBlur() {
+    const current = stateRef.current;
+    setState(null);
+    if (cancelRef.current) {
+      cancelRef.current = false;
+    } else if (current && current.value !== current.initialValue) {
+      onCommitRef.current(current);
+    }
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter' || event.key === 'Escape') {
+      event.preventDefault();
+      // Otherwise the event reaches the list's own handler once focus moves
+      // back to it, which would play the track or clear the selection.
+      event.stopPropagation();
+      cancelRef.current = event.key === 'Escape';
+      returnFocusRef.current?.focus();
+    }
+  }
+
+  function onChange(value: string) {
+    setState((current) => current && { ...current, value });
+  }
+
+  return { state, start: setState, onChange, onKeyDown, onBlur };
+}
+
+interface PanelRenamingState {
+  focused: string;
+  targets: string[];
+  value: string;
+  initialValue: string;
+}
 
 interface RenamingState {
   paths: string[];
@@ -1501,7 +1654,7 @@ interface RenamingState {
   placeholder: string;
 }
 
-interface TrackRename {
+interface InlineRename {
   value: string;
   placeholder: string;
   onChange: (value: string) => void;
@@ -1523,58 +1676,10 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
   const contextMenuRef = useTrackContextMenu();
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
-  const server = $$.getCurrentServer();
-  const trackSource = useMusicLibraryTrackSource();
-  const trackSourceRef = React.useRef(trackSource);
-  trackSourceRef.current = trackSource;
-
-  const [renaming, setRenaming] = React.useState<RenamingState | null>(null);
-  const renamingRef = React.useRef(renaming);
-  renamingRef.current = renaming;
-  const cancelRenameRef = React.useRef(false);
-
-  async function commitRename({ paths, value }: RenamingState) {
-    const changes: T.TrackTagUpdate[] = [{ frameId: 'TIT2', value }];
-    try {
-      const updated = await writeTrackTags(server.url, paths, changes);
-      const { tracks: allTracks, updateTracks } = trackSourceRef.current;
-      updateTracks(
-        allTracks.map((track) =>
-          updated.has(track.path)
-            ? applyIndexedTrackChanges(track, changes)
-            : track,
-        ),
-      );
-      if (updated.size < paths.length) {
-        throw new Error('Not every track was renamed.');
-      }
-    } catch {
-      dispatch(
-        A.addMessage({ message: 'Could not rename the track.', timeout: true }),
-      );
-    }
-  }
-
-  function handleRenameBlur() {
-    const current = renamingRef.current;
-    setRenaming(null);
-    if (cancelRenameRef.current) {
-      cancelRenameRef.current = false;
-    } else if (current && current.value !== current.initialValue) {
-      void commitRename(current);
-    }
-  }
-
-  function handleRenameKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter' || event.key === 'Escape') {
-      event.preventDefault();
-      // Otherwise the event reaches the list's own handler once focus moves
-      // back to it, which would play the track or clear the selection.
-      event.stopPropagation();
-      cancelRenameRef.current = event.key === 'Escape';
-      listRef.current?.focus();
-    }
-  }
+  const writeTags = useWriteTrackTags();
+  const rename = useInlineRename<RenamingState>(listRef, ({ paths, value }) => {
+    void writeTags(paths, [{ frameId: 'TIT2', value }]);
+  });
 
   React.useEffect(() => {
     const el = listRef.current;
@@ -1799,11 +1904,11 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
           return;
         }
         const titles = new Map(
-          trackSourceRef.current.tracks.map((t) => [t.path, t.title ?? '']),
+          $.getMusicTracks(getState()).map((t) => [t.path, t.title ?? '']),
         );
         const values = new Set(paths.map((path) => titles.get(path) ?? ''));
         const value = values.size === 1 ? [...values][0] : '';
-        setRenaming({
+        rename.start({
           paths,
           focusedPath: paths.includes(currentPath ?? '')
             ? (currentPath as string)
@@ -1982,14 +2087,13 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
                   contextMenuRef.current?.open(event, track.path)
                 }
                 rename={
-                  renaming?.focusedPath === track.path
+                  rename.state?.focusedPath === track.path
                     ? {
-                        value: renaming.value,
-                        placeholder: renaming.placeholder,
-                        onChange: (value) =>
-                          setRenaming({ ...renaming, value }),
-                        onKeyDown: handleRenameKeyDown,
-                        onBlur: handleRenameBlur,
+                        value: rename.state.value,
+                        placeholder: rename.state.placeholder,
+                        onChange: rename.onChange,
+                        onKeyDown: rename.onKeyDown,
+                        onBlur: rename.onBlur,
                       }
                     : null
                 }
@@ -2021,7 +2125,7 @@ function Track({
   onClick: (event: React.MouseEvent) => void;
   onContextMenu: (event: React.MouseEvent) => void;
   onPlay: (path: string) => void;
-  rename: TrackRename | null;
+  rename: InlineRename | null;
   offsetTop: number;
 }) {
   return (
@@ -2050,7 +2154,7 @@ function Track({
       {rename ? (
         <span className="musicTrackTitle editing">
           <input
-            className="musicTrackTitleInput"
+            className="musicRenameInput"
             autoFocus
             value={rename.value}
             placeholder={rename.placeholder}
