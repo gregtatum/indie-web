@@ -272,11 +272,8 @@ describe('<EditTrackModal> with real server', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
-    await waitFor(async () => {
-      expect(frameValue(await fetchTrackTags('/a.mp3'), 'TPE1')).toBe(
-        'New Artist',
-      );
-    });
+    const tags = await fetchTrackTags('/a.mp3');
+    expect(frameValue(tags, 'TPE1')).toBe('New Artist');
   }, 30_000);
 
   it('persists the prefer-composer-grouping private tag from the Details form', async () => {
@@ -541,11 +538,63 @@ describe('<EditTrackModal> with real server', () => {
 
     await screen.findByText(/Could not save/);
     expect(screen.getByText('/missing.mp3')).toBeTruthy();
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('dialog')).toBeTruthy();
 
     // The tracks that could be written were written.
     const tags = await fetchTrackTags('/a.mp3');
     expect(frameValue(tags, 'TCON')).toBe('New Genre');
+  }, 30_000);
+
+  it('refuses a numeric genre from the bulk modal and leaves the files untouched', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await openBulkEditModal(store, ['/a.mp3', '/b.mp3'], 'Song A');
+
+    const genreInput = await waitForEnabledField('Genre');
+    await act(async () => {
+      fireEvent.change(genreInput, { target: { value: '80' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+
+    await screen.findByText(/The genre "80" can't be just a number/);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    for (const path of ['/a.mp3', '/b.mp3']) {
+      expect(frameValue(await fetchTrackTags(path), 'TCON')).toBe('Rock');
+      expect((await fetchIndexTrack(path))?.genre).toBe('Rock');
+    }
+  }, 30_000);
+
+  it('refuses a numeric genre renamed from the filter panel and leaves the library untouched', async () => {
+    await writeAlbumA();
+    const { store } = await setup();
+    await screen.findByRole('option', { name: 'Rock' });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'Rock' }));
+    });
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      fireEvent.keyDown(document.body, { key: 'F2' });
+    });
+    const input = await screen.findByDisplayValue('Rock');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '80' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+
+    await screen.findByText(/The genre "80" can't be just a number/);
+    expect(screen.queryByRole('option', { name: '80' })).toBeNull();
+    expect(
+      (store.getState() as T.State).music.tracks.map(
+        (track: T.TrackMetadata) => track.genre,
+      ),
+    ).toEqual(['Rock', 'Rock']);
+    for (const path of ['/a.mp3', '/b.mp3']) {
+      expect(frameValue(await fetchTrackTags(path), 'TCON')).toBe('Rock');
+      expect((await fetchIndexTrack(path))?.genre).toBe('Rock');
+    }
   }, 30_000);
 
   it('edits an m4a track and disables the fields m4a cannot hold', async () => {
@@ -852,9 +901,6 @@ describe('<EditTrackModal> with real server', () => {
     });
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Song A' })).toBeNull();
-    });
-    await act(async () => {
-      await waitForNetworkIdle();
     });
 
     await openEditModal('Song A');

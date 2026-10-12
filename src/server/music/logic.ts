@@ -752,6 +752,10 @@ const NUMERIC_FRAME_VALIDATORS: Record<string, (value: string) => boolean> = {
   TBPM: isDigitsOnly,
 };
 
+function isNumericGenreReference(value: string): boolean {
+  return /^\s*\d+\s*$/.test(value) || /^\s*\(\d+\)/.test(value);
+}
+
 export function buildNodeId3Tags(
   changes: T.WriteTrackTagsRequest['changes'],
 ): Record<string, unknown> {
@@ -770,6 +774,11 @@ export function buildNodeId3Tags(
     const numericValidator = NUMERIC_FRAME_VALIDATORS[frameId];
     if (numericValidator && value !== '' && !numericValidator(value)) {
       throw new ClientError(`${frameId} must be numeric, got: "${value}"`);
+    }
+    if (frameId === 'TCON' && isNumericGenreReference(value)) {
+      throw new ClientError(
+        `The genre "${value}" can't be just a number, because players treat numbers as preset genres. Try a word, like "1980s".`,
+      );
     }
     if (frameId === 'COMM') {
       tags.comment = { language: 'eng', shortText: '', text: value };

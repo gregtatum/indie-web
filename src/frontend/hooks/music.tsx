@@ -552,8 +552,13 @@ export function useWriteTrackTags() {
           throw new Error('Not every track was written.');
         }
         return true;
-      } catch {
-        dispatch(A.addMessage({ message: 'Could not rename.', timeout: true }));
+      } catch (error) {
+        dispatch(
+          A.addMessage({
+            message: `Could not rename. ${error instanceof Error ? error.message : ''}`,
+            timeout: true,
+          }),
+        );
         return false;
       }
     },

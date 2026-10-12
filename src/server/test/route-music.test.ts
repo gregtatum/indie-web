@@ -455,6 +455,39 @@ describe('POST /music/music-index/scan incremental behavior', () => {
       assert.equal(tracks.get('/bulk-index-b.mp3')?.genre, 'New Genre');
     }),
   );
+
+  it(
+    'rejects numeric genres, which players read as ID3v1 genre codes',
+    withLogs(Array(4).fill('[400err ]'), async () => {
+      await writeFile(
+        join(server.mountDir, 'numeric-genre.mp3'),
+        buildMp3WithTags({ genre: '80s' }),
+      );
+
+      for (const value of ['80', ' 80 ', '(80)', '(80)Folk']) {
+        const res = await fetch(`${server.baseUrl}/music/write-track-tags`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paths: ['/numeric-genre.mp3'],
+            changes: [{ frameId: 'TCON', value }],
+          }),
+        });
+        assert.equal(res.status, 400, value);
+        assert.match(await res.text(), /can't be just a number/);
+      }
+
+      const okRes = await fetch(`${server.baseUrl}/music/write-track-tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paths: ['/numeric-genre.mp3'],
+          changes: [{ frameId: 'TCON', value: '80s' }],
+        }),
+      });
+      assert.equal(okRes.status, 200);
+    }),
+  );
 });
 
 describe('GET /music/music-index/scan (SSE)', () => {

@@ -3,7 +3,7 @@ import * as Router from 'react-router-dom';
 import { $$, A, Hooks, T } from 'frontend';
 import { Tabs } from 'frontend/components/Tabs';
 import { throttle } from 'shared/utils';
-import { getDirName, getPathFileName } from 'frontend/utils';
+import { getDirName, getGeneration, getPathFileName } from 'frontend/utils';
 import { ArtworkTab, type PendingArtwork } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
 import {
@@ -333,6 +333,7 @@ export const TrackEditorPanel = React.forwardRef<
     React.useState(false);
   const [bulkForceLoadAll, setBulkForceLoadAll] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const failureMessageGeneration = React.useRef(getGeneration());
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
   const [pendingArtwork, setPendingArtwork] =
     React.useState<PendingArtwork | null>(null);
@@ -710,7 +711,7 @@ export const TrackEditorPanel = React.forwardRef<
     const savedFormState = { ...formState };
     const artworkPath = editTracks[0]?.path;
     const artwork = pendingArtwork;
-    onClose?.();
+    dispatch(A.dismissMessage(failureMessageGeneration.current));
     try {
       if (artwork) {
         const res = await fetch(
@@ -761,6 +762,7 @@ export const TrackEditorPanel = React.forwardRef<
                   result={result}
                 />
               ),
+              generation: failureMessageGeneration.current,
             }),
           );
           return;
@@ -779,10 +781,12 @@ export const TrackEditorPanel = React.forwardRef<
         }
       }
       setCloseConfirmPending(false);
+      onClose?.();
     } catch (error) {
       dispatch(
         A.addMessage({
           message: `Could not save track details. ${error instanceof Error ? error.message : ''}`,
+          generation: failureMessageGeneration.current,
         }),
       );
     } finally {
