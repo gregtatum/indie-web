@@ -1,6 +1,10 @@
 import * as React from 'react';
 import { $$, T, A, Hooks, $ } from 'frontend';
-import { UnhandledCaseError, getKeyboardString } from 'frontend/utils';
+import {
+  UnhandledCaseError,
+  ensureExists,
+  getKeyboardString,
+} from 'frontend/utils';
 import { Splitter } from 'frontend/components/Splitter';
 import { upgradeMusicIndex } from 'frontend/logic/music/music-index-upgraders';
 import { getTrackFilterArtist } from 'frontend/logic/music/metadata';
@@ -23,6 +27,18 @@ import {
   layoutColumns,
   resizeColumnsOnDrag,
 } from './column-resize';
+
+const TrackContextMenuContext =
+  React.createContext<React.RefObject<TrackContextMenuHandle | null> | null>(
+    null,
+  );
+
+function useTrackContextMenu() {
+  return ensureExists(
+    React.useContext(TrackContextMenuContext),
+    'Expected a TrackContextMenu provider.',
+  );
+}
 
 interface LoadProgress {
   loaded: number;
@@ -99,6 +115,7 @@ export function MusicLibraryView({
 }: MusicLibraryViewProps) {
   const server = $$.getCurrentServer();
   const { dispatch, getState } = Hooks.useStore();
+  const contextMenuRef = React.useRef<TrackContextMenuHandle | null>(null);
   const [error, setError] = React.useState<React.ReactNode>(null);
   const [loadProgress, setLoadProgress] = React.useState<LoadProgress | null>(
     null,
@@ -343,36 +360,42 @@ export function MusicLibraryView({
   }
 
   return (
-    <div className="musicLibraryView">
-      <StagingPoolBanner />
-      <div className="musicLibraryBody">
-        <Splitter
-          direction="horizontal"
-          className="musicLibrarySidebarSplitter"
-          defaultOffset={400}
-          constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
-          start={isLoading ? <AlbumHeroSkeleton /> : <AlbumHero />}
-          end={
-            <div className="musicLibrarySplitterDropTarget" ref={importDropRef}>
-              {renderImportDropOverlay()}
-              <Splitter
-                direction="vertical"
-                className="musicLibrarySplitter"
-                start={<FilterPanels isLoading={isLoading} />}
-                end={
-                  <TracksView
-                    isLoading={isLoading}
-                    loadProgress={loadProgress}
-                  />
-                }
-                persistLocalStorage="musicLibrarySplitterOffset"
-              />
-            </div>
-          }
-          persistLocalStorage="musicLibrarySidebarSplitterOffset"
-        />
+    <TrackContextMenuContext.Provider value={contextMenuRef}>
+      <TrackContextMenu ref={contextMenuRef} />
+      <div className="musicLibraryView">
+        <StagingPoolBanner />
+        <div className="musicLibraryBody">
+          <Splitter
+            direction="horizontal"
+            className="musicLibrarySidebarSplitter"
+            defaultOffset={400}
+            constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
+            start={isLoading ? <AlbumHeroSkeleton /> : <AlbumHero />}
+            end={
+              <div
+                className="musicLibrarySplitterDropTarget"
+                ref={importDropRef}
+              >
+                {renderImportDropOverlay()}
+                <Splitter
+                  direction="vertical"
+                  className="musicLibrarySplitter"
+                  start={<FilterPanels isLoading={isLoading} />}
+                  end={
+                    <TracksView
+                      isLoading={isLoading}
+                      loadProgress={loadProgress}
+                    />
+                  }
+                  persistLocalStorage="musicLibrarySplitterOffset"
+                />
+              </div>
+            }
+            persistLocalStorage="musicLibrarySidebarSplitterOffset"
+          />
+        </div>
       </div>
-    </div>
+    </TrackContextMenuContext.Provider>
   );
 }
 
@@ -1126,6 +1149,7 @@ function FilterPanel({
   tracks: T.TrackMetadata[];
 }) {
   const { dispatch } = Hooks.useStore();
+  const contextMenuRef = useTrackContextMenu();
   const panelSelections = $$.getMusicPanelSelections();
   const selections = panelSelections[panel] ?? [];
 
@@ -1391,6 +1415,9 @@ function FilterPanel({
         tabIndex={0}
         aria-activedescendant={activeDescendant}
         ref={listRef}
+        onContextMenu={(event) =>
+          contextMenuRef.current?.openForFilteredTracks(event)
+        }
       >
         <div
           className={`musicFilterPanelItem${allSelected ? ' selected' : ''}`}
@@ -1472,7 +1499,7 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
   const { getState, dispatch } = Hooks.useStore();
 
   const listRef = React.useRef<HTMLDivElement | null>(null);
-  const contextMenuRef = React.useRef<TrackContextMenuHandle | null>(null);
+  const contextMenuRef = useTrackContextMenu();
   const tracksRef = React.useRef(tracks);
   tracksRef.current = tracks;
 
@@ -1619,6 +1646,14 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
       const keyboardString = getKeyboardString(event);
 
       switch (keyboardString) {
+        case 'Enter': {
+          if (!isFilterPanelFocused) {
+            break;
+          }
+          event.preventDefault();
+          contextMenuRef.current?.play(getShortcutTargetPaths());
+          return;
+        }
         case 'Meta+E':
         case 'Control+E': {
           event.preventDefault();
@@ -1635,23 +1670,6 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
         case 'Control+Shift+E': {
           event.preventDefault();
           contextMenuRef.current?.batchEdit(getShortcutTargetPaths());
-          return;
-        }
-        default:
-          break;
-      }
-
-      if (isFilterPanelFocused) {
-        return;
-      }
-
-      switch (keyboardString) {
-        case 'Meta+A':
-        case 'Control+A': {
-          event.preventDefault();
-          const allPaths = currentTracks.map((track) => track.path);
-          anchorPathRef.current = currentPath ?? allPaths[0] ?? null;
-          dispatch(A.setMusicSelectedTracks(allPaths));
           return;
         }
         case 'Meta+Enter':
@@ -1683,8 +1701,23 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
           contextMenuRef.current?.deleteTracks(getShortcutTargetPaths());
           return;
         }
+        case 'Meta+A':
+        case 'Control+A': {
+          if (isFilterPanelFocused) {
+            return;
+          }
+          event.preventDefault();
+          const allPaths = currentTracks.map((track) => track.path);
+          anchorPathRef.current = currentPath ?? allPaths[0] ?? null;
+          dispatch(A.setMusicSelectedTracks(allPaths));
+          return;
+        }
         default:
           break;
+      }
+
+      if (isFilterPanelFocused) {
+        return;
       }
 
       switch (event.key) {
@@ -1824,7 +1857,6 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
 
   return (
     <div className="musicTracksContainer">
-      <TrackContextMenu ref={contextMenuRef} />
       <div
         className="musicTracks"
         role="listbox"

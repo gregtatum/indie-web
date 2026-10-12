@@ -16,6 +16,8 @@ export interface TrackContextMenuHandle {
   edit(trackPaths: string[], tab?: T.MusicEditTab): void;
   batchEdit(trackPaths: string[]): void;
   open(event: React.MouseEvent, trackPath: string): void;
+  openForFilteredTracks(event: React.MouseEvent): void;
+  play(trackPaths: string[]): void;
   showInFiles(trackPath: string): void;
   revealInFileManager(trackPath: string): void;
   deleteTracks(trackPaths: string[]): void;
@@ -69,6 +71,24 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
       [dispatch, getState],
     );
 
+    const play = React.useCallback(
+      (trackPaths: string[]) => {
+        const tracks = $.getFilteredMusicTracks(getState());
+        if (trackPaths.length > 1) {
+          dispatch(
+            A.setMusicPlaybackQueue(
+              tracks.filter((t) => trackPaths.includes(t.path)),
+            ),
+          );
+          dispatch(A.musicPlaybackLoad(trackPaths[0]));
+        } else if (trackPaths.length === 1) {
+          dispatch(A.setMusicPlaybackQueue(tracks));
+          dispatch(A.musicPlaybackLoad(trackPaths[0]));
+        }
+      },
+      [dispatch, getState],
+    );
+
     const revealInFileManager = React.useCallback(
       (trackPath: string) => {
         const fs = $.getServerFSOrNull(getState());
@@ -95,41 +115,67 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
       [dispatch],
     );
 
+    const openMenu = React.useCallback(
+      (event: React.MouseEvent, trackPath: string) => {
+        event.preventDefault();
+        const { clientX: x, clientY: y } = event;
+        anchorRef.current = {
+          getBoundingClientRect: () =>
+            ({
+              top: y,
+              bottom: y,
+              left: x,
+              right: x + MENU_WIDTH,
+              width: MENU_WIDTH,
+              height: 0,
+              x,
+              y,
+              toJSON() {
+                return this;
+              },
+            }) as DOMRect,
+          contains: () => false,
+          focus: () => {},
+        } as unknown as HTMLElement;
+        setContextTrackPath(trackPath);
+        setOpenGeneration((n) => n + 1);
+        setOpenEventDetail(event.detail);
+      },
+      [],
+    );
+
     React.useImperativeHandle(
       ref,
       () => ({
         edit: editTracks,
         batchEdit,
-        open(event, trackPath) {
-          event.preventDefault();
-          const { clientX: x, clientY: y } = event;
-          anchorRef.current = {
-            getBoundingClientRect: () =>
-              ({
-                top: y,
-                bottom: y,
-                left: x,
-                right: x + MENU_WIDTH,
-                width: MENU_WIDTH,
-                height: 0,
-                x,
-                y,
-                toJSON() {
-                  return this;
-                },
-              }) as DOMRect,
-            contains: () => false,
-            focus: () => {},
-          } as unknown as HTMLElement;
-          setContextTrackPath(trackPath);
-          setOpenGeneration((n) => n + 1);
-          setOpenEventDetail(event.detail);
+        open: openMenu,
+        openForFilteredTracks(event) {
+          const paths = $.getFilteredMusicTracks(getState()).map(
+            (track) => track.path,
+          );
+          if (paths.length === 0) {
+            return;
+          }
+          dispatch(A.setMusicSelectedTracks(paths));
+          openMenu(event, paths[0]);
         },
+        play,
         showInFiles,
         revealInFileManager,
         deleteTracks,
       }),
-      [editTracks, batchEdit, showInFiles, revealInFileManager, deleteTracks],
+      [
+        editTracks,
+        batchEdit,
+        openMenu,
+        getState,
+        dispatch,
+        play,
+        showInFiles,
+        revealInFileManager,
+        deleteTracks,
+      ],
     );
 
     const selectedPaths = $$.getMusicSelectedTrackPaths();
@@ -154,18 +200,11 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
         children: 'Play',
         shortcut: 'Enter',
         onClick() {
-          const tracks = $.getFilteredMusicTracks(getState());
-          if (isMultiSelect) {
-            dispatch(
-              A.setMusicPlaybackQueue(
-                tracks.filter((t) => selectedPaths.includes(t.path)),
-              ),
-            );
-            dispatch(A.musicPlaybackLoad(selectedPaths[0]));
-          } else if (contextTrackPath) {
-            dispatch(A.setMusicPlaybackQueue(tracks));
-            dispatch(A.musicPlaybackLoad(contextTrackPath));
-          }
+          play(
+            isMultiSelect
+              ? selectedPaths
+              : [contextTrackPath].filter((path) => path !== null),
+          );
         },
       },
       ...(isMultiSelect

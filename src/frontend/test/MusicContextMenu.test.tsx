@@ -414,6 +414,90 @@ describe('track right-click context menu', () => {
   });
 });
 
+describe('filter panel context menu and shortcuts', () => {
+  async function filterToRock() {
+    await screen.findByText('Song A');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'Rock' }));
+    });
+  }
+
+  it('right-clicking a filter panel offers the actions for the filtered tracks', async () => {
+    const { store } = setup();
+    await filterToRock();
+
+    await act(async () => {
+      fireEvent.contextMenu(screen.getByRole('listbox', { name: 'genre' }));
+    });
+    await screen.findByRole('button', { name: 'Batch Edit' });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+    ]);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    });
+    const state = store.getState();
+    expect($.getMusicPlaybackTrackPath(state)).toBe('/music/a.mp3');
+    expect($.getMusicPlaybackQueue(state).map((t) => t.path)).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+    ]);
+  });
+
+  it('enter plays the filtered tracks when a filter panel has focus', async () => {
+    const { store } = setup();
+    await filterToRock();
+
+    await act(async () => {
+      screen.getByRole('listbox', { name: 'genre' }).focus();
+      fireEvent.keyDown(document.body, { key: 'Enter' });
+    });
+    const state = store.getState();
+    expect($.getMusicPlaybackTrackPath(state)).toBe('/music/a.mp3');
+    expect($.getMusicPlaybackQueue(state).map((t) => t.path)).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+    ]);
+  });
+
+  it('cmd+delete deletes the filtered tracks after confirming', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      fetchMock.post(`${FAKE_SERVER.url}/music/delete-tracks`, {
+        body: JSON.stringify({
+          deleted: ['/music/c.mp3'],
+          errors: [],
+          index: { status: 'updated', message: null },
+        }),
+        status: 200,
+      });
+      const { store } = setup();
+      await screen.findByText('Song A');
+      await act(async () => {
+        fireEvent.click(screen.getByRole('option', { name: 'Jazz' }));
+      });
+      await act(async () => {
+        screen.getByRole('listbox', { name: 'genre' }).focus();
+        fireEvent.keyDown(document.body, { key: 'Delete', metaKey: true });
+      });
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete Song C?',
+      );
+      await waitFor(() => {
+        expect($.getMusicTracks(store.getState()).map((t) => t.path)).toEqual([
+          '/music/a.mp3',
+          '/music/b.mp3',
+        ]);
+      });
+    } finally {
+      confirmSpy.mockRestore();
+    }
+  });
+});
+
 describe('track list keyboard shortcuts', () => {
   function focusTrackList() {
     screen.getByRole('listbox', { name: 'Tracks' }).focus();
