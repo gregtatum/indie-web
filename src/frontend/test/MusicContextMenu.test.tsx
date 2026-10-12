@@ -561,7 +561,7 @@ describe('filter panel context menu and shortcuts', () => {
     expect(screen.queryByRole('option', { name: 'Rock' })).toBeNull();
   });
 
-  it('renames a large genre in chunks and reports progress until done', async () => {
+  async function renameManyTracks(firstResponseDelayMs: number) {
     const manyTracks = Array.from({ length: 25 }, (_, i) => ({
       ...TRACKS[0],
       path: `/music/many-${i}.mp3`,
@@ -571,8 +571,13 @@ describe('filter panel context menu and shortcuts', () => {
     const { store } = setup(manyTracks);
     fetchMock.post(
       `${FAKE_SERVER.url}/music/write-track-tags`,
-      ({ options }) => {
+      async ({ options }) => {
         progressSeen.push($.getMessages(store.getState())[0]?.progress);
+        if (progressSeen.length === 1) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, firstResponseDelayMs),
+          );
+        }
         const { paths } = JSON.parse(options.body as string);
         return {
           body: JSON.stringify({
@@ -589,12 +594,24 @@ describe('filter panel context menu and shortcuts', () => {
     await renamePanelItem('genre', 'Rock', 'Classic Rock');
 
     await screen.findByRole('option', { name: 'Classic Rock' });
-    expect(progressSeen).toEqual([
-      { loaded: 0, total: 25 },
+    expect($.getMessages(store.getState())).toEqual([]);
+    return progressSeen;
+  }
+
+  it('shows rename progress once a write is slow, then dismisses it', async () => {
+    expect(await renameManyTracks(600)).toEqual([
+      undefined,
       { loaded: 10, total: 25 },
       { loaded: 20, total: 25 },
     ]);
-    expect($.getMessages(store.getState())).toEqual([]);
+  });
+
+  it('never shows rename progress for fast writes', async () => {
+    expect(await renameManyTracks(0)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
   });
 
   it('keeps concurrent progress messages in place as each one updates', async () => {

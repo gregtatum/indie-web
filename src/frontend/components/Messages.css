@@ -86,3 +86,16 @@
   background: #fff;
   transition: width 120ms linear;
 }
+
+.messagesErrorList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.messagesErrorPath {
+  font-weight: 600;
+  margin-right: 6px;
+}

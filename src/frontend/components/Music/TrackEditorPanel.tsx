@@ -25,10 +25,10 @@ import {
 } from 'shared/music';
 import type {
   TrackTagsResponse,
-  WriteTrackTagsRequest,
   WriteTrackTagsResponse,
   WriteFolderArtworkResponse,
 } from 'shared/@types/shared';
+import { writeTrackTagsWithProgress } from 'frontend/hooks/music';
 import './EditTrackModal.css';
 
 const GROUP_LABELS: Record<string, string> = {
@@ -64,6 +64,36 @@ const INDEXED_DETAIL_FIELD_KEYS: Partial<
   trackNum: 'track',
 } satisfies Partial<Record<DetailFormValueKey, keyof T.TrackMetadata>>;
 
+const MAX_SAVE_FAILURES_SHOWN = 3;
+
+function SaveFailureMessage({
+  attemptedCount,
+  result,
+}: {
+  attemptedCount: number;
+  result: WriteTrackTagsResponse;
+}) {
+  const shown = result.errors.slice(0, MAX_SAVE_FAILURES_SHOWN);
+  const hiddenCount = result.errors.length - shown.length;
+  return (
+    <>
+      Saved {result.updated.length} of {attemptedCount} tracks.
+      {result.errors.length === 0
+        ? ' The server did not update any tracks.'
+        : ` Could not save ${result.errors.length}:`}
+      <ul className="messagesErrorList">
+        {shown.map((error) => (
+          <li key={`${error.path}:${error.message}`}>
+            <span className="messagesErrorPath">{error.path}</span>
+            {error.message}
+          </li>
+        ))}
+        {hiddenCount > 0 && <li>and {hiddenCount} more</li>}
+      </ul>
+    </>
+  );
+}
+
 export interface TrackEditorPanelProps {
   trackPath: string | null;
   onClose: (() => void) | null;
@@ -74,17 +104,6 @@ export interface TrackEditorPanelHandle {
   requestClose(): void;
 }
 
-type SaveStatus = 'idle' | 'saving' | 'error';
-type SaveNotice =
-  | {
-      type: 'partial-error';
-      errors: WriteTrackTagsResponse['errors'];
-      index: WriteTrackTagsResponse['index'];
-      attemptedCount: number;
-      updatedCount: number;
-    }
-  | { type: 'index-error'; index: WriteTrackTagsResponse['index'] }
-  | { type: 'technical-error'; message: string };
 type BulkTagsState =
   | { status: 'idle' }
   | { status: 'loading'; loaded: number; total: number }
@@ -313,9 +332,7 @@ export const TrackEditorPanel = React.forwardRef<
   const [showBulkLoadingNotice, setShowBulkLoadingNotice] =
     React.useState(false);
   const [bulkForceLoadAll, setBulkForceLoadAll] = React.useState(false);
-  const [saveStatus, setSaveStatus] = React.useState<SaveStatus>('idle');
-  const [saveNotice, setSaveNotice] = React.useState<SaveNotice | null>(null);
-  const [showAllSaveErrors, setShowAllSaveErrors] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
   const [pendingArtwork, setPendingArtwork] =
     React.useState<PendingArtwork | null>(null);
@@ -408,11 +425,6 @@ export const TrackEditorPanel = React.forwardRef<
 
   function setField(key: DetailFormValueKey, value: string) {
     setCloseConfirmPending(false);
-    setSaveNotice(null);
-    setShowAllSaveErrors(false);
-    if (saveStatus === 'error') {
-      setSaveStatus('idle');
-    }
     setFormState((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -597,9 +609,7 @@ export const TrackEditorPanel = React.forwardRef<
     setShowBulkLoadingNotice(false);
     setBulkForceLoadAll(false);
     abortBulkTagLoad();
-    setSaveStatus('idle');
-    setSaveNotice(null);
-    setShowAllSaveErrors(false);
+    setIsSaving(false);
     setCloseConfirmPending(false);
     setPendingArtwork(null);
     setUndoneArtwork(null);
@@ -674,7 +684,7 @@ export const TrackEditorPanel = React.forwardRef<
 
   React.useImperativeHandle(ref, () => ({ requestClose: handleClose }));
 
-  async function handleSave(): Promise<boolean> {
+  async function handleSave() {
     let savePaths: string[] = [];
     if (isBulkEdit) {
       savePaths = selectedTrackPaths;
@@ -684,29 +694,31 @@ export const TrackEditorPanel = React.forwardRef<
     if (
       savePaths.length === 0 ||
       !isDirty ||
-      saveStatus === 'saving' ||
+      isSaving ||
       (!isBulkEdit && tagsState.status !== 'loaded') ||
       (isBulkEdit && bulkTagsState.status === 'loading')
     ) {
-      return false;
+      return;
     }
 
     const changes = buildDetailChanges(formState, baselineFormState);
     if (changes.length === 0 && !pendingArtwork) {
-      return false;
+      return;
     }
 
-    setSaveStatus('saving');
-    setSaveNotice(null);
-    setShowAllSaveErrors(false);
+    setIsSaving(true);
+    const savedFormState = { ...formState };
+    const artworkPath = editTracks[0]?.path;
+    const artwork = pendingArtwork;
+    onClose?.();
     try {
-      if (pendingArtwork) {
+      if (artwork) {
         const res = await fetch(
-          `${server.url}/music/artwork?path=${encodeURIComponent(editTracks[0].path)}`,
+          `${server.url}/music/artwork?path=${encodeURIComponent(artworkPath)}`,
           {
             method: 'POST',
-            headers: { 'Content-Type': pendingArtwork.contentType },
-            body: pendingArtwork.data,
+            headers: { 'Content-Type': artwork.contentType },
+            body: artwork.data,
           },
         );
         if (!res.ok) {
@@ -721,92 +733,66 @@ export const TrackEditorPanel = React.forwardRef<
         setPendingArtwork(null);
         setUndoneArtwork(null);
         revokeArtworkPreviews();
-        if (changes.length === 0) {
-          setSaveStatus('idle');
-          setCloseConfirmPending(false);
-          return true;
+      }
+      if (changes.length > 0) {
+        let currentTracks = tracks;
+        const result = await writeTrackTagsWithProgress({
+          dispatch,
+          serverUrl: server.url,
+          paths: savePaths,
+          changes,
+          verb: 'Saving',
+          onChunk: ({ updated }) => {
+            const updatedPaths = new Set(updated);
+            currentTracks = currentTracks.map((t) =>
+              updatedPaths.has(t.path)
+                ? applyIndexedTrackChanges(t, changes)
+                : t,
+            );
+            updateTracks(currentTracks);
+          },
+        });
+        if (result.errors.length > 0 || result.updated.length === 0) {
+          dispatch(
+            A.addMessage({
+              message: (
+                <SaveFailureMessage
+                  attemptedCount={savePaths.length}
+                  result={result}
+                />
+              ),
+            }),
+          );
+          return;
+        }
+        if (result.index.status === 'error') {
+          dispatch(
+            A.addMessage({
+              message: `Tags were saved, but the library index was not updated. ${result.index.message ?? ''} Scan the library if the list looks stale.`,
+              timeout: true,
+            }),
+          );
+        }
+        setBaselineFormState(savedFormState);
+        if (!isBulkEdit && !onClose) {
+          await loadTrackTags();
         }
       }
-      const body: WriteTrackTagsRequest = { paths: savePaths, changes };
-      const res = await fetch(`${server.url}/music/write-track-tags`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `${res.status}`);
-      }
-      const data = await (res.json() as Promise<WriteTrackTagsResponse>);
-      if (data.updated.length === 0) {
-        setSaveStatus('error');
-        setSaveNotice(
-          data.errors.length > 0
-            ? {
-                type: 'partial-error',
-                errors: data.errors,
-                index: data.index,
-                attemptedCount: savePaths.length,
-                updatedCount: data.updated.length,
-              }
-            : {
-                type: 'technical-error',
-                message: 'The server did not update any tracks.',
-              },
-        );
-        return false;
-      }
-
-      const updatedPathSet = new Set(data.updated);
-      updateTracks(
-        tracks.map((t) =>
-          updatedPathSet.has(t.path) ? applyIndexedTrackChanges(t, changes) : t,
-        ),
-      );
-
-      if (data.errors.length > 0) {
-        setSaveStatus('error');
-        setSaveNotice({
-          type: 'partial-error',
-          errors: data.errors,
-          index: data.index,
-          attemptedCount: savePaths.length,
-          updatedCount: data.updated.length,
-        });
-        return false;
-      }
-
-      setBaselineFormState({ ...formState });
-      setSaveStatus('idle');
       setCloseConfirmPending(false);
-
-      if (data.index.status === 'error') {
-        setSaveNotice({ type: 'index-error', index: data.index });
-      }
-      if (!isBulkEdit) {
-        await loadTrackTags();
-      }
-      return true;
     } catch (error) {
-      setSaveStatus('error');
-      setSaveNotice({
-        type: 'technical-error',
-        message:
-          error instanceof Error ? error.message : 'Unable to save tags.',
-      });
-      return false;
-    }
-  }
-
-  async function handleSaveAndClose() {
-    if (await handleSave()) {
-      onClose?.();
+      dispatch(
+        A.addMessage({
+          message: `Could not save track details. ${error instanceof Error ? error.message : ''}`,
+        }),
+      );
+    } finally {
+      setIsSaving(false);
     }
   }
 
   function handleDetailsSubmit(event: React.FormEvent) {
     event.preventDefault();
-    void handleSaveAndClose();
+    void handleSave();
   }
 
   const selectionDir =
@@ -1008,77 +994,6 @@ export const TrackEditorPanel = React.forwardRef<
       </div>,
     );
   }
-  if (saveNotice) {
-    let message: React.ReactNode;
-    let details: React.ReactNode = null;
-    if (saveNotice.type === 'partial-error') {
-      const hiddenCount = saveNotice.errors.length - 3;
-      const visibleErrors = showAllSaveErrors
-        ? saveNotice.errors
-        : saveNotice.errors.slice(0, 3);
-      message = (
-        <>
-          Saved {saveNotice.updatedCount} of {saveNotice.attemptedCount} tracks.
-          Could not save {saveNotice.errors.length} tracks.
-        </>
-      );
-      details = (
-        <>
-          <ul className="editTrackModalNoticeList">
-            {visibleErrors.map((error) => (
-              <li key={`${error.path}:${error.message}`}>
-                <span className="editTrackModalNoticePath">{error.path}</span>
-                <span>{error.message}</span>
-              </li>
-            ))}
-          </ul>
-          {!showAllSaveErrors && hiddenCount > 0 && (
-            <button
-              type="button"
-              className="editTrackModalIndexNoticeButton"
-              onClick={() => setShowAllSaveErrors(true)}
-            >
-              Show all failed tracks
-            </button>
-          )}
-          {saveNotice.index.status === 'error' && saveNotice.index.message && (
-            <div className="editTrackModalNoticeHelp">
-              Music index update failed: {saveNotice.index.message}
-            </div>
-          )}
-        </>
-      );
-    } else if (saveNotice.type === 'index-error') {
-      message = 'Tags were saved, but the library index was not updated.';
-      details = (
-        <div className="editTrackModalNoticeHelp">
-          {saveNotice.index.message} Check the server logs, then scan the
-          library if the list looks stale.
-        </div>
-      );
-    } else {
-      message = 'Could not save track details.';
-      details = (
-        <div className="editTrackModalNoticeHelp">
-          {saveNotice.message} Check the browser console and server logs for the
-          full error.
-        </div>
-      );
-    }
-    detailsNotices.push(
-      <div
-        key="save-notice"
-        className="editTrackModalIndexNotice editTrackModalIndexNotice-error"
-        role="status"
-      >
-        <div className="editTrackModalIndexNoticeLoading">
-          <span className="editTrackModalIndexNoticeText">{message}</span>
-          {details}
-        </div>
-      </div>,
-    );
-  }
-
   const detailRows: React.ReactNode[] = [];
 
   let pathRow: React.ReactNode = null;
@@ -1317,12 +1232,7 @@ export const TrackEditorPanel = React.forwardRef<
       ),
     },
   ];
-  let saveButtonLabel = 'Save';
-  if (saveStatus === 'saving') {
-    saveButtonLabel = 'Saving…';
-  } else if (saveStatus === 'error') {
-    saveButtonLabel = 'Save failed — retry';
-  }
+  const saveButtonLabel = isSaving ? 'Saving…' : 'Save';
   const effectiveActiveTab =
     isBulkEdit && activeTab === 'id3' ? 'details' : activeTab;
   let headerTitle = track?.title ?? 'Unknown Title';
@@ -1411,11 +1321,11 @@ export const TrackEditorPanel = React.forwardRef<
           className="editTrackModalSaveBtn"
           disabled={
             !isDirty ||
-            saveStatus === 'saving' ||
+            isSaving ||
             (!isBulkEdit && tagsState.status !== 'loaded') ||
             (isBulkEdit && bulkTagsState.status === 'loading')
           }
-          onClick={() => void handleSaveAndClose()}
+          onClick={() => void handleSave()}
         >
           {saveButtonLabel}
         </button>

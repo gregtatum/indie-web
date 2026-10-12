@@ -441,6 +441,58 @@ export async function writeTrackTags(
   return new Set(data.updated);
 }
 
+export const WRITE_TRACK_TAGS_CHUNK_SIZE = 10;
+
+/**
+ * Writes tags in small sequential requests so callers can show progress and
+ * update the library as each chunk lands. A failed request throws after the
+ * earlier chunks have already been handed to onChunk.
+ */
+export async function writeTrackTagsInChunks(
+  serverUrl: string,
+  paths: string[],
+  changes: TrackTagUpdate[],
+  {
+    onProgress,
+    onChunk,
+  }: {
+    onProgress?: (written: number) => void;
+    onChunk?: (response: WriteTrackTagsResponse) => void;
+  } = {},
+): Promise<WriteTrackTagsResponse> {
+  const result: WriteTrackTagsResponse = {
+    updated: [],
+    errors: [],
+    index: { status: 'updated', message: null },
+  };
+  for (
+    let start = 0;
+    start < paths.length;
+    start += WRITE_TRACK_TAGS_CHUNK_SIZE
+  ) {
+    onProgress?.(start);
+    const res = await fetch(`${serverUrl}/music/write-track-tags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paths: paths.slice(start, start + WRITE_TRACK_TAGS_CHUNK_SIZE),
+        changes,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error((await res.text()) || String(res.status));
+    }
+    const data = (await res.json()) as WriteTrackTagsResponse;
+    onChunk?.(data);
+    result.updated.push(...data.updated);
+    result.errors.push(...data.errors);
+    if (result.index.status !== 'error') {
+      result.index = data.index;
+    }
+  }
+  return result;
+}
+
 /**
  * Applies one save's tag changes to an already-loaded TrackMetadata so the
  * index reflects a write immediately, without waiting on a rescan.

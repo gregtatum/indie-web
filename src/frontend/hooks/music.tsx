@@ -1,11 +1,14 @@
 import * as React from 'react';
 import { A, $, $$, Hooks, T } from 'frontend';
 import { getDirName, getGeneration, getKeyboardString } from 'frontend/utils';
-import type { WriteFolderArtworkResponse } from 'shared/@types/shared';
+import type {
+  WriteFolderArtworkResponse,
+  WriteTrackTagsResponse,
+} from 'shared/@types/shared';
 import { compareTracksDefault } from 'shared/music';
 import {
   applyIndexedTrackChanges,
-  writeTrackTags,
+  writeTrackTagsInChunks,
   type MusicTrackSource,
 } from 'frontend/logic/music/metadata';
 
@@ -466,7 +469,56 @@ export function useMusicLibraryTrackSource(): MusicTrackSource {
   );
 }
 
-const WRITE_TRACK_TAGS_CHUNK_SIZE = 10;
+const WRITE_PROGRESS_DELAY = 500;
+
+export async function writeTrackTagsWithProgress({
+  dispatch,
+  serverUrl,
+  paths,
+  changes,
+  verb,
+  onChunk,
+}: {
+  dispatch: T.Dispatch;
+  serverUrl: string;
+  paths: string[];
+  changes: T.TrackTagUpdate[];
+  verb: string;
+  onChunk: (response: WriteTrackTagsResponse) => void;
+}): Promise<WriteTrackTagsResponse> {
+  const generation = getGeneration();
+  let loaded = 0;
+  let isShown = false;
+  const show = () => {
+    dispatch(
+      A.addMessage({
+        message: `${verb} ${loaded.toLocaleString()} / ${paths.length.toLocaleString()} tracks`,
+        progress: { loaded, total: paths.length },
+        generation,
+      }),
+    );
+  };
+  const showTimeout = setTimeout(() => {
+    isShown = true;
+    show();
+  }, WRITE_PROGRESS_DELAY);
+  try {
+    return await writeTrackTagsInChunks(serverUrl, paths, changes, {
+      onChunk,
+      onProgress: (written) => {
+        loaded = written;
+        if (isShown) {
+          show();
+        }
+      },
+    });
+  } finally {
+    clearTimeout(showTimeout);
+    if (isShown) {
+      dispatch(A.dismissMessage(generation));
+    }
+  }
+}
 
 export function useWriteTrackTags() {
   const dispatch = Hooks.useDispatch();
@@ -478,48 +530,30 @@ export function useWriteTrackTags() {
 
   return React.useCallback(
     async (paths: string[], changes: T.TrackTagUpdate[]): Promise<boolean> => {
-      const generation = getGeneration();
-      const showProgress = paths.length > WRITE_TRACK_TAGS_CHUNK_SIZE;
-      let written = 0;
       try {
-        for (
-          let start = 0;
-          start < paths.length;
-          start += WRITE_TRACK_TAGS_CHUNK_SIZE
-        ) {
-          if (showProgress) {
-            dispatch(
-              A.addMessage({
-                message: `Renaming ${written.toLocaleString()} / ${paths.length.toLocaleString()} tracks`,
-                progress: { loaded: written, total: paths.length },
-                generation,
-              }),
+        const result = await writeTrackTagsWithProgress({
+          dispatch,
+          serverUrl: server.url,
+          paths,
+          changes,
+          verb: 'Renaming',
+          onChunk: ({ updated }) => {
+            const updatedPaths = new Set(updated);
+            updateTracksRef.current(
+              $.getMusicTracks(getState()).map((track) =>
+                updatedPaths.has(track.path)
+                  ? applyIndexedTrackChanges(track, changes)
+                  : track,
+              ),
             );
-          }
-          const chunk = paths.slice(start, start + WRITE_TRACK_TAGS_CHUNK_SIZE);
-          const updated = await writeTrackTags(server.url, chunk, changes);
-          updateTracksRef.current(
-            $.getMusicTracks(getState()).map((track) =>
-              updated.has(track.path)
-                ? applyIndexedTrackChanges(track, changes)
-                : track,
-            ),
-          );
-          if (updated.size < chunk.length) {
-            throw new Error('Not every track was written.');
-          }
-          written += chunk.length;
+          },
+        });
+        if (result.updated.length < paths.length) {
+          throw new Error('Not every track was written.');
         }
-        dispatch(A.dismissMessage(generation));
         return true;
       } catch {
-        dispatch(
-          A.addMessage({
-            message: 'Could not rename.',
-            generation,
-            timeout: true,
-          }),
-        );
+        dispatch(A.addMessage({ message: 'Could not rename.', timeout: true }));
         return false;
       }
     },

@@ -272,8 +272,11 @@ describe('<EditTrackModal> with real server', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
-    const tags = await fetchTrackTags('/a.mp3');
-    expect(frameValue(tags, 'TPE1')).toBe('New Artist');
+    await waitFor(async () => {
+      expect(frameValue(await fetchTrackTags('/a.mp3'), 'TPE1')).toBe(
+        'New Artist',
+      );
+    });
   }, 30_000);
 
   it('persists the prefer-composer-grouping private tag from the Details form', async () => {
@@ -538,6 +541,7 @@ describe('<EditTrackModal> with real server', () => {
 
     await screen.findByText(/Could not save/);
     expect(screen.getByText('/missing.mp3')).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
 
     // The tracks that could be written were written.
     const tags = await fetchTrackTags('/a.mp3');
@@ -848,6 +852,9 @@ describe('<EditTrackModal> with real server', () => {
     });
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Song A' })).toBeNull();
+    });
+    await act(async () => {
+      await waitForNetworkIdle();
     });
 
     await openEditModal('Song A');
