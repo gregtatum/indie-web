@@ -72,6 +72,22 @@ describe('<Music> with real server', () => {
     return message;
   }
 
+  async function scanLibrary() {
+    await screen.findByText('Music library not found. Run a scan first.');
+    await act(async () => {
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Scan Library' }),
+      );
+    });
+    await waitForScanToFinish();
+  }
+
+  async function clickViewToggle(name: 'Files' | 'Library') {
+    await act(async () => {
+      await userEvent.click(screen.getByRole('link', { name }));
+    });
+  }
+
   it('renders the Scan Library button', async () => {
     await setup();
     await screen.findByRole('button', { name: 'Scan Library' });
@@ -725,5 +741,77 @@ describe('<Music> with real server', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     });
     expect(screen.queryByRole('dialog')).toBeNull();
+  }, 30_000);
+
+  it('keeps the loaded index when browsing files and returning', async () => {
+    await writeFile(
+      join(getServer().mountDir, 'Kept.mp3'),
+      buildMp3WithTags({ title: 'Kept Track', artist: 'Test Artist' }),
+    );
+
+    await setup();
+    await scanLibrary();
+    await screen.findByText('Kept Track', { selector: '.musicTrackTitle' });
+
+    await clickViewToggle('Files');
+    await screen.findByText('Kept', {
+      selector: '.listFileDisplayName',
+      exact: false,
+    });
+    await removeMusicIndex(getServer());
+    await clickViewToggle('Library');
+
+    await screen.findByText('Kept Track', { selector: '.musicTrackTitle' });
+    expect(
+      screen.queryByText('Music library not found. Run a scan first.'),
+    ).toBeNull();
+  }, 30_000);
+
+  it('drops the loaded index when a file is deleted in the files view', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      await writeFile(
+        join(getServer().mountDir, 'Doomed.mp3'),
+        buildMp3WithTags({ title: 'Doomed Track', artist: 'Test Artist' }),
+      );
+      await writeFile(
+        join(getServer().mountDir, 'Survivor.mp3'),
+        buildMp3WithTags({ title: 'Survivor Track', artist: 'Test Artist' }),
+      );
+
+      await setup();
+      await scanLibrary();
+      await screen.findByText('Doomed Track', { selector: '.musicTrackTitle' });
+
+      await clickViewToggle('Files');
+      const doomed = await screen.findByText('Doomed', {
+        selector: '.listFileDisplayName',
+        exact: false,
+      });
+      await act(async () => {
+        await userEvent.click(doomed);
+      });
+      await act(async () => {
+        await userEvent.keyboard('{Delete}');
+      });
+      await waitFor(() => {
+        expect(
+          screen.queryByText('Doomed', {
+            selector: '.listFileDisplayName',
+            exact: false,
+          }),
+        ).toBeNull();
+      });
+
+      await clickViewToggle('Library');
+      await screen.findByText('Survivor Track', {
+        selector: '.musicTrackTitle',
+      });
+      expect(
+        screen.queryByText('Doomed Track', { selector: '.musicTrackTitle' }),
+      ).toBeNull();
+    } finally {
+      confirmSpy.mockRestore();
+    }
   }, 30_000);
 });
