@@ -69,6 +69,7 @@ interface MenuProps {
   openEventDetail: React.MouseEvent['detail'];
   openGeneration: number;
   buttons: MenuButton[];
+  onCancel?: () => void;
   // Anchor via an explicit point rather than the measured element.
   anchorPoint?: { x: number; y: number } | null;
 }
@@ -78,6 +79,7 @@ export function Menu({
   openEventDetail,
   openGeneration,
   buttons,
+  onCancel,
   anchorPoint,
 }: MenuProps) {
   const [closeGeneration, setCloseGeneration] = React.useState(0);
@@ -90,8 +92,13 @@ export function Menu({
 
   const dismiss = () => void setCloseGeneration((n) => n + 1);
 
-  useEscape(dismiss, isOpen, true);
-  useDismissOnOutsideClick(clickedElement, divRef, dismiss, isOpen);
+  const cancel = () => {
+    dismiss();
+    onCancel?.();
+  };
+
+  useEscape(cancel, isOpen, true);
+  useDismissOnOutsideClick(clickedElement, divRef, cancel, isOpen);
 
   // Focus the menu if opened via keyboard.
   React.useEffect(() => {

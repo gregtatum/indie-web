@@ -469,6 +469,56 @@ describe('filter panel context menu and shortcuts', () => {
     expect($.getMusicPanelSelections(store.getState()).genre).toBeUndefined();
   });
 
+  it('dismissing the panel menu restores the track selection it replaced', async () => {
+    const { store } = setup();
+    const trackC = await screen.findByText('Song C');
+    await act(async () => {
+      fireEvent.click(trackC);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'Rock' }));
+    });
+    await act(async () => {
+      fireEvent.contextMenu(screen.getByRole('listbox', { name: 'genre' }));
+    });
+    await screen.findByRole('button', { name: 'Play' });
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/a.mp3',
+      '/music/b.mp3',
+    ]);
+
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+    });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/c.mp3',
+    ]);
+  });
+
+  it('clicking outside the panel menu restores the track selection it replaced', async () => {
+    const { store } = setup();
+    const trackC = await screen.findByText('Song C');
+    await act(async () => {
+      fireEvent.click(trackC);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('option', { name: 'Rock' }));
+    });
+    await act(async () => {
+      fireEvent.contextMenu(screen.getByRole('listbox', { name: 'genre' }));
+    });
+    await screen.findByRole('button', { name: 'Play' });
+
+    await act(async () => {
+      fireEvent.click(document.body);
+    });
+
+    expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
+      '/music/c.mp3',
+    ]);
+  });
+
   it('enter plays the filtered tracks when a filter panel has focus', async () => {
     const { store } = setup();
     await filterToRock();

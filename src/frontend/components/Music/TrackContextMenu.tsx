@@ -35,6 +35,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     >(null);
     const editTrackPath = $$.getMusicEditTrackPath();
     const anchorRef = React.useRef<HTMLElement | null>(null);
+    const selectionBeforeOpenRef = React.useRef<string[] | null>(null);
 
     const editTracks = React.useCallback(
       (trackPaths: string[], tab: T.MusicEditTab = 'details') => {
@@ -118,6 +119,7 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
     const openMenu = React.useCallback(
       (event: React.MouseEvent, trackPath: string) => {
         event.preventDefault();
+        selectionBeforeOpenRef.current = null;
         const { clientX: x, clientY: y } = event;
         anchorRef.current = {
           getBoundingClientRect: () =>
@@ -157,8 +159,10 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
           if (paths.length === 0) {
             return;
           }
+          const previousSelection = $.getMusicSelectedTrackPaths(getState());
           dispatch(A.setMusicSelectedTracks(paths));
           openMenu(event, paths[0]);
+          selectionBeforeOpenRef.current = previousSelection;
         },
         play,
         showInFiles,
@@ -281,6 +285,14 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
             openEventDetail={openEventDetail}
             openGeneration={openGeneration}
             buttons={buttons}
+            onCancel={() => {
+              if (selectionBeforeOpenRef.current) {
+                dispatch(
+                  A.setMusicSelectedTracks(selectionBeforeOpenRef.current),
+                );
+                selectionBeforeOpenRef.current = null;
+              }
+            }}
           />,
         )}
         <EditTrackModal
