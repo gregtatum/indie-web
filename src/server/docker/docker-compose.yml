@@ -5,13 +5,24 @@ services:
       dockerfile: src/server/docker/Dockerfile.dev
     hostname: floppydisk-server
     volumes:
-      # Live mount source code for development.
-      - /app/src/server/node_modules
-      - ../../../src/:/app/src
-
       # Mount the directory to serve.
       - ${MOUNT_DIR:-../../../mount}:/app/mount
     ports:
       - "${HOST_PORT:-6543}:6543"
     working_dir: /app/src/server
-    command: ["npm", "run", "start-dev"]
+    command: ["npm", "start"]
+    develop:
+      watch:
+        - action: sync+restart
+          path: ../../server
+          target: /app/src/server
+          ignore:
+            - node_modules/
+            - docker/
+        - action: sync+restart
+          path: ../../shared
+          target: /app/src/shared
+        - action: rebuild
+          path: ../package.json
+        - action: rebuild
+          path: ../package-lock.json

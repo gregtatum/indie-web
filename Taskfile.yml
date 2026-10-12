@@ -73,7 +73,7 @@ tasks:
       HOST_PORT: "6544"
     cmds:
       - docker compose build
-      - docker compose up
+      - docker compose up --watch
 
   screenshots:
     desc: |
@@ -158,7 +158,7 @@ tasks:
     cmds:
       # Add --progress=plain to debug the build.
       - docker compose build
-      - docker compose up
+      - docker compose up --watch
 
   docker-image-size:
     desc: Build the production server Docker image and report its final size.
