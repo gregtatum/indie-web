@@ -737,6 +737,11 @@
   opacity: 1;
 }
 
+.musicAlbumHeroArtworkEdit:focus-visible {
+  outline: var(--outline-focus);
+  outline-offset: 2px;
+}
+
 @media (hover: none) {
   .musicAlbumHeroArtworkEdit {
     opacity: 1;
@@ -745,8 +750,8 @@
 
 .musicAlbumHeroArtworkEditIcon {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   background-color: #fff;
   mask-position: center;
   mask-size: contain;
