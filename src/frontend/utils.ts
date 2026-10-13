@@ -548,3 +548,27 @@ export function getKeyboardString(event: KeyboardEvent) {
       : event.key;
   return key;
 }
+
+const HEX_DIGITS = '0123456789abcdef';
+
+/**
+ * crypto.randomUUID() only exists in secure contexts, which excludes the app
+ * served over plain http from a LAN address. crypto.getRandomValues() works
+ * everywhere.
+ */
+export function randomUuid(): string {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  let uuid = '';
+  for (let i = 0; i < 16; i++) {
+    if (i === 4 || i === 6 || i === 8 || i === 10) {
+      uuid += '-';
+    }
+    uuid += HEX_DIGITS[bytes[i] >> 4] + HEX_DIGITS[bytes[i] & 0x0f];
+  }
+  return uuid;
+}

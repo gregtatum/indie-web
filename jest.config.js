@@ -15,15 +15,6 @@ export default {
   // provided by the jest-environment-jsdom module.
   testEnvironment: './src/frontend/test/utils/fix-jsdom.ts',
 
-  // An array of regexp pattern strings that are matched against all source file paths
-  // before transformation. If the file path matches any of the patterns, it will not
-  // be transformed.
-  // Default: ["/node_modules/", "\\.pnp\\.[^\\\/]+$"]
-  //
-  // uuid ships as ESM-only, so it needs to be transformed like our own source rather
-  // than being left as-is like the rest of node_modules.
-  transformIgnorePatterns: ['/node_modules/(?!(uuid)/)'],
-
   // A map from regular expressions to module names or to arrays of module names that
   // allow to stub out resources, like images or styles with a single module. Modules
   // that are mapped to an alias are unmocked by default, regardless of whether

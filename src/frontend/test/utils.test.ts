@@ -4,6 +4,7 @@ import {
   getPathFileNameNoExt,
   getDirName,
   pathJoin,
+  randomUuid,
 } from 'frontend/utils';
 import { layoutColumns } from 'frontend/components/Music/column-resize';
 
@@ -97,5 +98,35 @@ describe('layoutColumns', () => {
 
   it('floors every column at the minimum width', () => {
     expect(layout(stored, 800, 100)).toEqual({ artist: 60, album: 60 });
+  });
+});
+
+describe('randomUuid', () => {
+  const V4_UUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  it('makes version 4 UUIDs', () => {
+    expect(randomUuid()).toMatch(V4_UUID);
+  });
+
+  it('still makes version 4 UUIDs when the page is not a secure context', () => {
+    const original = crypto.randomUUID;
+    Object.defineProperty(crypto, 'randomUUID', {
+      value: undefined,
+      configurable: true,
+    });
+    try {
+      expect(crypto.randomUUID).toBeUndefined();
+      const ids = new Set(Array.from({ length: 100 }, randomUuid));
+      expect(ids.size).toBe(100);
+      for (const id of ids) {
+        expect(id).toMatch(V4_UUID);
+      }
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', {
+        value: original,
+        configurable: true,
+      });
+    }
   });
 });

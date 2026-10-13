@@ -1,9 +1,13 @@
 import * as idb from 'idb';
-import * as uuid from 'uuid';
 import { FileStoreCache, FileStoreError } from 'frontend/logic/file-store';
 import { type T } from 'frontend';
 import type { WorkerClient } from 'frontend/worker/client';
-import { getPathFileName, getDirName, updatePathRoot } from 'frontend/utils';
+import {
+  getPathFileName,
+  getDirName,
+  randomUuid,
+  updatePathRoot,
+} from 'frontend/utils';
 import * as AppLogic from 'frontend/logic/app-logic';
 
 export const BROWSER_FILES_DB_NAME = 'browser-files';
@@ -793,7 +797,7 @@ export class IDBFS extends FileStoreCache {
       );
       const metadata: T.FolderMetadata = {
         type: 'folder',
-        id: existing?.id ?? uuid.v4(),
+        id: existing?.id ?? randomUuid(),
         name: getPathFileName(toPath),
         path: toPath,
       };
@@ -845,10 +849,10 @@ async function createFileMetadata(
     type: 'file',
     name: getPathFileName(path),
     path: path,
-    id: uuid.v4(),
+    id: randomUuid(),
     clientModified: now,
     serverModified: now,
-    rev: uuid.v4(),
+    rev: randomUuid(),
     size: blob.size,
     isDownloadable: true,
     hash,
@@ -876,7 +880,7 @@ function createFolderMetadata(path: string): T.FolderMetadata {
     type: 'folder',
     name: getPathFileName(path),
     path: path,
-    id: uuid.v4(),
+    id: randomUuid(),
   };
 }
 
