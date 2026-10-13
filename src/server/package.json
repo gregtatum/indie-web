@@ -10,13 +10,11 @@
     "start-docker": ""
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^4.21.2",
     "music-metadata": "^11.12.3"
   },
   "devDependencies": {
     "@types/archiver": "^6.0.3",
-    "@types/cors": "^2.8.17",
     "nodemon": "^3.1.9"
   }
 }

@@ -1,4 +1,5 @@
 import Express from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { resolve, join } from 'node:path';
 import { statSync } from 'fs';
 import { readdir } from 'node:fs/promises';
@@ -44,6 +45,35 @@ type RouteHandler<T> = (
   request: Express.Request,
   response: Express.Response,
 ) => Promise<T>;
+
+const ALLOWED_METHODS = 'GET,HEAD,PUT,PATCH,POST,DELETE';
+const EXPOSED_HEADERS = 'File-Store-Response';
+
+/**
+ * Lets any web page talk to the server, which is how the hosted apps reach a
+ * music server running on the user's own machine. Preflight requests are
+ * answered here, with the headers the page asked to send approved.
+ */
+export function corsMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Expose-Headers', EXPOSED_HEADERS);
+  if (req.method !== 'OPTIONS') {
+    next();
+    return;
+  }
+  res.setHeader('Access-Control-Allow-Methods', ALLOWED_METHODS);
+  const requestedHeaders = req.headers['access-control-request-headers'];
+  if (requestedHeaders) {
+    res.setHeader('Access-Control-Allow-Headers', requestedHeaders);
+  }
+  res.vary('Access-Control-Request-Headers');
+  res.status(204).setHeader('Content-Length', '0');
+  res.end();
+}
 
 export class ApiRoute {
   router: Express.Router;

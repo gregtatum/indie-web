@@ -14,6 +14,7 @@ import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileStoreRoute } from '../file-store/route.ts';
+import { corsMiddleware } from '../route-utils.ts';
 import { zipFolder } from '../file-store/zip.ts';
 import { musicRoute } from '../music/route.ts';
 import {
@@ -62,6 +63,66 @@ if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
     console.error(`LOCALHOST_BIND_SKIPPED_TEST ${name}`);
   };
 }
+
+describe('CORS', () => {
+  let server: TestServer;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use(corsMiddleware);
+      app.use('/file-store', fileStoreRoute(mountPath));
+    });
+  });
+
+  after(() => server.close());
+
+  it(
+    'lets any page call the API and read the File-Store-Response header',
+    withLogs([], async () => {
+      const res = await fetch(`${server.baseUrl}/file-store/list-files`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'https://example.com',
+        },
+        body: JSON.stringify({ path: '/' }),
+      });
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*');
+      assert.equal(
+        res.headers.get('Access-Control-Expose-Headers'),
+        'File-Store-Response',
+      );
+    }),
+  );
+
+  it(
+    'answers a preflight request without reaching the route',
+    withLogs([], async () => {
+      const res = await fetch(`${server.baseUrl}/file-store/save-blob`, {
+        method: 'OPTIONS',
+        headers: {
+          Origin: 'https://example.com',
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'content-type,x-custom',
+        },
+      });
+      assert.equal(res.status, 204);
+      assert.equal(res.headers.get('Content-Length'), '0');
+      assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*');
+      assert.equal(
+        res.headers.get('Access-Control-Allow-Methods'),
+        'GET,HEAD,PUT,PATCH,POST,DELETE',
+      );
+      assert.equal(
+        res.headers.get('Access-Control-Allow-Headers'),
+        'content-type,x-custom',
+      );
+      assert.equal(res.headers.get('Vary'), 'Access-Control-Request-Headers');
+      assert.equal(await res.text(), '');
+    }),
+  );
+});
 
 describe('POST /file-store/list-files', () => {
   let server: TestServer;

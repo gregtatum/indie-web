@@ -5,10 +5,9 @@ import Express, {
   type Response,
   type NextFunction,
 } from 'express';
-import { colors, MountPath } from './route-utils.ts';
+import { colors, corsMiddleware, MountPath } from './route-utils.ts';
 import { fileStoreRoute } from './file-store/route.ts';
 import { musicRoute } from './music/route.ts';
-import cors from 'cors';
 import * as url from 'url';
 import path from 'path';
 
@@ -17,11 +16,7 @@ startServer();
 export function startServer(): ExpressApp {
   const app = Express();
   app.set('query parser', 'simple');
-  app.use(
-    cors({
-      exposedHeaders: ['File-Store-Response'],
-    }),
-  );
+  app.use(corsMiddleware);
   app.use(Express.json());
   app.use(Express.raw({ type: ['image/jpeg', 'image/png'], limit: '50mb' }));
   app.use(simpleLoggingMiddleware);
