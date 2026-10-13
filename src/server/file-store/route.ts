@@ -10,8 +10,8 @@ import { dirname } from 'node:path';
 import { createReadStream, promises as fs } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
 import { hostname } from 'node:os';
-import archiver from 'archiver';
-import { finished } from 'stream/promises';
+import { finished, pipeline } from 'node:stream/promises';
+import { zipFolder } from './zip.ts';
 import {
   doesFolderExist,
   getFileManagerLauncher,
@@ -302,27 +302,12 @@ export function fileStoreRoute(mountPath: MountPath) {
       );
     }
     try {
-      const archive = archiver('zip', { zlib: { level: 9 } });
-
-      archive.on('warning', (err) => {
-        console.warn('Archive warning:', err);
-      });
-
-      archive.on('error', (err) => {
-        console.error('Archive error:', err);
-        res.status(500).end();
-      });
-
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${path.split('/').pop() || 'archive'}.zip"`,
       );
-      archive.pipe(res);
-      archive.directory(resolvedPath, false);
-      archive.finalize();
-
-      await finished(res);
+      await pipeline(zipFolder(resolvedPath), res);
     } catch (err) {
       console.error('Compression failed:', err);
       throw new ServerError(`Failed to compress ${path}`);

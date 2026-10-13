@@ -1,8 +1,20 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFile, mkdir, readFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileStoreRoute } from '../file-store/route.ts';
+import { zipFolder } from '../file-store/zip.ts';
 import { musicRoute } from '../music/route.ts';
 import {
   buildMp3WithTags,
@@ -11,6 +23,7 @@ import {
   withLogs,
 } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
+import { assertUnzipAccepts, extractZip, snapshotTree } from './zip-oracle.ts';
 
 async function listFiles(baseUrl: string, path: string) {
   return fetch(`${baseUrl}/file-store/list-files`, {
@@ -691,6 +704,145 @@ describe('POST /file-store/compress-folder', () => {
       const buf = Buffer.from(await res.arrayBuffer());
       assert.equal(buf[0], 0x50); // P
       assert.equal(buf[1], 0x4b); // K
+    }),
+  );
+
+  async function makeTree(root: string) {
+    const files: Record<string, string | Buffer> = {
+      'Björk ♫/01 Hyperballad.txt': 'Unicode name\n'.repeat(100),
+      'empty.txt': '',
+      '.hidden': 'dotfile',
+      'deep/a/b/c/leaf.bin': randomBytes(2_500_000),
+      'zeros.bin': Buffer.alloc(5_000_000),
+      'run.sh': '#!/bin/sh\necho hi\n',
+    };
+    for (const [name, contents] of Object.entries(files)) {
+      const path = join(root, name);
+      await mkdir(join(path, '..'), { recursive: true });
+      await writeFile(path, contents);
+      await utimes(
+        path,
+        new Date(2021, 2, 4, 5, 6, 8),
+        new Date(2021, 2, 4, 5, 6, 8),
+      );
+    }
+    await mkdir(join(root, 'empty-dir'));
+    await chmod(join(root, 'run.sh'), 0o755);
+  }
+
+  async function expectZipMatchesFolder(zipPath: string, folder: string) {
+    await assertUnzipAccepts(zipPath);
+    const extracted = await mkdtemp(join(tmpdir(), 'indie-web-unzip-'));
+    try {
+      await extractZip(zipPath, extracted);
+      const tree = await snapshotTree(extracted);
+      assert.deepEqual([...tree], [...(await snapshotTree(folder))]);
+      return [...tree.keys()];
+    } finally {
+      await rm(extracted, { recursive: true, force: true });
+    }
+  }
+
+  it(
+    'streams a zip that unzip accepts and extracts to the same folder',
+    withLogs([], async () => {
+      const folder = join(server.mountDir, 'zip-roundtrip');
+      await makeTree(folder);
+      await symlink('/etc/hosts', join(folder, 'link-to-file'));
+      await symlink('.', join(folder, 'link-to-self'));
+      const work = await mkdtemp(join(tmpdir(), 'indie-web-zip-'));
+      try {
+        const res = await fetch(
+          `${server.baseUrl}/file-store/compress-folder`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: '/zip-roundtrip' }),
+          },
+        );
+        assert.equal(res.status, 200);
+        const zipPath = join(work, 'out.zip');
+        await writeFile(zipPath, Buffer.from(await res.arrayBuffer()));
+
+        assert.deepEqual(await expectZipMatchesFolder(zipPath, folder), [
+          '.hidden',
+          'Björk ♫/',
+          'Björk ♫/01 Hyperballad.txt',
+          'deep/',
+          'deep/a/',
+          'deep/a/b/',
+          'deep/a/b/c/',
+          'deep/a/b/c/leaf.bin',
+          'empty-dir/',
+          'empty.txt',
+          'run.sh',
+          'zeros.bin',
+        ]);
+      } finally {
+        await rm(work, { recursive: true, force: true });
+      }
+    }),
+  );
+
+  it(
+    'writes an empty folder as a valid empty zip',
+    withLogs([], async () => {
+      await mkdir(join(server.mountDir, 'zip-empty'));
+      const res = await fetch(`${server.baseUrl}/file-store/compress-folder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: '/zip-empty' }),
+      });
+      assert.equal(res.status, 200);
+      assert.equal(
+        res.headers.get('Content-Disposition'),
+        'attachment; filename="zip-empty.zip"',
+      );
+      const bytes = Buffer.from(await res.arrayBuffer());
+      assert.equal(bytes.length, 22);
+      assert.equal(bytes.readUInt32LE(0), 0x06054b50);
+    }),
+  );
+
+  it(
+    'writes ZIP64 records that unzip accepts',
+    withLogs([], async () => {
+      const folder = join(server.mountDir, 'zip-zip64');
+      await makeTree(folder);
+      const work = await mkdtemp(join(tmpdir(), 'indie-web-zip-'));
+      try {
+        const zipPath = join(work, 'zip64.zip');
+        const chunks: Buffer[] = [];
+        for await (const chunk of zipFolder(folder, { forceZip64: true })) {
+          chunks.push(chunk);
+        }
+        await writeFile(zipPath, Buffer.concat(chunks));
+        await expectZipMatchesFolder(zipPath, folder);
+      } finally {
+        await rm(work, { recursive: true, force: true });
+      }
+    }),
+  );
+
+  it(
+    'the oracle detects a corrupted archive',
+    withLogs([], async () => {
+      const folder = join(server.mountDir, 'zip-corrupt');
+      await makeTree(folder);
+      const work = await mkdtemp(join(tmpdir(), 'indie-web-zip-'));
+      try {
+        const chunks: Buffer[] = [];
+        for await (const chunk of zipFolder(folder)) {
+          chunks.push(chunk);
+        }
+        const bytes = Buffer.concat(chunks);
+        bytes[bytes.indexOf('Unicode name') + 3] ^= 0xff;
+        const zipPath = join(work, 'corrupt.zip');
+        await writeFile(zipPath, bytes);
+        await assert.rejects(assertUnzipAccepts(zipPath));
+      } finally {
+        await rm(work, { recursive: true, force: true });
+      }
     }),
   );
 
