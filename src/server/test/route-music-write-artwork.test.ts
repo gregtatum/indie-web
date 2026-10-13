@@ -1,7 +1,7 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { writeFile, readFile, mkdir, readdir } from 'node:fs/promises';
+import { writeFile, readFile, mkdir, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import { runFfmpeg } from '../music/ffmpeg.ts';
@@ -21,6 +21,12 @@ import {
   assertOnlyTheseAtomsChanged,
   snapshotM4a,
 } from './m4a-oracle.ts';
+import {
+  assertOnlyTheseFramesChanged,
+  makeBareMp3,
+  makeTaggedMp3,
+  snapshotMp3,
+} from './mp3-oracle.ts';
 
 async function makeImage(path: string) {
   await runFfmpeg([
@@ -734,6 +740,45 @@ describe('POST /music/artwork/embedded/remove — strip embedded pictures', () =
       const meta = await parseFile(join(dir, '01.mp3'));
       assert.equal(meta.common.picture?.length ?? 0, 0);
       assert.equal(meta.common.title, 'Bare', 'kept its title');
+    }),
+  );
+
+  it(
+    'embeds and removes an mp3 cover, changing only the picture',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Strip', 'Mp3');
+      await mkdir(dir, { recursive: true });
+      const bare = join(dir, 'bare.tmp');
+      const path = join(dir, '01.mp3');
+      await makeBareMp3(bare);
+      await makeTaggedMp3(bare, path, { version: 3, id3v1: true });
+      await rm(bare);
+      const original = await snapshotMp3(path);
+      const pngImage = await makeImage(join(dir, 'Folder.png'));
+
+      const embedRes = await fetch(`${server.baseUrl}/music/artwork/embed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folderArtworkPath: '/Strip/Mp3/Folder.png',
+          trackPaths: ['/Strip/Mp3/01.mp3'],
+        }),
+      });
+      assert.deepEqual((await embedRes.json()).updated, ['/Strip/Mp3/01.mp3']);
+      const embedded = await snapshotMp3(path);
+      assertOnlyTheseFramesChanged(original, embedded, ['APIC']);
+      const meta = await parseFile(path);
+      assert.equal(meta.common.picture?.[0].format, 'image/png');
+      assert.deepEqual(Buffer.from(meta.common.picture![0].data), pngImage);
+      await assertDecodesCleanly(path);
+
+      const res = await removeEmbedded('/Strip/Mp3/01.mp3');
+      assert.equal(res.status, 200);
+      const stripped = await snapshotMp3(path);
+      assertOnlyTheseFramesChanged(original, stripped, []);
+      assert.deepEqual(stripped.frames, original.frames);
+      assert.equal((await parseFile(path)).common.picture?.length ?? 0, 0);
+      await assertDecodesCleanly(path);
     }),
   );
 

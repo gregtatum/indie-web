@@ -313,7 +313,7 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
       assert.equal(v23After.get('TIT2'), 'Migrate-V24-Title');
       assert.equal(v23After.get('TPE1'), 'Migrate-V24-Artist');
 
-      // The co-located ID3v2.4 tag: same values, untouched — node-id3 only
+      // The co-located ID3v2.4 tag: same values, untouched — the writer only
       // ever edits the leading ID3v2 tag.
       assert.deepEqual(tagsOf(after, 'ID3v2.4'), v24Before);
 
@@ -363,7 +363,7 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
 
       const after = await getTrackTags(server, clientPath);
       // The old leading ID3v2.4 tag is gone: it was the only ID3v2 tag, so
-      // node-id3 rewrote it in place — and this app always writes ID3v2.3.
+      // the writer replaced it in place — and this app always writes ID3v2.3.
       assert.equal(
         after.blocks.find((b) => b.format === 'ID3v2.4'),
         undefined,
@@ -373,7 +373,7 @@ describe('POST /music/write-track-tags eagerly migrates missing fields into ID3v
       assert.equal(v23After.get('TPE1'), 'Promote-V24-Artist');
       assert.equal(v23After.get('TALB'), 'Promote-Album');
 
-      // The separate, trailing ID3v1 tag was never the leading tag node-id3
+      // The separate, trailing ID3v1 tag was never the leading tag the writer
       // edits, so it's explicitly refreshed afterward to match, rather than
       // left with its old, now-stale album value.
       const v1After = tagsOf(after, 'ID3v1');

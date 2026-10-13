@@ -1,6 +1,16 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import type { IAudioMetadata, ITag } from 'music-metadata';
@@ -17,6 +27,7 @@ import {
   copyM4aFixture,
   withLogs,
   AUDIO_PAYLOAD,
+  buildId3v2Block,
   getBytesAfterId3,
 } from './helpers.ts';
 import type { M4aFixture, TestServer } from './helpers.ts';
@@ -28,6 +39,14 @@ import {
   ffprobeTags,
   snapshotM4a,
 } from './m4a-oracle.ts';
+import {
+  FIXTURE_TAGS,
+  assertAudioUntouched,
+  assertOnlyTheseFramesChanged,
+  makeBareMp3,
+  makeTaggedMp3,
+  snapshotMp3,
+} from './mp3-oracle.ts';
 
 /**
  * Correctness tests for POST /music/write-track-tags.
@@ -1299,5 +1318,475 @@ describe('POST /music/write-track-tags — m4a fidelity', () => {
         assert.deepEqual(await readFile(path), originalBytes);
       },
     ),
+  );
+});
+
+function id3v23Tag(frames: Buffer[], options: { padding?: number } = {}) {
+  const body = Buffer.concat([...frames, Buffer.alloc(options.padding ?? 0)]);
+  const header = Buffer.from([0x49, 0x44, 0x33, 3, 0, 0]);
+  const size = Buffer.from([
+    (body.length >> 21) & 0x7f,
+    (body.length >> 14) & 0x7f,
+    (body.length >> 7) & 0x7f,
+    body.length & 0x7f,
+  ]);
+  return Buffer.concat([header, size, body]);
+}
+
+function id3v23Frame(id: string, data: Buffer) {
+  const header = Buffer.alloc(10);
+  header.write(id, 0, 4, 'latin1');
+  header.writeUInt32BE(data.length, 4);
+  return Buffer.concat([header, data]);
+}
+
+function commentFrame(description: string, text: string) {
+  return id3v23Frame(
+    'COMM',
+    Buffer.concat([
+      Buffer.from([0]),
+      Buffer.from('eng', 'latin1'),
+      Buffer.from(`${description}\0${text}`, 'latin1'),
+    ]),
+  );
+}
+
+function latin1TextFrame(id: string, text: string) {
+  return id3v23Frame(
+    id,
+    Buffer.concat([Buffer.from([0]), Buffer.from(text, 'latin1')]),
+  );
+}
+
+describe('POST /music/write-track-tags — mp3 fidelity', () => {
+  let server: TestServer;
+  let fixtureDir: string;
+  let bare: string;
+  let v23: string;
+  let v24: string;
+  let withArt: string;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+    fixtureDir = await mkdtemp(join(tmpdir(), 'indie-web-mp3-'));
+    bare = join(fixtureDir, 'bare.mp3');
+    v23 = join(fixtureDir, 'v23.mp3');
+    v24 = join(fixtureDir, 'v24.mp3');
+    withArt = join(fixtureDir, 'art.mp3');
+    const cover = join(fixtureDir, 'cover.jpg');
+    await makeBareMp3(bare);
+    await makeTaggedMp3(bare, v23, { version: 3, id3v1: true });
+    await makeTaggedMp3(bare, v24, { version: 4 });
+    await runFfmpeg([
+      '-f',
+      'lavfi',
+      '-i',
+      'color=c=red:s=16x16',
+      '-frames:v',
+      '1',
+      '-update',
+      '1',
+      cover,
+    ]);
+    await makeTaggedMp3(bare, withArt, { version: 3, cover });
+  });
+  after(async () => {
+    await server.close();
+    await rm(fixtureDir, { recursive: true, force: true });
+  });
+
+  async function place(source: string, name: string) {
+    const path = join(server.mountDir, name);
+    await copyFile(source, path);
+    return path;
+  }
+
+  async function writeTags(name: string, changes: T.TrackTagUpdate[]) {
+    const { body } = await writeTrackTagsJson(server, [`/${name}`], changes);
+    assert.deepEqual(body.errors, []);
+    assert.deepEqual(body.updated, [`/${name}`]);
+  }
+
+  it(
+    'the oracle detects a frame that changed',
+    withLogs([], async () => {
+      const path = await place(v23, 'oracle-self-test.mp3');
+      const before = await snapshotMp3(path);
+      await writeTags('oracle-self-test.mp3', [
+        { frameId: 'TIT2', value: 'Different' },
+      ]);
+      const after = await snapshotMp3(path);
+      assert.throws(() => assertOnlyTheseFramesChanged(before, after, []));
+      assertOnlyTheseFramesChanged(before, after, ['TIT2']);
+    }),
+  );
+
+  it(
+    'reads the fixture tags the way the oracle expects',
+    withLogs([], async () => {
+      assert.deepEqual(
+        Object.fromEntries(
+          Object.entries(await ffprobeTags(v23)).filter(
+            ([key]) => key in FIXTURE_TAGS,
+          ),
+        ),
+        FIXTURE_TAGS,
+      );
+    }),
+  );
+
+  const FRAME_CASES = [
+    { frameId: 'TIT2', key: 'title' },
+    { frameId: 'TPE1', key: 'artist' },
+    { frameId: 'TPE2', key: 'album_artist' },
+    { frameId: 'TALB', key: 'album' },
+    { frameId: 'TCOM', key: 'composer' },
+    { frameId: 'TRCK', key: 'track' },
+    { frameId: 'TPOS', key: 'disc' },
+    { frameId: 'TYER', key: 'date' },
+    { frameId: 'TCON', key: 'genre' },
+    { frameId: 'TBPM', key: 'tbpm' },
+    { frameId: 'TEXT', key: 'text' },
+  ];
+  const EDIT_VALUES: Record<string, string> = {
+    TYER: '1999',
+    TBPM: '7',
+    TRCK: '7',
+    TPOS: '7',
+  };
+  for (const { frameId, key } of FRAME_CASES) {
+    const value = EDIT_VALUES[frameId] ?? 'Edited';
+    it(
+      `${frameId} edits only that frame, as ffprobe reads it`,
+      withLogs([], async () => {
+        const name = `edit-${frameId}.mp3`;
+        const path = await place(v23, name);
+        const before = await snapshotMp3(path);
+        await writeTags(name, [{ frameId, value }]);
+        const after = await snapshotMp3(path);
+        assertOnlyTheseFramesChanged(before, after, [frameId]);
+        assert.equal((await ffprobeTags(path))[key], value);
+        await assertDecodesCleanly(path);
+      }),
+    );
+  }
+
+  it(
+    'keeps other TXXX frames when writing the private grouping tag',
+    withLogs([], async () => {
+      const path = await place(v23, 'txxx.mp3');
+      const before = await snapshotMp3(path);
+      await writeTags('txxx.mp3', [
+        {
+          frameId: 'TXXX',
+          description: 'indie-web:prefer-composer-grouping',
+          value: 'true',
+        },
+      ]);
+      const after = await snapshotMp3(path);
+      assertOnlyTheseFramesChanged(before, after, [
+        'TXXX:indie-web:prefer-composer-grouping',
+      ]);
+      const tags = await ffprobeTags(path);
+      assert.equal(tags.mood, 'Calm');
+      assert.equal(tags['indie-web:prefer-composer-grouping'], 'true');
+    }),
+  );
+
+  it(
+    'removes a frame when its value is cleared',
+    withLogs([], async () => {
+      const path = await place(v23, 'clear.mp3');
+      const before = await snapshotMp3(path);
+      await writeTags('clear.mp3', [{ frameId: 'TCOM', value: '' }]);
+      const after = await snapshotMp3(path);
+      assertOnlyTheseFramesChanged(before, after, ['TCOM']);
+      assert.equal(after.frames.has('TCOM'), false);
+      assert.equal((await ffprobeTags(path)).composer, undefined);
+    }),
+  );
+
+  it(
+    'round-trips non-Latin-1 text through ffprobe',
+    withLogs([], async () => {
+      const path = await place(v23, 'unicode-fidelity.mp3');
+      const value = 'Ωμέγα — café 🎵';
+      await writeTags('unicode-fidelity.mp3', [{ frameId: 'TIT2', value }]);
+      assert.equal((await ffprobeTags(path)).title, value);
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'grows the tag past its padding, then shrinks it back to the original frames',
+    withLogs([], async () => {
+      const path = await place(v23, 'grow.mp3');
+      const before = await snapshotMp3(path);
+      const originalSize = (await stat(path)).size;
+
+      await writeTags('grow.mp3', [
+        { frameId: 'COMM', value: 'long '.repeat(12_000) },
+      ]);
+      const grown = await snapshotMp3(path);
+      assertOnlyTheseFramesChanged(before, grown, ['COMM']);
+      assert.ok((await stat(path)).size > originalSize + 50_000);
+      await assertDecodesCleanly(path);
+
+      await writeTags('grow.mp3', [{ frameId: 'COMM', value: '' }]);
+      const shrunk = await snapshotMp3(path);
+      assertAudioUntouched(before, shrunk);
+      assert.deepEqual(shrunk.frames, before.frames);
+      assert.ok((await stat(path)).size < originalSize + 2000);
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'upgrades a leading ID3v2.4 tag to ID3v2.3 without losing its frames',
+    withLogs([], async () => {
+      const path = await place(v24, 'upgrade.mp3');
+      const before = await snapshotMp3(path);
+      const tagsBefore = await ffprobeTags(path);
+      assert.equal(before.version, 4);
+
+      await writeTags('upgrade.mp3', [{ frameId: 'TALB', value: 'New Album' }]);
+
+      const after = await snapshotMp3(path);
+      assert.equal(after.version, 3);
+      assertAudioUntouched(before, after);
+      assert.deepEqual(await ffprobeTags(path), {
+        ...tagsBefore,
+        album: 'New Album',
+      });
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'converts the UTF-8 text of an ID3v2.4 tag',
+    withLogs([], async () => {
+      const audio = (await readFile(bare)) as Buffer;
+      const utf8Frame = (id: string, text: string) =>
+        Buffer.concat([
+          Buffer.from(id, 'latin1'),
+          Buffer.from([0, 0, 0, 1 + Buffer.byteLength(text), 0, 0]),
+          Buffer.from([3]),
+          Buffer.from(text, 'utf8'),
+        ]);
+      const body = Buffer.concat([
+        utf8Frame('TIT2', 'Ωμέγα 🎵'),
+        utf8Frame('TPE1', 'Zoë'),
+      ]);
+      const header = Buffer.from([
+        0x49,
+        0x44,
+        0x33,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        body.length,
+      ]);
+      const path = join(server.mountDir, 'utf8-v24.mp3');
+      await writeFile(path, Buffer.concat([header, body, audio]));
+
+      await writeTags('utf8-v24.mp3', [{ frameId: 'TALB', value: 'Album' }]);
+
+      const tags = await ffprobeTags(path);
+      assert.equal(tags.title, 'Ωμέγα 🎵');
+      assert.equal(tags.artist, 'Zoë');
+      assert.equal((await snapshotMp3(path)).version, 3);
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'upgrades a leading ID3v2.2 tag',
+    withLogs([], async () => {
+      const audio = (await readFile(bare)) as Buffer;
+      const path = join(server.mountDir, 'upgrade-v22.mp3');
+      await writeFile(
+        path,
+        Buffer.concat([
+          buildId3v2Block(2, [
+            { id: 'TT2', text: 'Old V22 Title' },
+            { id: 'TP1', text: 'Old V22 Artist' },
+          ]),
+          audio,
+        ]),
+      );
+
+      await writeTags('upgrade-v22.mp3', [{ frameId: 'TALB', value: 'Album' }]);
+
+      const tags = await ffprobeTags(path);
+      assert.equal(tags.title, 'Old V22 Title');
+      assert.equal(tags.artist, 'Old V22 Artist');
+      assert.equal(tags.album, 'Album');
+      const after = await snapshotMp3(path);
+      assert.equal(after.version, 3);
+      assert.equal(after.audioSha, (await snapshotMp3(bare)).audioSha);
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'writes in place when the tag fits in its padding',
+    withLogs([], async () => {
+      const audio = (await readFile(bare)) as Buffer;
+      const path = join(server.mountDir, 'in-place.mp3');
+      const tag = id3v23Tag([latin1TextFrame('TIT2', 'Short')], {
+        padding: 4096,
+      });
+      await writeFile(path, Buffer.concat([tag, audio]));
+
+      await writeTags('in-place.mp3', [
+        { frameId: 'TIT2', value: 'A somewhat longer title' },
+      ]);
+
+      const written = await readFile(path);
+      assert.equal(written.length, tag.length + audio.length + ID3V1_TAG_SIZE);
+      assert.deepEqual(
+        written.subarray(tag.length, tag.length + audio.length),
+        audio,
+      );
+      assert.equal((await ffprobeTags(path)).title, 'A somewhat longer title');
+      assert.deepEqual(
+        await readdir(server.mountDir).then((names) =>
+          names.filter((name) => name.endsWith('.tmp')),
+        ),
+        [],
+      );
+    }),
+  );
+
+  it(
+    "keeps other apps' frames through an unsynchronised tag with an extended header",
+    withLogs([], async () => {
+      const audio = (await readFile(bare)) as Buffer;
+      const privData = Buffer.concat([
+        Buffer.from('owner@example.com\0', 'latin1'),
+        Buffer.from([0xff, 0xe0, 0xff, 0x00, 0x12, 0xff]),
+      ]);
+      const popmData = Buffer.concat([
+        Buffer.from('user@example.com\0', 'latin1'),
+        Buffer.from([196, 0, 0, 0, 4]),
+      ]);
+      const normalization = commentFrame('iTunNORM', ' 00000000 00000000');
+      const extendedHeader = Buffer.from([0, 0, 0, 6, 0, 0, 0, 0, 0, 0]);
+      const plain = Buffer.concat([
+        extendedHeader,
+        latin1TextFrame('TIT2', 'Original'),
+        id3v23Frame('PRIV', privData),
+        id3v23Frame('POPM', popmData),
+        commentFrame('', 'Original comment'),
+        normalization,
+      ]);
+      const unsynchronised: number[] = [];
+      plain.forEach((byte, index) => {
+        unsynchronised.push(byte);
+        const next = plain[index + 1];
+        if (
+          byte === 0xff &&
+          (next === undefined || next === 0 || next >= 0xe0)
+        ) {
+          unsynchronised.push(0);
+        }
+      });
+      const body = Buffer.from(unsynchronised);
+      const header = Buffer.from([
+        0x49,
+        0x44,
+        0x33,
+        3,
+        0,
+        0xc0,
+        (body.length >> 21) & 0x7f,
+        (body.length >> 14) & 0x7f,
+        (body.length >> 7) & 0x7f,
+        body.length & 0x7f,
+      ]);
+      const path = join(server.mountDir, 'foreign-frames.mp3');
+      await writeFile(path, Buffer.concat([header, body, audio]));
+
+      await writeTags('foreign-frames.mp3', [
+        { frameId: 'TIT2', value: 'Edited' },
+        { frameId: 'COMM', value: 'Edited comment' },
+      ]);
+
+      const after = await snapshotMp3(path);
+      assert.equal(after.frames.get('PRIV'), '0000' + privData.toString('hex'));
+      assert.equal(after.frames.get('POPM'), '0000' + popmData.toString('hex'));
+      assert.equal(
+        after.frames.get('COMM#2'),
+        '0000' + normalization.subarray(10).toString('hex'),
+      );
+      assert.equal((await ffprobeTags(path)).title, 'Edited');
+      assert.equal(after.audioSha, (await snapshotMp3(bare)).audioSha);
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'keeps the embedded picture when editing text',
+    withLogs([], async () => {
+      const path = await place(withArt, 'keep-art.mp3');
+      const before = await snapshotMp3(path);
+      assert.ok(before.frames.has('APIC'));
+      await writeTags('keep-art.mp3', [{ frameId: 'TIT2', value: 'Edited' }]);
+      assertOnlyTheseFramesChanged(before, await snapshotMp3(path), ['TIT2']);
+      assert.equal((await parseFile(path)).common.picture?.length, 1);
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'leaves a file with a corrupt tag untouched',
+    withLogs([], async () => {
+      const path = join(server.mountDir, 'broken-tag.mp3');
+      const bytes = Buffer.concat([
+        Buffer.from([0x49, 0x44, 0x33, 3, 0, 0, 0, 0x7f, 0x7f, 0x7f]),
+        Buffer.alloc(200, 0x41),
+      ]);
+      await writeFile(path, bytes);
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/broken-tag.mp3'],
+        [{ frameId: 'TIT2', value: 'Nope' }],
+      );
+
+      assert.equal(body.errors[0].path, '/broken-tag.mp3');
+      assert.match(body.errors[0].message, /^Corrupt mp3/);
+      assert.deepEqual(await readFile(path), bytes);
+      assert.equal(
+        (await readdir(server.mountDir)).some((name) => name.endsWith('.tmp')),
+        false,
+      );
+    }),
+  );
+
+  it(
+    'reports an unknown ID3 version as an unsupported format',
+    withLogs([], async () => {
+      const path = join(server.mountDir, 'future-tag.mp3');
+      const bytes = Buffer.concat([
+        Buffer.from([0x49, 0x44, 0x33, 5, 0, 0, 0, 0, 0, 20]),
+        Buffer.alloc(100),
+      ]);
+      await writeFile(path, bytes);
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/future-tag.mp3'],
+        [{ frameId: 'TIT2', value: 'Nope' }],
+      );
+
+      assert.equal(body.errors[0].code, 'unsupported-format');
+      assert.deepEqual(await readFile(path), bytes);
+    }),
   );
 });

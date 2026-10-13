@@ -53,7 +53,7 @@ export function matchFolderArtworkFilename(names: string[]): string | null {
 /**
  * The dependency-specific native tag values are normalized into this small
  * shape before app-level parsing, so shared code stays independent of
- * music-metadata and node-id3.
+ * music-metadata and the ID3 writer.
  */
 export interface PrivateTextTag {
   description: string;
@@ -292,7 +292,7 @@ export const ORGANIZATION_PRESET_TEMPLATES: ReadonlyArray<string> = [
  * Some files contain more than one tag source. For example, an older iTunes
  * version may have left an ID3v2.4 tag that is now wrapped by a newer ID3v2.3
  * tag. The app standardizes on ID3v2.3 because it is the most widely compatible
- * format and the only format that node-id3 writes. Reads therefore prefer
+ * format and the only format the ID3 writer writes. Reads therefore prefer
  * ID3v2.3 and fall back to other formats only for fields that it does not
  * contain.
  */

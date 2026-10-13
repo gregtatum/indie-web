@@ -345,7 +345,7 @@ function id3v2FrameHeader(
  * Builds one ID3v2.x tag (header + text frames), for combining with other
  * tags in buildMp3WithNativeBlocks.
  */
-function buildId3v2Block(
+export function buildId3v2Block(
   version: 2 | 3 | 4,
   frames: Array<{ id: string; text: string }>,
 ): Buffer {

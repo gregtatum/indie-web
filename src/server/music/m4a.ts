@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
 import type { M4A_WRITABLE_FRAME_IDS } from '../../shared/music.ts';
 import type { T } from '../index.ts';
+import { copyRange } from './file-copy.ts';
 
 /**
  * A minimal m4a metadata editor. It rewrites only the ilst tag list and leaves
@@ -21,7 +22,6 @@ import type { T } from '../index.ts';
 
 type M4aFrameId = (typeof M4A_WRITABLE_FRAME_IDS)[number];
 
-const COPY_CHUNK_BYTES = 1024 * 1024;
 const MIN_ATOM_BYTES = 8;
 const MAX_UINT32 = 0xffffffff;
 const COVER_FLAG_JPEG = 13;
@@ -424,27 +424,6 @@ async function readTopLevelAtoms(
     pos += size;
   }
   return atoms;
-}
-
-async function copyRange(
-  source: FileHandle,
-  dest: FileHandle,
-  start: number,
-  end: number,
-): Promise<void> {
-  const chunk = Buffer.alloc(
-    Math.min(COPY_CHUNK_BYTES, Math.max(end - start, 1)),
-  );
-  let pos = start;
-  while (pos < end) {
-    const length = Math.min(chunk.length, end - pos);
-    const { bytesRead } = await source.read(chunk, 0, length, pos);
-    if (bytesRead === 0) {
-      throw new Error('Corrupt m4a: unexpected end of file.');
-    }
-    await dest.write(chunk, 0, bytesRead);
-    pos += bytesRead;
-  }
 }
 
 /**

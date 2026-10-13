@@ -1,5 +1,4 @@
 import { ClientError, colors, type MountPath } from '../route-utils.ts';
-import NodeID3 from 'node-id3';
 import type { T } from '../index.ts';
 import { Dirent, createReadStream, promises as fs } from 'node:fs';
 import { basename, extname, dirname } from 'node:path';
@@ -23,6 +22,12 @@ import {
 } from '../../shared/music.ts';
 import type { Id3v1TagFields } from '../../shared/music.ts';
 import {
+  Id3UnsupportedError,
+  removeId3Artwork,
+  writeId3Artwork,
+  writeId3Tags,
+} from './id3.ts';
+import {
   M4aUnsupportedError,
   removeM4aArtwork,
   writeM4aArtwork,
@@ -41,19 +46,19 @@ const AUDIO_EXTENSIONS = new Set([
   '.aac',
 ]);
 
-const FRAME_ID_TO_NODE_ID3: Record<string, string> = {
-  TIT2: 'title',
-  TPE1: 'artist',
-  TPE2: 'performerInfo',
-  TALB: 'album',
-  TRCK: 'trackNumber',
-  TPOS: 'partOfSet',
-  TYER: 'year',
-  TCON: 'genre',
-  TBPM: 'bpm',
-  TCOM: 'composer',
-  TEXT: 'textWriter',
-};
+const ID3_TEXT_FRAME_IDS = new Set([
+  'TIT2',
+  'TPE1',
+  'TPE2',
+  'TALB',
+  'TRCK',
+  'TPOS',
+  'TYER',
+  'TCON',
+  'TBPM',
+  'TCOM',
+  'TEXT',
+]);
 
 /**
  * When writing new folder artwork, remove any older folder artwork with all
@@ -756,10 +761,9 @@ function isNumericGenreReference(value: string): boolean {
   return /^\s*\d+\s*$/.test(value) || /^\s*\(\d+\)/.test(value);
 }
 
-export function buildNodeId3Tags(
+export function validateTagChanges(
   changes: T.WriteTrackTagsRequest['changes'],
-): Record<string, unknown> {
-  const tags: Record<string, unknown> = {};
+): void {
   for (const change of changes) {
     if (typeof change !== 'object' || change === null) {
       throw new ClientError('Invalid tag change.');
@@ -780,22 +784,14 @@ export function buildNodeId3Tags(
         `The genre "${value}" can't be just a number, because players treat numbers as preset genres. Try a word, like "1980s".`,
       );
     }
-    if (frameId === 'COMM') {
-      tags.comment = { language: 'eng', shortText: '', text: value };
-    } else if (frameId === 'TXXX') {
+    if (frameId === 'TXXX') {
       if (description !== PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION) {
         throw new ClientError(`Unsupported TXXX description: ${description}`);
       }
-      tags.userDefinedText = [{ description, value }];
-    } else {
-      const prop = FRAME_ID_TO_NODE_ID3[frameId];
-      if (!prop) {
-        throw new ClientError(`Unsupported frame ID: ${frameId}`);
-      }
-      tags[prop] = value;
+    } else if (frameId !== 'COMM' && !ID3_TEXT_FRAME_IDS.has(frameId)) {
+      throw new ClientError(`Unsupported frame ID: ${frameId}`);
     }
   }
-  return tags;
 }
 
 /**
@@ -822,7 +818,7 @@ function extractCommentText(rawValue: string): string {
  *
  * This function assumes the ID3v2.3 tag, when present, is the file's
  * leading tag. That holds for every tag this app writes and for the common
- * re-tagger case of prepending a fresh tag over an old one. NodeID3.update()
+ * re-tagger case of prepending a fresh tag over an old one. writeId3Tags()
  * only edits the leading tag, so a non-leading legacy ID3v2.3 tag will not
  * migrate. This is an accepted, atypical edge case.
  */
@@ -982,11 +978,19 @@ export async function writeTrackTagsForPath(
     }
 
     const id3v23Backfills = await computeId3v23Backfills(resolvedPath, changes);
-    const tags = buildNodeId3Tags([...id3v23Backfills, ...changes]);
-
-    const result = NodeID3.update(tags, resolvedPath);
-    if (result instanceof Error) {
-      return { type: 'error', message: result.message, code: 'write-failed' };
+    const allChanges = [...id3v23Backfills, ...changes];
+    validateTagChanges(allChanges);
+    try {
+      await writeId3Tags(resolvedPath, allChanges);
+    } catch (error) {
+      if (error instanceof Id3UnsupportedError) {
+        return {
+          type: 'error',
+          message: error.message,
+          code: 'unsupported-format',
+        };
+      }
+      throw error;
     }
     await backfillId3v1Tag(resolvedPath);
     return {
@@ -1730,21 +1734,7 @@ export async function embedArtworkIntoTrack(
       return { clientPath: normalizedClientPath, resolvedPath, mimeType };
     }
 
-    const result = NodeID3.update(
-      {
-        image: {
-          mime: mimeType,
-          type: { id: 3 }, // ID3v2 APIC picture type for "Cover (front)".
-          description: '',
-          imageBuffer,
-        },
-      },
-      resolvedPath,
-    );
-    if (result instanceof Error) {
-      return { path: normalizedClientPath, message: result.message };
-    }
-
+    await writeId3Artwork(resolvedPath, { mimeType, data: imageBuffer });
     return { clientPath: normalizedClientPath, resolvedPath, mimeType };
   } catch (error) {
     return {
@@ -1799,27 +1789,7 @@ export async function removeEmbeddedArtworkFromTrack(
       return { clientPath: normalizedClientPath, resolvedPath, removed };
     }
 
-    const current = NodeID3.read(resolvedPath) as {
-      raw?: Record<string, unknown>;
-    };
-    const raw = current.raw ?? {};
-    const apic = raw.APIC;
-    let removed = 0;
-    if (Array.isArray(apic)) {
-      removed = apic.length;
-    } else if (apic) {
-      removed = 1;
-    }
-    if (removed === 0) {
-      return { clientPath: normalizedClientPath, resolvedPath, removed: 0 };
-    }
-
-    delete raw.APIC;
-    const result = NodeID3.write(raw, resolvedPath);
-    if (result instanceof Error) {
-      return { path: normalizedClientPath, message: result.message };
-    }
-
+    const removed = await removeId3Artwork(resolvedPath);
     return { clientPath: normalizedClientPath, resolvedPath, removed };
   } catch (error) {
     return {

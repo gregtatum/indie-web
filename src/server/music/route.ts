@@ -18,7 +18,7 @@ import {
 } from '../../shared/music.ts';
 import {
   MUSIC_INDEX_FILENAME,
-  buildNodeId3Tags,
+  validateTagChanges,
   cleanUpDirectoriesAfterTrackDeletion,
   dedupeStagedTracks,
   deleteTrackFile,
@@ -620,7 +620,7 @@ export function musicRoute(mountPath: MountPath) {
       }
       // Validate/build the requested tags once up front so a malformed
       // request fails before any file is touched.
-      buildNodeId3Tags(changes);
+      validateTagChanges(changes);
       const updatedTracks: Extract<
         WriteTrackTagsForPathResult,
         { type: 'success' }

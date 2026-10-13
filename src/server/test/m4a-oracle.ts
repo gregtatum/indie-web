@@ -198,7 +198,7 @@ export async function ffprobeTags(
   );
 }
 
-async function packetMd5(path: string): Promise<string> {
+export async function packetMd5(path: string): Promise<string> {
   const output = await run('ffmpeg', [
     '-nostdin',
     '-v',
