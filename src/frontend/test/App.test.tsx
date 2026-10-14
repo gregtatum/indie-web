@@ -13,13 +13,12 @@ import {
   mockDropboxListFolder,
   spyOnDropboxFilesUpload,
 } from './utils/fixtures';
-import { ensureExists } from 'frontend/utils';
+import { ensureExists, dedent } from 'frontend/utils';
 import { FilesIndex, useFilesIndex } from 'frontend/logic/files-index';
-import { stripIndent } from 'common-tags';
 import fetchMock from '@fetch-mock/jest';
 import { MemoryRouter } from 'react-router-dom';
 
-const coldplayChordProText = stripIndent`
+const coldplayChordProText = dedent`
   {title: Clocks}
   {artist: Coldplay}
   {key: Ebmaj}

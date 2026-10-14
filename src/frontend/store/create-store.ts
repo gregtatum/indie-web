@@ -8,10 +8,14 @@ import {
   applyMiddleware,
   type Middleware,
 } from 'redux';
-import { thunk } from 'redux-thunk';
 import { mainReducer } from 'frontend/store/reducers';
 import { Store, Action, State } from 'frontend/@types';
 import { T } from 'frontend';
+
+const thunk: Middleware = (store) => (next) => (action: any) =>
+  typeof action === 'function'
+    ? action(store.dispatch, store.getState)
+    : next(action);
 
 /**
  * Create a more minimalist action logger.

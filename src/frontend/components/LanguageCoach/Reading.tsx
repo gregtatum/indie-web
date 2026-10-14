@@ -6,6 +6,7 @@ import {
   getPathFileNameNoExt,
   isElementInViewport,
   pathJoin,
+  dedent,
 } from 'frontend/utils';
 import { File, ListFilesSkeleton } from '../ListFiles';
 import {
@@ -21,7 +22,6 @@ import { applyClassToWords } from 'frontend/logic/language-tools';
 import * as Router from 'react-router-dom';
 import { TextSelectionTooltip } from '../TextSelectionTooltip';
 import { EditorView, placeholder } from '@codemirror/view';
-import dedent from 'dedent';
 
 export function Reading() {
   const coachPath = $$.getLanguageCoachPath();

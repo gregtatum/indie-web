@@ -3,16 +3,15 @@ import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import WorkboxPlugin from 'workbox-webpack-plugin';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 if (process.env.SITE === 'floppydisk') {
-  dotenv.config({ path: './.env.floppydisk' });
+  process.loadEnvFile('./.env.floppydisk');
 } else if (process.env.SITE === 'browserchords') {
-  dotenv.config({ path: './.env.browserchords' });
+  process.loadEnvFile('./.env.browserchords');
 } else {
   throw new Error(
     'The SITE environment must be set to either "floppydisk" or "browserchords"',

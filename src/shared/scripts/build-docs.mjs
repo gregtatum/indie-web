@@ -2,7 +2,6 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import { marked } from 'marked';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
@@ -44,9 +43,9 @@ if (!allowedSites.has(site)) {
 }
 
 if (site === 'floppydisk') {
-  dotenv.config({ path: './.env.floppydisk' });
+  process.loadEnvFile('./.env.floppydisk');
 } else if (site === 'browserchords') {
-  dotenv.config({ path: './.env.browserchords' });
+  process.loadEnvFile('./.env.browserchords');
 }
 
 const docsRoot = path.join(projectRoot, 'docs');

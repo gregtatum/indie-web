@@ -1,4 +1,4 @@
-import dedent from 'dedent';
+import { dedent } from 'frontend/utils';
 import {
   parseChord,
   parseChordPro,
@@ -10,7 +10,6 @@ import {
   romanChordText,
   SongKey,
 } from 'frontend/logic/parse-chords';
-import { stripIndent } from 'common-tags';
 
 describe('parser', () => {
   it('can parse alphanumeric', () => {
@@ -215,7 +214,7 @@ describe('parseChordPro', () => {
   });
 
   it('can do basic parsing', () => {
-    const result = parseChordPro(stripIndent`
+    const result = parseChordPro(dedent`
       This is[A] a simple song
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
@@ -247,7 +246,7 @@ describe('parseChordPro', () => {
   });
 
   it('will not parse broken chords', () => {
-    const result = parseChordPro(stripIndent`
+    const result = parseChordPro(dedent`
       This] is[A a simple song
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
@@ -266,7 +265,7 @@ describe('parseChordPro', () => {
   });
 
   it('will parse an empty chord', () => {
-    const result = parseChordPro(stripIndent`
+    const result = parseChordPro(dedent`
       This is[] a simple song
     `);
     expect(result.lines[0]).toMatchInlineSnapshot(`
@@ -297,7 +296,7 @@ describe('parseChordPro', () => {
 
   it('can do basic parsing', () => {
     expect(
-      parseChordPro(stripIndent`
+      parseChordPro(dedent`
         {t:My Song}
         {st:Greg Tatum}
         {key: Dm}
@@ -352,7 +351,7 @@ describe('parseChordPro', () => {
 
   it('can parse comments', () => {
     expect(
-      parseChordPro(stripIndent`
+      parseChordPro(dedent`
         {comment: This is a comment}
         Bare line
         {c: Another comment}
@@ -412,7 +411,7 @@ describe('parseChordPro', () => {
 
   it('can parse media', () => {
     expect(
-      parseChordPro(stripIndent`
+      parseChordPro(dedent`
         {img: src="/path/to/file.jpg"}
         {image: src="/path/to/file.png"}
         {audio: src="/path/to/audio.mp3"}

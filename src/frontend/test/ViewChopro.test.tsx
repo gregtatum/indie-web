@@ -8,19 +8,18 @@ import {
 } from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
-import { stripIndent } from 'common-tags';
+import { dedent, ensureExists } from 'frontend/utils';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import { T, A, $ } from 'frontend';
-import { ensureExists } from 'frontend/utils';
 import {
   mockDropboxAccessToken,
   mockDropboxFilesDownload,
   mockDropboxListFolder,
 } from './utils/fixtures';
 
-const coldplayChordProText = stripIndent`
+const coldplayChordProText = dedent`
   {title: Clocks}
   {artist: Coldplay}
   {key: D}
@@ -29,7 +28,7 @@ const coldplayChordProText = stripIndent`
   tides that I tried to sw[Em]im against
 `;
 
-const kokomoChordProText = stripIndent`
+const kokomoChordProText = dedent`
   {title: Kokomo}
   {artist: Beach Boys}
   {key: C}
@@ -587,7 +586,7 @@ describe('<ViewChopro>', () => {
 
   it('renders the song display as text after transpose', async () => {
     const { getSongText } = setup({
-      text: stripIndent`
+      text: dedent`
         {transpose: D}
         ${kokomoChordProText}
       `,
@@ -613,7 +612,7 @@ describe('<ViewChopro>', () => {
 
   it('renders the song display as text after capo', async () => {
     const { getSongText } = setup({
-      text: stripIndent`
+      text: dedent`
         {capo: 2}
         ${kokomoChordProText}
       `,
@@ -639,7 +638,7 @@ describe('<ViewChopro>', () => {
 
   it('renders the song display as text after capo and transpose', async () => {
     const { getSongText } = setup({
-      text: stripIndent`
+      text: dedent`
         {transpose: D}
         {capo: 2}
         ${kokomoChordProText}
@@ -666,7 +665,7 @@ describe('<ViewChopro>', () => {
 
   it('renders the song display as text with Nashville chords', async () => {
     const { getSongText } = setup({
-      text: stripIndent`
+      text: dedent`
         {chords: nashville}
         ${kokomoChordProText}
       `,
@@ -692,7 +691,7 @@ describe('<ViewChopro>', () => {
 
   it('ignores transpose with Nashville chords', async () => {
     const { getSongText } = setup({
-      text: stripIndent`
+      text: dedent`
         {chords: nashville}
         {transpose: D}
         ${kokomoChordProText}
@@ -719,7 +718,7 @@ describe('<ViewChopro>', () => {
 
   it('renders the song display as text with Roman numerals', async () => {
     const { getSongText } = setup({
-      text: stripIndent`
+      text: dedent`
         {chords: roman}
         ${kokomoChordProText}
       `,
@@ -745,7 +744,7 @@ describe('<ViewChopro>', () => {
 
   it('ignores capo with Roman numerals', async () => {
     const { getSongText } = setup({
-      text: stripIndent`
+      text: dedent`
         {chords: roman}
         {capo: 2}
         ${kokomoChordProText}

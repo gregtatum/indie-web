@@ -2,9 +2,8 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 
 import './ConnectFolder.css';
-import dedent from 'dedent';
+import { dedent, sluggify } from 'frontend/utils';
 import { $, $$, A, T, Hooks } from 'frontend';
-import { sluggify } from 'frontend/utils';
 import { InfoLink } from './InfoLink';
 
 export function ConnectFolder() {

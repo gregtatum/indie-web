@@ -572,3 +572,23 @@ export function randomUuid(): string {
   }
   return uuid;
 }
+
+/**
+ * Template tag that strips the common leading indentation from every line and
+ * trims the result, so multi-line strings can be indented with the code.
+ */
+export function dedent(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): string {
+  const text = String.raw({ raw: strings.raw }, ...values);
+  const lines = text.split('\n');
+  const indents = lines
+    .filter((line) => line.trim())
+    .map((line) => line.match(/^[ \t]*/)![0].length);
+  const indent = indents.length ? Math.min(...indents) : 0;
+  return lines
+    .map((line) => line.slice(indent))
+    .join('\n')
+    .trim();
+}

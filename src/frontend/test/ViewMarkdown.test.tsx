@@ -16,11 +16,10 @@ import {
   mockDropboxListFolder,
 } from './utils/fixtures';
 import { T, $, A } from 'frontend';
-import { ensureExists } from 'frontend/utils';
-import { stripIndent } from 'common-tags';
+import { ensureExists, dedent } from 'frontend/utils';
 import { MemoryRouter } from 'react-router-dom';
 
-const IdeasText = stripIndent`
+const IdeasText = dedent`
 # Great ideas
 
 Come up with some great ideas.
