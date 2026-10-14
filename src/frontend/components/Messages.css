@@ -34,6 +34,11 @@
   max-width: 420px;
 }
 
+.messagesMessage code {
+  background: #ffffff1f;
+  color: inherit;
+}
+
 .messagesDismissButton {
   flex-shrink: 0;
   width: 28px;

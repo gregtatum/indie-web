@@ -239,7 +239,6 @@ button.icon-mask {
 code {
   padding: 0 4px;
   background-color: #eee;
-  border: 1px solid 1px solid #00000033;
   border-radius: 3px;
 }
 
@@ -326,9 +325,9 @@ code {
   color: inherit;
 }
 
-[data-icon='pencil-fill'] {
+[data-icon='pencil'] {
   /* webpackIgnore: true */
-  background-image: url('/svg/pencil-fill.svg');
+  background-image: url('/svg/pencil.svg');
 }
 
 [data-icon='box-arrow-in-right'] {
@@ -336,9 +335,9 @@ code {
   background-image: url('/svg/box-arrow-in-right.svg');
 }
 
-[data-icon='trash-fill'] {
+[data-icon='trash'] {
   /* webpackIgnore: true */
-  background-image: url('/svg/trash-fill.svg');
+  background-image: url('/svg/trash.svg');
 }
 
 [data-icon='download'] {
@@ -354,11 +353,6 @@ code {
 [data-icon-mask='pause'] {
   /* webpackIgnore: true */
   mask-image: url('/svg/pause.svg');
-}
-
-[data-icon='trash-fill'] {
-  /* webpackIgnore: true */
-  background-image: url('/svg/trash-fill.svg');
 }
 
 [data-icon='music'] {

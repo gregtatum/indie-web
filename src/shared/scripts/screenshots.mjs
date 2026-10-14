@@ -180,6 +180,19 @@ const SHOTS = [
     describe: 'FloppyDisk: file + folder browser listing',
   },
   {
+    name: 'floppydisk-context-menu',
+    surface: 'files',
+    route: '/files/folder/',
+    waitFor: '.listFiles',
+    describe: 'FloppyDisk: file context menu',
+    prepare: async (page) => {
+      await page.locator('.listFiles [role="option"]').nth(2).click({
+        button: 'right',
+      });
+      await page.waitForSelector('.menusFile', { timeout: 5000 });
+    },
+  },
+  {
     name: 'floppydisk-markdown',
     surface: 'files',
     // The md route does not re-resolve the active store, so this shot relies on

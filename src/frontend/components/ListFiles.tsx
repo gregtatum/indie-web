@@ -791,12 +791,12 @@ const FileMenu = React.forwardRef<
               key: 'Rename',
               children: isMultiSelected ? (
                 <>
-                  <span className="icon" data-icon="pencil-fill" /> Rename{' '}
+                  <span className="icon" data-icon="pencil" /> Rename{' '}
                   {selectedFiles.length} Items
                 </>
               ) : (
                 <>
-                  <span className="icon" data-icon="pencil-fill" /> Rename
+                  <span className="icon" data-icon="pencil" /> Rename
                 </>
               ),
               onClick() {
@@ -816,12 +816,12 @@ const FileMenu = React.forwardRef<
               },
               children: isMultiSelected ? (
                 <>
-                  <span className="icon" data-icon="trash-fill" /> Delete{' '}
+                  <span className="icon" data-icon="trash" /> Delete{' '}
                   {selectedFiles.length} Items
                 </>
               ) : (
                 <>
-                  <span className="icon" data-icon="trash-fill" /> Delete{' '}
+                  <span className="icon" data-icon="trash" /> Delete{' '}
                   {file.type === 'file' ? 'File' : 'Folder'}
                 </>
               ),

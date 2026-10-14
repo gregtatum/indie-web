@@ -6,9 +6,14 @@ import { useEscape } from 'frontend/hooks';
 
 // The bottom and top border.
 const menuBorderHeight = 2;
-// Keeping this static makes the positioning below much simpler as there is no
-// measurement that needs to take place. Keep the value in sync with .menusFileButton
-const menuItemHeight = 41;
+// Items are sized by --density-touch-target (see .menusFileButton), so reading
+// the variable avoids having to measure the rendered menu.
+function getMenuItemHeight(): number {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(
+    '--density-touch-target',
+  );
+  return parseFloat(value) || 44;
+}
 const menuWidth = 220;
 const menuMargin = 10;
 
@@ -229,7 +234,7 @@ export function Menu({
 
   const { scrollTop } = document.documentElement;
   const scrollBottom = scrollTop + innerHeight;
-  const menuHeight = buttons.length * menuItemHeight + menuBorderHeight;
+  const menuHeight = buttons.length * getMenuItemHeight() + menuBorderHeight;
 
   if (elementY2 + menuHeight + menuMargin > scrollBottom) {
     // The menu is off the bottom of the scroll space.
