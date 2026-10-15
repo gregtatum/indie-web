@@ -4,8 +4,8 @@ import { ensureExists, getKeyboardString } from 'frontend/utils';
 import './Menus.css';
 import { useEscape } from 'frontend/hooks';
 
-// The bottom and top border.
-const menuBorderHeight = 2;
+// The bottom and top border, plus the bottom and top padding of .menusFile.
+const menuBorderHeight = 2 + 4;
 // Items are sized by --density-touch-target (see .menusFileButton), so reading
 // the variable avoids having to measure the rendered menu.
 function getMenuItemHeight(): number {

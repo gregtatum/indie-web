@@ -27,6 +27,7 @@
   font-size: var(--density-font-size);
   --icon-size: var(--density-icon-size);
   --menu-inset: calc((var(--density-touch-target) - var(--icon-size)) / 2);
+  padding: 2px;
   overflow: hidden;
 }
 
@@ -43,6 +44,7 @@
   justify-content: space-between;
   gap: 14px;
   border: 0;
+  border-radius: 5px;
   cursor: pointer;
 }
 
