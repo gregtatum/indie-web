@@ -190,6 +190,7 @@ const SHOTS = [
         button: 'right',
       });
       await page.waitForSelector('.menusFile', { timeout: 5000 });
+      await page.locator('.menusFileButton').nth(1).hover();
     },
   },
   {
