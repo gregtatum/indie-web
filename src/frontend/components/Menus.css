@@ -35,14 +35,14 @@
   margin: 0;
   background: none;
   height: var(--density-touch-target);
-  padding: 0 calc(var(--menu-inset) - 2px);
+  padding: 0 var(--menu-inset);
   box-sizing: border-box;
   text-align: left;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  border: 2px solid transparent;
+  border: 0;
   cursor: pointer;
 }
 
@@ -61,28 +61,21 @@
   font-size: 0.86em;
 }
 
-.menusFileButton:focus,
-.menusFileButton:active {
-  background: #d0f4ff;
-  border: var(--outline-active);
-  border-radius: 3px;
-  outline: none;
-}
-
 .menusFileButtonLabel > .icon {
   flex: none;
 }
 
-.menusFileButton:hover {
+.menusFileButton:focus {
   background-color: var(--accent);
   color: #fff;
+  outline: none;
 }
 
-.menusFileButton:hover > .menusFileButtonLabel > .icon {
+.menusFileButton:focus > .menusFileButtonLabel > .icon {
   filter: invert(1);
 }
 
-.menusFileButton:hover .menusFileButtonShortcut {
+.menusFileButton:focus .menusFileButtonShortcut {
   color: inherit;
 }
 

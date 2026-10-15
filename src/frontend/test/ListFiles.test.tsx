@@ -728,6 +728,70 @@ describe('ListFiles', () => {
     expect(await screen.findByRole('button', { name: /Rename/i })).toBeTruthy();
   });
 
+  it('navigates an open context menu with arrow keys, ignoring Tab, without moving the file selection', async () => {
+    const { user, getSelectedFilePath } = await setupWithListing([
+      'A.md',
+      'B.md',
+    ]);
+
+    await waitFor(() => getFileListing('/A.md'));
+
+    await act(async () => {
+      await user.click(getFileLink('/A.md'));
+    });
+    await act(async () => {
+      fireEvent.contextMenu(getFileListing('/A.md'));
+    });
+    const rename = await screen.findByRole('button', { name: /Rename/i });
+    const download = screen.getByRole('button', { name: /Download/i });
+
+    await act(async () => {
+      await user.keyboard('{ArrowDown}');
+    });
+    expect(document.activeElement).toBe(rename);
+    expect(getSelectedFilePath()).toEqual('/A.md');
+
+    await act(async () => {
+      await user.keyboard('{ArrowUp}');
+    });
+    expect(document.activeElement).toBe(download);
+    expect(getSelectedFilePath()).toEqual('/A.md');
+
+    await act(async () => {
+      await user.keyboard('{Tab}{Shift>}{Tab}{/Shift}');
+    });
+    expect(document.activeElement).toBe(download);
+    expect(getSelectedFilePath()).toEqual('/A.md');
+  });
+
+  it('selects the context menu item under the mouse, then moves from there with arrow keys', async () => {
+    const { user } = await setupWithListing(['A.md']);
+
+    await waitFor(() => getFileListing('/A.md'));
+    await act(async () => {
+      fireEvent.contextMenu(getFileListing('/A.md'));
+    });
+    const rename = await screen.findByRole('button', { name: /Rename/i });
+    const del = screen.getByRole('button', { name: /Delete/i });
+    const download = screen.getByRole('button', { name: /Download/i });
+    expect(document.activeElement).not.toBe(rename);
+
+    await act(async () => {
+      await user.hover(del);
+    });
+    expect(document.activeElement).toBe(del);
+
+    await act(async () => {
+      await user.keyboard('{ArrowDown}');
+    });
+    expect(document.activeElement).toBe(download);
+
+    await act(async () => {
+      await user.hover(rename);
+    });
+    expect(document.activeElement).toBe(rename);
+  });
+
   it('shows the file menu button in touch mode, with arrow-key focus and Enter to open it', async () => {
     const { store, user, navigateByKeyboard } = await setupWithListing([
       'README.md',

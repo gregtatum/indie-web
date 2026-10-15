@@ -156,24 +156,19 @@ export function Menu({
       switch (event.key) {
         case 'ArrowUp':
           event.preventDefault();
+          event.stopPropagation();
           setFocusIndex((index) => moveFocusUp(index, buttons));
           break;
         case 'ArrowDown':
           event.preventDefault();
+          event.stopPropagation();
           setFocusIndex((index) => moveFocusDown(index, buttons));
           break;
         case 'Tab': {
-          // Only handle plain Tab/Shift+Tab; let a Ctrl/Cmd/Alt+Tab combo
-          // (browser or OS tab-switching) pass through untouched.
           const key = getKeyboardString(event);
-          if (key !== 'Tab' && key !== 'Shift+Tab') {
-            break;
-          }
-          event.preventDefault();
-          if (key === 'Shift+Tab') {
-            setFocusIndex((index) => moveFocusUp(index, buttons));
-          } else {
-            setFocusIndex((index) => moveFocusDown(index, buttons));
+          if (key === 'Tab' || key === 'Shift+Tab') {
+            event.preventDefault();
+            event.stopPropagation();
           }
           break;
         }
@@ -181,9 +176,9 @@ export function Menu({
           break;
       }
     }
-    document.body.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
     return () => {
-      document.body.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [buttons, isClosed]);
 
@@ -252,12 +247,17 @@ export function Menu({
         width: menuWidth,
       }}
     >
-      {buttons.map((button) => (
+      {buttons.map((button, index) => (
         <button
           type="button"
           className="menusFileButton"
           tabIndex={0}
           key={button.key}
+          onMouseMove={() => {
+            if (focusIndex !== index) {
+              setFocusIndex(index);
+            }
+          }}
           onClick={() => {
             button.onClick();
             dismiss();
