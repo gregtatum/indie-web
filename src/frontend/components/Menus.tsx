@@ -4,15 +4,15 @@ import { ensureExists, getKeyboardString } from 'frontend/utils';
 import './Menus.css';
 import { useEscape } from 'frontend/hooks';
 
-// The bottom and top border, plus the bottom and top padding of .menusFile.
-const menuBorderHeight = 2 + 4;
-// Items are sized by --density-touch-target (see .menusFileButton), so reading
-// the variable avoids having to measure the rendered menu.
-function getMenuItemHeight(): number {
+// The bottom and top border.
+const menuBorderHeight = 2;
+// Sizes come from the density variables (see .menusFile and .menusFileButton),
+// so reading them avoids having to measure the rendered menu.
+function getDensityPx(name: string, fallback: number): number {
   const value = getComputedStyle(document.documentElement).getPropertyValue(
-    '--density-touch-target',
+    name,
   );
-  return parseFloat(value) || 44;
+  return parseFloat(value) || fallback;
 }
 const menuWidth = 220;
 const menuMargin = 10;
@@ -229,7 +229,10 @@ export function Menu({
 
   const { scrollTop } = document.documentElement;
   const scrollBottom = scrollTop + innerHeight;
-  const menuHeight = buttons.length * getMenuItemHeight() + menuBorderHeight;
+  const menuHeight =
+    buttons.length * getDensityPx('--density-touch-target', 44) +
+    2 * getDensityPx('--density-menu-padding', 4) +
+    menuBorderHeight;
 
   if (elementY2 + menuHeight + menuMargin > scrollBottom) {
     // The menu is off the bottom of the scroll space.

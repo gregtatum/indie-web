@@ -81,6 +81,8 @@
     --density-font-size: var(--font-size-normal);
     --density-icon-padding: 4px;
     --density-icon-size: 20px;
+    --density-menu-padding: 4px;
+    --density-menu-radius: 16px;
     --density-row-padding: 8px;
     --density-touch-target: 44px;
   }
@@ -91,6 +93,8 @@
     --density-font-size: var(--font-size-small);
     --density-icon-padding: 1px;
     --density-icon-size: 16px;
+    --density-menu-padding: 2px;
+    --density-menu-radius: 8px;
     --density-row-padding: 4px;
     --density-touch-target: 28px;
   }

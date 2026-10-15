@@ -23,11 +23,11 @@
   border: 1px solid #ccc;
   box-sizing: border-box;
   box-shadow: 0 3px 11px #0002;
-  border-radius: 8px;
+  border-radius: var(--density-menu-radius);
   font-size: var(--density-font-size);
   --icon-size: var(--density-icon-size);
   --menu-inset: calc((var(--density-touch-target) - var(--icon-size)) / 2);
-  padding: 2px;
+  padding: var(--density-menu-padding);
   overflow: hidden;
 }
 
@@ -44,7 +44,7 @@
   justify-content: space-between;
   gap: 14px;
   border: 0;
-  border-radius: 5px;
+  border-radius: calc(var(--density-menu-radius) - 1px - var(--density-menu-padding));
   cursor: pointer;
 }
 
