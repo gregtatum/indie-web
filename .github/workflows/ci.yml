@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { task: lint-js, label: Lint JS }
+          - { task: lint-css, label: Lint CSS }
+          - { task: ts-frontend, label: TypeScript Frontend }
+          - { task: ts-server, label: TypeScript Server }
+          - { task: ts-shared, label: TypeScript Shared }
+          - { task: test-frontend, label: Test Frontend }
+          - { task: test-server, label: Test Server }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            src/server/package-lock.json
+
+      - uses: go-task/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: npm ci
+
+      - run: npm ci
+        working-directory: src/server
+
+      - run: echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - run: task ${{ matrix.task }}
