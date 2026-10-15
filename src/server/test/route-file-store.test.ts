@@ -618,19 +618,23 @@ describe('POST /file-store/delete', () => {
 
 describe('POST /file-store/reveal', () => {
   let server: TestServer;
+  const originalPlatform = process.platform;
 
   before(async () => {
+    Object.defineProperty(process, 'platform', { value: 'darwin' });
     server = await createTestServer((app, mountPath) => {
       app.use('/file-store', fileStoreRoute(mountPath));
     });
   });
 
-  after(() => server.close());
+  after(() => {
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
+    return server.close();
+  });
 
   it(
     'returns 400 when the platform has no file manager launcher',
     withLogs(['[400err ]'], async () => {
-      const originalPlatform = process.platform;
       // Linux intentionally has no launcher — see file-manager-launcher.ts.
       Object.defineProperty(process, 'platform', { value: 'linux' });
       try {
@@ -641,9 +645,7 @@ describe('POST /file-store/reveal', () => {
         });
         assert.equal(res.status, 400);
       } finally {
-        Object.defineProperty(process, 'platform', {
-          value: originalPlatform,
-        });
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
       }
     }),
   );
