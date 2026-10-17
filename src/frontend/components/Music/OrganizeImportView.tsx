@@ -6,7 +6,158 @@ import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
   resolveOrganizationPath,
+  sanitizeFilenameSegment,
 } from 'shared/music';
+
+const EXAMPLE_TRACKS: ReadonlyArray<T.OrganizationTrackFields> = [
+  {
+    genre: 'Rock',
+    artist: 'Fleetwood Mac',
+    albumArtist: 'Fleetwood Mac',
+    album: 'Rumours',
+    year: '1977',
+    title: 'Dreams',
+    track: 2,
+    composer: null,
+  },
+  {
+    genre: 'Rock',
+    artist: 'Jimi Hendrix',
+    albumArtist: 'Jimi Hendrix',
+    album: 'Are You Experienced',
+    year: '1967',
+    title: 'Hey Joe',
+    track: 3,
+    composer: null,
+  },
+  {
+    genre: 'Rock',
+    artist: 'Led Zeppelin',
+    albumArtist: 'Led Zeppelin',
+    album: 'Houses of the Holy',
+    year: '1973',
+    title: 'The Rain Song',
+    track: 2,
+    composer: null,
+  },
+  {
+    genre: 'Rock',
+    artist: 'Pink Floyd',
+    albumArtist: 'Pink Floyd',
+    album: 'The Dark Side of the Moon',
+    year: '1973',
+    title: 'Money',
+    track: 6,
+    composer: null,
+  },
+  {
+    genre: 'Rock',
+    artist: 'Queen',
+    albumArtist: 'Queen',
+    album: 'A Night at the Opera',
+    year: '1975',
+    title: 'Bohemian Rhapsody',
+    track: 11,
+    composer: null,
+  },
+  {
+    genre: 'Rock',
+    artist: 'The Eagles',
+    albumArtist: 'The Eagles',
+    album: 'Hotel California',
+    year: '1976',
+    title: 'Hotel California',
+    track: 1,
+    composer: null,
+  },
+];
+
+const PATTERN_PARTS = /(\{[^}]*\}|\/)/;
+
+function splitPattern(template: string): string[] {
+  const pattern = template.startsWith('/') ? template : '/' + template;
+  return pattern.split(PATTERN_PARTS).filter(Boolean);
+}
+
+function PatternText({ pattern }: { pattern: string }) {
+  return (
+    <span>
+      {splitPattern(pattern).map((part, index) => {
+        if (part === '/') {
+          return (
+            <span key={index} className="musicOrganizePatternSlash">
+              /
+            </span>
+          );
+        }
+        if (part.startsWith('{') && part.endsWith('}')) {
+          const name = part.slice(1, -1);
+          return (
+            <span
+              key={index}
+              className="musicOrganizePatternPill"
+              data-token={name}
+            >
+              <span className="musicOrganizePatternBrace">{'{'}</span>
+              <span className="musicOrganizePatternToken">{name}</span>
+              <span className="musicOrganizePatternBrace">{'}'}</span>
+            </span>
+          );
+        }
+        return (
+          <span key={index} className="musicOrganizePatternLiteral">
+            {part}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function ExamplePath({
+  template,
+  track,
+}: {
+  template: string;
+  track: T.OrganizationTrackFields;
+}) {
+  return (
+    <>
+      {splitPattern(template).map((part, index) => {
+        const token = ORGANIZATION_TOKENS.find((t) => t.token === part);
+        if (token) {
+          return (
+            <span
+              key={index}
+              className="musicOrganizeExampleValue"
+              data-token={part.slice(1, -1)}
+            >
+              {sanitizeFilenameSegment(token.getValue(track))}
+            </span>
+          );
+        }
+        return (
+          <span key={index} className="musicOrganizeExampleSeparator">
+            {part}
+          </span>
+        );
+      })}
+      <span className="musicOrganizeExampleSeparator">.mp3</span>
+    </>
+  );
+}
+
+function OrganizeExamples({ template }: { template: string }) {
+  return (
+    <ul className="musicOrganizeExamples">
+      {EXAMPLE_TRACKS.map((track) => (
+        <li key={track.album}>
+          <ExamplePath template={template} track={track} />
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function OrganizeImportView({
   tracks,
@@ -22,6 +173,7 @@ export function OrganizeImportView({
   const [template, setTemplate] = React.useState(
     () => ORGANIZATION_PRESET_TEMPLATES[0],
   );
+  const [customSelected, setCustomSelected] = React.useState(false);
   const [overrides, setOverrides] = React.useState<Map<string, string>>(
     new Map(),
   );
@@ -31,6 +183,11 @@ export function OrganizeImportView({
   const [committing, setCommitting] = React.useState(false);
   const [remainingTracks, setRemainingTracks] =
     React.useState<T.TrackMetadata[]>(tracks);
+
+  function selectPreset(preset: string) {
+    setTemplate(preset);
+    setCustomSelected(false);
+  }
 
   function setOverride(path: string, value: string, computedPath: string) {
     setOverrides((prev) => {
@@ -127,40 +284,65 @@ export function OrganizeImportView({
       </div>
       <div className="musicBatchEditBody musicOrganizeBody">
         <div className="musicOrganizeTemplateSection">
-          <div className="musicOrganizeSectionLabel">Filename format</div>
-          <div className="musicOrganizeTemplateRow">
-            <input
-              className="musicOrganizeTemplateInput"
-              type="text"
-              value={template}
-              onChange={(event) => setTemplate(event.target.value)}
-              aria-label="Naming template"
-            />
-            <select
-              className="musicOrganizePresetsSelect"
-              value=""
-              aria-label="Insert a preset filename format"
-              onChange={(event) => {
-                if (event.target.value) {
-                  setTemplate(event.target.value);
-                }
-              }}
-            >
-              <option value="">Presets</option>
-              {ORGANIZATION_PRESET_TEMPLATES.map((preset) => (
-                <option key={preset} value={preset}>
-                  {preset}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="musicOrganizeTokenList">
-            {ORGANIZATION_TOKENS.map((t) => (
-              <span key={t.token} className="musicOrganizeTokenChip">
-                {t.token}
-              </span>
+          <div className="musicOrganizeSectionLabel">Organize files</div>
+          <div
+            className="musicOrganizePresetList"
+            role="radiogroup"
+            aria-label="Filename format"
+          >
+            {ORGANIZATION_PRESET_TEMPLATES.map((preset) => (
+              <div key={preset} className="musicOrganizePreset">
+                <label className="musicOrganizePresetPattern">
+                  <input
+                    type="radio"
+                    name="organizePreset"
+                    checked={!customSelected && template === preset}
+                    onChange={() => selectPreset(preset)}
+                  />
+                  <PatternText pattern={preset} />
+                </label>
+              </div>
             ))}
+            <div className="musicOrganizePreset">
+              <label className="musicOrganizePresetPattern">
+                <input
+                  type="radio"
+                  name="organizePreset"
+                  checked={customSelected}
+                  onChange={() => setCustomSelected(true)}
+                />
+                Custom…
+                <span
+                  className="musicOrganizePresetChevron"
+                  aria-hidden="true"
+                />
+              </label>
+              {customSelected ? (
+                <div className="musicOrganizePresetCustom">
+                  <input
+                    className="musicOrganizeTemplateInput"
+                    type="text"
+                    value={template}
+                    onChange={(event) => setTemplate(event.target.value)}
+                    aria-label="Naming template"
+                  />
+                  <div className="musicOrganizeTokenList">
+                    {ORGANIZATION_TOKENS.map((t) => (
+                      <span
+                        key={t.token}
+                        className="musicOrganizeTokenChip"
+                        data-token={t.token.slice(1, -1)}
+                      >
+                        {t.token}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
+          <div className="musicOrganizeSectionLabel">Example</div>
+          <OrganizeExamples template={template} />
         </div>
         <div className="musicOrganizePreviewSection">
           <div className="musicOrganizeSectionLabel">Preview</div>

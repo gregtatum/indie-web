@@ -939,6 +939,17 @@ describe('drag-and-drop import & organize', () => {
       }) as HTMLInputElement;
     }
 
+    function presetRadio(template: string): HTMLInputElement {
+      return screen.getByRole('radio', {
+        name: (name) =>
+          name.replace(/\s/g, '') ===
+          (template === 'Custom…' ? template : `/${template}`).replace(
+            /\s/g,
+            '',
+          ),
+      }) as HTMLInputElement;
+    }
+
     it('ignores a file drop while organizing', async () => {
       const { store } = await dropAndOrganize('time.mp3', {
         title: 'Time',
@@ -1000,19 +1011,24 @@ describe('drag-and-drop import & organize', () => {
       const otherPreset = ORGANIZATION_PRESET_TEMPLATES[3];
 
       expect(
-        (screen.getByLabelText('Naming template') as HTMLInputElement).value,
-      ).toBe(defaultPreset);
+        (presetRadio(ORGANIZATION_PRESET_TEMPLATES[0]) as HTMLInputElement)
+          .checked,
+      ).toBe(true);
       expect(destInput('Time').value).toBe(
         resolveOrganizationPath(defaultPreset, track, '.mp3'),
       );
 
-      fireEvent.change(
-        screen.getByLabelText('Insert a preset filename format'),
-        { target: { value: otherPreset } },
+      expect(screen.getByText('The Rain Song').parentElement?.textContent).toBe(
+        '/Rock/Led Zeppelin/1973 - Houses of the Holy/02 - The Rain Song.mp3',
       );
+      fireEvent.click(presetRadio(ORGANIZATION_PRESET_TEMPLATES[3]));
 
       expect(destInput('Time').value).toBe(
         resolveOrganizationPath(otherPreset, track, '.mp3'),
+      );
+
+      expect(screen.getByText('The Rain Song').parentElement?.textContent).toBe(
+        '/Led Zeppelin/Houses of the Holy/02 - The Rain Song.mp3',
       );
     }, 30_000);
 
@@ -1030,6 +1046,7 @@ describe('drag-and-drop import & organize', () => {
         composer: null,
       };
 
+      fireEvent.click(presetRadio('Custom…'));
       fireEvent.change(screen.getByLabelText('Naming template'), {
         target: { value: '{Artist} - {Title}' },
       });
@@ -1066,10 +1083,7 @@ describe('drag-and-drop import & organize', () => {
       expect(destInput('Time').value).toBe('/Custom/Path.mp3');
 
       // Switching presets doesn't clobber the manual override.
-      fireEvent.change(
-        screen.getByLabelText('Insert a preset filename format'),
-        { target: { value: otherPreset } },
-      );
+      fireEvent.click(presetRadio(ORGANIZATION_PRESET_TEMPLATES[3]));
       expect(destInput('Time').value).toBe('/Custom/Path.mp3');
 
       fireEvent.click(
@@ -1085,10 +1099,7 @@ describe('drag-and-drop import & organize', () => {
     it('returns to the staging screen via Back, and Next starts from the default preset again', async () => {
       await dropAndOrganize('time.mp3', { title: 'Time', artist: 'Floyd' });
 
-      fireEvent.change(
-        screen.getByLabelText('Insert a preset filename format'),
-        { target: { value: ORGANIZATION_PRESET_TEMPLATES[3] } },
-      );
+      fireEvent.click(presetRadio(ORGANIZATION_PRESET_TEMPLATES[3]));
 
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: '← Back' }));
@@ -1105,8 +1116,9 @@ describe('drag-and-drop import & organize', () => {
       // The template is ephemeral UI state, not persisted — each Organize
       // pass starts fresh from the default preset.
       expect(
-        (screen.getByLabelText('Naming template') as HTMLInputElement).value,
-      ).toBe(ORGANIZATION_PRESET_TEMPLATES[0]);
+        (presetRadio(ORGANIZATION_PRESET_TEMPLATES[0]) as HTMLInputElement)
+          .checked,
+      ).toBe(true);
     }, 30_000);
   });
 
