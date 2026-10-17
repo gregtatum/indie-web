@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { T, A, Hooks } from 'frontend';
+import { T, A, $$, Hooks } from 'frontend';
+import { ImportQualityPicker } from './ImportQualityPicker';
 import { useDiscardStagingPool } from 'frontend/hooks/music';
 import { splitOutFileExtension } from 'frontend/utils';
 import { persistedState } from 'frontend/logic/persisted-state';
@@ -121,6 +122,7 @@ export function OrganizeImportView({
   onClose: () => void;
 }) {
   const dispatch = Hooks.useDispatch();
+  const importQuality = $$.getMusicImportQuality();
   const { discardConfirmPending, handleDiscardClick } = useDiscardStagingPool();
   const [savedPattern] = React.useState(() =>
     persistedState.musicOrganizePattern.read(),
@@ -287,6 +289,15 @@ export function OrganizeImportView({
               ) : null}
             </div>
           </div>
+          <div className="musicOrganizeSectionLabel">Audio quality</div>
+          <p className="musicOrganizeSectionHint">
+            Choose how audio files are stored when imported.
+          </p>
+          <ImportQualityPicker
+            idPrefix="organize"
+            value={importQuality}
+            onChange={(value) => dispatch(A.setMusicImportQuality(value))}
+          />
         </div>
         <div className="musicOrganizePreviewSection">
           <div className="musicOrganizeSectionLabel">Preview</div>

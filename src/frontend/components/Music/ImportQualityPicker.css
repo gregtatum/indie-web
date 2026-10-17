@@ -1,12 +1,7 @@
 .importQualityPicker {
-  display: grid;
-  gap: 30px;
-  grid-template-columns: repeat(2, 1fr);
-  align-items: start;
-
-  @media (max-width: 700px) {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 
   & p {
     margin: 0;

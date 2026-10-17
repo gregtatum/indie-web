@@ -507,6 +507,11 @@
   color: var(--text-muted);
 }
 
+.musicOrganizeSectionHint {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 .musicOrganizePresetList {
   display: flex;
   flex-direction: column;

@@ -12,7 +12,6 @@ import { formatBytes, getEnv } from 'frontend/utils';
 import { useCodeVerifier } from 'frontend/hooks/pcse';
 import { ConnectedFoldersSettings } from './ConnectFolder';
 import { InfoLink } from './InfoLink';
-import { ImportQualityPicker } from './Music/ImportQualityPicker';
 import './Page.css';
 
 type CacheEstimate = {
@@ -26,7 +25,6 @@ export function Settings() {
   const editorAutocomplete = $$.getEditorAutocompleteSettings();
   const inputMode = $$.getInputMode();
   const fileStoreCacheEnabled = $$.getFileStoreCacheEnabled();
-  const musicImportQuality = $$.getMusicImportQuality();
   const dropboxOauth = $$.getDropboxOauth();
   const idbfs = $$.getIDBFSOrNull();
   const servers = $$.getServers();
@@ -399,26 +397,6 @@ export function Settings() {
             </p>
           </div>
         </div>
-        {experimentalFeatures && (
-          <div className="settingsCard settingsMusicCard">
-            <div className="settingsSectionHeading">
-              <div className="settingsSectionTitleRow">
-                <img
-                  className="settingsSectionIcon"
-                  src="/svg/music.svg"
-                  alt=""
-                />
-                <h2>Music</h2>
-              </div>
-              <p>Choose how audio files are stored when imported.</p>
-            </div>
-            <ImportQualityPicker
-              idPrefix="settings"
-              value={musicImportQuality}
-              onChange={(value) => dispatch(A.setMusicImportQuality(value))}
-            />
-          </div>
-        )}
         <hr className="settingsFooterRule" />
         <p className="settingsFooter">
           <a href="/docs/privacy.html">Privacy Policy and Usage.</a>
