@@ -117,6 +117,7 @@ describe('resolveOrganizationPath', () => {
       resolveOrganizationPath(
         '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
         ORGANIZATION_TRACK,
+        '.mp3',
       ),
     ).toBe('/Rock/Pink Floyd/1973 - Pink Floyd/04 - Time.mp3');
   });
@@ -126,25 +127,34 @@ describe('resolveOrganizationPath', () => {
       resolveOrganizationPath(
         '{Genre}/{Artist}/{Year} - {AlbumArtist}/{Track} - {Title}',
         { ...ORGANIZATION_TRACK, year: null },
+        '.mp3',
       ),
     ).toBe('/Rock/Pink Floyd/Pink Floyd/04 - Time.mp3');
   });
 
   it('sanitizes a slash inside a resolved field value instead of nesting a folder', () => {
     expect(
-      resolveOrganizationPath('{Artist}/{Title}', {
-        ...ORGANIZATION_TRACK,
-        artist: 'AC/DC',
-      }),
+      resolveOrganizationPath(
+        '{Artist}/{Title}',
+        {
+          ...ORGANIZATION_TRACK,
+          artist: 'AC/DC',
+        },
+        '.mp3',
+      ),
     ).toBe('/AC-DC/Time.mp3');
   });
 
   it('renders a null track number as an empty segment token', () => {
     expect(
-      resolveOrganizationPath('{Track} - {Title}', {
-        ...ORGANIZATION_TRACK,
-        track: null,
-      }),
+      resolveOrganizationPath(
+        '{Track} - {Title}',
+        {
+          ...ORGANIZATION_TRACK,
+          track: null,
+        },
+        '.mp3',
+      ),
     ).toBe('/Time.mp3');
   });
 });

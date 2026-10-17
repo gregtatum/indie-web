@@ -19,7 +19,11 @@ import * as Plain from './plain';
 import { FilesIndex, tryUpgradeIndexJSON } from 'frontend/logic/files-index';
 import { FileStoreError } from 'frontend/logic/file-store';
 import { IDBError } from 'frontend/logic/file-store/indexeddb-fs';
-import { compareTracksDefault, matchFolderArtworkFilename } from 'shared/music';
+import {
+  compareTracksDefault,
+  IMPORTABLE_AUDIO_EXTENSIONS,
+  matchFolderArtworkFilename,
+} from 'shared/music';
 import type {
   AddTracksResponse,
   WriteFolderArtworkResponse,
@@ -1912,11 +1916,13 @@ export function addFilesToStagingPool(
     const folderArtworkBySourceFolder = new Map<string, File>();
     let rejectedCount = 0;
     for (const [sourceFolder, entries] of byFolder) {
-      const isMp3 = (entry: { file: File }) =>
-        entry.file.name.toLowerCase().endsWith('.mp3');
-      const mp3Entries = entries.filter(isMp3);
-      const otherEntries = entries.filter((entry) => !isMp3(entry));
-      for (const entry of mp3Entries) {
+      const isImportable = (entry: { file: File }) =>
+        IMPORTABLE_AUDIO_EXTENSIONS.some((extension) =>
+          entry.file.name.toLowerCase().endsWith(extension),
+        );
+      const audioEntries = entries.filter(isImportable);
+      const otherEntries = entries.filter((entry) => !isImportable(entry));
+      for (const entry of audioEntries) {
         mp3Files.push(entry.file);
         mp3SourceFolders.push(sourceFolder);
       }
@@ -1936,7 +1942,7 @@ export function addFilesToStagingPool(
       if (rejectedCount > 0) {
         dispatch(
           addMessage({
-            message: `Only .mp3 files can be imported — skipped ${rejectedCount} file${rejectedCount === 1 ? '' : 's'}.`,
+            message: `Only MP3, M4A, and FLAC files can be imported — skipped ${rejectedCount} file${rejectedCount === 1 ? '' : 's'}.`,
             timeout: true,
           }),
         );

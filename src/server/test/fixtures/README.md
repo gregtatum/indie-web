@@ -18,6 +18,7 @@ rm cover.jpg
 head -c 600 tagged.m4a > corrupt.m4a
 ```
 
+- `tagged.flac`: FLAC with title, artist and album tags (`ffmpeg -f lavfi -i anullsrc=r=8000:cl=mono -t 1 -metadata title="Fixture Title" -metadata artist="Fixture Artist" -metadata album="Fixture Album" tagged.flac`).
 - `tagged.m4a`: AAC with the standard tags above.
 - `tagged-with-art.m4a`: the same, plus an embedded cover.
 - `corrupt.m4a`: truncated before the header finishes, so ffmpeg fails on it.

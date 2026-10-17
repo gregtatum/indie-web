@@ -6,7 +6,7 @@ import {
   within,
 } from '@testing-library/react';
 import { act } from 'react';
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { $, A, T } from 'frontend';
 import {
@@ -225,7 +225,7 @@ describe('drag-and-drop import & organize', () => {
       expect(stagedFiles).toContain('time.mp3');
     });
 
-    it('rejects non-MP3 files with a message and stages nothing', async () => {
+    it('rejects unsupported files with a message and stages nothing', async () => {
       await renderMusicApp({ server: getServer() });
       const zone = await dropZone();
 
@@ -239,7 +239,7 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      await screen.findByText(/Only \.mp3 files can be imported/);
+      await screen.findByText(/Only MP3, M4A, and FLAC files can be imported/);
 
       const stagingRoot = join(getServer().mountDir, '.music-staging');
       await expect(readdir(stagingRoot)).rejects.toThrow();
@@ -288,6 +288,41 @@ describe('drag-and-drop import & organize', () => {
       const stagingRoot = join(getServer().mountDir, '.music-staging');
       const stagedFiles = await readdir(stagingRoot);
       expect(stagedFiles).toContain('kaneda.mp3');
+    });
+
+    it('stages dropped FLAC and M4A files with their tags', async () => {
+      const fixtures = join(process.cwd(), 'src/server/test/fixtures');
+      const files = await Promise.all(
+        ['tagged.flac', 'tagged.m4a'].map(
+          async (name) =>
+            new File(
+              [new Uint8Array(await readFile(join(fixtures, name)))],
+              name,
+            ),
+        ),
+      );
+
+      const { store } = await renderMusicApp({ server: getServer() });
+      const zone = await dropZone();
+      await act(async () => {
+        fireEvent.drop(zone, { dataTransfer: makeDataTransfer(files) });
+        await waitForNetworkIdle();
+      });
+      await waitForStagingPool(store, 2);
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
+      const pool = $.getMusicStagingPool(store.getState());
+      expect(pool.map((track) => track.title)).toEqual([
+        'Fixture Title',
+        'Fixture Title',
+      ]);
+      const stagedFiles = await readdir(
+        join(getServer().mountDir, '.music-staging'),
+      );
+      expect(stagedFiles).toContain('tagged.flac');
+      expect(stagedFiles).toContain('tagged.m4a');
     });
 
     it('suffixes a new drop whose filename collides with a file already in the pool', async () => {
@@ -930,7 +965,7 @@ describe('drag-and-drop import & organize', () => {
         (screen.getByLabelText('Naming template') as HTMLInputElement).value,
       ).toBe(defaultPreset);
       expect(destInput('Time').value).toBe(
-        resolveOrganizationPath(defaultPreset, track),
+        resolveOrganizationPath(defaultPreset, track, '.mp3'),
       );
 
       fireEvent.change(
@@ -939,7 +974,7 @@ describe('drag-and-drop import & organize', () => {
       );
 
       expect(destInput('Time').value).toBe(
-        resolveOrganizationPath(otherPreset, track),
+        resolveOrganizationPath(otherPreset, track, '.mp3'),
       );
     }, 30_000);
 
@@ -962,7 +997,7 @@ describe('drag-and-drop import & organize', () => {
       });
 
       expect(destInput('Time').value).toBe(
-        resolveOrganizationPath('{Artist} - {Title}', track),
+        resolveOrganizationPath('{Artist} - {Title}', track, '.mp3'),
       );
     }, 30_000);
 
@@ -1004,7 +1039,7 @@ describe('drag-and-drop import & organize', () => {
           name: 'Reset Time to the template path',
         }),
       );
-      const resetPath = resolveOrganizationPath(otherPreset, track);
+      const resetPath = resolveOrganizationPath(otherPreset, track, '.mp3');
       expect(destInput('Time').value).toBe(resetPath);
       expect(resetPath).not.toBe(computedPath);
     }, 30_000);
@@ -1094,26 +1129,34 @@ describe('drag-and-drop import & organize', () => {
       });
 
       const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
-      const expectedPathA = resolveOrganizationPath(defaultPreset, {
-        genre: 'Rock',
-        artist: 'Pink Floyd',
-        albumArtist: 'Pink Floyd',
-        album: 'The Dark Side of the Moon',
-        year: null,
-        title: 'Time',
-        track: 4,
-        composer: null,
-      });
-      const expectedPathB = resolveOrganizationPath(defaultPreset, {
-        genre: 'Soundtrack',
-        artist: 'Geinoh',
-        albumArtist: null,
-        album: null,
-        year: null,
-        title: 'Kaneda',
-        track: null,
-        composer: null,
-      });
+      const expectedPathA = resolveOrganizationPath(
+        defaultPreset,
+        {
+          genre: 'Rock',
+          artist: 'Pink Floyd',
+          albumArtist: 'Pink Floyd',
+          album: 'The Dark Side of the Moon',
+          year: null,
+          title: 'Time',
+          track: 4,
+          composer: null,
+        },
+        '.mp3',
+      );
+      const expectedPathB = resolveOrganizationPath(
+        defaultPreset,
+        {
+          genre: 'Soundtrack',
+          artist: 'Geinoh',
+          albumArtist: null,
+          album: null,
+          year: null,
+          title: 'Kaneda',
+          track: null,
+          composer: null,
+        },
+        '.mp3',
+      );
 
       await expect(
         stat(join(getServer().mountDir, expectedPathA)),
@@ -1182,16 +1225,20 @@ describe('drag-and-drop import & organize', () => {
       });
 
       const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
-      const expectedPath = resolveOrganizationPath(defaultPreset, {
-        genre: 'Rock',
-        artist: 'Pink Floyd',
-        albumArtist: 'Pink Floyd',
-        album: 'The Dark Side of the Moon',
-        year: null,
-        title: 'Time',
-        track: 4,
-        composer: null,
-      });
+      const expectedPath = resolveOrganizationPath(
+        defaultPreset,
+        {
+          genre: 'Rock',
+          artist: 'Pink Floyd',
+          albumArtist: 'Pink Floyd',
+          album: 'The Dark Side of the Moon',
+          year: null,
+          title: 'Time',
+          track: 4,
+          composer: null,
+        },
+        '.mp3',
+      );
       const expectedFolder = dirname(expectedPath);
       const expectedFolderArtworkPath = `${expectedFolder}/Folder.jpg`;
 
@@ -1268,26 +1315,34 @@ describe('drag-and-drop import & organize', () => {
       });
 
       const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
-      const expectedPathA = resolveOrganizationPath(defaultPreset, {
-        genre: 'Rock',
-        artist: 'Pink Floyd',
-        albumArtist: 'Pink Floyd',
-        album: 'The Dark Side of the Moon',
-        year: null,
-        title: 'Time',
-        track: 4,
-        composer: null,
-      });
-      const expectedPathB = resolveOrganizationPath(defaultPreset, {
-        genre: 'Soundtrack',
-        artist: 'Geinoh',
-        albumArtist: null,
-        album: null,
-        year: null,
-        title: 'Kaneda',
-        track: null,
-        composer: null,
-      });
+      const expectedPathA = resolveOrganizationPath(
+        defaultPreset,
+        {
+          genre: 'Rock',
+          artist: 'Pink Floyd',
+          albumArtist: 'Pink Floyd',
+          album: 'The Dark Side of the Moon',
+          year: null,
+          title: 'Time',
+          track: 4,
+          composer: null,
+        },
+        '.mp3',
+      );
+      const expectedPathB = resolveOrganizationPath(
+        defaultPreset,
+        {
+          genre: 'Soundtrack',
+          artist: 'Geinoh',
+          albumArtist: null,
+          album: null,
+          year: null,
+          title: 'Kaneda',
+          track: null,
+          composer: null,
+        },
+        '.mp3',
+      );
       const folderA = dirname(expectedPathA);
       const folderB = dirname(expectedPathB);
       expect(folderA).not.toBe(folderB);
@@ -1356,6 +1411,7 @@ describe('drag-and-drop import & organize', () => {
           track: 2,
           composer: null,
         },
+        '.mp3',
       );
       await expect(
         stat(join(getServer().mountDir, uniquePath)),
@@ -1391,6 +1447,7 @@ describe('drag-and-drop import & organize', () => {
           track: 1,
           composer: null,
         },
+        '.mp3',
       );
       await expect(
         stat(join(getServer().mountDir, otherDupPath)),
@@ -1461,16 +1518,20 @@ describe('drag-and-drop import & organize', () => {
       expect(remaining[0].title).toBe('Song C');
 
       const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
-      const pathA = resolveOrganizationPath(defaultPreset, {
-        genre: 'Rock',
-        artist: 'Artist',
-        albumArtist: null,
-        album: null,
-        year: null,
-        title: 'Song A',
-        track: 1,
-        composer: null,
-      });
+      const pathA = resolveOrganizationPath(
+        defaultPreset,
+        {
+          genre: 'Rock',
+          artist: 'Artist',
+          albumArtist: null,
+          album: null,
+          year: null,
+          title: 'Song A',
+          track: 1,
+          composer: null,
+        },
+        '.mp3',
+      );
       await expect(
         stat(join(getServer().mountDir, pathA)),
       ).resolves.toBeTruthy();

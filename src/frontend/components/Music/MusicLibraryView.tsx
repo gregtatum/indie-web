@@ -307,8 +307,8 @@ export function MusicLibraryView({
       >
         <div className="musicImportDropOverlayInner">
           {stagingPool.length > 0
-            ? 'Add mp3s to staging'
-            : 'Add mp3s to your library'}
+            ? 'Add audio files to staging'
+            : 'Add audio files to your library'}
         </div>
       </div>,
     );

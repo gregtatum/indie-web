@@ -212,6 +212,12 @@ export function compareTracksDefault(
   return (a.title ?? a.path).localeCompare(b.title ?? b.path);
 }
 
+export const IMPORTABLE_AUDIO_EXTENSIONS: ReadonlyArray<string> = [
+  '.mp3',
+  '.m4a',
+  '.flac',
+];
+
 export interface OrganizationTrackFields {
   genre: string | null;
   artist: string | null;
@@ -267,6 +273,7 @@ function cleanOrganizationSegment(segment: string): string {
 export function resolveOrganizationPath(
   template: string,
   track: OrganizationTrackFields,
+  extension: string,
 ): string {
   let substituted = template;
   for (const { token, getValue } of ORGANIZATION_TOKENS) {
@@ -278,7 +285,7 @@ export function resolveOrganizationPath(
     .split('/')
     .map(cleanOrganizationSegment)
     .filter((segment) => segment.length > 0);
-  return '/' + segments.join('/') + '.mp3';
+  return '/' + segments.join('/') + extension;
 }
 
 export const ORGANIZATION_PRESET_TEMPLATES: ReadonlyArray<string> = [
@@ -302,6 +309,7 @@ export const TAG_FORMAT_PRIORITY = [
   'ID3v2.2',
   'ID3v1',
   'iTunes',
+  'vorbis',
 ] as const;
 
 /**
@@ -312,17 +320,22 @@ export const TAG_FORMAT_PRIORITY = [
  * name the same field differently.
  */
 const FRAME_ID_ALIASES: Record<string, Partial<Record<string, string>>> = {
-  TIT2: { 'ID3v2.2': 'TT2', ID3v1: 'title', iTunes: '©nam' },
-  TPE1: { 'ID3v2.2': 'TP1', ID3v1: 'artist', iTunes: '©ART' },
-  TPE2: { 'ID3v2.2': 'TP2', iTunes: 'aART' },
-  TALB: { 'ID3v2.2': 'TAL', ID3v1: 'album', iTunes: '©alb' },
-  TCOM: { 'ID3v2.2': 'TCM', iTunes: '©wrt' },
-  TRCK: { 'ID3v2.2': 'TRK', ID3v1: 'track', iTunes: 'trkn' },
-  TPOS: { 'ID3v2.2': 'TPA', iTunes: 'disk' },
-  TYER: { 'ID3v2.2': 'TYE', ID3v1: 'year' },
-  TCON: { 'ID3v2.2': 'TCO', ID3v1: 'genre', iTunes: '©gen' },
-  TBPM: { 'ID3v2.2': 'TBP' },
-  COMM: { 'ID3v2.2': 'COM', ID3v1: 'comment' },
+  TIT2: { 'ID3v2.2': 'TT2', ID3v1: 'title', iTunes: '©nam', vorbis: 'TITLE' },
+  TPE1: { 'ID3v2.2': 'TP1', ID3v1: 'artist', iTunes: '©ART', vorbis: 'ARTIST' },
+  TPE2: { 'ID3v2.2': 'TP2', iTunes: 'aART', vorbis: 'ALBUMARTIST' },
+  TALB: { 'ID3v2.2': 'TAL', ID3v1: 'album', iTunes: '©alb', vorbis: 'ALBUM' },
+  TCOM: { 'ID3v2.2': 'TCM', iTunes: '©wrt', vorbis: 'COMPOSER' },
+  TRCK: {
+    'ID3v2.2': 'TRK',
+    ID3v1: 'track',
+    iTunes: 'trkn',
+    vorbis: 'TRACKNUMBER',
+  },
+  TPOS: { 'ID3v2.2': 'TPA', iTunes: 'disk', vorbis: 'DISCNUMBER' },
+  TYER: { 'ID3v2.2': 'TYE', ID3v1: 'year', vorbis: 'DATE' },
+  TCON: { 'ID3v2.2': 'TCO', ID3v1: 'genre', iTunes: '©gen', vorbis: 'GENRE' },
+  TBPM: { 'ID3v2.2': 'TBP', vorbis: 'BPM' },
+  COMM: { 'ID3v2.2': 'COM', ID3v1: 'comment', vorbis: 'COMMENT' },
 };
 
 /**

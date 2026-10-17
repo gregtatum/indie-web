@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { T, A, Hooks } from 'frontend';
 import { useDiscardStagingPool } from 'frontend/hooks/music';
+import { splitOutFileExtension } from 'frontend/utils';
 import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
@@ -56,7 +57,12 @@ export function OrganizeImportView({
     const destinations: Record<string, string> = {};
     for (const track of remainingTracks) {
       destinations[track.path] =
-        overrides.get(track.path) ?? resolveOrganizationPath(template, track);
+        overrides.get(track.path) ??
+        resolveOrganizationPath(
+          template,
+          track,
+          splitOutFileExtension(track.path).extension,
+        );
     }
     const result = await dispatch(A.commitStagingPoolTracks(destinations));
     const collisionSet = new Set(result.collisions);
@@ -166,7 +172,11 @@ export function OrganizeImportView({
           </div>
           <div className="musicOrganizePreviewList">
             {remainingTracks.map((track) => {
-              const computedPath = resolveOrganizationPath(template, track);
+              const computedPath = resolveOrganizationPath(
+                template,
+                track,
+                splitOutFileExtension(track.path).extension,
+              );
               const overridden = overrides.get(track.path);
               const destPath = overridden ?? computedPath;
               const hasCollision = collisionPaths.has(track.path);
