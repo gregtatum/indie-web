@@ -6,71 +6,7 @@ import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
   resolveOrganizationPath,
-  sanitizeFilenameSegment,
 } from 'shared/music';
-
-const EXAMPLE_TRACKS: ReadonlyArray<T.OrganizationTrackFields> = [
-  {
-    genre: 'Rock',
-    artist: 'Fleetwood Mac',
-    albumArtist: 'Fleetwood Mac',
-    album: 'Rumours',
-    year: '1977',
-    title: 'Dreams',
-    track: 2,
-    composer: null,
-  },
-  {
-    genre: 'Rock',
-    artist: 'Jimi Hendrix',
-    albumArtist: 'Jimi Hendrix',
-    album: 'Are You Experienced',
-    year: '1967',
-    title: 'Hey Joe',
-    track: 3,
-    composer: null,
-  },
-  {
-    genre: 'Rock',
-    artist: 'Led Zeppelin',
-    albumArtist: 'Led Zeppelin',
-    album: 'Houses of the Holy',
-    year: '1973',
-    title: 'The Rain Song',
-    track: 2,
-    composer: null,
-  },
-  {
-    genre: 'Rock',
-    artist: 'Pink Floyd',
-    albumArtist: 'Pink Floyd',
-    album: 'The Dark Side of the Moon',
-    year: '1973',
-    title: 'Money',
-    track: 6,
-    composer: null,
-  },
-  {
-    genre: 'Rock',
-    artist: 'Queen',
-    albumArtist: 'Queen',
-    album: 'A Night at the Opera',
-    year: '1975',
-    title: 'Bohemian Rhapsody',
-    track: 11,
-    composer: null,
-  },
-  {
-    genre: 'Rock',
-    artist: 'The Eagles',
-    albumArtist: 'The Eagles',
-    album: 'Hotel California',
-    year: '1976',
-    title: 'Hotel California',
-    track: 1,
-    composer: null,
-  },
-];
 
 const PATTERN_PARTS = /(\{[^}]*\}|\/)/;
 
@@ -111,51 +47,6 @@ function PatternText({ pattern }: { pattern: string }) {
         );
       })}
     </span>
-  );
-}
-
-function ExamplePath({
-  template,
-  track,
-}: {
-  template: string;
-  track: T.OrganizationTrackFields;
-}) {
-  return (
-    <>
-      {splitPattern(template).map((part, index) => {
-        const token = ORGANIZATION_TOKENS.find((t) => t.token === part);
-        if (token) {
-          return (
-            <span
-              key={index}
-              className="musicOrganizeExampleValue"
-              data-token={part.slice(1, -1)}
-            >
-              {sanitizeFilenameSegment(token.getValue(track))}
-            </span>
-          );
-        }
-        return (
-          <span key={index} className="musicOrganizeExampleSeparator">
-            {part}
-          </span>
-        );
-      })}
-      <span className="musicOrganizeExampleSeparator">.mp3</span>
-    </>
-  );
-}
-
-function OrganizeExamples({ template }: { template: string }) {
-  return (
-    <ul className="musicOrganizeExamples">
-      {EXAMPLE_TRACKS.map((track) => (
-        <li key={track.album}>
-          <ExamplePath template={template} track={track} />
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -383,8 +274,6 @@ export function OrganizeImportView({
               ) : null}
             </div>
           </div>
-          <div className="musicOrganizeSectionLabel">Example</div>
-          <OrganizeExamples template={template} />
         </div>
         <div className="musicOrganizePreviewSection">
           <div className="musicOrganizeSectionLabel">Preview</div>

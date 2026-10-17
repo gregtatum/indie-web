@@ -1015,9 +1015,6 @@ describe('drag-and-drop import & organize', () => {
         'The Dark Side of the Moon',
         '01 - Time.mp3',
       ]);
-      expect(screen.getByText('The Rain Song').parentElement?.textContent).toBe(
-        '/Rock/Led Zeppelin/1973 - Houses of the Holy/02 - The Rain Song.mp3',
-      );
 
       fireEvent.click(presetRadio(ORGANIZATION_PRESET_TEMPLATES[3]));
 
@@ -1026,9 +1023,6 @@ describe('drag-and-drop import & organize', () => {
         'The Dark Side of the Moon',
         '01 - Time.mp3',
       ]);
-      expect(screen.getByText('The Rain Song').parentElement?.textContent).toBe(
-        '/Led Zeppelin/Houses of the Holy/02 - The Rain Song.mp3',
-      );
     }, 30_000);
 
     it('supports a custom typed template that updates the preview live', async () => {

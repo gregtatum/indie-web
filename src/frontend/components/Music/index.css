@@ -549,7 +549,6 @@
 }
 
 .musicOrganizePatternPill,
-.musicOrganizeExampleValue,
 .musicOrganizeTokenChip {
   background: var(--token-fill);
   color: var(--text-body);
@@ -624,33 +623,6 @@
   .musicOrganizePreset:has(input[type='radio']:checked) & {
     transform: rotate(135deg);
   }
-}
-
-.musicOrganizeExamples {
-  margin: 0;
-  padding: 10px 14px;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  border-radius: var(--button-border-radius);
-  background: var(--surface-raised);
-  font-size: var(--font-size-small);
-  line-height: 1.4;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow-x: auto;
-  user-select: text;
-}
-
-.musicOrganizeExampleValue {
-  padding: 1px 4px;
-  border-radius: 3px;
-}
-
-.musicOrganizeExampleSeparator {
-  color: var(--text-muted);
-  margin-inline: 2px;
 }
 
 .musicOrganizeTemplateInput {
