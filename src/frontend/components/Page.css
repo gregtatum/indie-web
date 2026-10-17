@@ -79,6 +79,10 @@
   margin-top: 20px;
 }
 
+.settingsMusicCard {
+  margin-top: 30px;
+}
+
 .settingsSectionGrid {
   display: grid;
   gap: 30px;

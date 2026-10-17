@@ -173,6 +173,26 @@ const SHOTS = [
     },
   },
   {
+    name: 'settings-music',
+    surface: 'files',
+    route: '/settings',
+    waitFor: '.settingsCard',
+    describe: 'Settings: Music import quality (experimental features on)',
+    prepare: async (page) => {
+      await page.evaluate(() => {
+        /* eslint-disable-next-line no-undef */
+        const storage = window.localStorage;
+        storage.setItem('experimentalFeatures', 'true');
+        storage.setItem(
+          'musicImportQuality',
+          JSON.stringify({ maximumQuality: 'high', lossyFormat: 'm4a' }),
+        );
+      });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.locator('.settingsMusicCard').scrollIntoViewIfNeeded();
+    },
+  },
+  {
     name: 'floppydisk-files',
     surface: 'files',
     route: '/files/folder/',

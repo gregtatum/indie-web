@@ -105,6 +105,10 @@ export function getEditorAutocompleteSettings(state: State) {
   return state.editorAutocompleteSettings;
 }
 
+export function getMusicImportQuality(state: State) {
+  return state.musicImportQuality;
+}
+
 export function getHideEditor(state: State) {
   return state.hideEditor;
 }

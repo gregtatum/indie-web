@@ -20,6 +20,63 @@ export const PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION =
 
 export type PreferComposerGroupingValue = 'true' | 'false';
 
+export const IMPORT_QUALITY_LEVELS = [
+  {
+    id: 'original',
+    label: 'Original',
+    description: 'Keep every file exactly as it is.',
+    detail: 'No conversion',
+    maxKbps: null,
+  },
+  {
+    id: 'lossless',
+    label: 'Lossless',
+    description: 'Identical to CD quality. Hi-res files are reduced.',
+    detail: 'FLAC up to 16-bit / 44.1 kHz',
+    maxKbps: null,
+  },
+  {
+    id: 'high',
+    label: 'High',
+    description: 'Hard to tell apart from lossless.',
+    detail: { m4a: 'AAC 256 kbps', mp3: 'MP3 V0 (~245 kbps)' },
+    maxKbps: 256,
+  },
+  {
+    id: 'standard',
+    label: 'Standard',
+    description: 'A good balance of size and quality.',
+    detail: { m4a: 'AAC 160 kbps', mp3: 'MP3 V4 (~165 kbps)' },
+    maxKbps: 160,
+  },
+  {
+    id: 'compact',
+    label: 'Compact',
+    description: 'The smallest files.',
+    detail: { m4a: 'AAC 128 kbps', mp3: 'MP3 V5 (~130 kbps)' },
+    maxKbps: 128,
+  },
+] as const;
+
+export type MaximumQuality = (typeof IMPORT_QUALITY_LEVELS)[number]['id'];
+
+export const LOSSY_FORMATS = [
+  { id: 'm4a', label: 'AAC (m4a)' },
+  { id: 'mp3', label: 'MP3' },
+] as const;
+
+export type LossyFormat = (typeof LOSSY_FORMATS)[number]['id'];
+
+export interface ImportQualitySettings {
+  maximumQuality: MaximumQuality;
+  lossyFormat: LossyFormat;
+}
+
+export const DEFAULT_IMPORT_QUALITY: ImportQualitySettings = {
+  maximumQuality: 'original',
+  lossyFormat: 'm4a',
+};
+
 export const FOLDER_ARTWORK_FILENAMES = [
   'cover.jpg',
   'cover.png',

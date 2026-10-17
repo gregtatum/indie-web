@@ -2,6 +2,7 @@ import * as T from 'frontend/@types';
 import { combineReducers } from 'redux';
 import { getDirName, updatePathRoot } from 'frontend/utils';
 import { FilesIndex } from 'frontend/logic/files-index';
+import type { ImportQualitySettings } from 'shared';
 import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 import { toFileStoreName } from 'frontend/logic/app-logic';
@@ -793,6 +794,19 @@ function editorAutocompleteSettings(
   }
 }
 
+function musicImportQuality(
+  state: ImportQualitySettings = persistedState.musicImportQuality.read(),
+  action: T.Action,
+): ImportQualitySettings {
+  switch (action.type) {
+    case 'set-music-import-quality':
+      persistedState.musicImportQuality.write(action.value);
+      return action.value;
+    default:
+      return state;
+  }
+}
+
 function copyFile(
   state: T.CopyFileState | null = null,
   action: T.Action,
@@ -935,6 +949,7 @@ export const reducers = combineReducers({
   isDraggingSplitter,
   languageCoach: languageCoachReducer,
   music: musicReducer,
+  musicImportQuality,
   listFileErrors,
   listFilesCache,
   messages,

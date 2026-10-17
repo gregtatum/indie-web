@@ -6,6 +6,12 @@ import {
   sluggify,
 } from 'frontend/utils';
 import {
+  DEFAULT_IMPORT_QUALITY,
+  IMPORT_QUALITY_LEVELS,
+  LOSSY_FORMATS,
+  type ImportQualitySettings,
+} from 'shared';
+import {
   BATCH_EDIT_COLUMN_KEYS,
   type BatchEditColumnKey,
 } from 'frontend/logic/music/metadata';
@@ -254,6 +260,25 @@ export const persistedState = {
       return {
         markdown: Boolean(getBooleanishProp(value, 'markdown')),
         chordpro: Boolean(getBooleanishProp(value, 'chordpro') ?? true),
+      };
+    },
+  }),
+
+  musicImportQuality: new JsonStorage({
+    defaultValue: DEFAULT_IMPORT_QUALITY,
+    parse(value): ImportQualitySettings | null {
+      const maximumQuality = IMPORT_QUALITY_LEVELS.find(
+        (level) => level.id === getStringProp(value, 'maximumQuality'),
+      );
+      const lossyFormat = LOSSY_FORMATS.find(
+        (format) => format.id === getStringProp(value, 'lossyFormat'),
+      );
+      if (!maximumQuality || !lossyFormat) {
+        return null;
+      }
+      return {
+        maximumQuality: maximumQuality.id,
+        lossyFormat: lossyFormat.id,
       };
     },
   }),

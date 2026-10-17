@@ -5,6 +5,7 @@ import {
   clearAllLocalStorageForUserDataRemoval,
   persistedState,
 } from 'frontend/logic/persisted-state';
+import type { ImportQualitySettings } from 'shared';
 import type { FileStoreCache } from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 
@@ -349,6 +350,13 @@ export function setEditorAutocomplete(
   return {
     type: 'set-editor-autocomplete' as const,
     editor,
+    value,
+  };
+}
+
+export function setMusicImportQuality(value: ImportQualitySettings) {
+  return {
+    type: 'set-music-import-quality' as const,
     value,
   };
 }
