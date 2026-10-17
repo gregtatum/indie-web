@@ -1853,15 +1853,19 @@ function dedupeStagedFilenames(
   });
 }
 
+interface StagedUploadResult {
+  tracks: T.TrackMetadata[];
+  duplicateCount: number;
+}
+
 async function uploadToStagingPool(
   fileStore: ReturnType<typeof $.getCurrentFS>,
   server: ReturnType<typeof $.getCurrentServer>,
   mp3Files: File[],
   filenames: string[],
   folderArtworkPathByPath: Record<string, string>,
-  importQuality: ImportQualitySettings,
   onProgress: (uploaded: number) => void,
-): Promise<T.StagingUploadResponse> {
+): Promise<StagedUploadResult> {
   const trackPaths: string[] = [];
   for (let i = 0; i < mp3Files.length; i++) {
     const path = `/.music-staging/${filenames[i]}`;
@@ -1873,11 +1877,7 @@ async function uploadToStagingPool(
   const res = await fetch(`${server.url}/music/staging-pool`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      trackPaths,
-      folderArtworkPathByPath,
-      importQuality,
-    }),
+    body: JSON.stringify({ trackPaths, folderArtworkPathByPath }),
   });
   if (!res.ok) {
     throw new Error(await res.text());
@@ -2001,17 +2001,12 @@ export function addFilesToStagingPool(
     const messageGeneration = dispatch(addMessage(stagingMessage(0)));
 
     try {
-      const {
-        tracks: addedTracks,
-        duplicateCount,
-        conversionErrors,
-      } = await uploadToStagingPool(
+      const { tracks: addedTracks, duplicateCount } = await uploadToStagingPool(
         fileStore,
         server,
         mp3Files,
         filenames,
         folderArtworkPathByStagingPath,
-        $.getMusicImportQuality(getState()),
         (uploaded) =>
           dispatch(
             addMessage({
@@ -2031,14 +2026,6 @@ export function addFilesToStagingPool(
       dispatch(Plain.dismissMessage(messageGeneration));
       reportRejectedFiles();
       reportDuplicates(duplicateCount);
-      if (conversionErrors.length > 0) {
-        dispatch(
-          addMessage({
-            message: `Could not convert ${conversionErrors.length} file${conversionErrors.length === 1 ? '' : 's'} — kept as imported.`,
-            timeout: true,
-          }),
-        );
-      }
     } catch (error) {
       console.error(error);
       dispatch(
@@ -2233,6 +2220,23 @@ export function refreshMusicStagingPool(): Thunk<Promise<void>> {
   };
 }
 
+async function organizeStagedTrack(
+  server: ReturnType<typeof $.getCurrentServer>,
+  from: string,
+  to: string,
+  importQuality: ImportQualitySettings,
+): Promise<T.OrganizeTrackResponse> {
+  const res = await fetch(`${server.url}/music/organize-track`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to, importQuality }),
+  });
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+  return (await res.json()) as T.OrganizeTrackResponse;
+}
+
 async function findMusicImportCollisions(
   fileStore: ReturnType<typeof $.getCurrentFS>,
   destinations: Map<string, string>,
@@ -2310,6 +2314,7 @@ export function commitStagingPoolTracks(
       destinationMap,
     );
 
+    const importQuality = $.getMusicImportQuality(getState());
     const pool = $.getMusicStagingPool(getState());
     const tracksToMove = pool.filter(
       (track) => destinationMap.has(track.path) && !collisions.has(track.path),
@@ -2333,8 +2338,18 @@ export function commitStagingPoolTracks(
       }
       try {
         await fileStore.createFolder(getDirName(destination));
-        await fileStore.move(track.path, destination);
-        movedTracks.push({ ...track, path: destination });
+        if (importQuality.maximumQuality === 'original') {
+          await fileStore.move(track.path, destination);
+          movedTracks.push({ ...track, path: destination });
+        } else {
+          const moved = await organizeStagedTrack(
+            server,
+            track.path,
+            destination,
+            importQuality,
+          );
+          movedTracks.push({ ...track, ...moved });
+        }
         movedSourcePaths.add(track.path);
         if (track.folderArtworkPath) {
           const destFolders =

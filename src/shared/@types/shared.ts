@@ -269,7 +269,6 @@ export interface ScanTrackPathsResponse {
 export interface StagingUploadResponse {
   tracks: TrackMetadata[];
   duplicateCount: number;
-  conversionErrors: Array<{ path: string; message: string }>;
 }
 
 export interface DeleteTracksRequest {
@@ -283,6 +282,12 @@ export interface DeleteTracksResponse {
     status: 'updated' | 'skipped' | 'error';
     message: string | null;
   };
+}
+
+export interface OrganizeTrackResponse {
+  path: string;
+  size: number;
+  mtime: string;
 }
 
 export interface AddTracksRequest {

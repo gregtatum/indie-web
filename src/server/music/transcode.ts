@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
-import { availableParallelism } from 'node:os';
-import { basename, dirname, extname, posix } from 'node:path';
+import { basename, dirname, extname } from 'node:path';
 import { parseFile } from 'music-metadata';
 import {
   IMPORT_BITRATE_TOLERANCE_PERCENT,
@@ -11,11 +10,10 @@ import {
   type LossyFormat,
   type MaximumQuality,
 } from '../../shared/music.ts';
-import type { MountPath } from '../route-utils.ts';
+import { ClientError, type MountPath } from '../route-utils.ts';
+import { MUSIC_STAGING_DIRNAME, isUnderClientPath } from './logic.ts';
 import { runFfmpeg } from './ffmpeg.ts';
 
-const MIN_CONCURRENT_CONVERSIONS = 1;
-const MAX_CONCURRENT_CONVERSIONS = 4;
 const DURATION_TOLERANCE_SECONDS = 1;
 const CD_SAMPLE_RATE = 44_100;
 const CD_BITS_PER_SAMPLE = 16;
@@ -47,12 +45,6 @@ export interface SourceAudio {
 export interface ConversionPlan {
   extension: string;
   encoderArgs: string[];
-}
-
-export interface StagedConversionResult {
-  paths: string[];
-  renamed: Map<string, string>;
-  errors: Array<{ path: string; message: string }>;
 }
 
 export function parseImportQualitySettings(
@@ -158,6 +150,14 @@ async function probeSource(fullPath: string): Promise<SourceAudio | null> {
   }
 }
 
+function isInStaging(mountPath: MountPath, fullPath: string): boolean {
+  const clientPath = mountPath.toClientPath(fullPath);
+  return (
+    clientPath !== null &&
+    isUnderClientPath(clientPath, `/${MUSIC_STAGING_DIRNAME}`)
+  );
+}
+
 function joinWithinMount(mountPath: MountPath, ...parts: string[]): string {
   const joined = mountPath.joinWithinMount(...parts);
   if (!joined) {
@@ -173,24 +173,6 @@ async function pathExists(fullPath: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-async function chooseTargetPath(
-  mountPath: MountPath,
-  sourcePath: string,
-  extension: string,
-): Promise<string> {
-  const dir = dirname(sourcePath);
-  const stem = basename(sourcePath, extname(sourcePath));
-  const preferred = joinWithinMount(mountPath, dir, `${stem}${extension}`);
-  if (preferred === sourcePath) {
-    return preferred;
-  }
-  let candidate = preferred;
-  for (let n = 2; await pathExists(candidate); n++) {
-    candidate = joinWithinMount(mountPath, dir, `${stem} (${n})${extension}`);
-  }
-  return candidate;
 }
 
 async function verifyConverted(
@@ -210,17 +192,13 @@ async function verifyConverted(
 async function convertFile(
   mountPath: MountPath,
   sourcePath: string,
+  targetPath: string,
   source: SourceAudio,
   plan: ConversionPlan,
-): Promise<string> {
-  const targetPath = await chooseTargetPath(
-    mountPath,
-    sourcePath,
-    plan.extension,
-  );
+): Promise<void> {
   const tempPath = joinWithinMount(
     mountPath,
-    dirname(sourcePath),
+    dirname(targetPath),
     `.converting-${randomUUID()}${plan.extension}`,
   );
   try {
@@ -244,85 +222,77 @@ async function convertFile(
       'transcode',
     );
     await verifyConverted(tempPath, source.durationSeconds);
+    await assertDestinationFree(targetPath);
     await fs.rename(tempPath, targetPath);
   } catch (error) {
     await fs.rm(tempPath, { force: true });
     throw error;
   }
-  if (targetPath !== sourcePath) {
-    await fs.rm(sourcePath);
-  }
-  return targetPath;
 }
 
-/**
- * Converts staged tracks in place according to the import quality settings.
- * A track that cannot be converted stays as imported and is reported in
- * `errors`, so one bad file never blocks the rest of an import.
- */
-export async function convertStagedTracks(
+async function assertDestinationFree(targetPath: string): Promise<void> {
+  if (await pathExists(targetPath)) {
+    throw new ClientError(
+      `A file already exists at ${basename(targetPath)} in the destination.`,
+    );
+  }
+}
+
+export async function importStagedTrack(
   mountPath: MountPath,
-  clientPaths: string[],
+  fromClientPath: string,
+  toClientPath: string,
   settings: ImportQualitySettings,
-): Promise<StagedConversionResult> {
-  const result: StagedConversionResult = {
-    paths: [...clientPaths],
-    renamed: new Map(),
-    errors: [],
-  };
-  if (settings.maximumQuality === 'original') {
-    return result;
+): Promise<string> {
+  const sourcePath = mountPath.resolve(fromClientPath);
+  const requestedPath = mountPath.resolve(toClientPath);
+  if (!sourcePath || !requestedPath) {
+    throw new ClientError('Invalid path.');
+  }
+  if (!isInStaging(mountPath, sourcePath)) {
+    throw new ClientError('Only staged tracks can be organized.');
+  }
+  if (isInStaging(mountPath, requestedPath)) {
+    throw new ClientError('Tracks cannot be organized into the staging area.');
+  }
+  const extension = extname(sourcePath).toLowerCase();
+  if (!KIND_BY_EXTENSION[extension]) {
+    throw new ClientError('Unsupported audio file type.');
+  }
+  if (extname(requestedPath).toLowerCase() !== extension) {
+    throw new ClientError('The destination must keep the same file type.');
   }
 
-  async function convertOne(index: number): Promise<void> {
-    const clientPath = clientPaths[index];
-    const sourcePath = mountPath.resolve(clientPath);
-    if (!sourcePath) {
-      return;
-    }
-    const source = await probeSource(sourcePath);
-    const plan = source && planConversion(source, settings);
-    if (!source || !plan) {
-      return;
-    }
+  const source = await probeSource(sourcePath);
+  const plan = source && planConversion(source, settings);
+  let targetPath = requestedPath;
+  let targetClientPath = toClientPath;
+  if (plan) {
+    targetPath = joinWithinMount(
+      mountPath,
+      dirname(requestedPath),
+      `${basename(requestedPath, extname(requestedPath))}${plan.extension}`,
+    );
+    targetClientPath = `${toClientPath.slice(0, -extension.length)}${plan.extension}`;
+  }
+
+  await assertDestinationFree(targetPath);
+  await fs.mkdir(dirname(targetPath), { recursive: true });
+  if (source && plan) {
     try {
-      const targetPath = await convertFile(mountPath, sourcePath, source, plan);
-      const converted = posix.join(
-        posix.dirname(clientPath),
-        basename(targetPath),
-      );
-      result.paths[index] = converted;
-      result.renamed.set(clientPath, converted);
+      await convertFile(mountPath, sourcePath, targetPath, source, plan);
     } catch (error) {
-      result.errors.push({
-        path: clientPath,
-        message: error instanceof Error ? error.message : String(error),
-      });
+      if (error instanceof ClientError) {
+        throw error;
+      }
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new ClientError(
+        `Could not convert ${basename(sourcePath)}: ${reason}`,
+      );
     }
+    await fs.rm(sourcePath);
+  } else {
+    await fs.rename(sourcePath, targetPath);
   }
-
-  let workerCount = availableParallelism() - 1;
-  if (workerCount < MIN_CONCURRENT_CONVERSIONS) {
-    workerCount = MIN_CONCURRENT_CONVERSIONS;
-  }
-  if (workerCount > MAX_CONCURRENT_CONVERSIONS) {
-    workerCount = MAX_CONCURRENT_CONVERSIONS;
-  }
-  if (workerCount > clientPaths.length) {
-    workerCount = clientPaths.length;
-  }
-
-  let next = 0;
-  async function runWorker(): Promise<void> {
-    while (next < clientPaths.length) {
-      await convertOne(next++);
-    }
-  }
-
-  const workers: Promise<void>[] = [];
-  for (let i = 0; i < workerCount; i++) {
-    workers.push(runWorker());
-  }
-  await Promise.all(workers);
-  return result;
+  return targetClientPath;
 }
