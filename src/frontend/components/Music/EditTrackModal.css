@@ -210,15 +210,9 @@
   font-style: italic;
 }
 
-.editTrackModalLabel-top {
-  align-self: start;
-  padding-top: 2px;
-}
-
-.editTrackModalAudioTable {
+.editTrackModalFileTable {
   font-size: var(--font-size-small);
   border-collapse: collapse;
-  justify-self: start;
 
   & th {
     color: var(--text-label);
@@ -234,18 +228,9 @@
   }
 }
 
-.editTrackModalGroupHeader {
+.editTrackModalGroupSpacer {
   grid-column: 1 / -1;
-  font-size: var(--font-size-small);
-  color: var(--text-muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding-top: 14px;
-}
-
-.editTrackModalGroupHeader:first-child {
-  padding-top: 0;
+  height: 20px;
 }
 
 .editTrackModalSplitInput {

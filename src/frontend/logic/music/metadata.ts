@@ -286,19 +286,19 @@ export const DETAIL_FIELDS = [
     type: 'split',
     group: 'position',
   },
-  {
-    frameId: 'TYER',
-    key: 'year',
-    label: 'Year',
-    type: 'number',
-    group: 'position',
-  },
   // classification
   {
     frameId: 'TCON',
     key: 'genre',
     label: 'Genre',
     type: 'text',
+    group: 'classification',
+  },
+  {
+    frameId: 'TYER',
+    key: 'year',
+    label: 'Year',
+    type: 'number',
     group: 'classification',
   },
   {

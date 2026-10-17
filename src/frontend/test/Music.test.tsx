@@ -288,7 +288,7 @@ describe('<Music> with real server', () => {
     });
 
     // Wait for tags to fully load — the TagsTab shows "Loading…" while in-flight;
-    // it's kept in the DOM even when the Details tab is active, so we can wait for
+    // it's kept in the DOM even when the Track tab is active, so we can wait for
     // it to disappear without switching tabs.
     await waitFor(() => {
       expect(screen.queryByText('Loading…')).toBeNull();
@@ -633,7 +633,7 @@ describe('<Music> with real server', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'Tags' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'File' }));
     });
     expect(
       screen
@@ -646,7 +646,7 @@ describe('<Music> with real server', () => {
     ).toBe(true);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'Details' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Track' }));
     });
     await act(async () => {
       await userEvent.clear(screen.getByLabelText('Title'));
@@ -673,7 +673,7 @@ describe('<Music> with real server', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'Tags' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'File' }));
     });
     await waitFor(() => {
       expect(

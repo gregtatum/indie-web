@@ -305,13 +305,13 @@ describe('edit track modal — loading and error states', () => {
 
     await openEditModal('Song A');
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'Tags' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'File' }));
     });
     await waitFor(() => {
       expect(screen.getByText(/Error: 500/)).toBeTruthy();
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('tab', { name: 'Details' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Track' }));
     });
 
     expect((screen.getByLabelText('Title') as HTMLInputElement).disabled).toBe(

@@ -3,14 +3,9 @@ import * as Router from 'react-router-dom';
 import { $$, A, Hooks, T } from 'frontend';
 import { Tabs } from 'frontend/components/Tabs';
 import { throttle } from 'shared/utils';
-import {
-  formatBytes,
-  getDirName,
-  getGeneration,
-  getPathFileName,
-} from 'frontend/utils';
+import { getDirName, getGeneration, getPathFileName } from 'frontend/utils';
 import { ArtworkTab, type PendingArtwork } from './ArtworkTab';
-import { TagsTab } from './TagsTab';
+import { FileTab } from './FileTab';
 import {
   DETAIL_FIELDS,
   emptyDetailFieldValues,
@@ -29,7 +24,6 @@ import {
   serializePreferComposerGroupingTag,
 } from 'shared/music';
 import type {
-  TrackAudioInfo,
   TrackTagsResponse,
   WriteTrackTagsResponse,
   WriteFolderArtworkResponse,
@@ -37,12 +31,6 @@ import type {
 import { writeTrackTagsWithProgress } from 'frontend/hooks/music';
 import './EditTrackModal.css';
 
-const GROUP_LABELS: Record<string, string> = {
-  core: 'Identity',
-  position: 'Position',
-  classification: 'Classification',
-  notes: 'Notes',
-};
 const DETAIL_GROUP_ORDER: DetailFieldGroup[] = [
   'core',
   'position',
@@ -258,97 +246,6 @@ function buildDetailChanges(
     });
   }
   return changes;
-}
-
-function formatContainer(container: string): string {
-  if (container.startsWith('M4A') || container.startsWith('mp4')) {
-    return 'MPEG-4 (M4A)';
-  }
-  if (container === 'MPEG') {
-    return 'MPEG audio';
-  }
-  return container;
-}
-
-function formatSampleRate(hertz: number): string {
-  return `${Number((hertz / 1000).toFixed(1))} kHz`;
-}
-
-function formatChannels(channels: number): string {
-  if (channels === 1) {
-    return 'Mono';
-  }
-  if (channels === 2) {
-    return 'Stereo';
-  }
-  return `${channels} channels`;
-}
-
-function formatDuration(seconds: number): string {
-  const total = Math.round(seconds);
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const secs = String(total % 60).padStart(2, '0');
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, '0')}:${secs}`;
-  }
-  return `${minutes}:${secs}`;
-}
-
-function AudioDetails({ audio }: { audio: TrackAudioInfo }) {
-  const rows: Array<[string, string]> = [];
-  if (audio.container) {
-    rows.push(['Container', formatContainer(audio.container)]);
-  }
-  if (audio.codec) {
-    rows.push(['Codec', audio.codec]);
-  }
-  if (audio.sampleRate) {
-    rows.push(['Sample rate', formatSampleRate(audio.sampleRate)]);
-  }
-  if (audio.channels) {
-    rows.push(['Channels', formatChannels(audio.channels)]);
-  }
-  if (audio.duration) {
-    rows.push(['Duration', formatDuration(audio.duration)]);
-  }
-  rows.push(['Size', formatBytes(audio.size)]);
-  if (audio.bitrate) {
-    rows.push(['Bitrate', `${Math.round(audio.bitrate / 1000)} kbps`]);
-  }
-
-  return (
-    <table className="editTrackModalAudioTable">
-      <tbody>
-        {rows.map(([label, value]) => (
-          <tr key={label}>
-            <th scope="row">{label}</th>
-            <td>{value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function getCommonFolder(paths: string[]): string | null {
-  if (paths.length === 0) {
-    return null;
-  }
-  const common = getDirName(paths[0]).split('/');
-  for (const path of paths.slice(1)) {
-    const parts = getDirName(path).split('/');
-    let length = 0;
-    while (
-      length < common.length &&
-      length < parts.length &&
-      common[length] === parts[length]
-    ) {
-      length++;
-    }
-    common.length = length;
-  }
-  return common.join('/') || '/';
 }
 
 export const TrackEditorPanel = React.forwardRef<
@@ -1077,43 +974,26 @@ export const TrackEditorPanel = React.forwardRef<
   }
   const detailRows: React.ReactNode[] = [];
 
-  let pathRow: React.ReactNode = null;
-  const pathFolder = getCommonFolder(editTracks.map((t) => t.path));
-  if (pathFolder && pathFolder !== '/') {
-    const pathHref = `/${fsSlug}/folder${pathFolder}`;
-    const fileName = isBulkEdit ? null : getPathFileName(editTracks[0].path);
-    pathRow = (
-      <div key="path" className="editTrackModalRow">
-        <span className="editTrackModalLabel">Path</span>
-        <a
-          className="editTrackModalPathLink"
-          href={pathHref}
-          onClick={(e) => {
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-              return;
-            }
-            e.preventDefault();
-            if (fileName) {
-              dispatch(A.changeFileFocus(pathFolder, fileName));
-            }
-            navigate(pathHref);
-          }}
-        >
-          {fileName ? `${pathFolder}/${fileName}` : pathFolder}
-        </a>
-      </div>
-    );
-  }
-
-  let audioRow: React.ReactNode = null;
-  if (!isBulkEdit && tagsState.status === 'loaded' && tagsState.data.audio) {
-    audioRow = (
-      <div key="audio" className="editTrackModalRow">
-        <span className="editTrackModalLabel editTrackModalLabel-top">
-          Audio
-        </span>
-        <AudioDetails audio={tagsState.data.audio} />
-      </div>
+  let pathLink: React.ReactNode = null;
+  if (!isBulkEdit && editTracks.length > 0) {
+    const filePath = editTracks[0].path;
+    const folder = getDirName(filePath) || '/';
+    const href = `/${fsSlug}/folder${folder}`;
+    pathLink = (
+      <a
+        className="editTrackModalPathLink"
+        href={href}
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+            return;
+          }
+          e.preventDefault();
+          dispatch(A.changeFileFocus(folder, getPathFileName(filePath)));
+          navigate(href);
+        }}
+      >
+        {filePath}
+      </a>
     );
   }
 
@@ -1229,31 +1109,25 @@ export const TrackEditorPanel = React.forwardRef<
     }
   }
 
-  for (const group of DETAIL_GROUP_ORDER) {
-    detailRows.push(
-      <div key={`group-${group}`} className="editTrackModalGroupHeader">
-        {GROUP_LABELS[group]}
-      </div>,
-    );
+  for (const [groupIndex, group] of DETAIL_GROUP_ORDER.entries()) {
+    if (groupIndex > 0) {
+      detailRows.push(
+        <div key={`group-${group}`} className="editTrackModalGroupSpacer" />,
+      );
+    }
     for (const field of DETAIL_FIELDS) {
       if (field.group !== group || (isBulkEdit && field.key === 'title')) {
         continue;
       }
       addDetailFieldRow(field);
     }
-    if (group === 'notes' && pathRow) {
-      detailRows.push(pathRow);
-    }
     detailRows.push(...(extraRowsByGroup[group] ?? []));
-    if (group === 'notes' && audioRow) {
-      detailRows.push(audioRow);
-    }
   }
 
   const tabs = [
     {
       id: 'details' as T.MusicEditTab,
-      label: 'Details',
+      label: 'Track',
       panel: (
         <form className="editTrackModalDetails" onSubmit={handleDetailsSubmit}>
           {detailsNotices}
@@ -1314,13 +1188,13 @@ export const TrackEditorPanel = React.forwardRef<
     },
     {
       id: 'id3' as T.MusicEditTab,
-      label: 'Tags',
+      label: 'File',
       disabled: isBulkEdit,
       disabledTitle: isBulkEdit
-        ? 'Tags are disabled for bulk editing'
+        ? 'File details are disabled for bulk editing'
         : undefined,
       panel: track ? (
-        <TagsTab tagsState={tagsState} />
+        <FileTab tagsState={tagsState} location={pathLink} />
       ) : (
         <div className="editTrackModalTags">
           <div className="editTrackModalTagsLoading">No track selected</div>
