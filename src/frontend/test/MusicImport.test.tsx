@@ -80,6 +80,20 @@ function makeFolderDataTransfer(entries: FileSystemEntry[]): DataTransfer {
   } as unknown as DataTransfer;
 }
 
+function treeRows(): string[] {
+  return within(screen.getByRole('list', { name: 'Organized folders' }))
+    .getAllByRole('listitem')
+    .map((row) => row.textContent ?? '');
+}
+
+function presetRadio(template: string): HTMLInputElement {
+  return screen.getByRole('radio', {
+    name: (name) =>
+      name.replace(/\s/g, '') ===
+      (template === 'Custom…' ? template : `/${template}`).replace(/\s/g, ''),
+  }) as HTMLInputElement;
+}
+
 describe('drag-and-drop import & organize', () => {
   const { getServer } = useMusicTestServer();
 
@@ -912,10 +926,7 @@ describe('drag-and-drop import & organize', () => {
       });
       await screen.findByText(/Organize ·/);
 
-      const destInput = screen.getByRole('textbox', {
-        name: 'Destination path for Song A',
-      }) as HTMLInputElement;
-      expect(destInput.value).toContain('2014');
+      expect(treeRows().join('/')).toContain('2014');
     }, 30_000);
   });
 
@@ -931,23 +942,6 @@ describe('drag-and-drop import & organize', () => {
       });
       await screen.findByText(/Organize ·/);
       return { store };
-    }
-
-    function destInput(title: string): HTMLInputElement {
-      return screen.getByRole('textbox', {
-        name: `Destination path for ${title}`,
-      }) as HTMLInputElement;
-    }
-
-    function presetRadio(template: string): HTMLInputElement {
-      return screen.getByRole('radio', {
-        name: (name) =>
-          name.replace(/\s/g, '') ===
-          (template === 'Custom…' ? template : `/${template}`).replace(
-            /\s/g,
-            '',
-          ),
-      }) as HTMLInputElement;
     }
 
     it('ignores a file drop while organizing', async () => {
@@ -986,6 +980,24 @@ describe('drag-and-drop import & organize', () => {
       await screen.findByText(/Organize ·/);
     }, 30_000);
 
+    it('shows the organized files as a folder tree', async () => {
+      await dropAndOrganize('time.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+        albumArtist: 'Pink Floyd',
+        album: 'The Dark Side of the Moon',
+        genre: 'Rock',
+        track: 4,
+      });
+
+      expect(treeRows()).toEqual([
+        'Rock',
+        'Pink Floyd',
+        'The Dark Side of the Moon',
+        '04 - Time.mp3',
+      ]);
+    }, 30_000);
+
     it('previews the default preset and switches to another preset', async () => {
       await dropAndOrganize('time.mp3', {
         title: 'Time',
@@ -996,37 +1008,24 @@ describe('drag-and-drop import & organize', () => {
         track: 1,
       });
 
-      const track: T.OrganizationTrackFields = {
-        genre: 'Rock',
-        artist: 'Pink Floyd',
-        albumArtist: 'Pink Floyd',
-        album: 'The Dark Side of the Moon',
-        year: null,
-        title: 'Time',
-        track: 1,
-        composer: null,
-      };
-
-      const defaultPreset = ORGANIZATION_PRESET_TEMPLATES[0];
-      const otherPreset = ORGANIZATION_PRESET_TEMPLATES[3];
-
-      expect(
-        (presetRadio(ORGANIZATION_PRESET_TEMPLATES[0]) as HTMLInputElement)
-          .checked,
-      ).toBe(true);
-      expect(destInput('Time').value).toBe(
-        resolveOrganizationPath(defaultPreset, track, '.mp3'),
-      );
-
+      expect(presetRadio(ORGANIZATION_PRESET_TEMPLATES[0]).checked).toBe(true);
+      expect(treeRows()).toEqual([
+        'Rock',
+        'Pink Floyd',
+        'The Dark Side of the Moon',
+        '01 - Time.mp3',
+      ]);
       expect(screen.getByText('The Rain Song').parentElement?.textContent).toBe(
         '/Rock/Led Zeppelin/1973 - Houses of the Holy/02 - The Rain Song.mp3',
       );
+
       fireEvent.click(presetRadio(ORGANIZATION_PRESET_TEMPLATES[3]));
 
-      expect(destInput('Time').value).toBe(
-        resolveOrganizationPath(otherPreset, track, '.mp3'),
-      );
-
+      expect(treeRows()).toEqual([
+        'Pink Floyd',
+        'The Dark Side of the Moon',
+        '01 - Time.mp3',
+      ]);
       expect(screen.getByText('The Rain Song').parentElement?.textContent).toBe(
         '/Led Zeppelin/Houses of the Holy/02 - The Rain Song.mp3',
       );
@@ -1035,65 +1034,12 @@ describe('drag-and-drop import & organize', () => {
     it('supports a custom typed template that updates the preview live', async () => {
       await dropAndOrganize('time.mp3', { title: 'Time', artist: 'Floyd' });
 
-      const track: T.OrganizationTrackFields = {
-        genre: null,
-        artist: 'Floyd',
-        albumArtist: null,
-        album: null,
-        year: null,
-        title: 'Time',
-        track: null,
-        composer: null,
-      };
-
       fireEvent.click(presetRadio('Custom…'));
       fireEvent.change(screen.getByLabelText('Naming template'), {
         target: { value: '{Artist} - {Title}' },
       });
 
-      expect(destInput('Time').value).toBe(
-        resolveOrganizationPath('{Artist} - {Title}', track, '.mp3'),
-      );
-    }, 30_000);
-
-    it('lets a single track override its destination path independent of the template', async () => {
-      await dropAndOrganize('time.mp3', {
-        title: 'Time',
-        artist: 'Floyd',
-        albumArtist: 'Pink Floyd',
-        genre: 'Rock',
-        track: 3,
-      });
-      const track: T.OrganizationTrackFields = {
-        genre: 'Rock',
-        artist: 'Floyd',
-        albumArtist: 'Pink Floyd',
-        album: null,
-        year: null,
-        title: 'Time',
-        track: 3,
-        composer: null,
-      };
-      const otherPreset = ORGANIZATION_PRESET_TEMPLATES[3];
-
-      const input = destInput('Time');
-      const computedPath = input.value;
-
-      fireEvent.change(input, { target: { value: '/Custom/Path.mp3' } });
-      expect(destInput('Time').value).toBe('/Custom/Path.mp3');
-
-      // Switching presets doesn't clobber the manual override.
-      fireEvent.click(presetRadio(ORGANIZATION_PRESET_TEMPLATES[3]));
-      expect(destInput('Time').value).toBe('/Custom/Path.mp3');
-
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: 'Reset Time to the template path',
-        }),
-      );
-      const resetPath = resolveOrganizationPath(otherPreset, track, '.mp3');
-      expect(destInput('Time').value).toBe(resetPath);
-      expect(resetPath).not.toBe(computedPath);
+      expect(treeRows()).toEqual(['Floyd - Time.mp3']);
     }, 30_000);
 
     it('returns to the staging screen via Back, and Next starts from the default preset again', async () => {
@@ -1439,14 +1385,12 @@ describe('drag-and-drop import & organize', () => {
       await clickDone();
 
       await waitFor(() => {
-        expect(
-          screen.getAllByText(
-            'Already exists — change the name or path and retry',
-          ),
-        ).toHaveLength(2);
+        expect(screen.getByRole('alert').textContent).toContain(
+          '2 files already exist',
+        );
       });
       // The non-colliding track committed and dropped out of the preview.
-      expect(screen.queryByText('Unique')).toBeNull();
+      expect(treeRows().join('/')).not.toContain('Unique');
       expect($.getMusicStagingPool(store.getState())).toHaveLength(2);
 
       const uniquePath = resolveOrganizationPath(
@@ -1467,14 +1411,15 @@ describe('drag-and-drop import & organize', () => {
         stat(join(getServer().mountDir, uniquePath)),
       ).resolves.toBeTruthy();
 
-      // Giving one of the pair a unique destination resolves the mutual
-      // collision entirely — retrying now lands both.
-      const destInputs = screen.getAllByRole('textbox', {
-        name: 'Destination path for Same',
+      // A pattern that tells the pair apart resolves the collision, and the
+      // notice goes away while the pattern is being changed.
+      fireEvent.click(presetRadio('Custom…'));
+      fireEvent.change(screen.getByLabelText('Naming template'), {
+        target: {
+          value: '{Genre}/{AlbumArtist}/{Track} - {Title} ({Composer})',
+        },
       });
-      fireEvent.change(destInputs[0], {
-        target: { value: '/Rock/Dup/Dup/01 - Same (1).mp3' },
-      });
+      expect(screen.queryByRole('alert')).toBeNull();
 
       await clickDone();
 
@@ -1482,26 +1427,13 @@ describe('drag-and-drop import & organize', () => {
         expect(screen.queryByText(/Organize ·/)).toBeNull();
       });
       expect($.getMusicStagingPool(store.getState())).toHaveLength(0);
-      await expect(
-        stat(join(getServer().mountDir, '/Rock/Dup/Dup/01 - Same (1).mp3')),
-      ).resolves.toBeTruthy();
-      const otherDupPath = resolveOrganizationPath(
-        ORGANIZATION_PRESET_TEMPLATES[0],
-        {
-          genre: 'Rock',
-          artist: 'Dup',
-          albumArtist: 'Dup',
-          album: null,
-          year: null,
-          title: 'Same',
-          track: 1,
-          composer: null,
-        },
-        '.mp3',
-      );
-      await expect(
-        stat(join(getServer().mountDir, otherDupPath)),
-      ).resolves.toBeTruthy();
+      for (const composer of ['One', 'Two']) {
+        await expect(
+          stat(
+            join(getServer().mountDir, `/Rock/Dup/01 - Same (${composer}).mp3`),
+          ),
+        ).resolves.toBeTruthy();
+      }
     }, 30_000);
 
     it('organizes only a multi-selected subset, leaving the rest staged', async () => {

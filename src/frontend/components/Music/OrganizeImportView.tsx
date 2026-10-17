@@ -159,6 +159,66 @@ function OrganizeExamples({ template }: { template: string }) {
   );
 }
 
+type TreeRow = { kind: 'folder' | 'file'; name: string; depth: number };
+
+interface TreeFolder {
+  folders: Map<string, TreeFolder>;
+  files: string[];
+}
+
+function buildTreeRows(paths: string[]): TreeRow[] {
+  const root: TreeFolder = { folders: new Map(), files: [] };
+  for (const path of paths) {
+    const segments = path.split('/').filter(Boolean);
+    const fileName = segments.pop();
+    if (fileName === undefined) {
+      continue;
+    }
+    let folder = root;
+    for (const segment of segments) {
+      let next = folder.folders.get(segment);
+      if (!next) {
+        next = { folders: new Map(), files: [] };
+        folder.folders.set(segment, next);
+      }
+      folder = next;
+    }
+    folder.files.push(fileName);
+  }
+  const rows: TreeRow[] = [];
+  function walk(folder: TreeFolder, depth: number) {
+    for (const [name, child] of folder.folders) {
+      rows.push({ kind: 'folder', name, depth });
+      walk(child, depth + 1);
+    }
+    for (const name of folder.files) {
+      rows.push({ kind: 'file', name, depth });
+    }
+  }
+  walk(root, 0);
+  return rows;
+}
+
+function OrganizeTree({ paths }: { paths: string[] }) {
+  return (
+    <ul className="musicOrganizeTree" aria-label="Organized folders">
+      {buildTreeRows(paths).map((row, index) => (
+        <li
+          key={index}
+          className="musicOrganizeTreeRow"
+          style={{ '--tree-depth': row.depth } as React.CSSProperties}
+        >
+          <span
+            className={`musicOrganizeTreeIcon musicOrganizeTreeIcon-${row.kind}`}
+            aria-hidden="true"
+          />
+          {row.name}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function OrganizeImportView({
   tracks,
   onBack,
@@ -174,56 +234,38 @@ export function OrganizeImportView({
     () => ORGANIZATION_PRESET_TEMPLATES[0],
   );
   const [customSelected, setCustomSelected] = React.useState(false);
-  const [overrides, setOverrides] = React.useState<Map<string, string>>(
-    new Map(),
-  );
-  const [collisionPaths, setCollisionPaths] = React.useState<Set<string>>(
-    new Set(),
-  );
+  const [collisionCount, setCollisionCount] = React.useState(0);
   const [committing, setCommitting] = React.useState(false);
   const [remainingTracks, setRemainingTracks] =
     React.useState<T.TrackMetadata[]>(tracks);
 
+  function resolveTrackPath(track: T.TrackMetadata) {
+    return resolveOrganizationPath(
+      template,
+      track,
+      splitOutFileExtension(track.path).extension,
+    );
+  }
+
+  function changeTemplate(next: string) {
+    setTemplate(next);
+    setCollisionCount(0);
+  }
+
   function selectPreset(preset: string) {
-    setTemplate(preset);
+    changeTemplate(preset);
     setCustomSelected(false);
-  }
-
-  function setOverride(path: string, value: string, computedPath: string) {
-    setOverrides((prev) => {
-      const next = new Map(prev);
-      if (value === computedPath) {
-        next.delete(path);
-      } else {
-        next.set(path, value);
-      }
-      return next;
-    });
-  }
-
-  function resetOverride(path: string) {
-    setOverrides((prev) => {
-      const next = new Map(prev);
-      next.delete(path);
-      return next;
-    });
   }
 
   async function handleDoneClick() {
     setCommitting(true);
     const destinations: Record<string, string> = {};
     for (const track of remainingTracks) {
-      destinations[track.path] =
-        overrides.get(track.path) ??
-        resolveOrganizationPath(
-          template,
-          track,
-          splitOutFileExtension(track.path).extension,
-        );
+      destinations[track.path] = resolveTrackPath(track);
     }
     const result = await dispatch(A.commitStagingPoolTracks(destinations));
     const collisionSet = new Set(result.collisions);
-    setCollisionPaths(collisionSet);
+    setCollisionCount(collisionSet.size);
     setCommitting(false);
     if (collisionSet.size === 0) {
       onBack();
@@ -323,7 +365,7 @@ export function OrganizeImportView({
                     className="musicOrganizeTemplateInput"
                     type="text"
                     value={template}
-                    onChange={(event) => setTemplate(event.target.value)}
+                    onChange={(event) => changeTemplate(event.target.value)}
                     aria-label="Naming template"
                   />
                   <div className="musicOrganizeTokenList">
@@ -346,78 +388,15 @@ export function OrganizeImportView({
         </div>
         <div className="musicOrganizePreviewSection">
           <div className="musicOrganizeSectionLabel">Preview</div>
-          <div className="musicOrganizePreviewHeader" aria-hidden="true">
-            <span>Current name</span>
-            <span />
-            <span>Destination</span>
-            <span />
-          </div>
-          <div className="musicOrganizePreviewList">
-            {remainingTracks.map((track) => {
-              const computedPath = resolveOrganizationPath(
-                template,
-                track,
-                splitOutFileExtension(track.path).extension,
-              );
-              const overridden = overrides.get(track.path);
-              const destPath = overridden ?? computedPath;
-              const hasCollision = collisionPaths.has(track.path);
-              return (
-                <div key={track.path} className="musicOrganizePreviewItem">
-                  <div className="musicOrganizePreviewRow">
-                    <span className="musicOrganizePreviewSource">
-                      {track.title ?? track.path}
-                    </span>
-                    <span
-                      className="musicOrganizePreviewArrow"
-                      aria-hidden="true"
-                    >
-                      →
-                    </span>
-                    <input
-                      className={
-                        'musicOrganizePreviewDest' +
-                        (hasCollision ? ' error' : '')
-                      }
-                      type="text"
-                      value={destPath}
-                      aria-label={`Destination path for ${track.title ?? track.path}`}
-                      onChange={(event) => {
-                        setCollisionPaths((prev) => {
-                          if (!prev.has(track.path)) {
-                            return prev;
-                          }
-                          const next = new Set(prev);
-                          next.delete(track.path);
-                          return next;
-                        });
-                        setOverride(
-                          track.path,
-                          event.target.value,
-                          computedPath,
-                        );
-                      }}
-                    />
-                    {overridden !== undefined ? (
-                      <button
-                        type="button"
-                        className="musicOrganizePreviewResetButton"
-                        aria-label={`Reset ${track.title ?? track.path} to the template path`}
-                        onClick={() => resetOverride(track.path)}
-                      >
-                        ↺
-                      </button>
-                    ) : null}
-                  </div>
-                  {hasCollision ? (
-                    <div className="musicOrganizePreviewCollision">
-                      Already exists — change the name or path and retry
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
+          {collisionCount > 0 ? (
+            <div className="musicOrganizePreviewCollision" role="alert">
+              {collisionCount === 1
+                ? '1 file already exists at its destination'
+                : `${collisionCount} files already exist at their destinations`}{' '}
+              — choose a different pattern and save again
+            </div>
+          ) : null}
+          <OrganizeTree paths={remainingTracks.map(resolveTrackPath)} />
         </div>
       </div>
     </div>
