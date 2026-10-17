@@ -11,6 +11,7 @@ import {
   createTestServer,
   buildMp3WithTags,
   copyM4aFixture,
+  copyFlacFixture,
   withLogs,
   getBytesAfterId3,
   MINIMAL_JPEG,
@@ -21,6 +22,11 @@ import {
   assertOnlyTheseAtomsChanged,
   snapshotM4a,
 } from './m4a-oracle.ts';
+import {
+  assertAudioAndStructureUntouched,
+  assertFlacVerifies,
+  snapshotFlac,
+} from './flac-oracle.ts';
 import {
   assertOnlyTheseFramesChanged,
   makeBareMp3,
@@ -412,6 +418,40 @@ describe('POST /music/artwork — embed into tracks', () => {
   );
 
   it(
+    'embeds into flac tracks, replacing the front cover and keeping the rest',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Embed', 'Flac');
+      await mkdir(dir, { recursive: true });
+      const path = join(dir, 'song.flac');
+      await copyFlacFixture('flac-rich', path);
+      const before = await snapshotFlac(path);
+
+      const res = await postFolderArtwork(server, {
+        path: '/Embed/Flac/song.flac',
+        embedInTracks: ['/Embed/Flac/song.flac'],
+        body: MINIMAL_JPEG,
+      });
+      assert.equal(res.status, 200);
+      const json = (await res.json()) as T.WriteFolderArtworkResponse;
+      assert.deepEqual(json.tracksEmbedded, {
+        updatedTracks: ['/Embed/Flac/song.flac'],
+        errors: [],
+      });
+
+      const after = await snapshotFlac(path);
+      assertAudioAndStructureUntouched(before, after);
+      assert.deepEqual(after.comments, before.comments);
+      assert.deepEqual(after.pictureTypes, [3]);
+      const meta = await parseFile(path);
+      assert.equal(meta.common.picture?.length, 1);
+      assert.equal(meta.common.picture?.[0].format, 'image/jpeg');
+      assert.deepEqual(Buffer.from(meta.common.picture![0].data), MINIMAL_JPEG);
+      await assertDecodesCleanly(path);
+      await assertFlacVerifies(path);
+    }),
+  );
+
+  it(
     'reports per-track failures without skipping the good tracks',
     withLogs([], async () => {
       const dir = join(server.mountDir, 'Embed', 'Partial');
@@ -437,7 +477,10 @@ describe('POST /music/artwork — embed into tracks', () => {
       const byPath = Object.fromEntries(
         (json.tracksEmbedded?.errors ?? []).map((e) => [e.path, e.message]),
       );
-      assert.match(byPath['/Embed/Partial/note.txt'], /Only MP3 and M4A files/);
+      assert.match(
+        byPath['/Embed/Partial/note.txt'],
+        /Only MP3, M4A, and FLAC files/,
+      );
       assert.match(byPath['/Embed/Partial/missing.mp3'], /File not found/);
 
       const meta = await parseFile(join(dir, 'ok.mp3'));
@@ -783,6 +826,47 @@ describe('POST /music/artwork/embedded/remove — strip embedded pictures', () =
   );
 
   it(
+    'removes every flac picture and keeps the tags and audio',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Strip', 'Flac');
+      await mkdir(dir, { recursive: true });
+      const path = join(dir, '01.flac');
+      await copyFlacFixture('flac-rich', path);
+      const original = await snapshotFlac(path);
+      assert.deepEqual(original.pictureTypes, [3]);
+
+      const res = await removeEmbedded('/Strip/Flac/01.flac');
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { ok: true });
+
+      const after = await snapshotFlac(path);
+      assertAudioAndStructureUntouched(original, after);
+      assert.deepEqual(after.comments, original.comments);
+      assert.deepEqual(after.pictureTypes, []);
+      assert.equal((await parseFile(path)).common.picture?.length ?? 0, 0);
+      await assertDecodesCleanly(path);
+      await assertFlacVerifies(path);
+    }),
+  );
+
+  it(
+    'leaves a flac without pictures byte for byte unchanged',
+    withLogs([], async () => {
+      const dir = join(server.mountDir, 'Strip', 'FlacBare');
+      await mkdir(dir, { recursive: true });
+      const path = join(dir, '01.flac');
+      await copyFlacFixture('tagged', path);
+      const bytes = await readFile(path);
+
+      const res = await removeEmbedded('/Strip/FlacBare/01.flac');
+
+      assert.equal(res.status, 200);
+      assert.deepEqual(await readFile(path), bytes);
+      assert.deepEqual(await readdir(dir), ['01.flac']);
+    }),
+  );
+
+  it(
     'removes an m4a cover and restores the original tags exactly',
     withLogs([], async () => {
       const dir = join(server.mountDir, 'Strip', 'M4a');
@@ -847,7 +931,7 @@ describe('POST /music/artwork/embedded/remove — strip embedded pictures', () =
   it(
     'returns 400 for a non-MP3 path',
     withLogs(
-      ['Only MP3 and M4A files are supported for artwork removal.'],
+      ['Only MP3, M4A, and FLAC files are supported for artwork removal.'],
       async () => {
         const dir = join(server.mountDir, 'Strip', 'NotAudio');
         await mkdir(dir, { recursive: true });

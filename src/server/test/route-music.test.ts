@@ -435,7 +435,8 @@ describe('POST /music/music-index/scan incremental behavior', () => {
           },
           {
             path: '/bulk-index-note.txt',
-            message: 'Only MP3 and M4A files are supported for tag writing.',
+            message:
+              'Only MP3, M4A, and FLAC files are supported for tag writing.',
             code: 'unsupported-format',
           },
         ],

@@ -156,6 +156,18 @@ export async function copyM4aFixture(
   );
 }
 
+export type FlacFixture = 'tagged' | 'flac-rich' | 'flac-tight';
+
+export async function copyFlacFixture(
+  fixture: FlacFixture,
+  destPath: string,
+): Promise<void> {
+  await copyFile(
+    new URL(`./fixtures/${fixture}.flac`, import.meta.url),
+    destPath,
+  );
+}
+
 // Minimal 1×1 white JPEG — valid enough for music-metadata to recognise as an image.
 export const MINIMAL_JPEG = Buffer.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01,

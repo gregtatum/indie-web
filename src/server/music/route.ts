@@ -579,7 +579,7 @@ export function musicRoute(mountPath: MountPath) {
   );
 
   /**
-   * Strips every embedded picture from a single MP3 or M4A, leaving the
+   * Strips every embedded picture from a single MP3, M4A, or FLAC, leaving the
    * album's folder artwork file untouched.
    */
   route.post('/artwork/embedded/remove', async (req): Promise<{ ok: true }> => {
@@ -604,7 +604,7 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   /**
-   * Writes one or more tag frames to MP3 and M4A files in-place.
+   * Writes one or more tag frames to MP3, M4A, and FLAC files in-place.
    * Accepts { paths, changes: [{ frameId, value }] }. Uses a diff approach —
    * only the specified frames are rewritten; all others are preserved.
    */

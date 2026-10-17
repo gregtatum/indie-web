@@ -25,12 +25,20 @@ import {
   createTestServer,
   buildMp3WithTags,
   copyM4aFixture,
+  copyFlacFixture,
   withLogs,
   AUDIO_PAYLOAD,
   buildId3v2Block,
   getBytesAfterId3,
 } from './helpers.ts';
-import type { M4aFixture, TestServer } from './helpers.ts';
+import type { FlacFixture, M4aFixture, TestServer } from './helpers.ts';
+import {
+  FRAME_COMMENTS,
+  assertFlacVerifies,
+  assertOnlyTheseCommentsChanged,
+  changedComments,
+  snapshotFlac,
+} from './flac-oracle.ts';
 import {
   FRAME_ATOMS,
   assertDecodesCleanly,
@@ -419,7 +427,8 @@ describe('POST /music/write-track-tags — bulk semantics', () => {
           },
           {
             path: '/bulk-note.txt',
-            message: 'Only MP3 and M4A files are supported for tag writing.',
+            message:
+              'Only MP3, M4A, and FLAC files are supported for tag writing.',
             code: 'unsupported-format',
           },
         ],
@@ -907,18 +916,19 @@ describe('POST /music/write-track-tags — m4a', () => {
         buildMp3WithTags({ title: 'Old' }),
       );
       await copyM4aFixture('tagged', join(server.mountDir, 'mixed.m4a'));
-      await writeFile(join(server.mountDir, 'mixed.flac'), 'not really flac');
+      await writeFile(join(server.mountDir, 'mixed.ogg'), 'not really ogg');
 
       const { body } = await writeTrackTagsJson(
         server,
-        ['/mixed.mp3', '/mixed.m4a', '/mixed.flac'],
+        ['/mixed.mp3', '/mixed.m4a', '/mixed.ogg'],
         [{ frameId: 'TIT2', value: 'Mixed Title' }],
       );
       assert.deepEqual(body.updated, ['/mixed.mp3', '/mixed.m4a']);
       assert.deepEqual(body.errors, [
         {
-          path: '/mixed.flac',
-          message: 'Only MP3 and M4A files are supported for tag writing.',
+          path: '/mixed.ogg',
+          message:
+            'Only MP3, M4A, and FLAC files are supported for tag writing.',
           code: 'unsupported-format',
         },
       ]);
@@ -1786,6 +1796,370 @@ describe('POST /music/write-track-tags — mp3 fidelity', () => {
       );
 
       assert.equal(body.errors[0].code, 'unsupported-format');
+      assert.deepEqual(await readFile(path), bytes);
+    }),
+  );
+});
+
+const FLAC_FIXTURES: FlacFixture[] = ['tagged', 'flac-rich', 'flac-tight'];
+
+function flacBlock(type: number, body: Buffer, last = false) {
+  const header = Buffer.alloc(4);
+  header[0] = type | (last ? 0x80 : 0);
+  header.writeUIntBE(body.length, 1, 3);
+  return Buffer.concat([header, body]);
+}
+
+function insertFlacBlockAfterStreaminfo(data: Buffer, block: Buffer) {
+  const streaminfoEnd = 4 + 4 + data.readUIntBE(5, 3);
+  return Buffer.concat([
+    data.subarray(0, streaminfoEnd),
+    block,
+    data.subarray(streaminfoEnd),
+  ]);
+}
+
+function vorbisCommentBody(entries: Buffer[]) {
+  const word = (n: number) => {
+    const b = Buffer.alloc(4);
+    b.writeUInt32LE(n);
+    return b;
+  };
+  return Buffer.concat([
+    word(0),
+    word(entries.length),
+    ...entries.flatMap((entry) => [word(entry.length), entry]),
+  ]);
+}
+
+describe('POST /music/write-track-tags — flac', () => {
+  let server: TestServer;
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+  });
+  after(() => server.close());
+
+  async function place(fixture: FlacFixture, name: string) {
+    const path = join(server.mountDir, name);
+    await copyFlacFixture(fixture, path);
+    return path;
+  }
+
+  async function writeTags(name: string, changes: T.TrackTagUpdate[]) {
+    const { body } = await writeTrackTagsJson(server, [`/${name}`], changes);
+    assert.deepEqual(body.errors, []);
+    assert.deepEqual(body.updated, [`/${name}`]);
+  }
+
+  const FIELDS: Array<[string, string, (meta: IAudioMetadata) => unknown]> = [
+    ['TIT2', 'My Title', (meta) => meta.common.title],
+    ['TPE1', 'My Artist', (meta) => meta.common.artist],
+    ['TPE2', 'My Album Artist', (meta) => meta.common.albumartist],
+    ['TALB', 'My Album', (meta) => meta.common.album],
+    ['TCOM', 'My Composer', (meta) => meta.common.composer?.[0]],
+    ['TYER', '1999', (meta) => String(meta.common.year)],
+    ['TCON', 'Rock', (meta) => meta.common.genre?.[0]],
+    ['TBPM', '128', (meta) => meta.common.bpm],
+    ['COMM', 'My comment', (meta) => meta.common.comment?.[0].text],
+  ];
+
+  for (const [frameId, value, read] of FIELDS) {
+    it(
+      `writes ${frameId} where music-metadata and ffprobe read it`,
+      withLogs([], async () => {
+        const name = `field-${frameId}.flac`;
+        const path = await place('tagged', name);
+        await writeTags(name, [{ frameId, value }]);
+        assert.equal(
+          read(await parseFile(path)),
+          frameId === 'TBPM' ? 128 : value,
+        );
+        const probed = await ffprobeTags(path);
+        assert.equal(
+          probed[FRAME_COMMENTS[frameId].toLowerCase()] ??
+            probed[{ TYER: 'date', TPE2: 'album_artist' }[frameId] ?? ''],
+          value,
+        );
+        await assertDecodesCleanly(path);
+        await assertFlacVerifies(path);
+      }),
+    );
+  }
+
+  for (const fixture of FLAC_FIXTURES) {
+    it(
+      `${fixture}: changes only the requested comments`,
+      withLogs([], async () => {
+        const name = `${fixture}-edit.flac`;
+        const path = await place(fixture, name);
+        const before = await snapshotFlac(path);
+        const changes: T.TrackTagUpdate[] = [
+          { frameId: 'TIT2', value: 'Edited Title ☃' },
+          { frameId: 'TPE1', value: 'Edited Artist' },
+          { frameId: 'TCON', value: 'Rock' },
+          { frameId: 'TRCK', value: '7' },
+          { frameId: 'COMM', value: 'Edited comment' },
+        ];
+
+        await writeTags(name, changes);
+
+        const after = await snapshotFlac(path);
+        const requested = changes.map(({ frameId }) => FRAME_COMMENTS[frameId]);
+        assertOnlyTheseCommentsChanged(before, after, requested);
+        assert.deepEqual(changedComments(before, after), requested.sort());
+        assert.deepEqual(after.comments.get('TITLE'), ['Edited Title ☃']);
+        await assertDecodesCleanly(path);
+        await assertFlacVerifies(path);
+        assert.deepEqual(
+          await readdir(server.mountDir).then((names) =>
+            names.filter((n) => n.endsWith('.tmp')),
+          ),
+          [],
+        );
+      }),
+    );
+  }
+
+  it(
+    'replaces a differently cased name instead of adding a second one',
+    withLogs([], async () => {
+      const path = await place('tagged', 'case.flac');
+      await writeTags('case.flac', [{ frameId: 'TIT2', value: 'Cased' }]);
+      const after = await snapshotFlac(path);
+      assert.deepEqual([...after.comments.keys()].sort(), [
+        'ALBUM',
+        'ARTIST',
+        'ENCODER',
+        'TITLE',
+      ]);
+      assert.equal(after.comments.get('TITLE')?.[0], 'Cased');
+    }),
+  );
+
+  it(
+    'removes a comment when the value is empty',
+    withLogs([], async () => {
+      const path = await place('flac-rich', 'remove.flac');
+      const before = await snapshotFlac(path);
+      await writeTags('remove.flac', [
+        { frameId: 'TPE1', value: '' },
+        { frameId: 'TRCK', value: '' },
+      ]);
+      const after = await snapshotFlac(path);
+      assert.deepEqual(changedComments(before, after), [
+        'ARTIST',
+        'TOTALTRACKS',
+        'TRACKNUMBER',
+      ]);
+      assert.equal((await parseFile(path)).common.artist, undefined);
+    }),
+  );
+
+  it(
+    'collapses a multi-value field only when it is written',
+    withLogs([], async () => {
+      const path = await place('flac-rich', 'multi.flac');
+      await writeTags('multi.flac', [{ frameId: 'TIT2', value: 'Other' }]);
+      assert.deepEqual((await snapshotFlac(path)).comments.get('ARTIST'), [
+        'Fixture Artist',
+        'Second Artist',
+      ]);
+      await writeTags('multi.flac', [{ frameId: 'TPE1', value: 'Solo' }]);
+      assert.deepEqual((await snapshotFlac(path)).comments.get('ARTIST'), [
+        'Solo',
+      ]);
+    }),
+  );
+
+  it(
+    'keeps an existing total unless the track value brings its own',
+    withLogs([], async () => {
+      const path = await place('flac-rich', 'total.flac');
+      await writeTags('total.flac', [{ frameId: 'TRCK', value: '4' }]);
+      let comments = (await snapshotFlac(path)).comments;
+      assert.deepEqual(comments.get('TRACKNUMBER'), ['4']);
+      assert.deepEqual(comments.get('TOTALTRACKS'), ['9']);
+
+      await writeTags('total.flac', [{ frameId: 'TRCK', value: '4/12' }]);
+      comments = (await snapshotFlac(path)).comments;
+      assert.deepEqual(comments.get('TRACKNUMBER'), ['4/12']);
+      assert.equal(comments.has('TOTALTRACKS'), false);
+      assert.deepEqual((await parseFile(path)).common.track, { no: 4, of: 12 });
+    }),
+  );
+
+  it(
+    'fits the edit in the padding without moving the audio',
+    withLogs([], async () => {
+      const path = await place('flac-rich', 'fits.flac');
+      const size = (await readFile(path)).length;
+      await writeTags('fits.flac', [
+        { frameId: 'COMM', value: 'a short comment' },
+      ]);
+      assert.equal((await readFile(path)).length, size);
+    }),
+  );
+
+  it(
+    'grows the file with fresh padding when a tight chain overflows',
+    withLogs([], async () => {
+      const path = await place('flac-tight', 'grows.flac');
+      const before = await snapshotFlac(path);
+      const size = (await readFile(path)).length;
+      await writeTags('grows.flac', [
+        { frameId: 'COMM', value: 'x'.repeat(500) },
+      ]);
+      assert.ok((await readFile(path)).length > size);
+      assertOnlyTheseCommentsChanged(before, await snapshotFlac(path), [
+        'COMMENT',
+      ]);
+      await assertFlacVerifies(path);
+    }),
+  );
+
+  it(
+    'restores the original chain when the original values are written back',
+    withLogs([], async () => {
+      const path = await place('flac-rich', 'restore.flac');
+      const original = await readFile(path);
+      await writeTags('restore.flac', [
+        { frameId: 'TIT2', value: 'Temporary' },
+        { frameId: 'COMM', value: 'Temporary comment' },
+      ]);
+      await writeTags('restore.flac', [
+        { frameId: 'TIT2', value: 'Fixture Title' },
+        { frameId: 'COMM', value: '' },
+      ]);
+      const restored = await readFile(path);
+      assert.equal(restored.length, original.length);
+      assert.equal(restored.subarray(0, 4).toString('latin1'), 'fLaC');
+      const after = await snapshotFlac(path);
+      const before = await snapshotFlac(
+        await place('flac-rich', 'pristine.flac'),
+      );
+      assert.deepEqual(
+        after.blocks.map((b) => b.type),
+        before.blocks.map((b) => b.type),
+      );
+      assert.deepEqual([...after.comments], [...before.comments]);
+    }),
+  );
+
+  it(
+    'preserves an ID3v2 tag in front of the stream',
+    withLogs([], async () => {
+      const path = join(server.mountDir, 'prefixed.flac');
+      const prefix = buildId3v2Block(3, [{ id: 'TIT2', text: 'Legacy' }]);
+      await copyFlacFixture('tagged', path);
+      const flac = await readFile(path);
+      await writeFile(path, Buffer.concat([prefix, flac]));
+      const before = await snapshotFlac(path);
+
+      await writeTags('prefixed.flac', [
+        { frameId: 'TALB', value: 'New Album' },
+      ]);
+
+      const after = await snapshotFlac(path);
+      assertOnlyTheseCommentsChanged(before, after, ['ALBUM']);
+      assert.deepEqual(
+        (await readFile(path)).subarray(0, prefix.length),
+        prefix,
+      );
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'keeps blocks it does not understand and comments it cannot decode',
+    withLogs([], async () => {
+      const path = join(server.mountDir, 'foreign.flac');
+      await copyFlacFixture('flac-rich', path);
+      const application = flacBlock(2, Buffer.from('abcdthe payload'));
+      await writeFile(
+        path,
+        insertFlacBlockAfterStreaminfo(await readFile(path), application),
+      );
+      const before = await snapshotFlac(path);
+
+      await writeTags('foreign.flac', [{ frameId: 'TALB', value: 'Changed' }]);
+
+      assertOnlyTheseCommentsChanged(before, await snapshotFlac(path), [
+        'ALBUM',
+      ]);
+      await assertDecodesCleanly(path);
+    }),
+  );
+
+  it(
+    'rejects a file with two Vorbis comment blocks without touching it',
+    withLogs([], async () => {
+      const path = join(server.mountDir, 'twice.flac');
+      await copyFlacFixture('tagged', path);
+      const second = flacBlock(
+        4,
+        vorbisCommentBody([Buffer.from('TITLE=Two')]),
+      );
+      await writeFile(
+        path,
+        insertFlacBlockAfterStreaminfo(await readFile(path), second),
+      );
+      const bytes = await readFile(path);
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/twice.flac'],
+        [{ frameId: 'TIT2', value: 'X' }],
+      );
+
+      assert.equal(body.errors[0].code, 'unsupported-format');
+      assert.deepEqual(await readFile(path), bytes);
+    }),
+  );
+
+  it(
+    'fails cleanly on a truncated file',
+    withLogs([], async () => {
+      const path = join(server.mountDir, 'truncated.flac');
+      await copyFlacFixture('tagged', path);
+      const bytes = (await readFile(path)).subarray(0, 20);
+      await writeFile(path, bytes);
+
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/truncated.flac'],
+        [{ frameId: 'TIT2', value: 'X' }],
+      );
+
+      assert.equal(body.errors[0].code, 'write-failed');
+      assert.deepEqual(await readFile(path), bytes);
+      assert.equal(
+        (await readdir(server.mountDir)).filter((n) => n.endsWith('.tmp'))
+          .length,
+        0,
+      );
+    }),
+  );
+
+  it(
+    'rejects frames flac cannot hold',
+    withLogs([], async () => {
+      const path = await place('tagged', 'frames.flac');
+      const bytes = await readFile(path);
+      const { body } = await writeTrackTagsJson(
+        server,
+        ['/frames.flac'],
+        [
+          { frameId: 'TIT2', value: 'Should Not Land' },
+          {
+            frameId: 'TXXX',
+            value: 'true',
+            description: PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
+          },
+        ],
+      );
+      assert.equal(body.errors[0].code, 'unsupported-frame');
       assert.deepEqual(await readFile(path), bytes);
     }),
   );

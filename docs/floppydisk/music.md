@@ -21,7 +21,8 @@ connection, because the folder is scanned on the server.
 - Later scans only read the files that changed, so they finish quickly.
 
 Most common audio formats will play. Editing tags and artwork from the track
-editor is supported for MP3 files.
+editor is supported for MP3, M4A, and FLAC files. FLAC files that hold more than
+one Vorbis comment block are not edited.
 
 ## How tracks are grouped into albums and artists
 

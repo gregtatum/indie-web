@@ -396,6 +396,20 @@ export const M4A_WRITABLE_FRAME_IDS = [
   'COMM',
 ] as const;
 
+export const FLAC_WRITABLE_FRAME_IDS = [
+  'TIT2',
+  'TPE1',
+  'TPE2',
+  'TALB',
+  'TCOM',
+  'TRCK',
+  'TPOS',
+  'TYER',
+  'TCON',
+  'TBPM',
+  'COMM',
+] as const;
+
 export interface TrackCapabilities {
   writableFrameIds: readonly string[];
   embedsArtwork: boolean;
@@ -411,6 +425,11 @@ const M4A_CAPABILITIES: TrackCapabilities = {
   embedsArtwork: true,
 };
 
+const FLAC_CAPABILITIES: TrackCapabilities = {
+  writableFrameIds: FLAC_WRITABLE_FRAME_IDS,
+  embedsArtwork: true,
+};
+
 const NO_CAPABILITIES: TrackCapabilities = {
   writableFrameIds: [],
   embedsArtwork: false,
@@ -423,6 +442,8 @@ export function getTrackCapabilities(path: string): TrackCapabilities {
       return MP3_CAPABILITIES;
     case '.m4a':
       return M4A_CAPABILITIES;
+    case '.flac':
+      return FLAC_CAPABILITIES;
     default:
       return NO_CAPABILITIES;
   }

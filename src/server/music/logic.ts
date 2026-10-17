@@ -28,6 +28,12 @@ import {
   writeId3Tags,
 } from './id3.ts';
 import {
+  FlacUnsupportedError,
+  removeFlacArtwork,
+  writeFlacArtwork,
+  writeFlacTags,
+} from './flac.ts';
+import {
   M4aUnsupportedError,
   removeM4aArtwork,
   writeM4aArtwork,
@@ -934,7 +940,7 @@ export async function writeTrackTagsForPath(
     if (writableFrameIds.length === 0) {
       return {
         type: 'error',
-        message: 'Only MP3 and M4A files are supported for tag writing.',
+        message: 'Only MP3, M4A, and FLAC files are supported for tag writing.',
         code: 'unsupported-format',
       };
     }
@@ -961,11 +967,18 @@ export async function writeTrackTagsForPath(
       };
     }
 
-    if (extension === '.m4a') {
+    if (extension === '.m4a' || extension === '.flac') {
       try {
-        await writeM4aTags(resolvedPath, changes);
+        if (extension === '.flac') {
+          await writeFlacTags(resolvedPath, changes);
+        } else {
+          await writeM4aTags(resolvedPath, changes);
+        }
       } catch (error) {
-        if (error instanceof M4aUnsupportedError) {
+        if (
+          error instanceof M4aUnsupportedError ||
+          error instanceof FlacUnsupportedError
+        ) {
           return {
             type: 'error',
             message: error.message,
@@ -1673,7 +1686,7 @@ export interface EmbedArtworkFailure {
 export interface RemoveEmbeddedArtworkSuccess {
   clientPath: string;
   resolvedPath: string;
-  /** Count of pictures stripped, APIC frames in MP3 or covr images in M4A. */
+  /** Count of pictures stripped, APIC frames in MP3, covr images in M4A, or PICTURE blocks in FLAC. */
   removed: number;
 }
 
@@ -1699,7 +1712,8 @@ export async function embedArtworkIntoTrack(
     if (!capabilities.embedsArtwork) {
       return {
         path: normalizedClientPath,
-        message: 'Only MP3 and M4A files are supported for artwork embedding.',
+        message:
+          'Only MP3, M4A, and FLAC files are supported for artwork embedding.',
       };
     }
 
@@ -1729,8 +1743,13 @@ export async function embedArtworkIntoTrack(
       };
     }
 
-    if (extname(resolvedPath).toLowerCase() === '.m4a') {
+    const embedExtension = extname(resolvedPath).toLowerCase();
+    if (embedExtension === '.m4a') {
       await writeM4aArtwork(resolvedPath, { mimeType, data: imageBuffer });
+      return { clientPath: normalizedClientPath, resolvedPath, mimeType };
+    }
+    if (embedExtension === '.flac') {
+      await writeFlacArtwork(resolvedPath, { mimeType, data: imageBuffer });
       return { clientPath: normalizedClientPath, resolvedPath, mimeType };
     }
 
@@ -1765,10 +1784,11 @@ export async function removeEmbeddedArtworkFromTrack(
     errorPath = normalizedClientPath;
 
     const extension = extname(resolvedPath).toLowerCase();
-    if (extension !== '.mp3' && extension !== '.m4a') {
+    if (extension !== '.mp3' && extension !== '.m4a' && extension !== '.flac') {
       return {
         path: normalizedClientPath,
-        message: 'Only MP3 and M4A files are supported for artwork removal.',
+        message:
+          'Only MP3, M4A, and FLAC files are supported for artwork removal.',
       };
     }
 
@@ -1786,6 +1806,10 @@ export async function removeEmbeddedArtworkFromTrack(
 
     if (extension === '.m4a') {
       const removed = await removeM4aArtwork(resolvedPath);
+      return { clientPath: normalizedClientPath, resolvedPath, removed };
+    }
+    if (extension === '.flac') {
+      const removed = await removeFlacArtwork(resolvedPath);
       return { clientPath: normalizedClientPath, resolvedPath, removed };
     }
 

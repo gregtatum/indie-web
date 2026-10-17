@@ -43,3 +43,22 @@ python3 -I src/server/test/fixtures/m4a-graft.py "$S" base-first.m4a itunes-gnre
 - `itunes-moov-last.m4a`: `moov` after `mdat`.
 - `itunes-co64.m4a`: `moov` first, 64-bit chunk offsets.
 - `itunes-gnre.m4a`: numeric `gnre` genre atom instead of `©gen`.
+
+## FLAC fixtures
+
+`flac-rich.flac` and `flac-tight.flac` are encoded with the `flac` and `metaflac` tools from a short sine wave. They are checked in, so running the tests does not need either tool. The tests also check the audio with `flac -t` when it is installed, and skip that check when it is not.
+
+```sh
+ffmpeg -f lavfi -i "sine=frequency=440:sample_rate=8000" -t 1 -ac 1 tone.wav
+ffmpeg -f lavfi -i color=c=red:s=16x16 -frames:v 1 -update 1 cover.jpg
+flac -s --padding=1024 --seekpoint=250ms -T "ARTIST=Fixture Artist" -T "ARTIST=Second Artist" \
+  -T "TITLE=Fixture Title" -T "ALBUM=Fixture Album" -T "TRACKNUMBER=2" -T "TOTALTRACKS=9" \
+  -T "CUSTOM_TAG=keep me" -T "REPLAYGAIN_TRACK_GAIN=-3.00 dB" -o flac-rich.flac tone.wav
+metaflac --import-picture-from="|image/jpeg|||cover.jpg" flac-rich.flac
+flac -s --no-padding -T "TITLE=Fixture Title" -T "ARTIST=Fixture Artist" -o flac-tight.flac tone.wav
+```
+
+- `flac-rich.flac`: seek table, a repeated `ARTIST`, tags the app does not edit, a front cover, and padding.
+- `flac-tight.flac`: seek table and two tags, with no padding, so any growth rewrites the file.
+
+The ID3v2-prefixed, two-comment-block, and truncated cases are built from these inside the tests.

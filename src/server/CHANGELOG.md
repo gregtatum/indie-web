@@ -10,6 +10,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Tags and artwork can be written to FLAC files. Only the metadata blocks are
+  rewritten, so the audio, seek table, and unknown blocks are left as they were.
+
 ## [3.8.0] - 2026-10-12
 
 ### Fixed
