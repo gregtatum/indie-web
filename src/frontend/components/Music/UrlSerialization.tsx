@@ -329,20 +329,12 @@ function useEditModalUrlSync(
   const selectedTrackPathsRef = React.useRef(selectedTrackPaths);
   selectedTrackPathsRef.current = selectedTrackPaths;
 
-  // Initialize Redux from the URL on mount and react to URL-driven changes
-  // (e.g., browser back). Unlike the filter sync, the edit URL is not replaced
-  // in-place, so navigating back can close the modal and must update Redux.
-  // The guards skip redundant dispatches when the URL changed because Redux
-  // just updated it.
   React.useEffect(() => {
     if (editFromUrl !== editTrackPathRef.current) {
       dispatch(A.setMusicEditTrackPath(editFromUrl));
     }
   }, [editFromUrl]);
 
-  // Bulk edit URLs store the open modal in `edit` and the selected files in
-  // `track` positions. Restore that selection when loading or navigating to
-  // the URL so the modal can derive its bulk-edit state.
   React.useEffect(() => {
     const tracksFromUrl = trackPathsFromUrl(trackParam, filteredTracks);
     if (
@@ -361,9 +353,6 @@ function useEditModalUrlSync(
     }
   }, [tabFromUrl]);
 
-  // isFirstEditRender/isFirstTabRender guard the Redux→URL direction from
-  // firing on the initial render, which would overwrite the URL params before
-  // the URL→Redux effects above have had a chance to initialize Redux.
   React.useEffect(() => {
     if (isFirstEditRender.current) {
       isFirstEditRender.current = false;
