@@ -405,7 +405,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.musicBatchEditCell-readOnly {
+.musicBatchEditRow:not(.selected) .musicBatchEditCell-readOnly {
   color: var(--muted);
 }
 
