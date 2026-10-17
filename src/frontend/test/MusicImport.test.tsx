@@ -277,7 +277,7 @@ describe('drag-and-drop import & organize', () => {
         await waitForNetworkIdle();
       });
 
-      await screen.findByText(/Only MP3, M4A, and FLAC files can be imported/);
+      await screen.findByText(/Skipped 1 non-audio file/);
 
       const stagingRoot = join(getServer().mountDir, '.music-staging');
       await expect(readdir(stagingRoot)).rejects.toThrow();

@@ -1948,7 +1948,7 @@ export function addFilesToStagingPool(
       if (rejectedCount > 0) {
         dispatch(
           addMessage({
-            message: `Only MP3, M4A, and FLAC files can be imported — skipped ${rejectedCount} file${rejectedCount === 1 ? '' : 's'}.`,
+            message: `Skipped ${rejectedCount} non-audio file${rejectedCount === 1 ? '' : 's'}.`,
             timeout: true,
           }),
         );
