@@ -6,6 +6,10 @@ import {
   pathJoin,
   randomUuid,
 } from 'frontend/utils';
+import {
+  formatTrackPositions,
+  parseTrackPositions,
+} from 'frontend/components/Music/UrlSerialization';
 import { layoutColumns } from 'frontend/components/Music/column-resize';
 
 describe('paths', () => {
@@ -128,5 +132,40 @@ describe('randomUuid', () => {
         configurable: true,
       });
     }
+  });
+});
+
+describe('track positions', () => {
+  it('parses singles and ranges', () => {
+    expect(parseTrackPositions('1.5.6', 10)).toEqual([1, 5, 6]);
+    expect(parseTrackPositions('1-3.7', 10)).toEqual([1, 2, 3, 7]);
+    expect(parseTrackPositions('3.1-3', 10)).toEqual([1, 2, 3]);
+  });
+
+  it('drops positions beyond the list', () => {
+    expect(parseTrackPositions('2-100', 4)).toEqual([2, 3, 4]);
+    expect(parseTrackPositions('9', 4)).toEqual([]);
+  });
+
+  it('rejects malformed input', () => {
+    for (const raw of [null, '', '0', '3-1', 'a', '1..2', '1-', '-2', '1,5']) {
+      expect(parseTrackPositions(raw, 10)).toEqual([]);
+    }
+  });
+
+  it('rejects more runs than fit in a URL', () => {
+    const odds = Array.from({ length: 21 }, (_, i) => i * 2 + 1);
+    expect(parseTrackPositions(odds.join('.'), 100)).toEqual([]);
+  });
+
+  it('formats positions as ranges', () => {
+    expect(formatTrackPositions([])).toBe('');
+    expect(formatTrackPositions([1, 5, 6, 7, 9])).toBe('1.5-7.9');
+    expect(formatTrackPositions([1, 2])).toBe('1-2');
+  });
+
+  it('refuses to format too many runs', () => {
+    const odds = Array.from({ length: 21 }, (_, i) => i * 2 + 1);
+    expect(formatTrackPositions(odds)).toBeNull();
   });
 });

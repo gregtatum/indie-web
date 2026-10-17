@@ -220,13 +220,11 @@ describe('music URL serialization', () => {
     fireEvent.click(await within(trackPanel).findByText('Sovay'));
 
     await waitFor(() => {
-      expect(getParams(getLocation().search).getAll('track')).toEqual([
-        '/Indie/Andrew Bird/The Mysterious Production of Eggs/Sovay.mp3',
-      ]);
+      expect(getParams(getLocation().search).get('track')).toBe('1');
     });
   });
 
-  it('stops serializing selected tracks above the URL cutoff', async () => {
+  it('serializes a contiguous track selection as a range', async () => {
     const tracks = makeTracks(MUSIC_URL_SERIALIZATION_CUTOFF + 1);
     const { store, getLocation } = setup('', tracks);
     await screen.findByText('Song 0');
@@ -236,22 +234,38 @@ describe('music URL serialization', () => {
         A.setMusicSelectedTracks(tracks.map((track) => track.path)),
       );
     });
-    expect($.getMusicSelectedTrackPaths(store.getState())).toHaveLength(
-      MUSIC_URL_SERIALIZATION_CUTOFF + 1,
-    );
     await waitFor(() => {
-      expect(getParams(getLocation().search).getAll('track')).toEqual([]);
+      expect(getParams(getLocation().search).get('track')).toBe(
+        `1-${tracks.length}`,
+      );
     });
   });
 
-  it('does not serialize an open bulk edit above the track URL cutoff', async () => {
+  it('serializes scattered tracks by position in the visible list', async () => {
+    const tracks = makeTracks(10);
+    const { store, getLocation } = setup('', tracks);
+    await screen.findByText('Song 0');
+
+    act(() => {
+      store.dispatch(
+        A.setMusicSelectedTracks([0, 4, 5, 6].map((i) => tracks[i].path)),
+      );
+    });
+    await waitFor(() => {
+      expect(getParams(getLocation().search).get('track')).toBe('1.5-7');
+    });
+  });
+
+  it('stops serializing a fragmented track selection', async () => {
     const tracks = makeTracks(MUSIC_URL_SERIALIZATION_CUTOFF + 1);
     const { store, getLocation } = setup('', tracks);
     await screen.findByText('Song 0');
 
     act(() => {
       store.dispatch(
-        A.setMusicSelectedTracks(tracks.map((track) => track.path)),
+        A.setMusicSelectedTracks(
+          tracks.filter((_, i) => i % 2 === 0).map((track) => track.path),
+        ),
       );
       store.dispatch(A.setMusicEditTrackPath(tracks[0].path));
     });
@@ -261,26 +275,30 @@ describe('music URL serialization', () => {
     });
     await waitFor(() => {
       const params = getParams(getLocation().search);
-      expect(params.getAll('track')).toEqual([]);
+      expect(params.get('track')).toBeNull();
       expect(params.get('edit')).toBeNull();
       expect(params.get('tab')).toBeNull();
     });
   });
 
-  it('ignores oversized track and edit params on load', async () => {
-    const tracks = makeTracks(MUSIC_URL_SERIALIZATION_CUTOFF + 1);
-    const params = new URLSearchParams();
-    for (const track of tracks) {
-      params.append('track', track.path);
-    }
-    params.set('edit', tracks[0].path);
+  it('restores the track selection from positions on load', async () => {
+    const tracks = makeTracks(10);
+    const { store } = setup('?track=1-3.7', tracks);
+    await screen.findByText('Song 0');
 
-    const { store } = setup(`?${params.toString()}`, tracks);
+    await waitFor(() => {
+      expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(
+        [0, 1, 2, 6].map((i) => tracks[i].path),
+      );
+    });
+  });
+
+  it('ignores malformed track params on load', async () => {
+    const tracks = makeTracks(10);
+    const { store } = setup('?track=3-1.abc', tracks);
     await screen.findByText('Song 0');
 
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([]);
-    expect($.getMusicEditTrackPath(store.getState())).toBeNull();
-    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('stops serializing filters above the URL cutoff', async () => {
@@ -631,11 +649,11 @@ describe('music filter URL deserialization', () => {
   });
 
   it('uses the track', async () => {
-    const { store } = setup(`?track=${encodeURIComponent('/music/a.mp3')}`);
+    const { store } = setup('?track=1');
 
     await waitFor(() => {
       expect($.getMusicSelectedTrackPaths(store.getState())).toEqual([
-        '/music/a.mp3',
+        TRACKS[0].path,
       ]);
     });
   });

@@ -232,7 +232,7 @@ describe('<EditTrackModal> with real server', () => {
     await scanViaApi();
     await renderMusicApp({
       server: getServer(),
-      search: '?track=%2Fa.mp3&track=%2Fb.mp3&edit=%2Fa.mp3',
+      search: '?track=1-2&edit=%2Fa.mp3',
     });
 
     const dialog = await screen.findByRole('dialog', { name: 'Album A' });

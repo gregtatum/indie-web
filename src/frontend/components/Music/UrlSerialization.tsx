@@ -6,14 +6,87 @@ import {
   useNavigationType,
   useSearchParams,
 } from 'react-router-dom';
-import { $$, A, Hooks, T } from 'frontend';
+import { $, $$, A, Hooks, T } from 'frontend';
 import { ensureNever } from 'frontend/utils';
 
 type SetSearchParams = ReturnType<typeof useSearchParams>[1];
 export const MUSIC_URL_SERIALIZATION_CUTOFF = 50;
 
-function sameStrings(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((value, i) => value === b[i]);
+const MUSIC_URL_TRACK_RUN_LIMIT = 20;
+
+/**
+ * Parses 1-based positions like "1,5,6" or "1-3,7". Returns an empty list for
+ * malformed input or when there are more runs than fit in a URL. Positions
+ * beyond `max` are dropped.
+ */
+export function parseTrackPositions(raw: string | null, max: number): number[] {
+  if (!raw) {
+    return [];
+  }
+  const runs = raw.split('.');
+  if (runs.length > MUSIC_URL_TRACK_RUN_LIMIT) {
+    return [];
+  }
+  const positions = new Set<number>();
+  for (const run of runs) {
+    const match = /^(\d+)(?:-(\d+))?$/.exec(run);
+    if (!match) {
+      return [];
+    }
+    const start = Number(match[1]);
+    const end = match[2] === undefined ? start : Number(match[2]);
+    if (start < 1 || end < start) {
+      return [];
+    }
+    for (let position = start; position <= Math.min(end, max); position++) {
+      positions.add(position);
+    }
+  }
+  return [...positions].sort((a, b) => a - b);
+}
+
+/**
+ * Formats ascending 1-based positions as "1-3,7". Returns null when there are
+ * too many runs to fit in a URL.
+ */
+export function formatTrackPositions(positions: number[]): string | null {
+  const runs: string[] = [];
+  for (let i = 0; i < positions.length; i++) {
+    const start = positions[i];
+    let end = start;
+    while (positions[i + 1] === end + 1) {
+      end = positions[++i];
+    }
+    runs.push(start === end ? `${start}` : `${start}-${end}`);
+  }
+  return runs.length > MUSIC_URL_TRACK_RUN_LIMIT ? null : runs.join('.');
+}
+
+/**
+ * Describes selected paths by their position in the visible track list.
+ * Returns null when the selection is too fragmented for a URL.
+ */
+function trackPathsToUrl(
+  paths: string[],
+  visibleTracks: T.TrackMetadata[],
+): string | null {
+  const selected = new Set(paths);
+  const positions: number[] = [];
+  visibleTracks.forEach((track, i) => {
+    if (selected.has(track.path)) {
+      positions.push(i + 1);
+    }
+  });
+  return formatTrackPositions(positions);
+}
+
+function trackPathsFromUrl(
+  raw: string | null,
+  visibleTracks: T.TrackMetadata[],
+): string[] {
+  return parseTrackPositions(raw, visibleTracks.length).map(
+    (position) => visibleTracks[position - 1].path,
+  );
 }
 
 function canSerializeUrlValues(values: string[]): boolean {
@@ -88,12 +161,30 @@ function useFilterUrlSync(
   const panelSelections = $$.getMusicPanelSelections();
   const selectedTrackPaths = $$.getMusicSelectedTrackPaths();
   const selectedTrackPathsKey = selectedTrackPaths.join('\0');
-  const { dispatch } = Hooks.useStore();
+  const filteredTracks = $$.getFilteredMusicTracks();
+  const hasTracks = $$.getMusicTracks().length > 0;
+  const { dispatch, getState } = Hooks.useStore();
+  const pendingTrackParamRef = React.useRef<string | null>(null);
   const isFirstRender = React.useRef(true);
   const panelSelectionsRef = React.useRef(panelSelections);
   panelSelectionsRef.current = panelSelections;
   const selectedTrackPathsRef = React.useRef(selectedTrackPaths);
   selectedTrackPathsRef.current = selectedTrackPaths;
+  const filteredTracksRef = React.useRef(filteredTracks);
+  filteredTracksRef.current = filteredTracks;
+
+  function restorePendingTracks() {
+    const raw = pendingTrackParamRef.current;
+    const visibleTracks = $.getFilteredMusicTracks(getState());
+    if (raw === null || visibleTracks.length === 0) {
+      return;
+    }
+    pendingTrackParamRef.current = null;
+    const paths = trackPathsFromUrl(raw, visibleTracks);
+    if (paths.length) {
+      dispatch(A.setMusicSelectedTracks(paths));
+    }
+  }
 
   // Initialize the Redux store from the URLs on the initial load.
   React.useEffect(
@@ -101,7 +192,6 @@ function useFilterUrlSync(
       const genres = searchParams.getAll('genre');
       const artists = searchParams.getAll('artist');
       const albums = searchParams.getAll('album');
-      const tracks = searchParams.getAll('track');
       if (genres.length && canSerializeUrlValues(genres)) {
         dispatch(A.setMusicPanelSelection('genre', genres));
       }
@@ -111,18 +201,16 @@ function useFilterUrlSync(
       if (albums.length && canSerializeUrlValues(albums)) {
         dispatch(A.setMusicPanelSelection('album', albums));
       }
-      if (
-        tracks.length &&
-        canSerializeUrlValues(tracks) &&
-        canSerializeUrlValues(selectedTrackPathsRef.current)
-      ) {
-        dispatch(A.setMusicSelectedTracks(tracks));
-      }
+      pendingTrackParamRef.current = searchParams.get('track');
+      restorePendingTracks();
     },
     [
       // Run once on mount.
     ],
   );
+
+  // Track positions can only be resolved once the library has loaded.
+  React.useEffect(restorePendingTracks, [hasTracks]);
 
   // Synchronize the URLs from the Redux store.
   React.useEffect(() => {
@@ -133,8 +221,6 @@ function useFilterUrlSync(
     setSearchParams(
       (prev) => {
         const params = new URLSearchParams(prev);
-        const wasOversizedTrackUrl =
-          params.getAll('track').length > MUSIC_URL_SERIALIZATION_CUTOFF;
         const currentPanelSelections = panelSelectionsRef.current;
         const currentSelectedTrackPaths = selectedTrackPathsRef.current;
         params.delete('genre');
@@ -144,15 +230,14 @@ function useFilterUrlSync(
         appendUrlValues(params, 'genre', currentPanelSelections.genre);
         appendUrlValues(params, 'artist', currentPanelSelections.artist);
         appendUrlValues(params, 'album', currentPanelSelections.album);
-        const canSerializeSelectedTracks = canSerializeUrlValues(
+        const trackParam = trackPathsToUrl(
           currentSelectedTrackPaths,
+          filteredTracksRef.current,
         );
-        if (canSerializeSelectedTracks) {
-          for (const track of currentSelectedTrackPaths) {
-            params.append('track', track);
-          }
+        if (trackParam) {
+          params.set('track', trackParam);
         }
-        if (!canSerializeSelectedTracks || wasOversizedTrackUrl) {
+        if (trackParam === null) {
           params.delete('edit');
           params.delete('tab');
         }
@@ -160,7 +245,7 @@ function useFilterUrlSync(
       },
       { replace: true },
     );
-  }, [panelSelections, selectedTrackPathsKey, setSearchParams]);
+  }, [panelSelections, selectedTrackPathsKey, filteredTracks, setSearchParams]);
 }
 
 function parseStagingViewFromUrl(
@@ -218,17 +303,15 @@ function useEditModalUrlSync(
   const { dispatch } = Hooks.useStore();
 
   const editFromUrl = searchParams.get('edit');
-  const tracksFromUrl = searchParams.getAll('track');
-  const tracksFromUrlKey = tracksFromUrl.join('\0');
-  const editFromUrlForRedux = canSerializeUrlValues(tracksFromUrl)
-    ? editFromUrl
-    : null;
-  const tabFromUrl = parseTabFromUrl(
-    searchParams.get('tab'),
-    editFromUrlForRedux,
+  const trackParam = searchParams.get('track');
+  const filteredTracks = $$.getFilteredMusicTracks();
+  const tabFromUrl = parseTabFromUrl(searchParams.get('tab'), editFromUrl);
+  const canSerializeCurrentEdit = React.useMemo(
+    () =>
+      selectedTrackPaths.length <= 1 ||
+      trackPathsToUrl(selectedTrackPaths, filteredTracks) !== null,
+    [selectedTrackPaths, filteredTracks],
   );
-  const canSerializeCurrentEdit =
-    selectedTrackPaths.length <= 1 || canSerializeUrlValues(selectedTrackPaths);
 
   const isFirstEditRender = React.useRef(true);
   const isFirstTabRender = React.useRef(true);
@@ -252,24 +335,25 @@ function useEditModalUrlSync(
   // The guards skip redundant dispatches when the URL changed because Redux
   // just updated it.
   React.useEffect(() => {
-    if (editFromUrlForRedux !== editTrackPathRef.current) {
-      dispatch(A.setMusicEditTrackPath(editFromUrlForRedux));
+    if (editFromUrl !== editTrackPathRef.current) {
+      dispatch(A.setMusicEditTrackPath(editFromUrl));
     }
-  }, [editFromUrlForRedux]);
+  }, [editFromUrl]);
 
   // Bulk edit URLs store the open modal in `edit` and the selected files in
-  // repeated `track` params. Restore that selection when loading or navigating
-  // to the URL so the modal can derive its bulk-edit state.
+  // `track` positions. Restore that selection when loading or navigating to
+  // the URL so the modal can derive its bulk-edit state.
   React.useEffect(() => {
+    const tracksFromUrl = trackPathsFromUrl(trackParam, filteredTracks);
     if (
       editFromUrl &&
       tracksFromUrl.length > 1 &&
-      canSerializeUrlValues(tracksFromUrl) &&
-      !sameStrings(tracksFromUrl, selectedTrackPathsRef.current)
+      trackPathsToUrl(selectedTrackPathsRef.current, filteredTracks) !==
+        trackParam
     ) {
       dispatch(A.setMusicSelectedTracks(tracksFromUrl));
     }
-  }, [editFromUrl, tracksFromUrlKey]);
+  }, [editFromUrl, trackParam, filteredTracks]);
 
   React.useEffect(() => {
     if (tabFromUrl !== null && tabFromUrl !== editTabRef.current) {
