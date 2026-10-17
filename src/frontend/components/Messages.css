@@ -85,6 +85,11 @@
   background: #ffffff33;
 }
 
+.messagesProgressDetail {
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
 .messagesProgressFill {
   height: 100%;
   border-radius: 3px;

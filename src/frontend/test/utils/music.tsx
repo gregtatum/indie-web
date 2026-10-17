@@ -347,6 +347,49 @@ class NodeEventSource {
   }
 }
 
+/**
+ * Minimal XMLHttpRequest stand-in for jsdom, which can't reach the test server.
+ * Sends through the (real) global fetch and reports the whole body as uploaded.
+ */
+class FetchXMLHttpRequest {
+  upload: { onprogress: ((e: { loaded: number }) => void) | null } = {
+    onprogress: null,
+  };
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  status = 0;
+  responseText = '';
+  private url = '';
+  private headers: Record<string, string> = {};
+
+  open(_method: string, url: string) {
+    this.url = url;
+  }
+
+  setRequestHeader(name: string, value: string) {
+    this.headers[name] = value;
+  }
+
+  send(body: Blob) {
+    this.upload.onprogress?.({ loaded: body.size });
+    body
+      .arrayBuffer()
+      .then((buffer) =>
+        fetch(this.url, {
+          method: 'POST',
+          headers: this.headers,
+          body: buffer,
+        }),
+      )
+      .then(async (response) => {
+        this.status = response.status;
+        this.responseText = await response.text();
+        this.onload?.();
+      })
+      .catch(() => this.onerror?.());
+  }
+}
+
 let networkMock: RealFetchMock | null = null;
 
 export function isNetworkIdle(): boolean {
@@ -372,9 +415,12 @@ export function useMusicTestServer() {
   }, 15_000);
 
   let originalEventSource: typeof EventSource | undefined;
+  let originalXHR: typeof XMLHttpRequest | undefined;
   beforeEach(() => {
     originalEventSource = (global as any).EventSource;
     (global as any).EventSource = NodeEventSource;
+    originalXHR = (global as any).XMLHttpRequest;
+    (global as any).XMLHttpRequest = FetchXMLHttpRequest;
   });
 
   afterEach(async () => {
@@ -384,6 +430,7 @@ export function useMusicTestServer() {
       await waitForNetworkIdle();
     });
     (global as any).EventSource = originalEventSource;
+    (global as any).XMLHttpRequest = originalXHR;
   });
 
   afterAll(async () => {

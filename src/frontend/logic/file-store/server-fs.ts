@@ -10,6 +10,23 @@ function log(key: string, ...args: any[]) {
   }
 }
 
+function uploadWithProgress(
+  url: string,
+  contents: Blob,
+  onProgress: (uploadedBytes: number) => void,
+): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (event) => onProgress(event.loaded);
+    xhr.onload = () =>
+      resolve(new Response(xhr.responseText, { status: xhr.status }));
+    xhr.onerror = () => reject(new Error('Upload failed'));
+    xhr.send(contents);
+  });
+}
+
 export class ServerFS extends FileStore {
   apiBaseUrl: string;
   cachePromise?: Promise<void>;
@@ -55,18 +72,22 @@ export class ServerFS extends FileStore {
     pathOrMetadata: string | T.FileMetadata,
     mode: T.SaveMode,
     contents: Blob,
+    onProgress?: (uploadedBytes: number) => void,
   ): Promise<T.FileMetadata> {
     const path =
       typeof pathOrMetadata === 'string' ? pathOrMetadata : pathOrMetadata.path;
 
     log('saveBlob request', { path, mode });
     const query = new URLSearchParams({ path, mode }).toString();
-    const response = await fetch(`${this.apiBaseUrl}/save-blob?${query}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      // Ensure the content doesn't get stringified by node-fetch.
-      body: await contents.arrayBuffer(),
-    });
+    const url = `${this.apiBaseUrl}/save-blob?${query}`;
+    const response = onProgress
+      ? await uploadWithProgress(url, contents, onProgress)
+      : await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          // Ensure the content doesn't get stringified by node-fetch.
+          body: await contents.arrayBuffer(),
+        });
 
     if (!response.ok) {
       const text = await response.text();

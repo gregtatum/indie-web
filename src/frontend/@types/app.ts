@@ -73,6 +73,7 @@ export type View =
 export interface MessageProgress {
   loaded: number;
   total: number;
+  detail?: string;
 }
 
 export type Message = {

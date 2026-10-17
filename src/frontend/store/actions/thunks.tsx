@@ -11,6 +11,7 @@ import {
   getPathFileName,
   insertTextAtLine,
   pathJoin,
+  formatMegabytes,
   getZipJs,
   processInChunks,
   splitOutFileExtension,
@@ -1864,14 +1865,18 @@ async function uploadToStagingPool(
   mp3Files: File[],
   filenames: string[],
   folderArtworkPathByPath: Record<string, string>,
-  onProgress: (uploaded: number) => void,
+  onProgress: (uploadedBytes: number) => void,
 ): Promise<StagedUploadResult> {
   const trackPaths: string[] = [];
+  let finishedBytes = 0;
   for (let i = 0; i < mp3Files.length; i++) {
     const path = `/.music-staging/${filenames[i]}`;
-    await fileStore.saveBlob(path, 'add', mp3Files[i]);
+    await fileStore.saveBlob(path, 'add', mp3Files[i], (bytes) =>
+      onProgress(finishedBytes + bytes),
+    );
+    finishedBytes += mp3Files[i].size;
     trackPaths.push(path);
-    onProgress(i + 1);
+    onProgress(finishedBytes);
   }
 
   const res = await fetch(`${server.url}/music/staging-pool`, {
@@ -1994,10 +1999,16 @@ export function addFilesToStagingPool(
       }
     }
 
-    const stagingMessage = (uploaded: number) => ({
-      message: `Staging ${uploaded} / ${mp3Files.length} track(s)…`,
-      progress: { loaded: uploaded, total: mp3Files.length },
+    const totalBytes = mp3Files.reduce((sum, file) => sum + file.size, 0);
+    const stagingMessage = (uploadedBytes: number) => ({
+      message: `Copying ${mp3Files.length} ${mp3Files.length === 1 ? 'track' : 'tracks'}`,
+      progress: {
+        loaded: uploadedBytes,
+        total: totalBytes,
+        detail: `${formatMegabytes(uploadedBytes)} of ${formatMegabytes(totalBytes)}`,
+      },
     });
+    let lastDispatch = 0;
     const messageGeneration = dispatch(addMessage(stagingMessage(0)));
 
     try {
@@ -2007,13 +2018,19 @@ export function addFilesToStagingPool(
         mp3Files,
         filenames,
         folderArtworkPathByStagingPath,
-        (uploaded) =>
+        (uploadedBytes) => {
+          const now = Date.now();
+          if (uploadedBytes < totalBytes && now - lastDispatch < 100) {
+            return;
+          }
+          lastDispatch = now;
           dispatch(
             addMessage({
-              ...stagingMessage(uploaded),
+              ...stagingMessage(uploadedBytes),
               generation: messageGeneration,
             }),
-          ),
+          );
+        },
       );
 
       if (addedTracks.length > 0) {

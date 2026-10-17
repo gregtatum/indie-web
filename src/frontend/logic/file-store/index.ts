@@ -14,6 +14,7 @@ export abstract class FileStore {
     pathOrMetadata: string | T.FileMetadata,
     mode: T.SaveMode,
     contents: Blob,
+    onProgress?: (uploadedBytes: number) => void,
   ): Promise<T.FileMetadata>;
 
   saveText(

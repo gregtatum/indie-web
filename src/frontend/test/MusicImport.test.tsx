@@ -225,6 +225,44 @@ describe('drag-and-drop import & organize', () => {
       expect(stagedFiles).toContain('time.mp3');
     });
 
+    it('reports byte progress while copying files into staging', async () => {
+      const { store } = await renderMusicApp({ server: getServer() });
+      const zone = await dropZone();
+      const files = ['a.mp3', 'b.mp3'].map(
+        (name) =>
+          new File([new Uint8Array(buildMp3WithTags({ title: name }))], name, {
+            type: 'audio/mpeg',
+          }),
+      );
+      const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+      const seen: Array<{
+        message: unknown;
+        loaded: number;
+        total: number;
+        detail?: string;
+      }> = [];
+      store.subscribe(() => {
+        for (const { message, progress } of $.getMessages(store.getState())) {
+          if (progress && progress.total === totalBytes) {
+            seen.push({ message, ...progress });
+          }
+        }
+      });
+
+      await act(async () => {
+        fireEvent.drop(zone, { dataTransfer: makeDataTransfer(files) });
+        await waitForNetworkIdle();
+      });
+      await waitForStagingPool(store, 2);
+
+      const last = seen[seen.length - 1];
+      expect(last.loaded).toBe(totalBytes);
+      expect(last.message).toContain('Copying 2 tracks');
+      expect(last.detail).toBe(
+        `${(totalBytes / 1_000_000).toFixed(1)} MB of ${(totalBytes / 1_000_000).toFixed(1)} MB`,
+      );
+    });
+
     it('rejects unsupported files with a message and stages nothing', async () => {
       await renderMusicApp({ server: getServer() });
       const zone = await dropZone();

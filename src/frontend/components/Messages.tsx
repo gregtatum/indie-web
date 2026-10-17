@@ -51,6 +51,11 @@ export function Messages() {
                   }}
                 />
               </div>
+              {progress.detail ? (
+                <span className="messagesProgressDetail">
+                  {progress.detail}
+                </span>
+              ) : null}
             </div>
           ) : (
             <span className="messagesMessageText">{message}</span>
