@@ -9,6 +9,7 @@ import { act } from 'react';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { $, A, T } from 'frontend';
+import { persistedState } from 'frontend/logic/persisted-state';
 import {
   ORGANIZATION_PRESET_TEMPLATES,
   resolveOrganizationPath,
@@ -99,6 +100,7 @@ describe('drag-and-drop import & organize', () => {
 
   afterEach(async () => {
     await clearMusicMount(getServer());
+    window.localStorage.removeItem(persistedState.musicOrganizePattern.key);
   });
 
   async function dropZone(): Promise<HTMLElement> {
@@ -1036,7 +1038,7 @@ describe('drag-and-drop import & organize', () => {
       expect(treeRows()).toEqual(['Floyd - Time.mp3']);
     }, 30_000);
 
-    it('returns to the staging screen via Back, and Next starts from the default preset again', async () => {
+    it('returns to the staging screen via Back, and Next restores the last selected preset', async () => {
       await dropAndOrganize('time.mp3', { title: 'Time', artist: 'Floyd' });
 
       fireEvent.click(presetRadio(ORGANIZATION_PRESET_TEMPLATES[3]));
@@ -1053,10 +1055,8 @@ describe('drag-and-drop import & organize', () => {
       });
       await screen.findByText(/Organize ·/);
 
-      // The template is ephemeral UI state, not persisted — each Organize
-      // pass starts fresh from the default preset.
       expect(
-        (presetRadio(ORGANIZATION_PRESET_TEMPLATES[0]) as HTMLInputElement)
+        (presetRadio(ORGANIZATION_PRESET_TEMPLATES[3]) as HTMLInputElement)
           .checked,
       ).toBe(true);
     }, 30_000);

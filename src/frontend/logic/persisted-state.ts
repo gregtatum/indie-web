@@ -11,6 +11,7 @@ import {
   LOSSY_FORMATS,
   type ImportQualitySettings,
 } from 'shared';
+import { ORGANIZATION_PRESET_TEMPLATES } from 'shared/music';
 import {
   BATCH_EDIT_COLUMN_KEYS,
   type BatchEditColumnKey,
@@ -33,6 +34,11 @@ export type MusicTrackColumnWidths = {
   artist: number;
   album: number;
   referenceWidth: number | null;
+};
+
+export type MusicOrganizePattern = {
+  template: string;
+  custom: boolean;
 };
 
 export type MusicBatchEditColumnWidths = Partial<
@@ -347,6 +353,21 @@ export const persistedState = {
         }
       }
       return Object.keys(result).length > 0 ? result : null;
+    },
+  }),
+
+  musicOrganizePattern: new JsonStorage({
+    defaultValue: null,
+    parse(value): MusicOrganizePattern | null {
+      const template = getStringProp(value, 'template');
+      if (template === null) {
+        return null;
+      }
+      const custom = (value as Record<string, unknown>).custom === true;
+      if (!custom && !ORGANIZATION_PRESET_TEMPLATES.includes(template)) {
+        return null;
+      }
+      return { template, custom };
     },
   }),
 

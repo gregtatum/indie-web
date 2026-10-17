@@ -2,6 +2,7 @@ import * as React from 'react';
 import { T, A, Hooks } from 'frontend';
 import { useDiscardStagingPool } from 'frontend/hooks/music';
 import { splitOutFileExtension } from 'frontend/utils';
+import { persistedState } from 'frontend/logic/persisted-state';
 import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
@@ -121,14 +122,26 @@ export function OrganizeImportView({
 }) {
   const dispatch = Hooks.useDispatch();
   const { discardConfirmPending, handleDiscardClick } = useDiscardStagingPool();
-  const [template, setTemplate] = React.useState(
-    () => ORGANIZATION_PRESET_TEMPLATES[0],
+  const [savedPattern] = React.useState(() =>
+    persistedState.musicOrganizePattern.read(),
   );
-  const [customSelected, setCustomSelected] = React.useState(false);
+  const [template, setTemplate] = React.useState(
+    () => savedPattern?.template ?? ORGANIZATION_PRESET_TEMPLATES[0],
+  );
+  const [customSelected, setCustomSelected] = React.useState(
+    () => savedPattern?.custom ?? false,
+  );
   const [collisionCount, setCollisionCount] = React.useState(0);
   const [committing, setCommitting] = React.useState(false);
   const [remainingTracks, setRemainingTracks] =
     React.useState<T.TrackMetadata[]>(tracks);
+
+  React.useEffect(() => {
+    persistedState.musicOrganizePattern.write({
+      template,
+      custom: customSelected,
+    });
+  }, [template, customSelected]);
 
   function resolveTrackPath(track: T.TrackMetadata) {
     return resolveOrganizationPath(
