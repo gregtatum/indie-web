@@ -210,6 +210,30 @@
   font-style: italic;
 }
 
+.editTrackModalLabel-top {
+  align-self: start;
+  padding-top: 2px;
+}
+
+.editTrackModalAudioTable {
+  font-size: var(--font-size-small);
+  border-collapse: collapse;
+  justify-self: start;
+
+  & th {
+    color: var(--text-label);
+    font-weight: 500;
+    padding: 2px 16px 2px 0;
+    text-align: left;
+  }
+
+  & td {
+    color: var(--text-body);
+    font-variant-numeric: tabular-nums;
+    padding: 2px 0;
+  }
+}
+
 .editTrackModalGroupHeader {
   grid-column: 1 / -1;
   font-size: var(--font-size-small);

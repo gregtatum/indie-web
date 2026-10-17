@@ -3,7 +3,12 @@ import * as Router from 'react-router-dom';
 import { $$, A, Hooks, T } from 'frontend';
 import { Tabs } from 'frontend/components/Tabs';
 import { throttle } from 'shared/utils';
-import { getDirName, getGeneration, getPathFileName } from 'frontend/utils';
+import {
+  formatBytes,
+  getDirName,
+  getGeneration,
+  getPathFileName,
+} from 'frontend/utils';
 import { ArtworkTab, type PendingArtwork } from './ArtworkTab';
 import { TagsTab } from './TagsTab';
 import {
@@ -24,6 +29,7 @@ import {
   serializePreferComposerGroupingTag,
 } from 'shared/music';
 import type {
+  TrackAudioInfo,
   TrackTagsResponse,
   WriteTrackTagsResponse,
   WriteFolderArtworkResponse,
@@ -252,6 +258,77 @@ function buildDetailChanges(
     });
   }
   return changes;
+}
+
+function formatContainer(container: string): string {
+  if (container.startsWith('M4A') || container.startsWith('mp4')) {
+    return 'MPEG-4 (M4A)';
+  }
+  if (container === 'MPEG') {
+    return 'MPEG audio';
+  }
+  return container;
+}
+
+function formatSampleRate(hertz: number): string {
+  return `${Number((hertz / 1000).toFixed(1))} kHz`;
+}
+
+function formatChannels(channels: number): string {
+  if (channels === 1) {
+    return 'Mono';
+  }
+  if (channels === 2) {
+    return 'Stereo';
+  }
+  return `${channels} channels`;
+}
+
+function formatDuration(seconds: number): string {
+  const total = Math.round(seconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = String(total % 60).padStart(2, '0');
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${secs}`;
+  }
+  return `${minutes}:${secs}`;
+}
+
+function AudioDetails({ audio }: { audio: TrackAudioInfo }) {
+  const rows: Array<[string, string]> = [];
+  if (audio.container) {
+    rows.push(['Container', formatContainer(audio.container)]);
+  }
+  if (audio.codec) {
+    rows.push(['Codec', audio.codec]);
+  }
+  if (audio.sampleRate) {
+    rows.push(['Sample rate', formatSampleRate(audio.sampleRate)]);
+  }
+  if (audio.channels) {
+    rows.push(['Channels', formatChannels(audio.channels)]);
+  }
+  if (audio.duration) {
+    rows.push(['Duration', formatDuration(audio.duration)]);
+  }
+  rows.push(['Size', formatBytes(audio.size)]);
+  if (audio.bitrate) {
+    rows.push(['Bitrate', `${Math.round(audio.bitrate / 1000)} kbps`]);
+  }
+
+  return (
+    <table className="editTrackModalAudioTable">
+      <tbody>
+        {rows.map(([label, value]) => (
+          <tr key={label}>
+            <th scope="row">{label}</th>
+            <td>{value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 function getCommonFolder(paths: string[]): string | null {
@@ -1028,6 +1105,18 @@ export const TrackEditorPanel = React.forwardRef<
     );
   }
 
+  let audioRow: React.ReactNode = null;
+  if (!isBulkEdit && tagsState.status === 'loaded' && tagsState.data.audio) {
+    audioRow = (
+      <div key="audio" className="editTrackModalRow">
+        <span className="editTrackModalLabel editTrackModalLabel-top">
+          Audio
+        </span>
+        <AudioDetails audio={tagsState.data.audio} />
+      </div>
+    );
+  }
+
   const radioName = 'preferComposerGrouping';
   const defaultPreferComposerGrouping = defaultPreferComposerGroupingForGenre(
     formState.genre ?? '',
@@ -1156,6 +1245,9 @@ export const TrackEditorPanel = React.forwardRef<
       detailRows.push(pathRow);
     }
     detailRows.push(...(extraRowsByGroup[group] ?? []));
+    if (group === 'notes' && audioRow) {
+      detailRows.push(audioRow);
+    }
   }
 
   const tabs = [

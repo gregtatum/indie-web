@@ -338,7 +338,8 @@ export function musicRoute(mountPath: MountPath) {
     if (!resolvedPath) {
       throw new ClientError('Invalid path.');
     }
-    const meta = await parseFile(resolvedPath);
+    const meta = await parseFile(resolvedPath, { duration: true });
+    const stats = await fs.stat(resolvedPath);
     const blocks = serializeTagBlocks(meta.native ?? {});
     const resolved: Record<string, string> = {};
     for (const frameId of APP_FRAME_IDS) {
@@ -347,7 +348,17 @@ export function musicRoute(mountPath: MountPath) {
         resolved[frameId] = value;
       }
     }
-    return { blocks, resolved };
+    const { format } = meta;
+    const audio: T.TrackAudioInfo = {
+      container: format.container ?? null,
+      codec: format.codec ?? null,
+      sampleRate: format.sampleRate ?? null,
+      channels: format.numberOfChannels ?? null,
+      bitrate: format.bitrate ?? null,
+      duration: format.duration ?? null,
+      size: stats.size,
+    };
+    return { blocks, resolved, audio };
   });
 
   /**

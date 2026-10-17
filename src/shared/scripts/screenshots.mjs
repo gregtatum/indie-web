@@ -125,6 +125,21 @@ const SHOTS = [
     describe: 'TapePlayer: Edit Track modal, Artwork tab (folder + embedded)',
   },
   {
+    name: 'tapeplayer-edit-details',
+    surface: 'music',
+    route:
+      '/music/music/?genre=Soundtrack&album=Akira' +
+      '&track=%2FSoundtrack%2FAnime+-+1987+-+Akira%2FKaneda.mp3' +
+      '&edit=%2FSoundtrack%2FAnime+-+1987+-+Akira%2FKaneda.mp3' +
+      '&tab=details',
+    waitFor: '.editTrackModalAudioTable',
+    settleMs: 1000,
+    prepare: (page) =>
+      page.locator('.editTrackModalAudioTable').scrollIntoViewIfNeeded(),
+    describe:
+      'TapePlayer: Edit Track modal, Details tab with audio format table',
+  },
+  {
     name: 'musicimport-drop-hover',
     surface: 'music',
     route: '/music/music/',

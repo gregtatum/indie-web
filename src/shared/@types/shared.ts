@@ -184,6 +184,16 @@ export interface EmbedFolderArtworkResponse {
   errors: Array<{ path: string; message: string }>;
 }
 
+export interface TrackAudioInfo {
+  container: string | null;
+  codec: string | null;
+  sampleRate: number | null;
+  channels: number | null;
+  bitrate: number | null;
+  duration: number | null;
+  size: number;
+}
+
 export interface TrackTagsResponse {
   blocks: Array<{
     format: string;
@@ -197,6 +207,10 @@ export interface TrackTagsResponse {
    * and the index never disagree.
    */
   resolved: Record<string, string>;
+  /**
+   * Absent when talking to a server older than the frontend.
+   */
+  audio?: TrackAudioInfo;
 }
 
 export type TrackWriteErrorCode =

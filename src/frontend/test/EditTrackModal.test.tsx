@@ -438,6 +438,43 @@ describe('<EditTrackModal> with real server', () => {
     expect(link.getAttribute('href')).toMatch(/\/folder\/Rock$/);
   }, 30_000);
 
+  it('shows the audio format of a track at the bottom of the Notes group', async () => {
+    await writeM4aTrack('Rock/song.m4a');
+    await setup();
+
+    await openEditModal('Fixture Title');
+
+    const table = await screen.findByRole('table');
+    const rows = within(table)
+      .getAllByRole('row')
+      .map((row) => Array.from(row.children, (cell) => cell.textContent));
+    expect(rows).toEqual([
+      ['Container', 'MPEG-4 (M4A)'],
+      ['Codec', 'MPEG-4/AAC'],
+      ['Sample rate', '8 kHz'],
+      ['Channels', 'Mono'],
+      ['Duration', '0:01'],
+      ['Size', expect.stringMatching(/^\d(\.\d)? KB$/)],
+      ['Bitrate', expect.stringMatching(/^\d+ kbps$/)],
+    ]);
+    const pathLink = screen.getByRole('link', { name: '/Rock/song.m4a' });
+    expect(
+      pathLink.compareDocumentPosition(table) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  }, 30_000);
+
+  it('does not show audio details when editing several tracks', async () => {
+    await writeM4aTrack('Rock/a.m4a');
+    await writeTrack('Rock/b.mp3', { title: 'Song B' });
+    const { store } = await setup();
+
+    await openBulkEditModal(store, ['/Rock/a.m4a', '/Rock/b.mp3'], 'Song B');
+    await waitForEnabledField('Genre');
+
+    expect(screen.queryByRole('table')).toBeNull();
+  }, 30_000);
+
   it('hides the Details path when the files share only the root', async () => {
     await writeTrack('Rock/a.mp3', { title: 'Song A' });
     await writeTrack('b.mp3', { title: 'Song B' });

@@ -17,6 +17,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
   and FLAC files are converted to AAC or MP3, or hi-res FLAC is reduced to CD
   quality, with tags and artwork kept. A file that can't be converted is
   imported as it was.
+- The Edit Track dialog shows each file's audio format: container, codec,
+  sample rate, channels, duration, size, and bitrate.
 
 ## [3.8.0] - 2026-10-12
 
