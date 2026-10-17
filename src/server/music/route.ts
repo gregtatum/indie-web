@@ -31,6 +31,7 @@ import {
   scanTrackFiles,
   serializeTagBlocks,
   setStagingFolderArtwork,
+  setStagingSourceHashes,
   sniffImageMimeType,
   updateMusicIndexAfterEmbeddedArtworkRemoval,
   updateIndexAfterFolderArtworkRemoval,
@@ -40,6 +41,10 @@ import {
   updateIndexAfterTrackTagWrites,
   writeTrackTagsForPath,
 } from './logic.ts';
+import {
+  convertStagedTracks,
+  parseImportQualitySettings,
+} from './transcode.ts';
 import type {
   EmbedArtworkFailure,
   WriteTrackTagsForPathResult,
@@ -191,32 +196,64 @@ export function musicRoute(mountPath: MountPath) {
   });
 
   route.post('/staging-pool', async (req): Promise<T.StagingUploadResponse> => {
-    const { trackPaths, folderArtworkPathByPath } = req.body as {
+    const { trackPaths, folderArtworkPathByPath, importQuality } = req.body as {
       trackPaths: string[];
       folderArtworkPathByPath?: Record<string, string>;
+      importQuality?: unknown;
     };
     if (!Array.isArray(trackPaths) || trackPaths.length === 0) {
       throw new ClientError('Missing or empty trackPaths array.');
     }
-    const { paths, duplicateCount } = await dedupeStagedTracks(
-      mountPath,
-      trackPaths,
-    );
-    if (paths.length === 0) {
-      return { tracks: [], duplicateCount };
+    const quality =
+      importQuality === undefined
+        ? null
+        : parseImportQualitySettings(importQuality);
+    if (importQuality !== undefined && !quality) {
+      throw new ClientError('Invalid importQuality.');
     }
-    if (folderArtworkPathByPath) {
-      await setStagingFolderArtwork(mountPath, folderArtworkPathByPath);
+    const dedupe = await dedupeStagedTracks(mountPath, trackPaths);
+    const { duplicateCount } = dedupe;
+    if (dedupe.paths.length === 0) {
+      return { tracks: [], duplicateCount, conversionErrors: [] };
+    }
+
+    let paths = dedupe.paths;
+    let artworkPathByPath = folderArtworkPathByPath;
+    let conversionErrors: T.StagingUploadResponse['conversionErrors'] = [];
+    if (quality) {
+      const conversion = await convertStagedTracks(mountPath, paths, quality);
+      paths = conversion.paths;
+      conversionErrors = conversion.errors;
+      artworkPathByPath =
+        folderArtworkPathByPath &&
+        Object.fromEntries(
+          Object.entries(folderArtworkPathByPath).map(([path, artworkPath]) => [
+            conversion.renamed.get(path) ?? path,
+            artworkPath,
+          ]),
+        );
+      await setStagingSourceHashes(
+        mountPath,
+        new Map(
+          paths.flatMap((path, i) => {
+            const hash = dedupe.hashByPath.get(dedupe.paths[i]);
+            return hash && path !== dedupe.paths[i] ? [[path, hash]] : [];
+          }),
+        ),
+      );
+    }
+    if (artworkPathByPath) {
+      await setStagingFolderArtwork(mountPath, artworkPathByPath);
     }
     const results = await scanTrackFiles(mountPath, paths);
     const tracks = results.flatMap((r) => {
       if (!r.track) {
         return [];
       }
-      const folderArtworkPath = folderArtworkPathByPath?.[r.clientPath];
+      const folderArtworkPath = artworkPathByPath?.[r.clientPath];
       return [folderArtworkPath ? { ...r.track, folderArtworkPath } : r.track];
     });
-    return { tracks, duplicateCount };
+    return { tracks, duplicateCount, conversionErrors };
   });
 
   /**

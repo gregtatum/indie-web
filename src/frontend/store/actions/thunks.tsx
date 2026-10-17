@@ -23,6 +23,7 @@ import {
   compareTracksDefault,
   IMPORTABLE_AUDIO_EXTENSIONS,
   matchFolderArtworkFilename,
+  type ImportQualitySettings,
 } from 'shared/music';
 import type {
   AddTracksResponse,
@@ -1852,19 +1853,15 @@ function dedupeStagedFilenames(
   });
 }
 
-interface StagedUploadResult {
-  tracks: T.TrackMetadata[];
-  duplicateCount: number;
-}
-
 async function uploadToStagingPool(
   fileStore: ReturnType<typeof $.getCurrentFS>,
   server: ReturnType<typeof $.getCurrentServer>,
   mp3Files: File[],
   filenames: string[],
   folderArtworkPathByPath: Record<string, string>,
+  importQuality: ImportQualitySettings,
   onProgress: (uploaded: number) => void,
-): Promise<StagedUploadResult> {
+): Promise<T.StagingUploadResponse> {
   const trackPaths: string[] = [];
   for (let i = 0; i < mp3Files.length; i++) {
     const path = `/.music-staging/${filenames[i]}`;
@@ -1876,7 +1873,11 @@ async function uploadToStagingPool(
   const res = await fetch(`${server.url}/music/staging-pool`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trackPaths, folderArtworkPathByPath }),
+    body: JSON.stringify({
+      trackPaths,
+      folderArtworkPathByPath,
+      importQuality,
+    }),
   });
   if (!res.ok) {
     throw new Error(await res.text());
@@ -2000,12 +2001,17 @@ export function addFilesToStagingPool(
     const messageGeneration = dispatch(addMessage(stagingMessage(0)));
 
     try {
-      const { tracks: addedTracks, duplicateCount } = await uploadToStagingPool(
+      const {
+        tracks: addedTracks,
+        duplicateCount,
+        conversionErrors,
+      } = await uploadToStagingPool(
         fileStore,
         server,
         mp3Files,
         filenames,
         folderArtworkPathByStagingPath,
+        $.getMusicImportQuality(getState()),
         (uploaded) =>
           dispatch(
             addMessage({
@@ -2025,6 +2031,14 @@ export function addFilesToStagingPool(
       dispatch(Plain.dismissMessage(messageGeneration));
       reportRejectedFiles();
       reportDuplicates(duplicateCount);
+      if (conversionErrors.length > 0) {
+        dispatch(
+          addMessage({
+            message: `Could not convert ${conversionErrors.length} file${conversionErrors.length === 1 ? '' : 's'} — kept as imported.`,
+            timeout: true,
+          }),
+        );
+      }
     } catch (error) {
       console.error(error);
       dispatch(

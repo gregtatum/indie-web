@@ -1,9 +1,17 @@
 import { describe as nodeDescribe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  readdir,
+  readFile,
+  truncate,
+  writeFile,
+} from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { parseFile } from 'music-metadata';
 import { musicRoute } from '../music/route.ts';
+import { runFfmpeg } from '../music/ffmpeg.ts';
 import { buildMp3WithTags, createTestServer, withLogs } from './helpers.ts';
 import type { TestServer } from './helpers.ts';
 import type { T } from '../index.ts';
@@ -336,6 +344,313 @@ describe('POST /music/add-tracks', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tracks: [] }),
+      });
+      assert.equal(res.status, 400);
+    }),
+  );
+});
+
+describe('import quality conversion', () => {
+  let server: TestServer;
+  const stagingDir = () => join(server.mountDir, '.music-staging');
+  const cover = () => join(server.mountDir, 'cover.jpg');
+  let tone = 200;
+
+  before(async () => {
+    server = await createTestServer((app, mountPath) => {
+      app.use('/music', musicRoute(mountPath));
+    });
+    await mkdir(stagingDir(), { recursive: true });
+    await runFfmpeg(
+      [
+        '-f',
+        'lavfi',
+        '-i',
+        'color=c=red:s=64x64',
+        '-frames:v',
+        '1',
+        '-update',
+        '1',
+        cover(),
+      ],
+      'quick',
+    );
+  });
+
+  after(() => server.close());
+
+  async function stageAudio(
+    filename: string,
+    inputArgs: string[],
+    outputArgs: string[],
+  ): Promise<string> {
+    await runFfmpeg(
+      [
+        '-f',
+        'lavfi',
+        '-i',
+        ...inputArgs,
+        ...outputArgs,
+        join(stagingDir(), filename),
+      ],
+      'quick',
+    );
+    return `/.music-staging/${filename}`;
+  }
+
+  function stageHiResFlac(filename: string, seconds = 2): Promise<string> {
+    return stageAudio(
+      filename,
+      [`sine=frequency=${tone++}:duration=${seconds}:sample_rate=96000`],
+      [
+        '-i',
+        cover(),
+        '-map',
+        '0:a',
+        '-map',
+        '1:v',
+        '-sample_fmt',
+        's32',
+        '-c:a',
+        'flac',
+        '-disposition:v:0',
+        'attached_pic',
+        '-metadata',
+        'title=Hi-Res Title',
+        '-metadata',
+        'artist=Hi-Res Artist',
+      ],
+    );
+  }
+
+  function stageMp3(filename: string, kbps: number): Promise<string> {
+    return stageAudio(
+      filename,
+      [`sine=frequency=${tone++}:duration=2`],
+      ['-c:a', 'libmp3lame', '-b:a', `${kbps}k`],
+    );
+  }
+
+  async function importTracks(
+    trackPaths: string[],
+    importQuality?: unknown,
+    folderArtworkPathByPath?: Record<string, string>,
+  ): Promise<T.StagingUploadResponse> {
+    const res = await fetch(`${server.baseUrl}/music/staging-pool`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trackPaths,
+        importQuality,
+        folderArtworkPathByPath,
+      }),
+    });
+    assert.equal(res.status, 200);
+    return (await res.json()) as T.StagingUploadResponse;
+  }
+
+  async function audioInfo(clientPath: string) {
+    const meta = await parseFile(join(server.mountDir, clientPath), {
+      duration: true,
+    });
+    return {
+      container: meta.format.container,
+      sampleRate: meta.format.sampleRate,
+      bitsPerSample: meta.format.bitsPerSample,
+      kbps: (meta.format.bitrate ?? 0) / 1000,
+      duration: meta.format.duration ?? 0,
+      title: meta.common.title,
+      artist: meta.common.artist,
+      pictures: meta.common.picture?.length ?? 0,
+    };
+  }
+
+  it('leaves files exactly as they are when no quality limit is set or it is Original', async () => {
+    const path = await stageHiResFlac('untouched.flac');
+    const before = await readFile(join(server.mountDir, path));
+
+    await importTracks([path]);
+    await importTracks([path], {
+      maximumQuality: 'original',
+      lossyFormat: 'm4a',
+    });
+
+    assert.deepEqual(await readFile(join(server.mountDir, path)), before);
+  });
+
+  it('reduces hi-res FLAC to CD quality at Lossless, keeping tags and cover art', async () => {
+    const path = await stageHiResFlac('lossless-hires.flac');
+
+    const { tracks, conversionErrors } = await importTracks([path], {
+      maximumQuality: 'lossless',
+      lossyFormat: 'm4a',
+    });
+
+    assert.deepEqual(conversionErrors, []);
+    assert.equal(tracks[0].path, path);
+    const info = await audioInfo(path);
+    assert.equal(info.container, 'FLAC');
+    assert.equal(info.sampleRate, 44100);
+    assert.equal(info.bitsPerSample, 16);
+    assert.equal(info.title, 'Hi-Res Title');
+    assert.equal(info.artist, 'Hi-Res Artist');
+    assert.equal(info.pictures, 1);
+  });
+
+  it('does not touch a FLAC that is already CD quality at Lossless', async () => {
+    const path = await stageAudio(
+      'lossless-cd.flac',
+      [`sine=frequency=${tone++}:duration=1:sample_rate=44100`],
+      ['-sample_fmt', 's16', '-c:a', 'flac'],
+    );
+    const before = await readFile(join(server.mountDir, path));
+
+    await importTracks([path], {
+      maximumQuality: 'lossless',
+      lossyFormat: 'm4a',
+    });
+
+    assert.deepEqual(await readFile(join(server.mountDir, path)), before);
+  });
+
+  it('converts FLAC to AAC at High, discards the original, and carries tags, art, and folder artwork over', async () => {
+    const path = await stageHiResFlac('high-aac.flac');
+    const artwork = '/.music-staging/.artwork/high-aac/Folder.jpg';
+
+    const { tracks, conversionErrors } = await importTracks(
+      [path],
+      { maximumQuality: 'high', lossyFormat: 'm4a' },
+      { [path]: artwork },
+    );
+
+    assert.deepEqual(conversionErrors, []);
+    assert.equal(tracks.length, 1);
+    assert.equal(tracks[0].path, '/.music-staging/high-aac.m4a');
+    assert.equal(tracks[0].folderArtworkPath, artwork);
+    assert.equal(tracks[0].title, 'Hi-Res Title');
+    const info = await audioInfo(tracks[0].path);
+    assert.ok(info.container?.startsWith('M4A'));
+    assert.ok(Math.abs(info.duration - 2) < 0.5);
+    assert.equal(info.pictures, 1);
+    assert.deepEqual(
+      (await readdir(stagingDir())).filter(
+        (name) => name.startsWith('high-aac') || name.startsWith('.converting'),
+      ),
+      ['high-aac.m4a'],
+    );
+
+    const listed = await fetch(`${server.baseUrl}/music/staging-pool`);
+    const pool = (await listed.json()) as T.TrackMetadata[];
+    assert.equal(
+      pool.find((track) => track.path === tracks[0].path)?.folderArtworkPath,
+      artwork,
+    );
+  });
+
+  it('converts FLAC to MP3 at Standard when MP3 is chosen', async () => {
+    const path = await stageHiResFlac('standard-mp3.flac');
+
+    const { tracks } = await importTracks([path], {
+      maximumQuality: 'standard',
+      lossyFormat: 'mp3',
+    });
+
+    assert.equal(tracks[0].path, '/.music-staging/standard-mp3.mp3');
+    const info = await audioInfo(tracks[0].path);
+    assert.equal(info.container, 'MPEG');
+    assert.equal(info.title, 'Hi-Res Title');
+    assert.equal(info.pictures, 1);
+  });
+
+  it('does not overwrite an existing file when the converted name is taken', async () => {
+    const taken = await stageAudio(
+      'collision.m4a',
+      [`sine=frequency=${tone++}:duration=1`],
+      ['-c:a', 'aac'],
+    );
+    const path = await stageHiResFlac('collision.flac');
+
+    const { tracks } = await importTracks([path], {
+      maximumQuality: 'high',
+      lossyFormat: 'm4a',
+    });
+
+    assert.equal(tracks[0].path, '/.music-staging/collision (2).m4a');
+    assert.ok((await readFile(join(server.mountDir, taken))).length > 0);
+  });
+
+  it('re-encodes lossy files only when above the limit by more than the tolerance', async () => {
+    const above = await stageMp3('lossy-320.mp3', 320);
+    const withinTolerance = await stageMp3('lossy-192.mp3', 192);
+    const below = await stageMp3('lossy-128.mp3', 128);
+    const beforeWithin = await readFile(join(server.mountDir, withinTolerance));
+    const beforeBelow = await readFile(join(server.mountDir, below));
+
+    await importTracks([above, withinTolerance, below], {
+      maximumQuality: 'standard',
+      lossyFormat: 'm4a',
+    });
+
+    const converted = await audioInfo(above);
+    assert.equal(converted.container, 'MPEG');
+    assert.ok(
+      converted.kbps < 200,
+      `expected a smaller file: ${converted.kbps}`,
+    );
+    assert.deepEqual(
+      await readFile(join(server.mountDir, withinTolerance)),
+      beforeWithin,
+    );
+    assert.deepEqual(await readFile(join(server.mountDir, below)), beforeBelow);
+  });
+
+  it('keeps a file it could not convert and reports it', async () => {
+    const path = await stageHiResFlac('truncated.flac', 4);
+    const fullPath = join(server.mountDir, path);
+    const bytes = await readFile(fullPath);
+    await truncate(fullPath, Math.floor(bytes.length / 2));
+
+    const { tracks, conversionErrors } = await importTracks([path], {
+      maximumQuality: 'high',
+      lossyFormat: 'm4a',
+    });
+
+    assert.equal(conversionErrors.length, 1);
+    assert.equal(conversionErrors[0].path, path);
+    assert.equal(tracks[0].path, path);
+    assert.deepEqual(
+      (await readdir(stagingDir())).filter((name) =>
+        name.startsWith('.converting'),
+      ),
+      [],
+    );
+  });
+
+  it('still counts a converted FLAC as a duplicate when the same file is imported again', async () => {
+    const first = await stageHiResFlac('dupe-a.flac');
+    const original = await readFile(join(server.mountDir, first));
+    const quality = { maximumQuality: 'high', lossyFormat: 'm4a' };
+    await importTracks([first], quality);
+
+    const second = '/.music-staging/dupe-b.flac';
+    await writeFile(join(server.mountDir, second), original);
+    const { tracks, duplicateCount } = await importTracks([second], quality);
+
+    assert.equal(duplicateCount, 1);
+    assert.deepEqual(tracks, []);
+  });
+
+  it(
+    'rejects an unknown quality level',
+    withLogs(['Invalid importQuality.'], async () => {
+      const path = await stageMp3('invalid-quality.mp3', 64);
+      const res = await fetch(`${server.baseUrl}/music/staging-pool`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trackPaths: [path],
+          importQuality: { maximumQuality: 'ultra', lossyFormat: 'm4a' },
+        }),
       });
       assert.equal(res.status, 400);
     }),

@@ -659,7 +659,7 @@ async function writeTrackTagsJson(
 }
 
 async function assertDecodes(path: string) {
-  await runFfmpeg(['-i', path, '-f', 'null', '-']);
+  await runFfmpeg(['-i', path, '-f', 'null', '-'], 'quick');
 }
 
 describe('POST /music/write-track-tags — m4a', () => {
@@ -1063,19 +1063,22 @@ describe('POST /music/write-track-tags — m4a fidelity', () => {
     withLogs([], async () => {
       const original = await copyFixture('itunes-padded', 'ffmpeg-source.m4a');
       const rewritten = join(server.mountDir, 'ffmpeg-copy.m4a');
-      await runFfmpeg([
-        '-i',
-        original,
-        '-map',
-        '0',
-        '-c',
-        'copy',
-        '-map_metadata',
-        '0',
-        '-f',
-        'ipod',
-        rewritten,
-      ]);
+      await runFfmpeg(
+        [
+          '-i',
+          original,
+          '-map',
+          '0',
+          '-c',
+          'copy',
+          '-map_metadata',
+          '0',
+          '-f',
+          'ipod',
+          rewritten,
+        ],
+        'quick',
+      );
       const before = await snapshotM4a(original);
       const after = await snapshotM4a(rewritten);
       assert.deepEqual(
@@ -1229,21 +1232,24 @@ describe('POST /music/write-track-tags — m4a fidelity', () => {
     withLogs([], async () => {
       const source = await copyFixture('tagged', 'tagless-source.m4a');
       const path = join(server.mountDir, 'tagless.m4a');
-      await runFfmpeg([
-        '-i',
-        source,
-        '-map',
-        '0:a',
-        '-c',
-        'copy',
-        '-map_metadata',
-        '-1',
-        '-fflags',
-        '+bitexact',
-        '-f',
-        'ipod',
-        path,
-      ]);
+      await runFfmpeg(
+        [
+          '-i',
+          source,
+          '-map',
+          '0:a',
+          '-c',
+          'copy',
+          '-map_metadata',
+          '-1',
+          '-fflags',
+          '+bitexact',
+          '-f',
+          'ipod',
+          path,
+        ],
+        'quick',
+      );
       const before = await snapshotM4a(path);
       assert.equal(before.ilst.size, 0);
 
@@ -1271,16 +1277,10 @@ describe('POST /music/write-track-tags — m4a fidelity', () => {
       };
       for (const [name, args] of Object.entries(variants)) {
         const path = join(server.mountDir, name);
-        await runFfmpeg([
-          '-i',
-          source,
-          '-map',
-          '0:a',
-          '-c',
-          'copy',
-          ...args,
-          path,
-        ]);
+        await runFfmpeg(
+          ['-i', source, '-map', '0:a', '-c', 'copy', ...args, path],
+          'quick',
+        );
         const originalBytes = await readFile(path);
 
         const { body } = await writeTrackTagsJson(
@@ -1389,17 +1389,20 @@ describe('POST /music/write-track-tags — mp3 fidelity', () => {
     await makeBareMp3(bare);
     await makeTaggedMp3(bare, v23, { version: 3, id3v1: true });
     await makeTaggedMp3(bare, v24, { version: 4 });
-    await runFfmpeg([
-      '-f',
-      'lavfi',
-      '-i',
-      'color=c=red:s=16x16',
-      '-frames:v',
-      '1',
-      '-update',
-      '1',
-      cover,
-    ]);
+    await runFfmpeg(
+      [
+        '-f',
+        'lavfi',
+        '-i',
+        'color=c=red:s=16x16',
+        '-frames:v',
+        '1',
+        '-update',
+        '1',
+        cover,
+      ],
+      'quick',
+    );
     await makeTaggedMp3(bare, withArt, { version: 3, cover });
   });
   after(async () => {

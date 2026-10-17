@@ -35,17 +35,20 @@ import {
 } from './mp3-oracle.ts';
 
 async function makeImage(path: string) {
-  await runFfmpeg([
-    '-f',
-    'lavfi',
-    '-i',
-    'testsrc=s=640x640',
-    '-frames:v',
-    '1',
-    '-update',
-    '1',
-    path,
-  ]);
+  await runFfmpeg(
+    [
+      '-f',
+      'lavfi',
+      '-i',
+      'testsrc=s=640x640',
+      '-frames:v',
+      '1',
+      '-update',
+      '1',
+      path,
+    ],
+    'quick',
+  );
   return readFile(path);
 }
 

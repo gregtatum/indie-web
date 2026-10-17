@@ -1,9 +1,22 @@
 import { spawn } from 'node:child_process';
 
-const FFMPEG_TIMEOUT_MS = 60_000;
+const QUICK_TIMEOUT_MS = 60_000;
+const TRANSCODE_TIMEOUT_MS = 10 * 60_000;
 const STDERR_TAIL_BYTES = 2000;
 
-export function runFfmpeg(args: string[]): Promise<void> {
+export type FfmpegJobKind = 'quick' | 'transcode';
+
+function getTimeoutMs(jobKind: FfmpegJobKind): number {
+  if (jobKind === 'quick') {
+    return QUICK_TIMEOUT_MS;
+  }
+  return TRANSCODE_TIMEOUT_MS;
+}
+
+export function runFfmpeg(
+  args: string[],
+  jobKind: FfmpegJobKind,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(
       'ffmpeg',
@@ -14,7 +27,10 @@ export function runFfmpeg(args: string[]): Promise<void> {
     child.stderr.on('data', (chunk: Buffer) => {
       stderr = (stderr + chunk.toString()).slice(-STDERR_TAIL_BYTES);
     });
-    const timer = setTimeout(() => child.kill('SIGKILL'), FFMPEG_TIMEOUT_MS);
+    const timer = setTimeout(
+      () => child.kill('SIGKILL'),
+      getTimeoutMs(jobKind),
+    );
     child.on('error', (error: NodeJS.ErrnoException) => {
       clearTimeout(timer);
       reject(

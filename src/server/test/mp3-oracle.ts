@@ -153,19 +153,22 @@ export const FIXTURE_TAGS: Record<string, string> = {
  */
 export async function makeBareMp3(path: string): Promise<void> {
   const encoded = `${path}.encoded`;
-  await runFfmpeg([
-    '-f',
-    'lavfi',
-    '-i',
-    'sine=frequency=440:duration=1',
-    '-c:a',
-    'libmp3lame',
-    '-b:a',
-    '64k',
-    '-f',
-    'mp3',
-    encoded,
-  ]);
+  await runFfmpeg(
+    [
+      '-f',
+      'lavfi',
+      '-i',
+      'sine=frequency=440:duration=1',
+      '-c:a',
+      'libmp3lame',
+      '-b:a',
+      '64k',
+      '-f',
+      'mp3',
+      encoded,
+    ],
+    'quick',
+  );
   const data = await readFile(encoded);
   await writeFile(path, data.subarray(HEADER_BYTES + syncSafe(data, 6)));
   await rm(encoded);
@@ -184,22 +187,25 @@ export async function makeTaggedMp3(
     '-metadata',
     `${key}=${value}`,
   ]);
-  await runFfmpeg([
-    '-i',
-    bare,
-    ...(options.cover ? ['-i', options.cover] : []),
-    '-map',
-    '0:a',
-    ...(options.cover
-      ? ['-map', '1:v', '-disposition:v:0', 'attached_pic']
-      : []),
-    '-c',
-    'copy',
-    ...metadata,
-    '-id3v2_version',
-    String(options.version),
-    '-write_id3v1',
-    options.id3v1 ? '1' : '0',
-    path,
-  ]);
+  await runFfmpeg(
+    [
+      '-i',
+      bare,
+      ...(options.cover ? ['-i', options.cover] : []),
+      '-map',
+      '0:a',
+      ...(options.cover
+        ? ['-map', '1:v', '-disposition:v:0', 'attached_pic']
+        : []),
+      '-c',
+      'copy',
+      ...metadata,
+      '-id3v2_version',
+      String(options.version),
+      '-write_id3v1',
+      options.id3v1 ? '1' : '0',
+      path,
+    ],
+    'quick',
+  );
 }

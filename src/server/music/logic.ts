@@ -500,6 +500,7 @@ interface StagingIndexEntry {
   size: number;
   mtime: string;
   folderArtworkPath?: string | null;
+  sourceHash?: string | null;
 }
 
 interface StagingIndex {
@@ -513,6 +514,7 @@ export interface StagingPoolEntry {
   size: number;
   mtime: string;
   folderArtworkPath: string | null;
+  sourceHash: string | null;
 }
 
 async function hashFile(fullPath: string): Promise<string> {
@@ -590,17 +592,24 @@ export async function scanStagingPool(
     const stats = await fs.stat(fullPath);
     const mtime = stats.mtime.toISOString();
     const cached = index.entries[clientPath];
-    const hash =
-      cached && cached.mtime === mtime && cached.size === stats.size
-        ? cached.hash
-        : await hashFile(fullPath);
+    const isUnchanged =
+      cached && cached.mtime === mtime && cached.size === stats.size;
     const folderArtworkPath = cached?.folderArtworkPath ?? null;
+    let hash: string;
+    let sourceHash: string | null = null;
+    if (isUnchanged) {
+      hash = cached.hash;
+      sourceHash = cached.sourceHash ?? null;
+    } else {
+      hash = await hashFile(fullPath);
+    }
 
     nextEntries[clientPath] = {
       hash,
       size: stats.size,
       mtime,
       folderArtworkPath,
+      sourceHash,
     };
     results.push({
       path: clientPath,
@@ -608,6 +617,7 @@ export async function scanStagingPool(
       size: stats.size,
       mtime,
       folderArtworkPath,
+      sourceHash,
     });
   }
 
@@ -621,7 +631,11 @@ export async function scanStagingPool(
 export async function dedupeStagedTracks(
   mountPath: MountPath,
   candidatePaths: string[],
-): Promise<{ paths: string[]; duplicateCount: number }> {
+): Promise<{
+  paths: string[];
+  duplicateCount: number;
+  hashByPath: Map<string, string>;
+}> {
   const candidateSet = new Set(candidatePaths);
   const pool = await scanStagingPool(mountPath);
   const poolHashByPath = new Map(pool.map((entry) => [entry.path, entry.hash]));
@@ -630,6 +644,9 @@ export async function dedupeStagedTracks(
   for (const entry of pool) {
     if (!candidateSet.has(entry.path)) {
       seenHashes.add(entry.hash);
+      if (entry.sourceHash) {
+        seenHashes.add(entry.sourceHash);
+      }
     }
   }
 
@@ -655,7 +672,14 @@ export async function dedupeStagedTracks(
     await scanStagingPool(mountPath);
   }
 
-  return { paths, duplicateCount };
+  const hashByPath = new Map<string, string>();
+  for (const path of paths) {
+    const hash = poolHashByPath.get(path);
+    if (hash) {
+      hashByPath.set(path, hash);
+    }
+  }
+  return { paths, duplicateCount, hashByPath };
 }
 
 export async function listStagingPoolTracks(
@@ -678,6 +702,21 @@ export async function listStagingPoolTracks(
       folderArtworkPath ? { ...result.track, folderArtworkPath } : result.track,
     ];
   });
+}
+
+export async function setStagingSourceHashes(
+  mountPath: MountPath,
+  sourceHashByPath: Map<string, string>,
+): Promise<void> {
+  await scanStagingPool(mountPath);
+  const index = await readStagingIndex(mountPath);
+  for (const [path, sourceHash] of sourceHashByPath) {
+    const entry = index.entries[path];
+    if (entry) {
+      entry.sourceHash = sourceHash;
+    }
+  }
+  await writeStagingIndex(mountPath, index);
 }
 
 export async function setStagingFolderArtwork(

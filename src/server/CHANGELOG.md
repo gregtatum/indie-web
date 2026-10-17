@@ -12,8 +12,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Tags and artwork can be written to FLAC files. Only the metadata blocks are
-  rewritten, so the audio, seek table, and unknown blocks are left as they were.
+- You can edit tags and artwork on FLAC files. The audio is never touched.
+- Music imports can convert files to a smaller size. Choose a maximum quality
+  and FLAC files are converted to AAC or MP3, or hi-res FLAC is reduced to CD
+  quality, with tags and artwork kept. A file that can't be converted is
+  imported as it was.
 
 ## [3.8.0] - 2026-10-12
 

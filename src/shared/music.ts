@@ -60,6 +60,8 @@ export const IMPORT_QUALITY_LEVELS = [
 
 export type MaximumQuality = (typeof IMPORT_QUALITY_LEVELS)[number]['id'];
 
+export const IMPORT_BITRATE_TOLERANCE_PERCENT = 25;
+
 export const LOSSY_FORMATS = [
   { id: 'm4a', label: 'AAC (m4a)' },
   { id: 'mp3', label: 'MP3' },

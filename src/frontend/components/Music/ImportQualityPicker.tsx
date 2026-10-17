@@ -1,11 +1,10 @@
 import * as React from 'react';
 import {
+  IMPORT_BITRATE_TOLERANCE_PERCENT,
   IMPORT_QUALITY_LEVELS,
   LOSSY_FORMATS,
   type ImportQualitySettings,
 } from 'shared';
-
-const BITRATE_TOLERANCE_PERCENT = 25;
 import './ImportQualityPicker.css';
 
 interface ImportQualityPickerProps {
@@ -113,7 +112,7 @@ function getHowItWorks(
     default:
       return [
         `FLAC files are converted to ${formatLabel} at up to ${level.maxKbps} kbps.`,
-        `MP3 and m4a files more than ${BITRATE_TOLERANCE_PERCENT}% above ${level.maxKbps} kbps are re-encoded in their own format, which slightly reduces quality.`,
+        `MP3 and m4a files more than ${IMPORT_BITRATE_TOLERANCE_PERCENT}% above ${level.maxKbps} kbps are re-encoded in their own format, which slightly reduces quality.`,
         'Everything else is left alone.',
         'Converted originals are not kept.',
       ];
