@@ -11,7 +11,6 @@ import {
   emptyDetailFieldValues,
   detailFieldValues,
   isSplitField,
-  applyIndexedTrackChanges,
   type DetailFormValueKey,
   type DetailFieldGroup,
   type TrackTagsLoadState,
@@ -25,10 +24,9 @@ import {
 } from 'shared/music';
 import type {
   TrackTagsResponse,
-  WriteTrackTagsResponse,
   WriteFolderArtworkResponse,
 } from 'shared/@types/shared';
-import { writeTrackTagsWithProgress } from 'frontend/hooks/music';
+import { useSaveTrackTags } from 'frontend/hooks/music';
 import './EditTrackModal.css';
 
 const DETAIL_GROUP_ORDER: DetailFieldGroup[] = [
@@ -57,36 +55,6 @@ const INDEXED_DETAIL_FIELD_KEYS: Partial<
   genre: 'genre',
   trackNum: 'track',
 } satisfies Partial<Record<DetailFormValueKey, keyof T.TrackMetadata>>;
-
-const MAX_SAVE_FAILURES_SHOWN = 3;
-
-function SaveFailureMessage({
-  attemptedCount,
-  result,
-}: {
-  attemptedCount: number;
-  result: WriteTrackTagsResponse;
-}) {
-  const shown = result.errors.slice(0, MAX_SAVE_FAILURES_SHOWN);
-  const hiddenCount = result.errors.length - shown.length;
-  return (
-    <>
-      Saved {result.updated.length} of {attemptedCount} tracks.
-      {result.errors.length === 0
-        ? ' The server did not update any tracks.'
-        : ` Could not save ${result.errors.length}:`}
-      <ul className="messagesErrorList">
-        {shown.map((error) => (
-          <li key={`${error.path}:${error.message}`}>
-            <span className="messagesErrorPath">{error.path}</span>
-            {error.message}
-          </li>
-        ))}
-        {hiddenCount > 0 && <li>and {hiddenCount} more</li>}
-      </ul>
-    </>
-  );
-}
 
 export interface TrackEditorPanelProps {
   trackPath: string | null;
@@ -308,6 +276,7 @@ export const TrackEditorPanel = React.forwardRef<
   const [bulkForceLoadAll, setBulkForceLoadAll] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const failureMessageGeneration = React.useRef(getGeneration());
+  const saveTrackTags = useSaveTrackTags(trackSource);
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
   const [pendingArtwork, setPendingArtwork] =
     React.useState<PendingArtwork | null>(null);
@@ -710,44 +679,13 @@ export const TrackEditorPanel = React.forwardRef<
         revokeArtworkPreviews();
       }
       if (changes.length > 0) {
-        let currentTracks = tracks;
-        const result = await writeTrackTagsWithProgress({
-          dispatch,
-          serverUrl: server.url,
-          paths: savePaths,
+        const isSaved = await saveTrackTags(
+          savePaths,
           changes,
-          verb: 'Saving',
-          onChunk: ({ updated }) => {
-            const updatedPaths = new Set(updated);
-            currentTracks = currentTracks.map((t) =>
-              updatedPaths.has(t.path)
-                ? applyIndexedTrackChanges(t, changes)
-                : t,
-            );
-            updateTracks(currentTracks);
-          },
-        });
-        if (result.errors.length > 0 || result.updated.length === 0) {
-          dispatch(
-            A.addMessage({
-              message: (
-                <SaveFailureMessage
-                  attemptedCount={savePaths.length}
-                  result={result}
-                />
-              ),
-              generation: failureMessageGeneration.current,
-            }),
-          );
+          failureMessageGeneration.current,
+        );
+        if (!isSaved) {
           return;
-        }
-        if (result.index.status === 'error') {
-          dispatch(
-            A.addMessage({
-              message: `Tags were saved, but the library index was not updated. ${result.index.message ?? ''} Scan the library if the list looks stale.`,
-              timeout: true,
-            }),
-          );
         }
         setBaselineFormState(savedFormState);
         if (!isBulkEdit && !onClose) {

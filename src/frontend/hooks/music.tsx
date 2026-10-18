@@ -520,6 +520,103 @@ export async function writeTrackTagsWithProgress({
   }
 }
 
+const MAX_SAVE_FAILURES_SHOWN = 3;
+
+function SaveFailureMessage({
+  attemptedCount,
+  result,
+}: {
+  attemptedCount: number;
+  result: WriteTrackTagsResponse;
+}) {
+  const shown = result.errors.slice(0, MAX_SAVE_FAILURES_SHOWN);
+  const hiddenCount = result.errors.length - shown.length;
+  return (
+    <>
+      Saved {result.updated.length} of {attemptedCount} tracks.
+      {result.errors.length === 0
+        ? ' The server did not update any tracks.'
+        : ` Could not save ${result.errors.length}:`}
+      <ul className="messagesErrorList">
+        {shown.map((error) => (
+          <li key={`${error.path}:${error.message}`}>
+            <span className="messagesErrorPath">{error.path}</span>
+            {error.message}
+          </li>
+        ))}
+        {hiddenCount > 0 && <li>and {hiddenCount} more</li>}
+      </ul>
+    </>
+  );
+}
+
+export function useSaveTrackTags(trackSource: MusicTrackSource) {
+  const dispatch = Hooks.useDispatch();
+  const server = $$.getCurrentServer();
+  const trackSourceRef = React.useRef(trackSource);
+  trackSourceRef.current = trackSource;
+
+  return React.useCallback(
+    async (
+      paths: string[],
+      changes: T.TrackTagUpdate[],
+      generation: number,
+    ): Promise<boolean> => {
+      try {
+        let currentTracks = trackSourceRef.current.tracks;
+        const result = await writeTrackTagsWithProgress({
+          dispatch,
+          serverUrl: server.url,
+          paths,
+          changes,
+          verb: 'Saving',
+          onChunk: ({ updated }) => {
+            const updatedPaths = new Set(updated);
+            currentTracks = currentTracks.map((track) =>
+              updatedPaths.has(track.path)
+                ? applyIndexedTrackChanges(track, changes)
+                : track,
+            );
+            trackSourceRef.current.updateTracks(currentTracks);
+          },
+        });
+        if (result.errors.length > 0 || result.updated.length === 0) {
+          dispatch(
+            A.addMessage({
+              message: (
+                <SaveFailureMessage
+                  attemptedCount={paths.length}
+                  result={result}
+                />
+              ),
+              generation,
+            }),
+          );
+          return false;
+        }
+        if (result.index.status === 'error') {
+          dispatch(
+            A.addMessage({
+              message: `Tags were saved, but the library index was not updated. ${result.index.message ?? ''} Scan the library if the list looks stale.`,
+              timeout: true,
+            }),
+          );
+        }
+        return true;
+      } catch (error) {
+        dispatch(
+          A.addMessage({
+            message: `Could not save track details. ${error instanceof Error ? error.message : ''}`,
+            generation,
+          }),
+        );
+        return false;
+      }
+    },
+    [server.url, dispatch],
+  );
+}
+
 export function useWriteTrackTags() {
   const dispatch = Hooks.useDispatch();
   const { getState } = Hooks.useStore();
