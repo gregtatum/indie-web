@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { cleanup, render } from '@testing-library/react';
 import { spawn } from 'child_process';
 import { writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
@@ -424,6 +424,7 @@ export function useMusicTestServer() {
   });
 
   afterEach(async () => {
+    cleanup();
     // Ensure any pending network traffic from a test lands within the same test,
     // so that the updates are accounted for, and don't error out.
     await React.act(async () => {
