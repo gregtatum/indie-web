@@ -167,6 +167,7 @@ const SHOTS = [
       await page.waitForSelector('.musicOrganizeTree', {
         timeout: 5000,
       });
+      await page.locator('#organize-quality-high').check();
     },
   },
   {

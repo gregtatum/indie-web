@@ -508,11 +508,13 @@
   flex-direction: column;
   gap: 16px;
   flex: 0 0 600px;
+  max-width: 50vw;
   min-width: 0;
   overflow-y: auto;
 
   @media (max-width: 800px) {
     flex-basis: auto;
+    max-width: none;
     overflow-y: visible;
   }
 }
@@ -534,7 +536,7 @@
   --music-organize-choice-align: center;
   --music-organize-choice-gap: 10px;
   --music-organize-choice-padding: 8px 12px;
-  --music-organize-choice-font-size: var(--font-size-small);
+  --music-organize-choice-font-size: var(--music-item-font-size);
   --music-organize-choice-accent: var(--accent);
   --music-organize-choice-input-size: 14px;
   --music-organize-choice-input-margin: 0;
@@ -542,6 +544,10 @@
   flex-direction: column;
   gap: 4px;
   color: var(--text-body);
+}
+
+.musicOrganizePresetList .musicOrganizeChoiceBody {
+  line-height: 1.75;
 }
 
 .musicOrganizePresetCustomLabel {
@@ -1521,10 +1527,10 @@
 :where(.musicOrganizeChoiceList) {
   --music-organize-choice-align: flex-start;
   --music-organize-choice-gap: 8px;
-  --music-organize-choice-padding: 6px 0;
-  --music-organize-choice-font-size: inherit;
-  --music-organize-choice-accent: auto;
-  --music-organize-choice-input-size: auto;
+  --music-organize-choice-padding: 6px 12px;
+  --music-organize-choice-font-size: var(--music-item-font-size);
+  --music-organize-choice-accent: var(--accent);
+  --music-organize-choice-input-size: 14px;
   --music-organize-choice-input-margin: 4px 0 0;
 }
 
@@ -1567,6 +1573,30 @@
   gap: 16px;
 }
 
+.musicOrganizeQualityInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  font-size: var(--music-item-font-size);
+  border: 1px solid var(--line-strong);
+  border-radius: calc(var(--button-border-radius) * 1.5);
+}
+
+.musicOrganizeFormatGroup {
+  --music-organize-choice-padding: 4px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+
+  & legend {
+    float: left;
+    padding: 0;
+    line-height: 2;
+  }
+}
+
 .musicOrganizeQualityGroup {
   border: none;
   margin: 0;
@@ -1575,8 +1605,10 @@
 }
 
 .musicOrganizeQualityLabel {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .musicOrganizeQualityName {
@@ -1584,12 +1616,13 @@
 }
 
 .musicOrganizeQualityDetail {
-  font-size: 0.9em;
+  color: var(--text-muted);
+  font-size: var(--music-meta-font-size);
 }
 
 .musicOrganizeQualityHow {
-  color: var(--muted);
-  font-size: 0.9em;
+  color: var(--text-muted);
+  font-size: var(--music-meta-font-size);
   margin: 0;
   padding-left: 20px;
 

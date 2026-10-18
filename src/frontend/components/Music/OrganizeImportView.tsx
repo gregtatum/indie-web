@@ -96,36 +96,38 @@ export function ImportQualityPicker({
         })}
       </fieldset>
       <div className="musicOrganizeQualitySide">
-        {selected && <p>{selected.description}</p>}
         {selected && (
-          <ul className="musicOrganizeQualityHow">
-            {getHowItWorks(selected, formatLabel).map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        )}
-        {isLossyLevel && (
-          <fieldset className="musicOrganizeQualityGroup musicOrganizeChoiceList">
-            <legend>Convert FLAC to</legend>
-            {LOSSY_FORMATS.map((format) => {
-              const id = `${idPrefix}-lossy-format-${format.id}`;
-              return (
-                <RadioChoice
-                  key={format.id}
-                  id={id}
-                  name={`${idPrefix}-lossy-format`}
-                  checked={value.lossyFormat === format.id}
-                  onChange={() =>
-                    onChange({ ...value, lossyFormat: format.id })
-                  }
-                >
-                  <span className="musicOrganizeQualityName">
-                    {format.label}
-                  </span>
-                </RadioChoice>
-              );
-            })}
-          </fieldset>
+          <div className="musicOrganizeQualityInfo">
+            <p>{selected.description}</p>
+            <ul className="musicOrganizeQualityHow">
+              {getHowItWorks(selected, formatLabel).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+            {isLossyLevel && (
+              <fieldset className="musicOrganizeQualityGroup musicOrganizeChoiceList musicOrganizeFormatGroup">
+                <legend>Convert FLAC to</legend>
+                {LOSSY_FORMATS.map((format) => {
+                  const id = `${idPrefix}-lossy-format-${format.id}`;
+                  return (
+                    <RadioChoice
+                      key={format.id}
+                      id={id}
+                      name={`${idPrefix}-lossy-format`}
+                      checked={value.lossyFormat === format.id}
+                      onChange={() =>
+                        onChange({ ...value, lossyFormat: format.id })
+                      }
+                    >
+                      <span className="musicOrganizeQualityName">
+                        {format.label}
+                      </span>
+                    </RadioChoice>
+                  );
+                })}
+              </fieldset>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -448,10 +450,7 @@ export function OrganizeImportView({
               </div>
             </div>
           </OrganizeCard>
-          <OrganizeCard
-            title="Audio quality"
-            hint="Choose how audio files are stored when imported."
-          >
+          <OrganizeCard title="Audio quality">
             <ImportQualityPicker
               idPrefix="organize"
               value={importQuality}
