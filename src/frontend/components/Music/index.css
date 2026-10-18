@@ -475,9 +475,10 @@
 .musicOrganizeBody {
   display: flex;
   flex-direction: row;
-  gap: calc(var(--music-gap) * 3);
-  padding: var(--music-padding-v) var(--music-padding-h);
+  gap: 16px;
+  padding: 16px;
   overflow: hidden;
+  background: #eeeef0;
 
   @media (max-width: 800px) {
     flex-direction: column;
@@ -485,11 +486,28 @@
   }
 }
 
-.musicOrganizeTemplateSection {
+.musicOrganizeCard,
+.musicOrganizePreviewSection {
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px #0000000d;
+}
+
+.musicOrganizeCard {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex: 0 0 520px;
+  flex: none;
+}
+
+.musicOrganizeTemplateSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 0 0 600px;
   min-width: 0;
   overflow-y: auto;
 

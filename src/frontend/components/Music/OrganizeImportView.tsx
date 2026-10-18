@@ -232,72 +232,76 @@ export function OrganizeImportView({
       </div>
       <div className="musicBatchEditBody musicOrganizeBody">
         <div className="musicOrganizeTemplateSection">
-          <div className="musicOrganizeSectionLabel">Organize files</div>
-          <div
-            className="musicOrganizePresetList"
-            role="radiogroup"
-            aria-label="Filename format"
-          >
-            {ORGANIZATION_PRESET_TEMPLATES.map((preset) => (
-              <div key={preset} className="musicOrganizePreset">
+          <section className="musicOrganizeCard">
+            <div className="musicOrganizeSectionLabel">Organize files</div>
+            <div
+              className="musicOrganizePresetList"
+              role="radiogroup"
+              aria-label="Filename format"
+            >
+              {ORGANIZATION_PRESET_TEMPLATES.map((preset) => (
+                <div key={preset} className="musicOrganizePreset">
+                  <label className="musicOrganizePresetPattern">
+                    <input
+                      type="radio"
+                      name="organizePreset"
+                      checked={!customSelected && template === preset}
+                      onChange={() => selectPreset(preset)}
+                    />
+                    <PatternText pattern={preset} />
+                  </label>
+                </div>
+              ))}
+              <div className="musicOrganizePreset">
                 <label className="musicOrganizePresetPattern">
                   <input
                     type="radio"
                     name="organizePreset"
-                    checked={!customSelected && template === preset}
-                    onChange={() => selectPreset(preset)}
+                    checked={customSelected}
+                    onChange={() => setCustomSelected(true)}
                   />
-                  <PatternText pattern={preset} />
+                  Custom…
+                  <span
+                    className="musicOrganizePresetChevron"
+                    aria-hidden="true"
+                  />
                 </label>
-              </div>
-            ))}
-            <div className="musicOrganizePreset">
-              <label className="musicOrganizePresetPattern">
-                <input
-                  type="radio"
-                  name="organizePreset"
-                  checked={customSelected}
-                  onChange={() => setCustomSelected(true)}
-                />
-                Custom…
-                <span
-                  className="musicOrganizePresetChevron"
-                  aria-hidden="true"
-                />
-              </label>
-              {customSelected ? (
-                <div className="musicOrganizePresetCustom">
-                  <input
-                    className="musicOrganizeTemplateInput"
-                    type="text"
-                    value={template}
-                    onChange={(event) => changeTemplate(event.target.value)}
-                    aria-label="Naming template"
-                  />
-                  <div className="musicOrganizeTokenList">
-                    {ORGANIZATION_TOKENS.map((t) => (
-                      <span
-                        key={t.token}
-                        className="musicOrganizeTokenChip"
-                        data-token={t.token.slice(1, -1)}
-                      >
-                        {t.token}
-                      </span>
-                    ))}
+                {customSelected ? (
+                  <div className="musicOrganizePresetCustom">
+                    <input
+                      className="musicOrganizeTemplateInput"
+                      type="text"
+                      value={template}
+                      onChange={(event) => changeTemplate(event.target.value)}
+                      aria-label="Naming template"
+                    />
+                    <div className="musicOrganizeTokenList">
+                      {ORGANIZATION_TOKENS.map((t) => (
+                        <span
+                          key={t.token}
+                          className="musicOrganizeTokenChip"
+                          data-token={t.token.slice(1, -1)}
+                        >
+                          {t.token}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
-          </div>
-          <div className="musicOrganizeSectionLabel">Audio quality</div>
-          <p className="musicOrganizeSectionHint">
-            Choose how audio files are stored when imported.
-          </p>
-          <ImportQualityPicker
-            idPrefix="organize"
-            value={importQuality}
-            onChange={(value) => dispatch(A.setMusicImportQuality(value))}
-          />
+          </section>
+          <section className="musicOrganizeCard">
+            <div className="musicOrganizeSectionLabel">Audio quality</div>
+            <p className="musicOrganizeSectionHint">
+              Choose how audio files are stored when imported.
+            </p>
+            <ImportQualityPicker
+              idPrefix="organize"
+              value={importQuality}
+              onChange={(value) => dispatch(A.setMusicImportQuality(value))}
+            />
+          </section>
         </div>
         <div className="musicOrganizePreviewSection">
           <div className="musicOrganizeSectionLabel">Preview</div>
