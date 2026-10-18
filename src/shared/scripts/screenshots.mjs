@@ -163,8 +163,8 @@ const SHOTS = [
     describe: 'Music import: organize screen (presets + live preview)',
     prepare: async (page) => {
       await dropImportTracks(page);
-      await page.locator('button:has-text("Organize")').click();
-      await page.waitForSelector('.musicOrganizePreviewList', {
+      await page.locator('button.button-primary:has-text("Next")').click();
+      await page.waitForSelector('.musicOrganizeTree', {
         timeout: 5000,
       });
     },
@@ -396,7 +396,7 @@ async function dispatchFileDrop(page, selector, files, dropType) {
 async function simulateFileDragHover(page) {
   await dispatchFileDrop(
     page,
-    '.musicLibraryView',
+    '.musicLibrarySplitterDropTarget',
     [{ name: 'hover.mp3', base64: buildTaggedMp3({}).toString('base64') }],
     'hover',
   );
@@ -408,7 +408,12 @@ async function dropImportTracks(page) {
     name: track.filename,
     base64: buildTaggedMp3(track.tags).toString('base64'),
   }));
-  await dispatchFileDrop(page, '.musicLibraryView', files, 'drop');
+  await dispatchFileDrop(
+    page,
+    '.musicLibrarySplitterDropTarget',
+    files,
+    'drop',
+  );
   await page.waitForSelector('.musicBatchEditGrid', { timeout: 10_000 });
   // Lets the sidebar's own tag-loading fetch for the auto-selected track land.
   await page.waitForTimeout(500);
