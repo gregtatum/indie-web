@@ -267,6 +267,7 @@ describe('<EditTrackModal> with real server', () => {
     await act(async () => {
       await userEvent.clear(artistInput);
       await userEvent.type(artistInput, 'New Artist{Enter}');
+      await waitForNetworkIdle();
     });
 
     await waitFor(() => {
@@ -295,6 +296,7 @@ describe('<EditTrackModal> with real server', () => {
     await act(async () => {
       await userEvent.click(preferComposerRadio);
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitForNetworkIdle();
     });
 
     await waitFor(async () => {
@@ -324,6 +326,7 @@ describe('<EditTrackModal> with real server', () => {
     await act(async () => {
       await userEvent.click(defaultComposerRadio);
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitForNetworkIdle();
     });
 
     await waitFor(async () => {
@@ -564,6 +567,7 @@ describe('<EditTrackModal> with real server', () => {
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitForNetworkIdle();
     });
 
     await screen.findByText(/Could not save/);
@@ -928,6 +932,7 @@ describe('<EditTrackModal> with real server', () => {
 
     await act(async () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+      await waitForNetworkIdle();
     });
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Song A' })).toBeNull();
