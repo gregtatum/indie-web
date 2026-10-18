@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { T, A, $$, Hooks } from 'frontend';
 import { useDiscardStagingPool } from 'frontend/hooks/music';
-import { splitOutFileExtension } from 'frontend/utils';
+import { getDirName, splitOutFileExtension } from 'frontend/utils';
 import { persistedState } from 'frontend/logic/persisted-state';
 import {
   IMPORT_BITRATE_TOLERANCE_PERCENT,
@@ -12,6 +12,7 @@ import {
 import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
+  getAlbumArtworkKey,
   resolveOrganizationPath,
 } from 'shared/music';
 
@@ -214,6 +215,47 @@ function PatternText({ pattern }: { pattern: string }) {
   );
 }
 
+function getArtworkNotices(
+  tracks: T.TrackMetadata[],
+  resolveTrackPath: (track: T.TrackMetadata) => string,
+): string[] {
+  const artworkPathsByFolder = new Map<string, Set<string>>();
+  const albumsByArtworkPath = new Map<string, Map<string, string>>();
+  for (const track of tracks) {
+    if (!track.folderArtworkPath) {
+      continue;
+    }
+    const folder = getDirName(resolveTrackPath(track));
+    const artworkPaths = artworkPathsByFolder.get(folder) ?? new Set<string>();
+    artworkPaths.add(track.folderArtworkPath);
+    artworkPathsByFolder.set(folder, artworkPaths);
+    const key = getAlbumArtworkKey(track);
+    if (key !== null) {
+      const albums =
+        albumsByArtworkPath.get(track.folderArtworkPath) ??
+        new Map<string, string>();
+      albums.set(key, track.album ?? '');
+      albumsByArtworkPath.set(track.folderArtworkPath, albums);
+    }
+  }
+  const notices: string[] = [];
+  for (const [folder, artworkPaths] of artworkPathsByFolder) {
+    if (artworkPaths.size > 1) {
+      notices.push(
+        `Different covers would land in ${folder}, so no cover will be written there.`,
+      );
+    }
+  }
+  for (const albums of albumsByArtworkPath.values()) {
+    if (albums.size > 1) {
+      notices.push(
+        `One cover is shared by ${[...albums.values()].join(', ')} and will be written to each album's folder.`,
+      );
+    }
+  }
+  return notices;
+}
+
 type TreeRow = { kind: 'folder' | 'file'; name: string; depth: number };
 
 interface TreeFolder {
@@ -314,6 +356,8 @@ export function OrganizeImportView({
       splitOutFileExtension(track.path).extension,
     );
   }
+
+  const artworkNotices = getArtworkNotices(remainingTracks, resolveTrackPath);
 
   function changeTemplate(next: string) {
     setTemplate(next);
@@ -467,6 +511,15 @@ export function OrganizeImportView({
               — choose a different pattern and save again
             </div>
           ) : null}
+          {artworkNotices.map((notice) => (
+            <div
+              key={notice}
+              className="musicOrganizePreviewNotice"
+              role="status"
+            >
+              {notice}
+            </div>
+          ))}
           <OrganizeTree paths={remainingTracks.map(resolveTrackPath)} />
         </OrganizeCard>
       </div>

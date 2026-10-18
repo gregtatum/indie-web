@@ -2104,23 +2104,6 @@ export function removeMusicStagingPoolTracks(
         ),
       ),
     );
-
-    const remainingArtworkPaths = new Set(
-      remainingPool.flatMap((track) =>
-        track.folderArtworkPath ? [track.folderArtworkPath] : [],
-      ),
-    );
-    const orphanedArtworkPaths = new Set(
-      pool
-        .filter(
-          (track) => removedSet.has(track.path) && track.folderArtworkPath,
-        )
-        .map((track) => track.folderArtworkPath as string)
-        .filter((path) => !remainingArtworkPaths.has(path)),
-    );
-    for (const artworkPath of orphanedArtworkPaths) {
-      fileStore.delete(getDirName(artworkPath)).catch(() => {});
-    }
   };
 }
 
@@ -2347,6 +2330,7 @@ export function commitStagingPoolTracks(
     const movedSourcePaths = new Set<string>();
     const stillStagedPaths = new Set(collisions);
     const destFoldersByStagingArtworkPath = new Map<string, Set<string>>();
+    const stagingArtworkPathsByDestFolder = new Map<string, Set<string>>();
     for (let i = 0; i < tracksToMove.length; i++) {
       const track = tracksToMove[i];
       const destination = destinationMap.get(track.path);
@@ -2373,6 +2357,14 @@ export function commitStagingPoolTracks(
             destFoldersByStagingArtworkPath.get(track.folderArtworkPath) ??
             new Set<string>();
           destFolders.add(getDirName(destination));
+          const artworkPaths =
+            stagingArtworkPathsByDestFolder.get(getDirName(destination)) ??
+            new Set<string>();
+          artworkPaths.add(track.folderArtworkPath);
+          stagingArtworkPathsByDestFolder.set(
+            getDirName(destination),
+            artworkPaths,
+          );
           destFoldersByStagingArtworkPath.set(
             track.folderArtworkPath,
             destFolders,
@@ -2394,11 +2386,6 @@ export function commitStagingPoolTracks(
     const remainingPool = pool.filter(
       (track) => !movedSourcePaths.has(track.path),
     );
-    const remainingStagingArtworkPaths = new Set(
-      remainingPool.flatMap((track) =>
-        track.folderArtworkPath ? [track.folderArtworkPath] : [],
-      ),
-    );
 
     const folderArtworkPathByDestFolder = new Map<string, string>();
     for (const [
@@ -2412,6 +2399,9 @@ export function commitStagingPoolTracks(
         : 'image/jpeg';
       let artworkBlob: Blob | undefined;
       for (const destFolder of destFolders) {
+        if ((stagingArtworkPathsByDestFolder.get(destFolder)?.size ?? 0) > 1) {
+          continue;
+        }
         const trackInFolder = movedTracks.find(
           (track) => getDirName(track.path) === destFolder,
         );
@@ -2434,9 +2424,6 @@ export function commitStagingPoolTracks(
         } catch (error) {
           console.error(error);
         }
-      }
-      if (!remainingStagingArtworkPaths.has(stagingArtworkPath)) {
-        fileStore.delete(getDirName(stagingArtworkPath)).catch(() => {});
       }
     }
     const movedTracksWithArtwork = movedTracks.map((track) => ({

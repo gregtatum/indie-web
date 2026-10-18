@@ -215,6 +215,59 @@ describe('drag-and-drop import & organize', () => {
     });
   }
 
+  const albumA = { albumArtist: 'Pink Floyd', album: 'Meddle' };
+  const albumB = { albumArtist: 'Geinoh', album: 'Akira' };
+
+  async function dropFolders(
+    folders: Array<{
+      name: string;
+      tracks: Array<{
+        fileName: string;
+        tags: Parameters<typeof buildMp3WithTags>[0];
+      }>;
+      coverSize?: number;
+    }>,
+    existingStore?: Awaited<ReturnType<typeof renderMusicApp>>['store'],
+  ) {
+    const store =
+      existingStore ?? (await renderMusicApp({ server: getServer() })).store;
+    const zone = await dropZone();
+    const entries = folders.map((folder) =>
+      dirEntry(folder.name, [
+        ...folder.tracks.map(({ fileName, tags }) =>
+          fileEntry(
+            new File([new Uint8Array(buildMp3WithTags(tags))], fileName, {
+              type: 'audio/mpeg',
+            }),
+          ),
+        ),
+        ...(folder.coverSize
+          ? [
+              fileEntry(
+                new File(
+                  [new Uint8Array(buildJpegBytes(folder.coverSize))],
+                  'cover.jpg',
+                  { type: 'image/jpeg' },
+                ),
+              ),
+            ]
+          : []),
+      ]),
+    );
+    await act(async () => {
+      fireEvent.drop(zone, { dataTransfer: makeFolderDataTransfer(entries) });
+      await waitForNetworkIdle();
+    });
+    await waitForStagingPool(
+      store,
+      folders.reduce((sum, folder) => sum + folder.tracks.length, 0),
+    );
+    await act(async () => {
+      await waitForNetworkIdle();
+    });
+    return { store };
+  }
+
   async function scanLibrary(): Promise<void> {
     await screen.findByText('Music library not found. Run a scan first.');
     await act(async () => {
@@ -649,7 +702,7 @@ describe('drag-and-drop import & organize', () => {
 
       const [reloadedTrack] = $.getMusicStagingPool(store.getState());
       expect(reloadedTrack.folderArtworkPath).toMatch(
-        /^\/\.music-staging\/\.artwork\/.+\/Folder\.jpg$/,
+        /^\/\.music-staging\/\.artwork\/[0-9a-f]{64}\.jpg$/,
       );
       await expect(
         stat(join(getServer().mountDir, reloadedTrack.folderArtworkPath ?? '')),
@@ -1075,6 +1128,169 @@ describe('drag-and-drop import & organize', () => {
       expect($.getMusicStagingPool(store.getState())[0].artist).toBe(
         'Pink Floyd',
       );
+    }, 30_000);
+
+    async function selectTitles(
+      store: Awaited<ReturnType<typeof renderMusicApp>>['store'],
+      titles: string[],
+    ) {
+      const paths = $.getMusicStagingPool(store.getState())
+        .filter((t) => titles.includes(t.title ?? ''))
+        .map((t) => t.path);
+      await act(async () => {
+        store.dispatch(A.setMusicSelectedTracks(paths));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('tab', { name: 'Artwork' }));
+      });
+    }
+
+    function artworkOf(
+      store: Awaited<ReturnType<typeof renderMusicApp>>['store'],
+      title: string,
+    ) {
+      return $.getMusicStagingPool(store.getState()).find(
+        (t) => t.title === title,
+      )?.folderArtworkPath;
+    }
+
+    it('sets and removes artwork for the selected track’s whole album only', async () => {
+      const { store } = await dropFolders([
+        {
+          name: 'Mixed',
+          tracks: [
+            { fileName: 'a1.mp3', tags: { title: 'One', ...albumA } },
+            { fileName: 'a2.mp3', tags: { title: 'Two', ...albumA } },
+            { fileName: 'b1.mp3', tags: { title: 'Kaneda', ...albumB } },
+          ],
+        },
+      ]);
+      await selectTitles(store, ['One']);
+
+      const input = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      const cover = Object.assign(new Uint8Array(buildJpegBytes(3000)), {
+        type: 'image/jpeg',
+      });
+      await act(async () => {
+        fireEvent.change(input, { target: { files: [cover] } });
+        await waitForNetworkIdle();
+      });
+
+      await waitFor(() => {
+        expect(artworkOf(store, 'One')).toBeTruthy();
+      });
+      expect(artworkOf(store, 'Two')).toBe(artworkOf(store, 'One'));
+      expect(artworkOf(store, 'Kaneda')).toBeFalsy();
+
+      const remove = await screen.findByRole('button', {
+        name: 'Remove artwork',
+      });
+      await act(async () => {
+        fireEvent.click(remove);
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('button', { name: 'Click to confirm' }),
+        );
+        await waitForNetworkIdle();
+      });
+
+      await waitFor(() => {
+        expect(artworkOf(store, 'One')).toBeFalsy();
+      });
+      expect(artworkOf(store, 'Two')).toBeFalsy();
+    }, 30_000);
+
+    it('only offers artwork editing when the selection is one album', async () => {
+      const { store } = await dropFolders([
+        {
+          name: 'Mixed',
+          tracks: [
+            { fileName: 'a1.mp3', tags: { title: 'One', ...albumA } },
+            { fileName: 'a2.mp3', tags: { title: 'Two', ...albumA } },
+            { fileName: 'b1.mp3', tags: { title: 'Kaneda', ...albumB } },
+          ],
+        },
+      ]);
+
+      await selectTitles(store, ['One', 'Two']);
+      expect(
+        await screen.findByRole('button', { name: 'Add artwork file' }),
+      ).toBeTruthy();
+
+      await act(async () => {
+        store.dispatch(
+          A.setMusicSelectedTracks(
+            $.getMusicStagingPool(store.getState()).map((t) => t.path),
+          ),
+        );
+      });
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('button', { name: 'Add artwork file' }),
+        ).toBeNull();
+      });
+    }, 30_000);
+
+    it('embeds a shared cover only into the selected tracks', async () => {
+      const { store } = await dropFolders([
+        {
+          name: 'Meddle',
+          tracks: [
+            { fileName: 'a1.mp3', tags: { title: 'One', ...albumA } },
+            { fileName: 'a2.mp3', tags: { title: 'Two', ...albumA } },
+          ],
+          coverSize: 2500,
+        },
+      ]);
+      await selectTitles(store, ['One']);
+
+      await act(async () => {
+        fireEvent.click(
+          await screen.findByRole('button', { name: 'Embed artwork' }),
+        );
+        await waitForNetworkIdle();
+      });
+
+      await waitFor(() => {
+        const pool = $.getMusicStagingPool(store.getState());
+        expect(pool.find((t) => t.title === 'One')?.hasEmbeddedArtwork).toBe(
+          true,
+        );
+      });
+      expect(
+        $.getMusicStagingPool(store.getState()).find((t) => t.title === 'Two')
+          ?.hasEmbeddedArtwork,
+      ).toBeFalsy();
+    }, 30_000);
+
+    it('gives a dropped cover to its album and keeps it on mixed folders', async () => {
+      const { store } = await dropFolders([
+        {
+          name: 'Meddle',
+          tracks: [
+            { fileName: 'a1.mp3', tags: { title: 'One', ...albumA } },
+            { fileName: 'a2.mp3', tags: { title: 'Two', ...albumA } },
+          ],
+          coverSize: 2600,
+        },
+        {
+          name: 'Jumble',
+          tracks: [
+            { fileName: 'm1.mp3', tags: { title: 'Three', ...albumA } },
+            { fileName: 'm2.mp3', tags: { title: 'Kaneda', ...albumB } },
+          ],
+          coverSize: 2700,
+        },
+      ]);
+
+      expect(artworkOf(store, 'One')).toBeTruthy();
+      expect(artworkOf(store, 'Two')).toBe(artworkOf(store, 'One'));
+      expect(artworkOf(store, 'Three')).toBe(artworkOf(store, 'One'));
+      expect(artworkOf(store, 'Kaneda')).toBeTruthy();
+      expect(artworkOf(store, 'Kaneda')).not.toBe(artworkOf(store, 'One'));
     }, 30_000);
 
     it('leaves the pool intact on disk when going back to the library', async () => {
@@ -1650,6 +1866,62 @@ describe('drag-and-drop import & organize', () => {
       expect(
         tracks.find((t) => t.path === expectedPathB)?.folderArtworkPath,
       ).toBe(`${folderB}/Folder.jpg`);
+    }, 30_000);
+
+    it('notes when one cover is shared by several albums', async () => {
+      await dropFolders([
+        {
+          name: 'Jumble',
+          tracks: [
+            { fileName: 'm1.mp3', tags: { title: 'Three', ...albumA } },
+            { fileName: 'm2.mp3', tags: { title: 'Kaneda', ...albumB } },
+          ],
+          coverSize: 2800,
+        },
+      ]);
+
+      await organizeAll();
+
+      expect(
+        (await screen.findByText(/One cover is shared by/)).textContent,
+      ).toContain('Meddle');
+    }, 30_000);
+
+    it('writes no cover into a folder that would get different covers', async () => {
+      await dropFolders([
+        {
+          name: 'First',
+          tracks: [{ fileName: 'a1.mp3', tags: { title: 'One', ...albumA } }],
+          coverSize: 2900,
+        },
+        {
+          name: 'Second',
+          tracks: [{ fileName: 'b1.mp3', tags: { title: 'Two', ...albumB } }],
+          coverSize: 3100,
+        },
+      ]);
+      await organizeAll();
+      await act(async () => {
+        fireEvent.click(presetRadio('Custom…'));
+      });
+      await act(async () => {
+        fireEvent.change(screen.getByLabelText('Naming template'), {
+          target: { value: 'Shared/{Title}' },
+        });
+      });
+
+      expect(
+        await screen.findByText(/Different covers would land in/),
+      ).toBeTruthy();
+
+      await clickDone();
+      await waitFor(() => {
+        expect(screen.queryByText(/Organize ·/)).toBeNull();
+      });
+
+      const shared = await readdir(join(getServer().mountDir, 'Shared'));
+      expect(shared.filter((name) => name.endsWith('.mp3'))).toHaveLength(2);
+      expect(shared).not.toContain('Folder.jpg');
     }, 30_000);
 
     it('flags colliding destinations without moving them, letting the rest commit and allowing a retry', async () => {

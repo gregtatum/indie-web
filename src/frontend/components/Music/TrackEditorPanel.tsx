@@ -19,6 +19,7 @@ import {
 } from 'frontend/logic/music/metadata';
 import {
   defaultPreferComposerGroupingForGenre,
+  getAlbumArtworkKey,
   getTrackCapabilities,
   serializePreferComposerGroupingTag,
 } from 'shared/music';
@@ -893,11 +894,17 @@ export const TrackEditorPanel = React.forwardRef<
 
   const selectionDir =
     editTracks.length > 0 ? getDirName(editTracks[0].path) : null;
-  const isColocatedSelection =
+  const stagedAlbumKeys = new Set(editTracks.map(getAlbumArtworkKey));
+  const isOneStagedAlbum =
     editTracks.length > 0 &&
-    editTracks.every((t) => getDirName(t.path) === selectionDir);
+    (editTracks.length === 1 ||
+      (stagedAlbumKeys.size === 1 && !stagedAlbumKeys.has(null)));
+  const isColocatedSelection = isStagingSource
+    ? isOneStagedAlbum
+    : editTracks.length > 0 &&
+      editTracks.every((t) => getDirName(t.path) === selectionDir);
   const canEmbedFolderArtwork = !isBulkEdit || isColocatedSelection;
-  const canEditFolderArtwork = !isStagingSource && canEmbedFolderArtwork;
+  const canEditFolderArtwork = canEmbedFolderArtwork;
 
   let sharedFolderArtworkPath: string | null = null;
   if (
@@ -926,7 +933,8 @@ export const TrackEditorPanel = React.forwardRef<
     if (isBulkEdit && !isColocatedSelection) {
       return [];
     }
-    return tracks
+    const candidateTracks = isStagingSource ? editTracks : tracks;
+    return candidateTracks
       .filter(
         (t) =>
           !t.hasEmbeddedArtwork &&
@@ -934,11 +942,46 @@ export const TrackEditorPanel = React.forwardRef<
           getTrackCapabilities(t.path).embedsArtwork,
       )
       .map((t) => t.path);
-  }, [isBulkEdit, isColocatedSelection, sharedFolderArtworkPath, tracks]);
+  }, [
+    isBulkEdit,
+    isColocatedSelection,
+    isStagingSource,
+    sharedFolderArtworkPath,
+    tracks,
+    editTracks,
+  ]);
+  const setStagedAlbumArtwork = React.useCallback(
+    (folderArtworkPath: string | null) => {
+      const [edited] = editTracksRef.current;
+      if (!edited) {
+        return;
+      }
+      const key = getAlbumArtworkKey(edited);
+      function isInEditedAlbum(t: T.TrackMetadata): boolean {
+        if (key === null) {
+          return t.path === edited.path;
+        }
+        return getAlbumArtworkKey(t) === key;
+      }
+      updateTracks(
+        tracks.map((t) => {
+          if (isInEditedAlbum(t)) {
+            return { ...t, folderArtworkPath };
+          }
+          return t;
+        }),
+      );
+    },
+    [updateTracks, tracks],
+  );
   // Neither the folder artwork write nor the embed touches the music index, so
   // patch the store to keep the tab (and library) current until the next scan.
   const handleFolderArtworkWritten = React.useCallback(
     (folderArtworkPath: string) => {
+      if (isStagingSource) {
+        setStagedAlbumArtwork(folderArtworkPath);
+        return;
+      }
       const folderDir = getDirName(folderArtworkPath);
       updateTracks(
         tracks.map((t) =>
@@ -946,8 +989,13 @@ export const TrackEditorPanel = React.forwardRef<
         ),
       );
     },
-    [updateTracks, tracks],
+    [updateTracks, tracks, isStagingSource, setStagedAlbumArtwork],
   );
+  const handleFolderArtworkRemoved = React.useCallback(() => {
+    if (isStagingSource) {
+      setStagedAlbumArtwork(null);
+    }
+  }, [isStagingSource, setStagedAlbumArtwork]);
   const handleTracksEmbedded = React.useCallback(
     (embeddedPaths: string[]) => {
       const embedded = new Set(embeddedPaths);
@@ -1301,6 +1349,7 @@ export const TrackEditorPanel = React.forwardRef<
             trackPath={editTracks[0].path}
             embeddableTrackPaths={embeddableTrackPaths}
             onFolderArtworkWritten={handleFolderArtworkWritten}
+            onFolderArtworkRemoved={handleFolderArtworkRemoved}
             pendingArtwork={pendingArtwork}
             canRedoArtwork={undoneArtwork !== null}
             onStageArtwork={(artwork) => {

@@ -737,6 +737,12 @@
   padding: 2px 0 4px;
 }
 
+.musicOrganizePreviewNotice {
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
+  padding: 2px 0 4px;
+}
+
 .musicFilterPanels {
   display: flex;
   flex-direction: row;

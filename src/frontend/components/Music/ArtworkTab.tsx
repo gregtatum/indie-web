@@ -30,6 +30,7 @@ interface Props {
   trackPath: string;
   embeddableTrackPaths: string[];
   onFolderArtworkWritten: (folderArtworkPath: string) => void;
+  onFolderArtworkRemoved?: () => void;
   pendingArtwork: PendingArtwork | null;
   canRedoArtwork: boolean;
   onStageArtwork: (artwork: PendingArtwork) => void;
@@ -484,11 +485,16 @@ function ItunesArtworkSearchPanel({
 function RemoveFolderArtworkButton({
   trackPath,
   serverUrl,
+  onRemoved,
 }: {
   trackPath: string;
   serverUrl: string;
+  onRemoved?: () => void;
 }) {
-  const { removeStatus, active, remove } = useFolderArtworkRemove(serverUrl);
+  const { removeStatus, active, remove } = useFolderArtworkRemove(
+    serverUrl,
+    onRemoved,
+  );
   const [confirming, setConfirming] = React.useState(false);
   const busy =
     active && (removeStatus === 'saving' || removeStatus === 'saved');
@@ -792,17 +798,20 @@ function ArtworkDropZone({
   trackPath,
   serverUrl,
   canEdit,
+  onSaved,
   children,
 }: {
   trackPath: string;
   serverUrl: string;
   canEdit: boolean;
+  onSaved: (folderArtworkPath: string) => void;
   children: React.ReactNode;
 }) {
   const { ref, dragging } = useFolderArtworkDrop({
     trackPath,
     serverUrl,
     canEdit,
+    onSaved,
   });
 
   return (
@@ -827,6 +836,7 @@ function AlbumArtwork({
   trackPath,
   serverUrl,
   canEditFolderArtwork,
+  onFolderArtworkWritten,
   banner,
   children,
 }: {
@@ -839,6 +849,7 @@ function AlbumArtwork({
   trackPath: string;
   serverUrl: string;
   canEditFolderArtwork: boolean;
+  onFolderArtworkWritten: (folderArtworkPath: string) => void;
   banner?: React.ReactNode;
   children?: React.ReactNode;
 }) {
@@ -873,6 +884,7 @@ function AlbumArtwork({
         trackPath={trackPath}
         serverUrl={serverUrl}
         canEdit={canEditFolderArtwork}
+        onSaved={onFolderArtworkWritten}
       >
         {imgError ? (
           <div className="artworkSectionError">Unable to load image</div>
@@ -1016,6 +1028,7 @@ export function ArtworkTab({
   trackPath,
   embeddableTrackPaths,
   onFolderArtworkWritten,
+  onFolderArtworkRemoved,
   pendingArtwork,
   canRedoArtwork,
   onStageArtwork,
@@ -1140,6 +1153,7 @@ export function ArtworkTab({
               trackPath={trackPath}
               serverUrl={serverUrl}
               canEdit={canEditFolderArtwork}
+              onSaved={onFolderArtworkWritten}
             >
               {pendingArtwork ? (
                 <SizedArtworkImage
@@ -1212,6 +1226,7 @@ export function ArtworkTab({
             trackPath={trackPath}
             serverUrl={serverUrl}
             canEditFolderArtwork={canEditFolderArtwork}
+            onFolderArtworkWritten={onFolderArtworkWritten}
             banner={
               canEmbedFolderArtwork && embeddableTrackPaths.length > 0 ? (
                 <EmbedArtworkBanner
@@ -1233,6 +1248,7 @@ export function ArtworkTab({
                 <RemoveFolderArtworkButton
                   trackPath={trackPath}
                   serverUrl={serverUrl}
+                  onRemoved={onFolderArtworkRemoved}
                 />
               </>
             )}
