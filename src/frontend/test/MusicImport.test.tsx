@@ -6,7 +6,7 @@ import {
   within,
 } from '@testing-library/react';
 import { act } from 'react';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile, rm, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { $, A, T } from 'frontend';
 import { persistedState } from 'frontend/logic/persisted-state';
@@ -22,6 +22,7 @@ import {
   useMusicTestServer,
   waitForNetworkIdle,
 } from './utils/music';
+import { expectConsoleError } from './utils/setupAfterEnv';
 
 const jestDescribe = globalThis.describe;
 let describe: (name: string, fn: () => void) => void = jestDescribe;
@@ -171,6 +172,47 @@ describe('drag-and-drop import & organize', () => {
       await waitForNetworkIdle();
     });
     return { store };
+  }
+
+  function mockClipboard() {
+    const clipboard = { text: '' };
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          clipboard.text = text;
+        },
+        readText: async () => clipboard.text,
+      },
+    });
+    return clipboard;
+  }
+
+  async function copyArtistAndPasteIntoAll(
+    store: Awaited<ReturnType<typeof renderMusicApp>>['store'],
+    artist: string,
+  ) {
+    mockClipboard();
+    await act(async () => {
+      fireEvent.click(
+        screen.getAllByText(artist, {
+          selector: '.musicBatchEditCellText',
+        })[0],
+      );
+    });
+    const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+    grid.focus();
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: 'c', metaKey: true });
+      fireEvent.keyDown(document.body, { key: 'a', metaKey: true });
+    });
+    expect(
+      $.getMusicSelectedTrackPaths(store.getState()).length,
+    ).toBeGreaterThan(1);
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: 'v', metaKey: true });
+      await waitForNetworkIdle();
+    });
   }
 
   async function scanLibrary(): Promise<void> {
@@ -806,16 +848,7 @@ describe('drag-and-drop import & organize', () => {
     }, 30_000);
 
     it('copies a cell with Cmd+C and pastes it into the selected tracks with Cmd+V', async () => {
-      let clipboardText = '';
-      Object.defineProperty(navigator, 'clipboard', {
-        configurable: true,
-        value: {
-          writeText: async (text: string) => {
-            clipboardText = text;
-          },
-          readText: async () => clipboardText,
-        },
-      });
+      const clipboard = mockClipboard();
       const { store } = await dropTracks([
         { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
         { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
@@ -833,7 +866,7 @@ describe('drag-and-drop import & organize', () => {
       await act(async () => {
         fireEvent.keyDown(document.body, { key: 'c', metaKey: true });
       });
-      expect(clipboardText).toBe('Pink Floyd');
+      expect(clipboard.text).toBe('Pink Floyd');
 
       await act(async () => {
         fireEvent.click(
@@ -851,6 +884,60 @@ describe('drag-and-drop import & organize', () => {
           $.getMusicStagingPool(store.getState()).map((t) => t.artist),
         ).toEqual(['Pink Floyd', 'Pink Floyd']);
       });
+    }, 30_000);
+
+    it('pastes across more than one write chunk, updating every row', async () => {
+      const { store } = await dropTracks(
+        Array.from({ length: 12 }, (_, i) => ({
+          fileName: `track-${i}.mp3`,
+          tags: {
+            title: `Song ${i}`,
+            artist: i === 0 ? 'Pink Floyd' : 'Geinoh',
+          },
+        })),
+      );
+      const writeSpy = jest.spyOn(globalThis, 'fetch');
+
+      await copyArtistAndPasteIntoAll(store, 'Pink Floyd');
+
+      await waitFor(() => {
+        expect(
+          new Set($.getMusicStagingPool(store.getState()).map((t) => t.artist)),
+        ).toEqual(new Set(['Pink Floyd']));
+      });
+      const writes = writeSpy.mock.calls.filter(([input]) =>
+        String(input).endsWith('/music/write-track-tags'),
+      );
+      expect(writes).toHaveLength(2);
+      expect(
+        document.querySelectorAll('.musicBatchEditCell.error'),
+      ).toHaveLength(0);
+      writeSpy.mockRestore();
+    }, 30_000);
+
+    it('marks cells and shows a message when the server cannot write a track', async () => {
+      const { store } = await dropTracks([
+        { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
+        { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
+      ]);
+      await rm(join(getServer().mountDir, '.music-staging', 'b.mp3'));
+      expectConsoleError((args) => String(args[0]).includes('[music-server]'));
+
+      await copyArtistAndPasteIntoAll(store, 'Pink Floyd');
+
+      await screen.findByText(/Saved 1 of 2 tracks\./);
+      expect(
+        document.querySelectorAll('.musicBatchEditCell.error'),
+      ).toHaveLength(1);
+      expect(
+        $.getMusicStagingPool(store.getState()).find((t) => t.title === 'Time')
+          ?.artist,
+      ).toBe('Pink Floyd');
+      expect(
+        $.getMusicStagingPool(store.getState()).find(
+          (t) => t.title === 'Kaneda',
+        )?.artist,
+      ).toBe('Geinoh');
     }, 30_000);
 
     it('leaves the pool intact on disk when going back to the library', async () => {

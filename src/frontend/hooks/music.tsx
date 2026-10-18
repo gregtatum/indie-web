@@ -550,6 +550,11 @@ function SaveFailureMessage({
   );
 }
 
+interface SaveTrackTagsResult {
+  isSaved: boolean;
+  updatedPaths: Set<string>;
+}
+
 export function useSaveTrackTags(trackSource: MusicTrackSource) {
   const dispatch = Hooks.useDispatch();
   const server = $$.getCurrentServer();
@@ -561,7 +566,9 @@ export function useSaveTrackTags(trackSource: MusicTrackSource) {
       paths: string[],
       changes: T.TrackTagUpdate[],
       generation: number,
-    ): Promise<boolean> => {
+      onChunk?: (response: WriteTrackTagsResponse) => void,
+    ): Promise<SaveTrackTagsResult> => {
+      const updatedPaths = new Set<string>();
       try {
         let currentTracks = trackSourceRef.current.tracks;
         const result = await writeTrackTagsWithProgress({
@@ -570,14 +577,16 @@ export function useSaveTrackTags(trackSource: MusicTrackSource) {
           paths,
           changes,
           verb: 'Saving',
-          onChunk: ({ updated }) => {
-            const updatedPaths = new Set(updated);
+          onChunk: (response) => {
+            const chunkPaths = new Set(response.updated);
+            response.updated.forEach((path) => updatedPaths.add(path));
             currentTracks = currentTracks.map((track) =>
-              updatedPaths.has(track.path)
+              chunkPaths.has(track.path)
                 ? applyIndexedTrackChanges(track, changes)
                 : track,
             );
             trackSourceRef.current.updateTracks(currentTracks);
+            onChunk?.(response);
           },
         });
         if (result.errors.length > 0 || result.updated.length === 0) {
@@ -592,7 +601,7 @@ export function useSaveTrackTags(trackSource: MusicTrackSource) {
               generation,
             }),
           );
-          return false;
+          return { isSaved: false, updatedPaths };
         }
         if (result.index.status === 'error') {
           dispatch(
@@ -602,7 +611,7 @@ export function useSaveTrackTags(trackSource: MusicTrackSource) {
             }),
           );
         }
-        return true;
+        return { isSaved: true, updatedPaths };
       } catch (error) {
         dispatch(
           A.addMessage({
@@ -610,7 +619,7 @@ export function useSaveTrackTags(trackSource: MusicTrackSource) {
             generation,
           }),
         );
-        return false;
+        return { isSaved: false, updatedPaths };
       }
     },
     [server.url, dispatch],

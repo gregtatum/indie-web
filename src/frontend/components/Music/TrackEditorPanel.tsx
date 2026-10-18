@@ -679,7 +679,7 @@ export const TrackEditorPanel = React.forwardRef<
         revokeArtworkPreviews();
       }
       if (changes.length > 0) {
-        const isSaved = await saveTrackTags(
+        const { isSaved } = await saveTrackTags(
           savePaths,
           changes,
           failureMessageGeneration.current,

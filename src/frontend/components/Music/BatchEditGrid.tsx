@@ -1,17 +1,16 @@
 import * as React from 'react';
 import { $$, $, A, Hooks, T } from 'frontend';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { getKeyboardString } from 'frontend/utils';
+import { getGeneration, getKeyboardString } from 'frontend/utils';
 import { persistedState } from 'frontend/logic/persisted-state';
 import {
   BATCH_EDIT_COLUMN_KEYS,
   BATCH_EDIT_COLUMNS,
-  applyIndexedTrackChanges,
-  writeTrackTags,
   type BatchEditColumn,
   type BatchEditColumnKey,
   type MusicTrackSource,
 } from 'frontend/logic/music/metadata';
+import { useSaveTrackTags } from 'frontend/hooks/music';
 import { getTrackCapabilities } from 'shared/music';
 import {
   ColumnResizeHandle,
@@ -126,12 +125,13 @@ interface BatchEditGridProps {
 export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
   const tracks = trackSource.tracks;
   const selectedPaths = $$.getMusicSelectedTrackPaths();
-  const server = $$.getCurrentServer();
   const dispatch = Hooks.useDispatch();
   const { getState } = Hooks.useStore();
 
   const trackSourceRef = React.useRef(trackSource);
   trackSourceRef.current = trackSource;
+  const saveTrackTags = useSaveTrackTags(trackSource);
+  const failureMessageGeneration = React.useRef(getGeneration());
 
   const tracksByPath = React.useMemo(() => {
     const map = new Map<string, T.TrackMetadata>();
@@ -376,21 +376,19 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
     const changes: T.TrackTagUpdate[] = [
       { frameId: columnDef.frameId, value: newValue },
     ];
-    try {
-      const updatedSet = await writeTrackTags(server.url, paths, changes);
-      trackSourceRef.current.updateTracks(
-        trackSourceRef.current.tracks.map((t) =>
-          updatedSet.has(t.path) ? applyIndexedTrackChanges(t, changes) : t,
-        ),
-      );
-      for (const path of paths) {
-        setStatus(
-          `${path}:${columnDef.frameId}`,
-          updatedSet.has(path) ? null : { status: 'error', value: newValue },
-        );
-      }
-    } catch {
-      for (const path of paths) {
+    dispatch(A.dismissMessage(failureMessageGeneration.current));
+    const { updatedPaths } = await saveTrackTags(
+      paths,
+      changes,
+      failureMessageGeneration.current,
+      ({ updated }) => {
+        for (const path of updated) {
+          setStatus(`${path}:${columnDef.frameId}`, null);
+        }
+      },
+    );
+    for (const path of paths) {
+      if (!updatedPaths.has(path)) {
         setStatus(`${path}:${columnDef.frameId}`, {
           status: 'error',
           value: newValue,
