@@ -180,6 +180,14 @@
   box-shadow: var(--box-shadow-focus);
 }
 
+.editTrackModalInput-saving {
+  border-color: var(--accent);
+}
+
+.editTrackModalInput-error {
+  border-color: var(--error-color);
+}
+
 .editTrackModalRadioGroup {
   display: flex;
   align-items: center;

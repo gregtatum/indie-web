@@ -940,6 +940,143 @@ describe('drag-and-drop import & organize', () => {
       ).toBe('Geinoh');
     }, 30_000);
 
+    async function clearArtistFromGrid() {
+      const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByText('Pink Floyd', {
+            selector: '.musicBatchEditCellText',
+          }),
+        );
+      });
+      grid.focus();
+      await act(async () => {
+        fireEvent.keyDown(document.body, { key: 'Delete' });
+        await waitForNetworkIdle();
+      });
+    }
+
+    async function artistInputOfSidebar(): Promise<HTMLInputElement> {
+      const input = (await screen.findByLabelText(
+        'Artist',
+      )) as HTMLInputElement;
+      await waitFor(() => {
+        expect(input.disabled).toBe(false);
+      });
+      return input;
+    }
+
+    it('shows a grid edit in a clean sidebar form', async () => {
+      await dropTrack('a.mp3', { title: 'Time', artist: 'Pink Floyd' });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByText('Time', { selector: '.musicBatchEditCellText' }),
+        );
+      });
+      const artistInput = await artistInputOfSidebar();
+      await waitFor(() => {
+        expect(artistInput.value).toBe('Pink Floyd');
+      });
+
+      await clearArtistFromGrid();
+
+      await waitFor(() => {
+        expect(artistInput.value).toBe('');
+      });
+    }, 30_000);
+
+    it('keeps typed sidebar text when the grid edits the same field', async () => {
+      await dropTrack('a.mp3', { title: 'Time', artist: 'Pink Floyd' });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByText('Time', { selector: '.musicBatchEditCellText' }),
+        );
+      });
+      const artistInput = await artistInputOfSidebar();
+      await waitFor(() => {
+        expect(artistInput.value).toBe('Pink Floyd');
+      });
+      await act(async () => {
+        fireEvent.change(artistInput, { target: { value: 'Draft' } });
+      });
+
+      await clearArtistFromGrid();
+
+      expect(artistInput.value).toBe('Draft');
+    }, 30_000);
+
+    it('applies sidebar edits on blur and Enter without a Save button', async () => {
+      const { store } = await dropTrack('a.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByText('Time', { selector: '.musicBatchEditCellText' }),
+        );
+      });
+      const artistInput = await artistInputOfSidebar();
+      await waitFor(() => {
+        expect(artistInput.value).toBe('Pink Floyd');
+      });
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+
+      await act(async () => {
+        fireEvent.change(artistInput, { target: { value: 'Roger Waters' } });
+        fireEvent.blur(artistInput);
+        await waitForNetworkIdle();
+      });
+      await waitFor(() => {
+        expect($.getMusicStagingPool(store.getState())[0].artist).toBe(
+          'Roger Waters',
+        );
+      });
+
+      const titleInput = screen.getByLabelText('Title') as HTMLInputElement;
+      await act(async () => {
+        fireEvent.change(titleInput, { target: { value: 'Money' } });
+        fireEvent.submit(titleInput.closest('form') as HTMLFormElement);
+        await waitForNetworkIdle();
+      });
+      await waitFor(() => {
+        expect($.getMusicStagingPool(store.getState())[0].title).toBe('Money');
+      });
+    }, 30_000);
+
+    it('reverts an unapplied sidebar edit on Escape', async () => {
+      const { store } = await dropTrack('a.mp3', {
+        title: 'Time',
+        artist: 'Pink Floyd',
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByText('Time', { selector: '.musicBatchEditCellText' }),
+        );
+      });
+      const artistInput = await artistInputOfSidebar();
+      await waitFor(() => {
+        expect(artistInput.value).toBe('Pink Floyd');
+      });
+
+      await act(async () => {
+        fireEvent.change(artistInput, { target: { value: 'Draft' } });
+      });
+      expect(artistInput.value).toBe('Draft');
+      await act(async () => {
+        fireEvent.keyDown(artistInput, { key: 'Escape' });
+      });
+      expect(artistInput.value).toBe('Pink Floyd');
+      await act(async () => {
+        fireEvent.blur(artistInput);
+        await waitForNetworkIdle();
+      });
+
+      expect(artistInput.value).toBe('Pink Floyd');
+      expect($.getMusicStagingPool(store.getState())[0].artist).toBe(
+        'Pink Floyd',
+      );
+    }, 30_000);
+
     it('leaves the pool intact on disk when going back to the library', async () => {
       const { store } = await dropTrack('time.mp3', {
         title: 'Time',
@@ -1078,7 +1215,7 @@ describe('drag-and-drop import & organize', () => {
       });
       fireEvent.change(yearInput, { target: { value: '2014' } });
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        fireEvent.blur(yearInput);
         await waitForNetworkIdle();
       });
 

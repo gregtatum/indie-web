@@ -275,6 +275,16 @@ export const TrackEditorPanel = React.forwardRef<
     React.useState(false);
   const [bulkForceLoadAll, setBulkForceLoadAll] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [fieldStatus, setFieldStatus] = React.useState<
+    Partial<Record<DetailFormValueKey, 'saving' | 'error'>>
+  >({});
+  const isImmediate = !onClose;
+  const formStateRef = React.useRef(formState);
+  formStateRef.current = formState;
+  const baselineFormStateRef = React.useRef(baselineFormState);
+  baselineFormStateRef.current = baselineFormState;
+  const commitQueueRef = React.useRef<Promise<void>>(Promise.resolve());
+  const pendingCommitsRef = React.useRef(0);
   const failureMessageGeneration = React.useRef(getGeneration());
   const saveTrackTags = useSaveTrackTags(trackSource);
   const [closeConfirmPending, setCloseConfirmPending] = React.useState(false);
@@ -590,6 +600,78 @@ export const TrackEditorPanel = React.forwardRef<
     }
   }, [isBulkEdit, tagsState, resolvedEditTrackKey]);
 
+  const indexPresentation = React.useMemo(
+    () =>
+      isBulkEdit
+        ? aggregateDetailFieldValues(editTracks, null, 'index')
+        : {
+            values: detailFieldValues(track, null),
+            placeholders: emptyDetailFieldValues(),
+          },
+    [tracks, track, bulkTrackKey, isBulkEdit],
+  );
+  const indexSnapshotRef = React.useRef<{
+    selectionKey: string;
+    values: DetailFieldValues;
+  } | null>(null);
+
+  // Pick up index changes made elsewhere, like the batch edit grid. Dirty
+  // fields keep what was typed and only rebase against the new value.
+  React.useEffect(() => {
+    const selectionKey = [
+      trackPath,
+      bulkTrackKey,
+      resolvedEditTrackKey,
+      isBulkEdit,
+    ].join('\0');
+    const previous = indexSnapshotRef.current;
+    indexSnapshotRef.current = {
+      selectionKey,
+      values: indexPresentation.values,
+    };
+    const isLoaded = isBulkEdit
+      ? bulkTagsState.status !== 'loading'
+      : tagsState.status === 'loaded';
+    if (!previous || previous.selectionKey !== selectionKey || !isLoaded) {
+      return;
+    }
+    if (isSaving) {
+      return;
+    }
+    const changedKeys = (
+      Object.keys(indexPresentation.values) as DetailFormValueKey[]
+    ).filter(
+      (key) =>
+        (previous.values[key] ?? '') !== (indexPresentation.values[key] ?? ''),
+    );
+    if (changedKeys.length === 0) {
+      return;
+    }
+    setFormState((prev) => {
+      const next = { ...prev };
+      for (const key of changedKeys) {
+        if ((prev[key] ?? '') === (baselineFormState[key] ?? '')) {
+          next[key] = indexPresentation.values[key];
+        }
+      }
+      return next;
+    });
+    setBaselineFormState((prev) => {
+      const next = { ...prev };
+      for (const key of changedKeys) {
+        next[key] = indexPresentation.values[key];
+      }
+      return next;
+    });
+    setFormPlaceholders((prev) => {
+      const next = { ...prev };
+      for (const key of changedKeys) {
+        next[key] = indexPresentation.placeholders[key];
+      }
+      return next;
+    });
+  }, [indexPresentation]);
+
   React.useEffect(() => {
     if (isBulkEdit && activeTab === 'id3') {
       dispatch(A.setMusicEditTab('details'));
@@ -628,13 +710,124 @@ export const TrackEditorPanel = React.forwardRef<
 
   React.useImperativeHandle(ref, () => ({ requestClose: handleClose }));
 
-  async function handleSave() {
-    let savePaths: string[] = [];
-    if (isBulkEdit) {
-      savePaths = selectedTrackPaths;
-    } else if (trackPath) {
-      savePaths = [trackPath];
+  async function writeArtwork(artwork: PendingArtwork) {
+    const res = await fetch(
+      `${server.url}/music/artwork?path=${encodeURIComponent(editTracks[0]?.path)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': artwork.contentType },
+        body: artwork.data,
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `${res.status}`);
     }
+    const written = await (res.json() as Promise<WriteFolderArtworkResponse>);
+    if (written.folderArtworkPath) {
+      handleFolderArtworkWritten(written.folderArtworkPath);
+    }
+  }
+
+  async function writeArtworkImmediately(artwork: PendingArtwork) {
+    dispatch(A.dismissMessage(failureMessageGeneration.current));
+    try {
+      await writeArtwork(artwork);
+    } catch (error) {
+      dispatch(
+        A.addMessage({
+          message: `Could not save artwork. ${error instanceof Error ? error.message : ''}`,
+          generation: failureMessageGeneration.current,
+        }),
+      );
+    } finally {
+      URL.revokeObjectURL(artwork.previewUrl);
+    }
+  }
+
+  function updateImmediateBaseline(
+    keys: DetailFormValueKey[],
+    values: DetailFieldValues,
+  ) {
+    const next = { ...baselineFormStateRef.current };
+    for (const key of keys) {
+      next[key] = values[key];
+    }
+    baselineFormStateRef.current = next;
+    setBaselineFormState(next);
+  }
+
+  async function writeFormChanges(paths: string[]) {
+    const form = formStateRef.current;
+    const baseline = baselineFormStateRef.current;
+    const changes = buildDetailChanges(form, baseline);
+    if (changes.length === 0) {
+      return;
+    }
+    const changedKeys = (Object.keys(form) as DetailFormValueKey[]).filter(
+      (key) => (form[key] ?? '') !== (baseline[key] ?? ''),
+    );
+    const setStatus = (status: 'saving' | 'error' | null) =>
+      setFieldStatus((prev) => {
+        const next = { ...prev };
+        for (const key of changedKeys) {
+          if (status) {
+            next[key] = status;
+          } else {
+            delete next[key];
+          }
+        }
+        return next;
+      });
+    dispatch(A.dismissMessage(failureMessageGeneration.current));
+    setStatus('saving');
+    const { isSaved } = await saveTrackTags(
+      paths,
+      changes,
+      failureMessageGeneration.current,
+    );
+    if (isSaved) {
+      updateImmediateBaseline(changedKeys, form);
+      setStatus(null);
+    } else {
+      setStatus('error');
+    }
+  }
+
+  function commitFormChanges() {
+    const paths = getSavePaths();
+    if (!isImmediate || paths.length === 0 || detailsEditingDisabled) {
+      return;
+    }
+    pendingCommitsRef.current++;
+    setIsSaving(true);
+    commitQueueRef.current = commitQueueRef.current.then(async () => {
+      try {
+        await writeFormChanges(paths);
+      } finally {
+        pendingCommitsRef.current--;
+        if (pendingCommitsRef.current === 0) {
+          setIsSaving(false);
+        }
+      }
+    });
+  }
+
+  function getSavePaths(): string[] {
+    if (isBulkEdit) {
+      return selectedTrackPaths;
+    }
+    return trackPath ? [trackPath] : [];
+  }
+
+  function revertFormChanges() {
+    formStateRef.current = baselineFormStateRef.current;
+    setFormState(baselineFormStateRef.current);
+    setFieldStatus({});
+  }
+
+  async function handleSave() {
+    const savePaths = getSavePaths();
     if (
       savePaths.length === 0 ||
       !isDirty ||
@@ -652,28 +845,11 @@ export const TrackEditorPanel = React.forwardRef<
 
     setIsSaving(true);
     const savedFormState = { ...formState };
-    const artworkPath = editTracks[0]?.path;
     const artwork = pendingArtwork;
     dispatch(A.dismissMessage(failureMessageGeneration.current));
     try {
       if (artwork) {
-        const res = await fetch(
-          `${server.url}/music/artwork?path=${encodeURIComponent(artworkPath)}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': artwork.contentType },
-            body: artwork.data,
-          },
-        );
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `${res.status}`);
-        }
-        const written =
-          await (res.json() as Promise<WriteFolderArtworkResponse>);
-        if (written.folderArtworkPath) {
-          handleFolderArtworkWritten(written.folderArtworkPath);
-        }
+        await writeArtwork(artwork);
         setPendingArtwork(null);
         setUndoneArtwork(null);
         revokeArtworkPreviews();
@@ -708,7 +884,11 @@ export const TrackEditorPanel = React.forwardRef<
 
   function handleDetailsSubmit(event: React.FormEvent) {
     event.preventDefault();
-    void handleSave();
+    if (isImmediate) {
+      commitFormChanges();
+    } else {
+      void handleSave();
+    }
   }
 
   const selectionDir =
@@ -951,6 +1131,13 @@ export const TrackEditorPanel = React.forwardRef<
       ] as const);
   function setGroupArtistBy(value: 'true' | 'false') {
     setField('preferComposerGrouping', value);
+    if (isImmediate) {
+      formStateRef.current = {
+        ...formStateRef.current,
+        preferComposerGrouping: value,
+      };
+      commitFormChanges();
+    }
   }
   const extraRowsByGroup: Partial<Record<DetailFieldGroup, React.ReactNode[]>> =
     {
@@ -992,6 +1179,10 @@ export const TrackEditorPanel = React.forwardRef<
       ],
     };
 
+  function statusClass(key: DetailFormValueKey): string {
+    return fieldStatus[key] ? ` editTrackModalInput-${fieldStatus[key]}` : '';
+  }
+
   function addDetailFieldRow(field: (typeof DETAIL_FIELDS)[number]) {
     const fieldDisabled =
       detailsEditingDisabled || !isFrameWritable(field.frameId);
@@ -1004,7 +1195,7 @@ export const TrackEditorPanel = React.forwardRef<
           <span className="editTrackModalLabel">{field.label}</span>
           <div className="editTrackModalSplitInput">
             <input
-              className="editTrackModalInput editTrackModalSplitInput-num"
+              className={`editTrackModalInput editTrackModalSplitInput-num${statusClass(field.key)}`}
               type="text"
               inputMode="numeric"
               value={formState[field.key]}
@@ -1014,7 +1205,7 @@ export const TrackEditorPanel = React.forwardRef<
             />
             <span className="editTrackModalSplitSep">of</span>
             <input
-              className="editTrackModalInput editTrackModalSplitInput-total"
+              className={`editTrackModalInput editTrackModalSplitInput-total${statusClass(field.totalKey)}`}
               type="text"
               inputMode="numeric"
               value={formState[field.totalKey]}
@@ -1030,7 +1221,7 @@ export const TrackEditorPanel = React.forwardRef<
         <label key={field.key} className="editTrackModalRow" title={fieldTitle}>
           <span className="editTrackModalLabel">{field.label}</span>
           <input
-            className="editTrackModalInput"
+            className={`editTrackModalInput${statusClass(field.key)}`}
             type="text"
             inputMode={field.type === 'number' ? 'numeric' : 'text'}
             value={formState[field.key]}
@@ -1067,7 +1258,21 @@ export const TrackEditorPanel = React.forwardRef<
       id: 'details' as T.MusicEditTab,
       label: 'Track',
       panel: (
-        <form className="editTrackModalDetails" onSubmit={handleDetailsSubmit}>
+        <form
+          className="editTrackModalDetails"
+          onSubmit={handleDetailsSubmit}
+          onBlur={isImmediate ? commitFormChanges : undefined}
+          onKeyDown={
+            isImmediate
+              ? (event) => {
+                  if (event.key === 'Escape') {
+                    event.stopPropagation();
+                    revertFormChanges();
+                  }
+                }
+              : undefined
+          }
+        >
           {detailsNotices}
           <div className="editTrackModalGrid">{detailRows}</div>
           <button type="submit" hidden />
@@ -1099,6 +1304,10 @@ export const TrackEditorPanel = React.forwardRef<
             pendingArtwork={pendingArtwork}
             canRedoArtwork={undoneArtwork !== null}
             onStageArtwork={(artwork) => {
+              if (isImmediate) {
+                void writeArtworkImmediately(artwork);
+                return;
+              }
               setCloseConfirmPending(false);
               artworkPreviewUrls.current.push(artwork.previewUrl);
               setUndoneArtwork(null);
@@ -1218,26 +1427,28 @@ export const TrackEditorPanel = React.forwardRef<
         activeTab={effectiveActiveTab}
         onChange={(id) => dispatch(A.setMusicEditTab(id as T.MusicEditTab))}
       />
-      <div className="editTrackModalFooter">
-        {closeConfirmPending && (
-          <span className="editTrackModalCloseWarning">
-            Close one more time to discard changes
-          </span>
-        )}
-        <button
-          type="button"
-          className="editTrackModalSaveBtn"
-          disabled={
-            !isDirty ||
-            isSaving ||
-            (!isBulkEdit && tagsState.status !== 'loaded') ||
-            (isBulkEdit && bulkTagsState.status === 'loading')
-          }
-          onClick={() => void handleSave()}
-        >
-          {saveButtonLabel}
-        </button>
-      </div>
+      {!isImmediate && (
+        <div className="editTrackModalFooter">
+          {closeConfirmPending && (
+            <span className="editTrackModalCloseWarning">
+              Close one more time to discard changes
+            </span>
+          )}
+          <button
+            type="button"
+            className="editTrackModalSaveBtn"
+            disabled={
+              !isDirty ||
+              isSaving ||
+              (!isBulkEdit && tagsState.status !== 'loaded') ||
+              (isBulkEdit && bulkTagsState.status === 'loading')
+            }
+            onClick={() => void handleSave()}
+          >
+            {saveButtonLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 });
