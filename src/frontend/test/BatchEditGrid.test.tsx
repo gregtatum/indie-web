@@ -502,14 +502,14 @@ describe('<BatchEditGrid> with real server', () => {
     ]);
   }, 30_000);
 
-  it('ignores the Delete key — deleting via keyboard is import-only', async () => {
+  it('ignores Cmd+Delete — deleting tracks via keyboard is import-only', async () => {
     await writeAlbumA();
     const { store } = await setup();
     await openBatchEdit(store, ['/a.mp3', '/b.mp3'], 'Song A');
 
     const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
     grid.focus();
-    fireEvent.keyDown(document.body, { key: 'Delete' });
+    fireEvent.keyDown(document.body, { key: 'Delete', metaKey: true });
 
     getCellText('Song A');
     expect(await fetchIndexTrack('/a.mp3')).toBeTruthy();

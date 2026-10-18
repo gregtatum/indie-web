@@ -744,7 +744,7 @@ describe('drag-and-drop import & organize', () => {
       );
     }, 30_000);
 
-    it('removes the selected track on Delete, staging file and all', async () => {
+    it('removes the selected track on Cmd+Delete, staging file and all', async () => {
       const { store } = await dropTracks([
         { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
         { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
@@ -760,7 +760,7 @@ describe('drag-and-drop import & organize', () => {
       grid.focus();
 
       await act(async () => {
-        fireEvent.keyDown(document.body, { key: 'Delete' });
+        fireEvent.keyDown(document.body, { key: 'Delete', metaKey: true });
         await waitForNetworkIdle();
       });
 
@@ -776,6 +776,81 @@ describe('drag-and-drop import & organize', () => {
       );
       expect(stagedFiles).toContain('a.mp3');
       expect(stagedFiles).not.toContain('b.mp3');
+    }, 30_000);
+
+    it('clears the focused column of the selected track on Delete', async () => {
+      const { store } = await dropTracks([
+        { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
+      ]);
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByText('Time', { selector: '.musicBatchEditCellText' }),
+        );
+      });
+      const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+      grid.focus();
+
+      await act(async () => {
+        fireEvent.keyDown(document.body, { key: 'Delete' });
+        await waitForNetworkIdle();
+      });
+
+      await waitFor(() => {
+        expect($.getMusicStagingPool(store.getState())[0].title).toBeFalsy();
+      });
+      expect($.getMusicStagingPool(store.getState())[0].artist).toBe(
+        'Pink Floyd',
+      );
+      expect($.getMusicStagingPool(store.getState())).toHaveLength(1);
+    }, 30_000);
+
+    it('copies a cell with Cmd+C and pastes it into the selected tracks with Cmd+V', async () => {
+      let clipboardText = '';
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            clipboardText = text;
+          },
+          readText: async () => clipboardText,
+        },
+      });
+      const { store } = await dropTracks([
+        { fileName: 'a.mp3', tags: { title: 'Time', artist: 'Pink Floyd' } },
+        { fileName: 'b.mp3', tags: { title: 'Kaneda', artist: 'Geinoh' } },
+      ]);
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByText('Pink Floyd', {
+            selector: '.musicBatchEditCellText',
+          }),
+        );
+      });
+      const grid = screen.getByRole('grid', { name: 'Batch edit tracks' });
+      grid.focus();
+      await act(async () => {
+        fireEvent.keyDown(document.body, { key: 'c', metaKey: true });
+      });
+      expect(clipboardText).toBe('Pink Floyd');
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByText('Geinoh', { selector: '.musicBatchEditCellText' }),
+        );
+      });
+      grid.focus();
+      await act(async () => {
+        fireEvent.keyDown(document.body, { key: 'v', metaKey: true });
+        await waitForNetworkIdle();
+      });
+
+      await waitFor(() => {
+        expect(
+          $.getMusicStagingPool(store.getState()).map((t) => t.artist),
+        ).toEqual(['Pink Floyd', 'Pink Floyd']);
+      });
     }, 30_000);
 
     it('leaves the pool intact on disk when going back to the library', async () => {

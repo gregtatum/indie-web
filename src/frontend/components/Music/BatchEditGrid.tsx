@@ -418,6 +418,38 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
     });
   }
 
+  function clearSelectedCells() {
+    const columnDef = columnsRef.current[cursorColumnRef.current];
+    if (!columnDef) {
+      return;
+    }
+    const paths = $.getMusicSelectedTrackPaths(getState()).filter(
+      (selectedPath) => canEditCell(selectedPath, columnDef),
+    );
+    void commitEdit(paths, columnDef, '');
+  }
+
+  function copyFocusedCell() {
+    const columnDef = columnsRef.current[cursorColumnRef.current];
+    if (!columnDef) {
+      return;
+    }
+    const track = tracksByPathRef.current.get(focusedPathRef.current ?? '');
+    void navigator.clipboard.writeText(getCellValue(track, columnDef));
+  }
+
+  async function pasteIntoSelectedCells() {
+    const columnDef = columnsRef.current[cursorColumnRef.current];
+    if (!columnDef) {
+      return;
+    }
+    const text = await navigator.clipboard.readText();
+    const paths = $.getMusicSelectedTrackPaths(getState()).filter(
+      (selectedPath) => canEditCell(selectedPath, columnDef),
+    );
+    await commitEdit(paths, columnDef, text.replace(/\s*\n\s*/g, ' ').trim());
+  }
+
   function selectSingleRow(path: string) {
     anchorPathRef.current = path;
     setFocusedPath(path);
@@ -656,7 +688,21 @@ export function BatchEditGrid({ trackPaths, trackSource }: BatchEditGridProps) {
           dispatch(A.setMusicSelectedTracks(allPaths));
           break;
         }
+        case 'Meta+C':
+        case 'Control+C':
+          event.preventDefault();
+          copyFocusedCell();
+          break;
+        case 'Meta+V':
+        case 'Control+V':
+          event.preventDefault();
+          void pasteIntoSelectedCells();
+          break;
         case 'Delete':
+        case 'Backspace':
+          event.preventDefault();
+          clearSelectedCells();
+          break;
         case 'Meta+Delete':
         case 'Meta+Backspace':
           event.preventDefault();
