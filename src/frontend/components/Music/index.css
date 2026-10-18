@@ -487,7 +487,7 @@
 }
 
 .musicOrganizeCard,
-.musicOrganizePreviewSection {
+.musicOrganizeCardPreview {
   box-sizing: border-box;
   padding: 16px;
   border: 1px solid var(--line);
@@ -503,7 +503,7 @@
   flex: none;
 }
 
-.musicOrganizeTemplateSection {
+.musicOrganizeCards {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -517,7 +517,7 @@
   }
 }
 
-.musicOrganizeSectionLabel {
+.musicOrganizeCardTitle {
   font-size: var(--font-size-small);
   font-weight: 600;
   text-transform: uppercase;
@@ -525,15 +525,28 @@
   color: var(--text-muted);
 }
 
-.musicOrganizeSectionHint {
+.musicOrganizeCardHint {
   margin: 0;
   color: var(--text-muted);
 }
 
 .musicOrganizePresetList {
+  --music-organize-choice-align: center;
+  --music-organize-choice-gap: 10px;
+  --music-organize-choice-padding: 8px 12px;
+  --music-organize-choice-font-size: var(--font-size-small);
+  --music-organize-choice-accent: var(--accent);
+  --music-organize-choice-input-size: 14px;
+  --music-organize-choice-input-margin: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  color: var(--text-body);
+}
+
+.musicOrganizePresetCustomLabel {
+  display: flex;
+  align-items: center;
 }
 
 .musicOrganizePreset {
@@ -544,25 +557,6 @@
 
   &:hover {
     border-color: var(--accent);
-  }
-}
-
-.musicOrganizePresetPattern {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  font-size: var(--font-size-small);
-  color: var(--text-body);
-  overflow-wrap: anywhere;
-  cursor: pointer;
-
-  input {
-    flex-shrink: 0;
-    width: 14px;
-    height: 14px;
-    margin: 0;
-    accent-color: var(--accent);
   }
 }
 
@@ -679,7 +673,7 @@
   user-select: text;
 }
 
-.musicOrganizePreviewSection {
+.musicOrganizeCardPreview {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1521,5 +1515,85 @@
   }
   to {
     transform: translateX(250%);
+  }
+}
+
+:where(.musicOrganizeChoiceList) {
+  --music-organize-choice-align: flex-start;
+  --music-organize-choice-gap: 8px;
+  --music-organize-choice-padding: 6px 0;
+  --music-organize-choice-font-size: inherit;
+  --music-organize-choice-accent: auto;
+  --music-organize-choice-input-size: auto;
+  --music-organize-choice-input-margin: 4px 0 0;
+}
+
+.musicOrganizeChoice {
+  display: flex;
+  align-items: var(--music-organize-choice-align);
+  gap: var(--music-organize-choice-gap);
+  padding: var(--music-organize-choice-padding);
+  font-size: var(--music-organize-choice-font-size);
+  cursor: pointer;
+
+  & input {
+    flex-shrink: 0;
+    width: var(--music-organize-choice-input-size);
+    height: var(--music-organize-choice-input-size);
+    margin: var(--music-organize-choice-input-margin);
+    accent-color: var(--music-organize-choice-accent);
+  }
+}
+
+.musicOrganizeChoiceBody {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.musicOrganizeQuality {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  & p {
+    margin: 0;
+  }
+}
+
+.musicOrganizeQualitySide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.musicOrganizeQualityGroup {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.musicOrganizeQualityLabel {
+  display: grid;
+  gap: 2px;
+}
+
+.musicOrganizeQualityName {
+  font-weight: 600;
+}
+
+.musicOrganizeQualityDetail {
+  font-size: 0.9em;
+}
+
+.musicOrganizeQualityHow {
+  color: var(--muted);
+  font-size: 0.9em;
+  margin: 0;
+  padding-left: 20px;
+
+  & li + li {
+    margin-top: 4px;
   }
 }

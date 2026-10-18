@@ -1,9 +1,14 @@
 import * as React from 'react';
 import { T, A, $$, Hooks } from 'frontend';
-import { ImportQualityPicker } from './ImportQualityPicker';
 import { useDiscardStagingPool } from 'frontend/hooks/music';
 import { splitOutFileExtension } from 'frontend/utils';
 import { persistedState } from 'frontend/logic/persisted-state';
+import {
+  IMPORT_BITRATE_TOLERANCE_PERCENT,
+  IMPORT_QUALITY_LEVELS,
+  LOSSY_FORMATS,
+  type ImportQualitySettings,
+} from 'shared';
 import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
@@ -15,6 +20,161 @@ const PATTERN_PARTS = /(\{[^}]*\}|\/)/;
 function splitPattern(template: string): string[] {
   const pattern = template.startsWith('/') ? template : '/' + template;
   return pattern.split(PATTERN_PARTS).filter(Boolean);
+}
+
+interface RadioChoiceProps {
+  name: string;
+  checked: boolean;
+  onChange(): void;
+  id?: string;
+  children: React.ReactNode;
+}
+
+export function RadioChoice({
+  name,
+  checked,
+  onChange,
+  id,
+  children,
+}: RadioChoiceProps) {
+  return (
+    <label className="musicOrganizeChoice">
+      <input
+        type="radio"
+        id={id}
+        name={name}
+        checked={checked}
+        onChange={onChange}
+      />
+      <span className="musicOrganizeChoiceBody">{children}</span>
+    </label>
+  );
+}
+
+interface ImportQualityPickerProps {
+  idPrefix: string;
+  value: ImportQualitySettings;
+  onChange(value: ImportQualitySettings): void;
+}
+
+export function ImportQualityPicker({
+  idPrefix,
+  value,
+  onChange,
+}: ImportQualityPickerProps) {
+  const selected = IMPORT_QUALITY_LEVELS.find(
+    (level) => level.id === value.maximumQuality,
+  );
+  const isLossyLevel = selected !== undefined && selected.maxKbps !== null;
+  const formatLabel =
+    LOSSY_FORMATS.find((format) => format.id === value.lossyFormat)?.label ??
+    '';
+
+  return (
+    <div className="musicOrganizeQuality">
+      <fieldset className="musicOrganizeQualityGroup musicOrganizeChoiceList">
+        {IMPORT_QUALITY_LEVELS.map((level) => {
+          const id = `${idPrefix}-quality-${level.id}`;
+          const detail =
+            typeof level.detail === 'string'
+              ? level.detail
+              : level.detail[value.lossyFormat];
+          return (
+            <RadioChoice
+              key={level.id}
+              id={id}
+              name={`${idPrefix}-maximum-quality`}
+              checked={value.maximumQuality === level.id}
+              onChange={() => onChange({ ...value, maximumQuality: level.id })}
+            >
+              <span className="musicOrganizeQualityLabel">
+                <span className="musicOrganizeQualityName">{level.label}</span>
+                <span className="musicOrganizeQualityDetail">{detail}</span>
+              </span>
+            </RadioChoice>
+          );
+        })}
+      </fieldset>
+      <div className="musicOrganizeQualitySide">
+        {selected && <p>{selected.description}</p>}
+        {selected && (
+          <ul className="musicOrganizeQualityHow">
+            {getHowItWorks(selected, formatLabel).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {isLossyLevel && (
+          <fieldset className="musicOrganizeQualityGroup musicOrganizeChoiceList">
+            <legend>Convert FLAC to</legend>
+            {LOSSY_FORMATS.map((format) => {
+              const id = `${idPrefix}-lossy-format-${format.id}`;
+              return (
+                <RadioChoice
+                  key={format.id}
+                  id={id}
+                  name={`${idPrefix}-lossy-format`}
+                  checked={value.lossyFormat === format.id}
+                  onChange={() =>
+                    onChange({ ...value, lossyFormat: format.id })
+                  }
+                >
+                  <span className="musicOrganizeQualityName">
+                    {format.label}
+                  </span>
+                </RadioChoice>
+              );
+            })}
+          </fieldset>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function getHowItWorks(
+  level: (typeof IMPORT_QUALITY_LEVELS)[number],
+  formatLabel: string,
+): string[] {
+  switch (level.id) {
+    case 'original':
+      return [
+        'Files are imported exactly as they are, with nothing converted.',
+      ];
+    case 'lossless':
+      return [
+        'FLAC files above 16-bit / 44.1 kHz are reduced to CD quality.',
+        'Other FLAC files, MP3s and m4a files are left alone.',
+        'Converted originals are not kept.',
+      ];
+    default:
+      return [
+        `FLAC files are converted to ${formatLabel} at up to ${level.maxKbps} kbps.`,
+        `MP3 and m4a files more than ${IMPORT_BITRATE_TOLERANCE_PERCENT}% above ${level.maxKbps} kbps are re-encoded in their own format, which slightly reduces quality.`,
+        'Everything else is left alone.',
+        'Converted originals are not kept.',
+      ];
+  }
+}
+
+function OrganizeCard({
+  title,
+  hint,
+  className = '',
+  children,
+}: {
+  title: string;
+  hint?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={`musicOrganizeCard ${className}`}>
+      <div className="musicOrganizeCardTitle">{title}</div>
+      {hint ? <p className="musicOrganizeCardHint">{hint}</p> : null}
+      {children}
+    </section>
+  );
 }
 
 function PatternText({ pattern }: { pattern: string }) {
@@ -231,41 +391,38 @@ export function OrganizeImportView({
         </div>
       </div>
       <div className="musicBatchEditBody musicOrganizeBody">
-        <div className="musicOrganizeTemplateSection">
-          <section className="musicOrganizeCard">
-            <div className="musicOrganizeSectionLabel">Organize files</div>
+        <div className="musicOrganizeCards">
+          <OrganizeCard title="Organize files">
             <div
-              className="musicOrganizePresetList"
+              className="musicOrganizePresetList musicOrganizeChoiceList"
               role="radiogroup"
               aria-label="Filename format"
             >
               {ORGANIZATION_PRESET_TEMPLATES.map((preset) => (
                 <div key={preset} className="musicOrganizePreset">
-                  <label className="musicOrganizePresetPattern">
-                    <input
-                      type="radio"
-                      name="organizePreset"
-                      checked={!customSelected && template === preset}
-                      onChange={() => selectPreset(preset)}
-                    />
+                  <RadioChoice
+                    name="organizePreset"
+                    checked={!customSelected && template === preset}
+                    onChange={() => selectPreset(preset)}
+                  >
                     <PatternText pattern={preset} />
-                  </label>
+                  </RadioChoice>
                 </div>
               ))}
               <div className="musicOrganizePreset">
-                <label className="musicOrganizePresetPattern">
-                  <input
-                    type="radio"
-                    name="organizePreset"
-                    checked={customSelected}
-                    onChange={() => setCustomSelected(true)}
-                  />
-                  Custom…
-                  <span
-                    className="musicOrganizePresetChevron"
-                    aria-hidden="true"
-                  />
-                </label>
+                <RadioChoice
+                  name="organizePreset"
+                  checked={customSelected}
+                  onChange={() => setCustomSelected(true)}
+                >
+                  <span className="musicOrganizePresetCustomLabel">
+                    Custom…
+                    <span
+                      className="musicOrganizePresetChevron"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </RadioChoice>
                 {customSelected ? (
                   <div className="musicOrganizePresetCustom">
                     <input
@@ -290,21 +447,19 @@ export function OrganizeImportView({
                 ) : null}
               </div>
             </div>
-          </section>
-          <section className="musicOrganizeCard">
-            <div className="musicOrganizeSectionLabel">Audio quality</div>
-            <p className="musicOrganizeSectionHint">
-              Choose how audio files are stored when imported.
-            </p>
+          </OrganizeCard>
+          <OrganizeCard
+            title="Audio quality"
+            hint="Choose how audio files are stored when imported."
+          >
             <ImportQualityPicker
               idPrefix="organize"
               value={importQuality}
               onChange={(value) => dispatch(A.setMusicImportQuality(value))}
             />
-          </section>
+          </OrganizeCard>
         </div>
-        <div className="musicOrganizePreviewSection">
-          <div className="musicOrganizeSectionLabel">Preview</div>
+        <OrganizeCard title="Preview" className="musicOrganizeCardPreview">
           {collisionCount > 0 ? (
             <div className="musicOrganizePreviewCollision" role="alert">
               {collisionCount === 1
@@ -314,7 +469,7 @@ export function OrganizeImportView({
             </div>
           ) : null}
           <OrganizeTree paths={remainingTracks.map(resolveTrackPath)} />
-        </div>
+        </OrganizeCard>
       </div>
     </div>
   );
