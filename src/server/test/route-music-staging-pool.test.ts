@@ -4,8 +4,10 @@ import {
   mkdir,
   readdir,
   readFile,
+  rm,
   stat,
   truncate,
+  utimes,
   writeFile,
 } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -223,6 +225,221 @@ describe('drag-and-drop import staging', () => {
     const poolFiles = await readdir(join(server.mountDir, '.music-staging'));
     assert.ok(poolFiles.includes('reqdup-a.mp3'));
     assert.ok(!poolFiles.includes('reqdup-b.mp3'));
+  });
+
+  describe('album artwork', () => {
+    const stagingDir = () => join(server.mountDir, '.music-staging');
+    const jpeg = (seed: number) =>
+      Buffer.from([0xff, 0xd8, 0xff, 0xe0, seed, seed, seed]);
+
+    async function stageDropArtwork(name: string, bytes: Buffer) {
+      const dir = join(stagingDir(), '.artwork', name);
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, 'Folder.jpg'), bytes);
+      return `/.music-staging/.artwork/${name}/Folder.jpg`;
+    }
+
+    async function addToPool(
+      paths: string[],
+      folderArtworkPathByPath: Record<string, string> = {},
+    ) {
+      const res = await fetch(`${server.baseUrl}/music/staging-pool`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackPaths: paths, folderArtworkPathByPath }),
+      });
+      assert.equal(res.status, 200);
+      return ((await res.json()) as T.StagingUploadResponse).tracks;
+    }
+
+    async function listPool() {
+      const res = await fetch(`${server.baseUrl}/music/staging-pool`);
+      return (await res.json()) as T.TrackMetadata[];
+    }
+
+    async function setArtwork(path: string, bytes: Buffer) {
+      const res = await fetch(
+        `${server.baseUrl}/music/artwork?path=${encodeURIComponent(path)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'image/jpeg' },
+          body: new Uint8Array(bytes),
+        },
+      );
+      assert.equal(res.status, 200);
+      return ((await res.json()) as T.WriteFolderArtworkResponse)
+        .folderArtworkPath;
+    }
+
+    it('stores a dropped cover content-addressed and shares it across the album', async () => {
+      const a = await stageTrack(server, 'aa-1.mp3', {
+        title: 'One',
+        album: 'Shared Album',
+        albumArtist: 'AA Band',
+      });
+      const b = await stageTrack(server, 'aa-2.mp3', {
+        title: 'Two',
+        album: 'Shared Album',
+        albumArtist: 'AA Band',
+      });
+      const cover = await stageDropArtwork('aa-drop', jpeg(1));
+
+      const tracks = await addToPool([a, b], { [a]: cover, [b]: cover });
+
+      const hash = createHash('sha256').update(jpeg(1)).digest('hex');
+      const expected = `/.music-staging/.artwork/${hash}.jpg`;
+      assert.deepEqual(
+        tracks.map((t) => t.folderArtworkPath),
+        [expected, expected],
+      );
+      await stat(join(server.mountDir, expected));
+      assert.ok(
+        !(await readdir(join(stagingDir(), '.artwork'))).includes('aa-drop'),
+      );
+    });
+
+    it('keeps a cover on the dropped tracks when its folder mixes albums', async () => {
+      const a = await stageTrack(server, 'mix-1.mp3', {
+        title: 'One',
+        album: 'Mixed Album One',
+        albumArtist: 'MX',
+      });
+      const b = await stageTrack(server, 'mix-2.mp3', {
+        title: 'Two',
+        album: 'Mixed Album Two',
+        albumArtist: 'MX',
+      });
+      const cover = await stageDropArtwork('mix-drop', jpeg(2));
+
+      await addToPool([a, b], { [a]: cover, [b]: cover });
+      const listed = await listPool();
+
+      const hash = createHash('sha256').update(jpeg(2)).digest('hex');
+      for (const path of [a, b]) {
+        assert.equal(
+          listed.find((t) => t.path === path)?.folderArtworkPath,
+          `/.music-staging/.artwork/${hash}.jpg`,
+        );
+      }
+
+      const written = await setArtwork(a, jpeg(3));
+      const relisted = await listPool();
+      assert.equal(
+        relisted.find((t) => t.path === a)?.folderArtworkPath,
+        written,
+      );
+      assert.equal(
+        relisted.find((t) => t.path === b)?.folderArtworkPath,
+        `/.music-staging/.artwork/${hash}.jpg`,
+      );
+    });
+
+    it('follows the tags when a track moves to another album', async () => {
+      const a = await stageTrack(server, 'move-1.mp3', {
+        title: 'One',
+        album: 'Move Album',
+        albumArtist: 'MV',
+      });
+      const b = await stageTrack(server, 'move-2.mp3', {
+        title: 'Two',
+        album: 'Move Album',
+        albumArtist: 'MV',
+      });
+      await addToPool([a, b]);
+      const written = await setArtwork(a, jpeg(4));
+      assert.equal(
+        (await listPool()).find((t) => t.path === b)?.folderArtworkPath,
+        written,
+      );
+
+      await writeFile(
+        join(stagingDir(), 'move-2.mp3'),
+        buildMp3WithTags({
+          title: 'Two',
+          album: 'Another Album',
+          albumArtist: 'MV',
+        }),
+      );
+      const relisted = await listPool();
+      assert.equal(
+        relisted.find((t) => t.path === a)?.folderArtworkPath,
+        written,
+      );
+      assert.equal(
+        relisted.find((t) => t.path === b)?.folderArtworkPath ?? null,
+        null,
+      );
+    });
+
+    it('removing the album artwork overrides a dropped cover', async () => {
+      const a = await stageTrack(server, 'rm-1.mp3', {
+        title: 'One',
+        album: 'Remove Album',
+        albumArtist: 'RM',
+      });
+      const cover = await stageDropArtwork('rm-drop', jpeg(5));
+      await addToPool([a], { [a]: cover });
+      assert.ok(
+        (await listPool()).find((t) => t.path === a)?.folderArtworkPath,
+      );
+
+      const res = await fetch(
+        `${server.baseUrl}/music/artwork/remove?path=${encodeURIComponent(a)}`,
+        { method: 'POST' },
+      );
+      assert.equal(res.status, 200);
+
+      assert.equal(
+        (await listPool()).find((t) => t.path === a)?.folderArtworkPath ?? null,
+        null,
+      );
+    });
+
+    it('never writes a Folder.jpg into the pool or lists images as tracks', async () => {
+      await stageTrack(server, 'embedded-art.mp3', {
+        title: 'Has Art',
+        album: 'Embedded Album',
+        apic: Buffer.concat([
+          Buffer.from([0x00]),
+          Buffer.from('image/jpeg\0', 'latin1'),
+          Buffer.from([0x03, 0x00]),
+          jpeg(6),
+        ]),
+      });
+      await writeFile(join(stagingDir(), 'Folder.jpg'), jpeg(7));
+      await writeFile(join(stagingDir(), 'notes.txt'), 'not audio');
+
+      const listed = await listPool();
+
+      assert.ok(!listed.some((t) => /\.(jpg|png|txt)$/.test(t.path)));
+      const files = await readdir(stagingDir());
+      assert.ok(!files.includes('Folder.jpg'));
+      assert.ok(files.includes('notes.txt'));
+      assert.equal(
+        listed.find((t) => t.path === '/.music-staging/embedded-art.mp3')
+          ?.folderArtworkPath ?? null,
+        null,
+      );
+    });
+
+    it('collects artwork that no track or album references any more', async () => {
+      const a = await stageTrack(server, 'gc-1.mp3', {
+        title: 'One',
+        album: 'Gc Album',
+        albumArtist: 'GC',
+      });
+      await addToPool([a]);
+      const written = await setArtwork(a, jpeg(8));
+      const fullPath = join(server.mountDir, written);
+      await stat(fullPath);
+
+      await rm(join(stagingDir(), 'gc-1.mp3'));
+      const old = new Date(Date.now() - 10 * 60_000);
+      await utimes(fullPath, old, old);
+      await listPool();
+
+      await assert.rejects(stat(fullPath));
+    });
   });
 });
 

@@ -277,6 +277,25 @@ export const IMPORTABLE_AUDIO_EXTENSIONS: ReadonlyArray<string> = [
   '.flac',
 ];
 
+export function getAlbumArtworkKey(track: {
+  albumArtist: string | null;
+  artist: string | null;
+  album: string | null;
+}): string | null {
+  const album = track.album?.trim();
+  if (!album) {
+    return null;
+  }
+  const albumArtist = (track.albumArtist || track.artist || '').trim();
+  return `${albumArtist}\0${album}`.normalize('NFC').toLowerCase();
+}
+
+export const STAGING_DIRNAME = '.music-staging';
+
+export function isStagedPath(clientPath: string): boolean {
+  return clientPath.startsWith(`/${STAGING_DIRNAME}/`);
+}
+
 export interface OrganizationTrackFields {
   genre: string | null;
   artist: string | null;

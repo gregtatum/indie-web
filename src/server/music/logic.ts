@@ -10,9 +10,12 @@ import {
   ID3V1_TAG_SIZE,
   MUSIC_INDEX_VERSION,
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
+  IMPORTABLE_AUDIO_EXTENSIONS,
   buildId3v1TagBuffer,
   compareTracksDefault,
+  getAlbumArtworkKey,
   getTrackCapabilities,
+  isStagedPath,
   isFolderArtworkFilename,
   matchFolderArtworkFilename,
   nativePrivateTextTagValue,
@@ -377,6 +380,7 @@ async function scanSingleAudioFile(
   stats: { mtime: Date; size: number },
   folderArtworkPathIn: string | null,
   folderArtworkDirCache: Map<string, string | null>,
+  extractEmbeddedArtwork = true,
 ): Promise<T.TrackMetadata> {
   const mtime = stats.mtime.toISOString();
   const size = stats.size;
@@ -414,7 +418,7 @@ async function scanSingleAudioFile(
 
     // If no folder artwork exists but this file has an embedded artwork
     // frame, write it to disk so the /music/artwork endpoint can serve it.
-    if (!folderArtworkPath && hasEmbeddedArtwork) {
+    if (extractEmbeddedArtwork && !folderArtworkPath && hasEmbeddedArtwork) {
       const picture = meta.common.picture![0];
       const filename =
         picture.format === 'image/png' ? 'Folder.png' : 'Folder.jpg';
@@ -471,12 +475,15 @@ export async function scanTrackFiles(
       results.push({ clientPath, track: null });
       continue;
     }
-    const folderArtworkPath = await probeFolderArtworkForDir(
-      mountPath,
-      dirname(clientPath),
-      dirname(fullPath),
-      folderArtworkDirCache,
-    );
+    const isStaged = isStagedPath(clientPath);
+    const folderArtworkPath = isStaged
+      ? null
+      : await probeFolderArtworkForDir(
+          mountPath,
+          dirname(clientPath),
+          dirname(fullPath),
+          folderArtworkDirCache,
+        );
     const track = await scanSingleAudioFile(
       mountPath,
       clientPath,
@@ -484,6 +491,7 @@ export async function scanTrackFiles(
       stats,
       folderArtworkPath,
       folderArtworkDirCache,
+      !isStaged,
     );
     results.push({ clientPath, track });
   }
@@ -493,6 +501,12 @@ export async function scanTrackFiles(
 export const MUSIC_STAGING_DIRNAME = '.music-staging';
 
 const STAGING_INDEX_FILENAME = '.staging-index.json';
+const STAGING_ARTWORK_DIRNAME = '.artwork';
+const STAGING_ARTWORK_GRACE_MS = 60_000;
+const GENERATED_STAGING_ROOT_ARTWORK = new Set(['Folder.jpg', 'Folder.png']);
+const CONTENT_ADDRESSED_STAGING_ARTWORK = new RegExp(
+  `^/${MUSIC_STAGING_DIRNAME}/${STAGING_ARTWORK_DIRNAME}/[0-9a-f]{64}\\.(jpg|png)$`,
+);
 const STAGING_INDEX_VERSION = 1;
 
 interface StagingIndexEntry {
@@ -505,6 +519,7 @@ interface StagingIndexEntry {
 interface StagingIndex {
   version: number;
   entries: Record<string, StagingIndexEntry>;
+  albumArtwork: Record<string, string | null>;
 }
 
 export interface StagingPoolEntry {
@@ -539,13 +554,17 @@ async function readStagingIndex(mountPath: MountPath): Promise<StagingIndex> {
     try {
       const raw = JSON.parse(await fs.readFile(paths.indexPath, 'utf-8'));
       if (raw?.version === STAGING_INDEX_VERSION) {
-        return raw as StagingIndex;
+        return {
+          version: STAGING_INDEX_VERSION,
+          entries: raw.entries ?? {},
+          albumArtwork: raw.albumArtwork ?? {},
+        };
       }
     } catch {
       // No existing index — start fresh.
     }
   }
-  return { version: STAGING_INDEX_VERSION, entries: {} };
+  return { version: STAGING_INDEX_VERSION, entries: {}, albumArtwork: {} };
 }
 
 async function writeStagingIndex(
@@ -586,6 +605,15 @@ export async function scanStagingPool(
     if (!fullPath) {
       continue;
     }
+    if (GENERATED_STAGING_ROOT_ARTWORK.has(entry.name)) {
+      await fs.rm(fullPath, { force: true });
+      continue;
+    }
+    if (
+      !IMPORTABLE_AUDIO_EXTENSIONS.includes(extname(entry.name).toLowerCase())
+    ) {
+      continue;
+    }
     const clientPath = `/${MUSIC_STAGING_DIRNAME}/${entry.name}`;
     const stats = await fs.stat(fullPath);
     const mtime = stats.mtime.toISOString();
@@ -614,6 +642,7 @@ export async function scanStagingPool(
   await writeStagingIndex(mountPath, {
     version: STAGING_INDEX_VERSION,
     entries: nextEntries,
+    albumArtwork: index.albumArtwork,
   });
   return results;
 }
@@ -658,42 +687,241 @@ export async function dedupeStagedTracks(
   return { paths, duplicateCount };
 }
 
+async function storeStagingArtwork(
+  mountPath: MountPath,
+  data: Buffer,
+  mimeType: 'image/jpeg' | 'image/png',
+): Promise<string> {
+  const hash = createHash('sha256').update(data).digest('hex');
+  const filename = `${hash}.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
+  const fullPath = mountPath.joinOnMount(
+    `${MUSIC_STAGING_DIRNAME}/${STAGING_ARTWORK_DIRNAME}/${filename}`,
+  );
+  if (!fullPath) {
+    throw new Error('Unexpected: staging artwork path escaped the mount.');
+  }
+  await fs.mkdir(dirname(fullPath), { recursive: true });
+  await fs.writeFile(fullPath, data, { flag: 'wx' }).catch((error) => {
+    if (error.code !== 'EEXIST') {
+      throw error;
+    }
+  });
+  return `/${MUSIC_STAGING_DIRNAME}/${STAGING_ARTWORK_DIRNAME}/${filename}`;
+}
+
+async function canonicalizeStagingArtwork(
+  mountPath: MountPath,
+  clientPath: string,
+): Promise<string | null> {
+  if (CONTENT_ADDRESSED_STAGING_ARTWORK.test(clientPath)) {
+    return clientPath;
+  }
+  const fullPath = mountPath.resolve(clientPath);
+  if (!fullPath) {
+    return null;
+  }
+  let data: Buffer;
+  try {
+    data = await fs.readFile(fullPath);
+  } catch {
+    return null;
+  }
+  const mimeType = sniffImageMimeType(data);
+  if (!mimeType) {
+    return null;
+  }
+  const stored = await storeStagingArtwork(mountPath, data, mimeType);
+  if (
+    clientPath.startsWith(
+      `/${MUSIC_STAGING_DIRNAME}/${STAGING_ARTWORK_DIRNAME}/`,
+    )
+  ) {
+    await fs.rm(dirname(fullPath), { recursive: true, force: true });
+  }
+  return stored;
+}
+
+async function collectStagingArtwork(
+  mountPath: MountPath,
+  index: StagingIndex,
+): Promise<void> {
+  const artworkDir = mountPath.joinOnMount(
+    `${MUSIC_STAGING_DIRNAME}/${STAGING_ARTWORK_DIRNAME}`,
+  );
+  if (!artworkDir) {
+    return;
+  }
+  const referenced = new Set<string>();
+  for (const entry of Object.values(index.entries)) {
+    if (entry.folderArtworkPath) {
+      referenced.add(entry.folderArtworkPath);
+    }
+  }
+  for (const artworkPath of Object.values(index.albumArtwork)) {
+    if (artworkPath) {
+      referenced.add(artworkPath);
+    }
+  }
+  let names: string[];
+  try {
+    names = await fs.readdir(artworkDir);
+  } catch {
+    return;
+  }
+  const now = Date.now();
+  for (const name of names) {
+    const clientPath = `/${MUSIC_STAGING_DIRNAME}/${STAGING_ARTWORK_DIRNAME}/${name}`;
+    if (referenced.has(clientPath)) {
+      continue;
+    }
+    const fullPath = mountPath.joinWithinMount(artworkDir, name);
+    if (!fullPath) {
+      continue;
+    }
+    try {
+      const stats = await fs.stat(fullPath);
+      if (now - stats.mtimeMs > STAGING_ARTWORK_GRACE_MS) {
+        await fs.rm(fullPath, { recursive: true, force: true });
+      }
+    } catch {
+      // Already gone.
+    }
+  }
+}
+
+function resolveStagedArtwork(
+  index: StagingIndex,
+  track: T.TrackMetadata,
+): string | null {
+  const key = getAlbumArtworkKey(track);
+  if (key !== null && key in index.albumArtwork) {
+    return index.albumArtwork[key];
+  }
+  return index.entries[track.path]?.folderArtworkPath ?? null;
+}
+
+function withStagedArtwork(
+  index: StagingIndex,
+  track: T.TrackMetadata,
+): T.TrackMetadata {
+  const folderArtworkPath = resolveStagedArtwork(index, track);
+  return { ...track, folderArtworkPath };
+}
+
 export async function listStagingPoolTracks(
   mountPath: MountPath,
 ): Promise<T.TrackMetadata[]> {
+  const stagingRoot = mountPath.joinOnMount(MUSIC_STAGING_DIRNAME);
+  if (!stagingRoot || !(await fs.stat(stagingRoot).catch(() => null))) {
+    return [];
+  }
   const pool = await scanStagingPool(mountPath);
-  const folderArtworkByPath = new Map(
-    pool.map((entry) => [entry.path, entry.folderArtworkPath]),
-  );
+  const index = await readStagingIndex(mountPath);
   const results = await scanTrackFiles(
     mountPath,
     pool.map((entry) => entry.path),
   );
-  return results.flatMap((result) => {
-    if (!result.track) {
-      return [];
-    }
-    const folderArtworkPath = folderArtworkByPath.get(result.clientPath);
-    return [
-      folderArtworkPath ? { ...result.track, folderArtworkPath } : result.track,
-    ];
-  });
-}
+  const tracks = results.flatMap((result) =>
+    result.track ? [result.track] : [],
+  );
 
-export async function setStagingFolderArtwork(
-  mountPath: MountPath,
-  folderArtworkPathByPath: Record<string, string>,
-): Promise<void> {
-  const index = await readStagingIndex(mountPath);
-  for (const [path, folderArtworkPath] of Object.entries(
-    folderArtworkPathByPath,
-  )) {
-    const entry = index.entries[path];
-    if (entry) {
-      entry.folderArtworkPath = folderArtworkPath;
+  const canonicalPaths = new Map<string, string | null>();
+  for (const entry of Object.values(index.entries)) {
+    const artworkPath = entry.folderArtworkPath;
+    if (artworkPath && !canonicalPaths.has(artworkPath)) {
+      canonicalPaths.set(
+        artworkPath,
+        await canonicalizeStagingArtwork(mountPath, artworkPath),
+      );
+    }
+    if (artworkPath) {
+      entry.folderArtworkPath = canonicalPaths.get(artworkPath) ?? null;
     }
   }
+
+  const presentKeys = new Set(tracks.map((track) => getAlbumArtworkKey(track)));
+  for (const key of Object.keys(index.albumArtwork)) {
+    if (!presentKeys.has(key)) {
+      delete index.albumArtwork[key];
+    }
+  }
+
   await writeStagingIndex(mountPath, index);
+  await collectStagingArtwork(mountPath, index);
+  return tracks.map((track) => withStagedArtwork(index, track));
+}
+
+export async function addStagedTracks(
+  mountPath: MountPath,
+  paths: string[],
+  folderArtworkPathByPath: Record<string, string>,
+): Promise<T.TrackMetadata[]> {
+  const index = await readStagingIndex(mountPath);
+  const canonicalPaths = new Map<string, string | null>();
+  for (const [path, artworkPath] of Object.entries(folderArtworkPathByPath)) {
+    const entry = index.entries[path];
+    if (!entry) {
+      continue;
+    }
+    if (!canonicalPaths.has(artworkPath)) {
+      canonicalPaths.set(
+        artworkPath,
+        await canonicalizeStagingArtwork(mountPath, artworkPath),
+      );
+    }
+    entry.folderArtworkPath = canonicalPaths.get(artworkPath) ?? null;
+  }
+
+  const results = await scanTrackFiles(mountPath, paths);
+  const tracks = results.flatMap((result) =>
+    result.track ? [result.track] : [],
+  );
+
+  const keysByArtwork = new Map<string, Set<string | null>>();
+  for (const track of tracks) {
+    const artworkPath = index.entries[track.path]?.folderArtworkPath;
+    if (artworkPath) {
+      const keys = keysByArtwork.get(artworkPath) ?? new Set();
+      keys.add(getAlbumArtworkKey(track));
+      keysByArtwork.set(artworkPath, keys);
+    }
+  }
+  for (const [artworkPath, keys] of keysByArtwork) {
+    const [key] = keys;
+    if (keys.size === 1 && key !== null && !(key in index.albumArtwork)) {
+      index.albumArtwork[key] = artworkPath;
+    }
+  }
+
+  await writeStagingIndex(mountPath, index);
+  return tracks.map((track) => withStagedArtwork(index, track));
+}
+
+/**
+ * Sets (or with null, clears) the artwork for a staged track's album. A track
+ * with no album tag has no album to key on, so only that track is affected.
+ */
+export async function setStagedTrackArtwork(
+  mountPath: MountPath,
+  trackClientPath: string,
+  artwork: { data: Buffer; mimeType: 'image/jpeg' | 'image/png' } | null,
+): Promise<string | null> {
+  const [{ track }] = await scanTrackFiles(mountPath, [trackClientPath]);
+  if (!track) {
+    throw new ClientError('Staged track not found.');
+  }
+  const index = await readStagingIndex(mountPath);
+  const artworkPath = artwork
+    ? await storeStagingArtwork(mountPath, artwork.data, artwork.mimeType)
+    : null;
+  const key = getAlbumArtworkKey(track);
+  if (key !== null) {
+    index.albumArtwork[key] = artworkPath;
+  } else if (index.entries[trackClientPath]) {
+    index.entries[trackClientPath].folderArtworkPath = artworkPath;
+  }
+  await writeStagingIndex(mountPath, index);
+  return artworkPath;
 }
 
 /**

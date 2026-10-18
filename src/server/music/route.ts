@@ -15,11 +15,13 @@ import {
   APP_FRAME_IDS,
   MUSIC_INDEX_VERSION,
   resolveTagValue,
+  isStagedPath,
 } from '../../shared/music.ts';
 import {
   MUSIC_INDEX_FILENAME,
   validateTagChanges,
   cleanUpDirectoriesAfterTrackDeletion,
+  addStagedTracks,
   dedupeStagedTracks,
   deleteTrackFile,
   embedArtworkIntoTrack,
@@ -30,7 +32,7 @@ import {
   removeOutdatedFolderArtwork,
   scanTrackFiles,
   serializeTagBlocks,
-  setStagingFolderArtwork,
+  setStagedTrackArtwork,
   sniffImageMimeType,
   updateMusicIndexAfterEmbeddedArtworkRemoval,
   updateIndexAfterFolderArtworkRemoval,
@@ -206,17 +208,11 @@ export function musicRoute(mountPath: MountPath) {
     if (paths.length === 0) {
       return { tracks: [], duplicateCount };
     }
-    if (folderArtworkPathByPath) {
-      await setStagingFolderArtwork(mountPath, folderArtworkPathByPath);
-    }
-    const results = await scanTrackFiles(mountPath, paths);
-    const tracks = results.flatMap((r) => {
-      if (!r.track) {
-        return [];
-      }
-      const folderArtworkPath = folderArtworkPathByPath?.[r.clientPath];
-      return [folderArtworkPath ? { ...r.track, folderArtworkPath } : r.track];
-    });
+    const tracks = await addStagedTracks(
+      mountPath,
+      paths,
+      folderArtworkPathByPath ?? {},
+    );
     return { tracks, duplicateCount };
   });
 
@@ -474,6 +470,18 @@ export function musicRoute(mountPath: MountPath) {
       mimeType = picture.format === 'image/png' ? 'image/png' : 'image/jpeg';
     }
 
+    if (isStagedPath(clientPath)) {
+      const stagedArtworkPath = await setStagedTrackArtwork(
+        mountPath,
+        clientPath,
+        { data: imageData, mimeType },
+      );
+      if (!stagedArtworkPath) {
+        throw new Error('Unexpected: staged artwork was not stored.');
+      }
+      return { folderArtworkPath: stagedArtworkPath };
+    }
+
     const filename = mimeType === 'image/png' ? 'Folder.png' : 'Folder.jpg';
     const artworkFullPath = mountPath.joinWithinMount(dirFullPath, filename);
     if (!artworkFullPath) {
@@ -540,6 +548,10 @@ export function musicRoute(mountPath: MountPath) {
     const resolvedPath = mountPath.resolve(clientPath);
     if (!resolvedPath) {
       throw new ClientError('Invalid path.');
+    }
+    if (isStagedPath(clientPath)) {
+      await setStagedTrackArtwork(mountPath, clientPath, null);
+      return { removed: [] };
     }
     const dirFullPath = dirname(resolvedPath);
     const dirClientPath = dirname(
