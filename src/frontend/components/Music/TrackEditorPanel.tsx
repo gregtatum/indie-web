@@ -728,6 +728,7 @@ export const TrackEditorPanel = React.forwardRef<
     if (written.folderArtworkPath) {
       handleFolderArtworkWritten(written.folderArtworkPath);
     }
+    dispatch(A.musicFolderArtworkSaveSuccess());
   }
 
   async function writeArtworkImmediately(artwork: PendingArtwork) {
