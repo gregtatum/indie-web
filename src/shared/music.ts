@@ -315,7 +315,10 @@ export const ORGANIZATION_TOKENS: ReadonlyArray<{
   { token: '{Artist}', getValue: (t) => t.artist ?? '' },
   { token: '{AlbumArtist}', getValue: (t) => t.albumArtist ?? '' },
   { token: '{Album}', getValue: (t) => t.album ?? '' },
-  { token: '{Year}', getValue: (t) => t.year ?? '' },
+  {
+    token: '{Year}',
+    getValue: (t) => t.year?.match(/^\s*(\d{4})/)?.[1] ?? t.year ?? '',
+  },
   { token: '{Title}', getValue: (t) => t.title ?? '' },
   {
     token: '{Track}',

@@ -122,6 +122,16 @@ describe('resolveOrganizationPath', () => {
     ).toBe('/Rock/Pink Floyd/1973 - Pink Floyd/04 - Time.mp3');
   });
 
+  it('uses only the year from a full date', () => {
+    expect(
+      resolveOrganizationPath(
+        '{Year} - {Album}/{Title}',
+        { ...ORGANIZATION_TRACK, year: '2012-08-18' },
+        '.flac',
+      ),
+    ).toBe('/2012 - The Dark Side of the Moon/Time.flac');
+  });
+
   it('drops a missing field but collapses the dangling separator around it', () => {
     expect(
       resolveOrganizationPath(
