@@ -362,6 +362,21 @@ function useItunesArtworkSearch(initialQuery: string) {
   return { query, setQuery, status, results, search };
 }
 
+function ItunesResultSize({ url }: { url: string }) {
+  const [size, setSize] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const img = new Image();
+    img.onload = () => setSize(`${img.naturalWidth} × ${img.naturalHeight}`);
+    img.src = url;
+    return () => {
+      img.onload = null;
+    };
+  }, [url]);
+
+  return <span className="artworkItunesResultSize">{size ?? '\u00a0'}</span>;
+}
+
 function ItunesArtworkSearchPanel({
   initialQuery,
   autoSearch,
@@ -471,6 +486,7 @@ function ItunesArtworkSearchPanel({
               <span className="artworkItunesResultLabel">
                 {metaLine([result.collectionName, result.artistName])}
               </span>
+              <ItunesResultSize url={result.artworkUrl} />
               {downloadingUrl === result.artworkUrl && (
                 <span className="artworkItunesResultOverlay">Loading…</span>
               )}
