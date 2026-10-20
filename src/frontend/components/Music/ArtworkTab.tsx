@@ -1045,7 +1045,10 @@ export function ArtworkTab({
   const navigate = Router.useNavigate();
   const version = $$.getMusicFolderArtworkVersion();
   const activeTab = $$.getMusicEditTab();
-  const itunesInitialQuery = [artistHint, albumHint].filter(Boolean).join(' ');
+  const itunesInitialQuery =
+    artistHint?.trim().toLowerCase() === albumHint?.trim().toLowerCase()
+      ? (albumHint ?? '')
+      : [artistHint, albumHint].filter(Boolean).join(' ');
 
   useFolderArtworkPaste({
     trackPath,
