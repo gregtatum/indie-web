@@ -13,6 +13,7 @@ import {
   ORGANIZATION_PRESET_TEMPLATES,
   ORGANIZATION_TOKENS,
   getAlbumArtworkKey,
+  getImportedExtension,
   resolveOrganizationPath,
 } from 'shared/music';
 
@@ -338,6 +339,7 @@ export function OrganizeImportView({
     () => savedPattern?.custom ?? false,
   );
   const [collisionCount, setCollisionCount] = React.useState(0);
+  const [failureCount, setFailureCount] = React.useState(0);
   const [committing, setCommitting] = React.useState(false);
   const [remainingTracks, setRemainingTracks] =
     React.useState<T.TrackMetadata[]>(tracks);
@@ -349,11 +351,12 @@ export function OrganizeImportView({
     });
   }, [template, customSelected]);
 
-  function resolveTrackPath(track: T.TrackMetadata) {
+  function resolveTrackPath(track: T.TrackMetadata, converted = false) {
+    const { extension } = splitOutFileExtension(track.path);
     return resolveOrganizationPath(
       template,
       track,
-      splitOutFileExtension(track.path).extension,
+      converted ? getImportedExtension(extension, importQuality) : extension,
     );
   }
 
@@ -362,6 +365,7 @@ export function OrganizeImportView({
   function changeTemplate(next: string) {
     setTemplate(next);
     setCollisionCount(0);
+    setFailureCount(0);
   }
 
   function selectPreset(preset: string) {
@@ -376,15 +380,16 @@ export function OrganizeImportView({
       destinations[track.path] = resolveTrackPath(track);
     }
     const result = await dispatch(A.commitStagingPoolTracks(destinations));
-    const collisionSet = new Set(result.collisions);
-    setCollisionCount(collisionSet.size);
+    const stillStaged = new Set([...result.collisions, ...result.failures]);
+    setCollisionCount(result.collisions.length);
+    setFailureCount(result.failures.length);
     setCommitting(false);
-    if (collisionSet.size === 0) {
+    if (stillStaged.size === 0) {
       onBack();
       return;
     }
     setRemainingTracks((prev) =>
-      prev.filter((track) => collisionSet.has(track.path)),
+      prev.filter((track) => stillStaged.has(track.path)),
     );
   }
 
@@ -511,6 +516,14 @@ export function OrganizeImportView({
               — choose a different pattern and save again
             </div>
           ) : null}
+          {failureCount > 0 ? (
+            <div className="musicOrganizePreviewCollision" role="alert">
+              {failureCount === 1
+                ? '1 file could not be saved'
+                : `${failureCount} files could not be saved`}{' '}
+              — check the console for details
+            </div>
+          ) : null}
           {artworkNotices.map((notice) => (
             <div
               key={notice}
@@ -520,7 +533,11 @@ export function OrganizeImportView({
               {notice}
             </div>
           ))}
-          <OrganizeTree paths={remainingTracks.map(resolveTrackPath)} />
+          <OrganizeTree
+            paths={remainingTracks.map((track) =>
+              resolveTrackPath(track, true),
+            )}
+          />
         </OrganizeCard>
       </div>
     </div>

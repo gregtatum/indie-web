@@ -79,6 +79,18 @@ export const DEFAULT_IMPORT_QUALITY: ImportQualitySettings = {
   lossyFormat: 'm4a',
 };
 
+export function getImportedExtension(
+  extension: string,
+  settings: ImportQualitySettings,
+): string {
+  const convertsFlac = IMPORT_QUALITY_LEVELS.some(
+    ({ id, maxKbps }) => id === settings.maximumQuality && maxKbps !== null,
+  );
+  return convertsFlac && extension.toLowerCase() === '.flac'
+    ? `.${settings.lossyFormat}`
+    : extension;
+}
+
 export const FOLDER_ARTWORK_FILENAMES = [
   'cover.jpg',
   'cover.png',

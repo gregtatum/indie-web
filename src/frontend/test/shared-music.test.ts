@@ -4,6 +4,7 @@ import {
   getTrackFilterArtist,
   nativePrivateTextTagValue,
   parsePreferComposerGroupingTag,
+  getImportedExtension,
   resolveOrganizationPath,
   sanitizeFilenameSegment,
   serializePreferComposerGroupingTag,
@@ -166,6 +167,36 @@ describe('resolveOrganizationPath', () => {
         '.mp3',
       ),
     ).toBe('/Time.mp3');
+  });
+});
+
+describe('getImportedExtension', () => {
+  const standardMp3 = {
+    maximumQuality: 'standard',
+    lossyFormat: 'mp3',
+  } as const;
+
+  it('swaps flac for the chosen lossy format when converting to lossy', () => {
+    expect(getImportedExtension('.flac', standardMp3)).toBe('.mp3');
+    expect(
+      getImportedExtension('.flac', { ...standardMp3, lossyFormat: 'm4a' }),
+    ).toBe('.m4a');
+  });
+
+  it('keeps flac for original and lossless, and leaves other formats alone', () => {
+    expect(
+      getImportedExtension('.flac', {
+        ...standardMp3,
+        maximumQuality: 'original',
+      }),
+    ).toBe('.flac');
+    expect(
+      getImportedExtension('.flac', {
+        ...standardMp3,
+        maximumQuality: 'lossless',
+      }),
+    ).toBe('.flac');
+    expect(getImportedExtension('.m4a', standardMp3)).toBe('.m4a');
   });
 });
 

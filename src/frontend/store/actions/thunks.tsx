@@ -25,6 +25,7 @@ import {
   IMPORTABLE_AUDIO_EXTENSIONS,
   matchFolderArtworkFilename,
   type ImportQualitySettings,
+  getImportedExtension,
 } from 'shared/music';
 import type {
   AddTracksResponse,
@@ -2300,6 +2301,8 @@ async function writeStagedFolderArtwork(
 export interface MusicImportCommitResult {
   /** Source paths (still staged) that were not moved. */
   collisions: string[];
+  /** Source paths (still staged) whose move or conversion errored. */
+  failures: string[];
 }
 
 export function commitStagingPoolTracks(
@@ -2309,12 +2312,21 @@ export function commitStagingPoolTracks(
     const fileStore = $.getCurrentFS(getState());
     const server = $.getCurrentServer(getState());
     const destinationMap = new Map(Object.entries(destinations));
+    const importQuality = $.getMusicImportQuality(getState());
     const collisions = await findMusicImportCollisions(
       fileStore,
-      destinationMap,
+      new Map(
+        [...destinationMap].map(([source, destination]) => {
+          const { extension } = splitOutFileExtension(destination);
+          return [
+            source,
+            destination.slice(0, destination.length - extension.length) +
+              getImportedExtension(extension, importQuality),
+          ];
+        }),
+      ),
     );
 
-    const importQuality = $.getMusicImportQuality(getState());
     const pool = $.getMusicStagingPool(getState());
     const tracksToMove = pool.filter(
       (track) => destinationMap.has(track.path) && !collisions.has(track.path),
@@ -2329,6 +2341,7 @@ export function commitStagingPoolTracks(
     const movedTracks: T.TrackMetadata[] = [];
     const movedSourcePaths = new Set<string>();
     const stillStagedPaths = new Set(collisions);
+    const failures = new Set<string>();
     const destFoldersByStagingArtworkPath = new Map<string, Set<string>>();
     const stagingArtworkPathsByDestFolder = new Map<string, Set<string>>();
     for (let i = 0; i < tracksToMove.length; i++) {
@@ -2372,6 +2385,7 @@ export function commitStagingPoolTracks(
         }
       } catch (error) {
         console.error(error);
+        failures.add(track.path);
         stillStagedPaths.add(track.path);
       }
       dispatch(
@@ -2479,6 +2493,9 @@ export function commitStagingPoolTracks(
       }),
     );
 
-    return { collisions: [...stillStagedPaths] };
+    return {
+      collisions: [...stillStagedPaths].filter((path) => !failures.has(path)),
+      failures: [...failures],
+    };
   };
 }
