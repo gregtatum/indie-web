@@ -5,6 +5,7 @@ import { basename, extname, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 import { parseFile } from 'music-metadata';
+import { hashAudioPayload } from './audio-hash.ts';
 import {
   APP_FRAME_IDS,
   ID3V1_TAG_SIZE,
@@ -511,6 +512,7 @@ const STAGING_INDEX_VERSION = 1;
 
 interface StagingIndexEntry {
   hash: string;
+  audioHash?: string;
   size: number;
   mtime: string;
   folderArtworkPath?: string | null;
@@ -525,6 +527,7 @@ interface StagingIndex {
 export interface StagingPoolEntry {
   path: string;
   hash: string;
+  audioHash: string;
   size: number;
   mtime: string;
   folderArtworkPath: string | null;
@@ -618,14 +621,18 @@ export async function scanStagingPool(
     const stats = await fs.stat(fullPath);
     const mtime = stats.mtime.toISOString();
     const cached = index.entries[clientPath];
-    const hash =
-      cached && cached.mtime === mtime && cached.size === stats.size
-        ? cached.hash
-        : await hashFile(fullPath);
+    const unchanged =
+      cached && cached.mtime === mtime && cached.size === stats.size;
+    const hash = unchanged ? cached.hash : await hashFile(fullPath);
+    const audioHash =
+      unchanged && cached.audioHash
+        ? cached.audioHash
+        : await hashAudioPayload(fullPath, stats.size);
     const folderArtworkPath = cached?.folderArtworkPath ?? null;
 
     nextEntries[clientPath] = {
       hash,
+      audioHash,
       size: stats.size,
       mtime,
       folderArtworkPath,
@@ -633,6 +640,7 @@ export async function scanStagingPool(
     results.push({
       path: clientPath,
       hash,
+      audioHash,
       size: stats.size,
       mtime,
       folderArtworkPath,
@@ -653,12 +661,14 @@ export async function dedupeStagedTracks(
 ): Promise<{ paths: string[]; duplicateCount: number }> {
   const candidateSet = new Set(candidatePaths);
   const pool = await scanStagingPool(mountPath);
-  const poolHashByPath = new Map(pool.map((entry) => [entry.path, entry.hash]));
+  const poolHashByPath = new Map(
+    pool.map((entry) => [entry.path, entry.audioHash]),
+  );
 
   const seenHashes = new Set<string>();
   for (const entry of pool) {
     if (!candidateSet.has(entry.path)) {
-      seenHashes.add(entry.hash);
+      seenHashes.add(entry.audioHash);
     }
   }
 

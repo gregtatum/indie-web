@@ -15,7 +15,12 @@ import { createHash } from 'node:crypto';
 import { parseFile } from 'music-metadata';
 import { musicRoute } from '../music/route.ts';
 import { runFfmpeg } from '../music/ffmpeg.ts';
-import { buildMp3WithTags, createTestServer, withLogs } from './helpers.ts';
+import {
+  AUDIO_PAYLOAD,
+  buildMp3WithTags,
+  createTestServer,
+  withLogs,
+} from './helpers.ts';
 import type { TestServer } from './helpers.ts';
 import type { T } from '../index.ts';
 
@@ -30,10 +35,16 @@ async function stageTrack(
   server: TestServer,
   filename: string,
   tags: Parameters<typeof buildMp3WithTags>[0],
+  audioSeed: string = JSON.stringify(tags),
 ): Promise<string> {
   const dir = join(server.mountDir, '.music-staging');
   await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, filename), buildMp3WithTags(tags));
+  const bytes = buildMp3WithTags(tags);
+  createHash('sha256')
+    .update(audioSeed)
+    .digest()
+    .copy(bytes, bytes.length - AUDIO_PAYLOAD.length + 4, 0, 4);
+  await writeFile(join(dir, filename), bytes);
   return `/.music-staging/${filename}`;
 }
 
@@ -140,8 +151,10 @@ describe('drag-and-drop import staging', () => {
 
   it('records a verifiable content hash for a staged track in .staging-index.json', async () => {
     const tags = { title: 'Hashed Track' };
-    const bytes = buildMp3WithTags(tags);
     await stageTrack(server, 'hashed.mp3', tags);
+    const bytes = await readFile(
+      join(server.mountDir, '.music-staging', 'hashed.mp3'),
+    );
 
     await fetch(`${server.baseUrl}/music/staging-pool`);
 
@@ -204,6 +217,41 @@ describe('drag-and-drop import staging', () => {
     const poolFiles = await readdir(join(server.mountDir, '.music-staging'));
     assert.ok(!poolFiles.includes('dup-copy.mp3'));
     assert.ok(poolFiles.includes('dup-source.mp3'));
+  });
+
+  it('treats re-tagged copies of the same audio as duplicates', async () => {
+    const pathA = await stageTrack(
+      server,
+      'retag-a.mp3',
+      {
+        title: 'Retagged',
+        artist: 'Art Tatum',
+      },
+      'retagged',
+    );
+    const pathB = await stageTrack(
+      server,
+      'retag-a (1).mp3',
+      {
+        title: 'Retagged',
+        artist: 'Art Tatum',
+        album: 'Different Download',
+        composer: 'Longer tag block from another tagger',
+      },
+      'retagged',
+    );
+
+    const created = await fetch(`${server.baseUrl}/music/staging-pool`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trackPaths: [pathA, pathB] }),
+    });
+    const body = (await created.json()) as T.StagingUploadResponse;
+    assert.equal(body.duplicateCount, 1);
+    assert.deepEqual(
+      body.tracks.map((track) => track.path),
+      [pathA],
+    );
   });
 
   it('collapses duplicates within the same upload request, keeping the first', async () => {
