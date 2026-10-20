@@ -1,6 +1,11 @@
 import * as React from 'react';
 import { A, $, $$, Hooks, T } from 'frontend';
-import { getDirName, getGeneration, getKeyboardString } from 'frontend/utils';
+import {
+  getDirName,
+  getGeneration,
+  getKeyboardString,
+  getZipJs,
+} from 'frontend/utils';
 import type {
   WriteFolderArtworkResponse,
   WriteTrackTagsResponse,
@@ -80,6 +85,47 @@ async function collectFilesFromEntry(
   return [];
 }
 
+function isZipFile(file: File): boolean {
+  return file.type === 'application/zip' || /\.zip$/i.test(file.name);
+}
+
+async function expandZipFile(dropped: DroppedFile): Promise<DroppedFile[]> {
+  const zip = await getZipJs();
+  const reader = new zip.ZipReader(new zip.BlobReader(dropped.file));
+  try {
+    const entries = await reader.getEntries();
+    const rootFolder = dropped.file.name.replace(/\.zip$/i, '');
+    const baseFolder = dropped.sourceFolder
+      ? `${dropped.sourceFolder}/${rootFolder}`
+      : rootFolder;
+    const files: DroppedFile[] = [];
+    for (const entry of entries) {
+      const name = entry.filename.split('/').pop() ?? '';
+      if (entry.directory || name.startsWith('.')) {
+        continue;
+      }
+      const blob = await entry.getData(new zip.BlobWriter());
+      const folder = getDirName(`/${entry.filename}`).slice(1);
+      files.push({
+        file: new File([blob], name, { type: blob.type }),
+        sourceFolder: folder ? `${baseFolder}/${folder}` : baseFolder,
+      });
+    }
+    return files;
+  } finally {
+    await reader.close();
+  }
+}
+
+async function expandZipFiles(files: DroppedFile[]): Promise<DroppedFile[]> {
+  const expanded = await Promise.all(
+    files.map((dropped) =>
+      isZipFile(dropped.file) ? expandZipFile(dropped) : [dropped],
+    ),
+  );
+  return expanded.flat();
+}
+
 export async function collectFilesFromDataTransfer(
   dataTransfer: DataTransfer | null,
 ): Promise<DroppedFile[]> {
@@ -91,16 +137,18 @@ export async function collectFilesFromDataTransfer(
     .filter((entry): entry is FileSystemEntry => entry !== null);
 
   if (entries.length === 0) {
-    return Array.from(dataTransfer.files ?? []).map((file) => ({
-      file,
-      sourceFolder: '',
-    }));
+    return expandZipFiles(
+      Array.from(dataTransfer.files ?? []).map((file) => ({
+        file,
+        sourceFolder: '',
+      })),
+    );
   }
 
   const nested = await Promise.all(
     entries.map((entry) => collectFilesFromEntry(entry, '')),
   );
-  return nested.flat();
+  return expandZipFiles(nested.flat());
 }
 
 /**

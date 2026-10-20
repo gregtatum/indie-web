@@ -24,6 +24,13 @@ import {
 } from './utils/music';
 import { expectConsoleError } from './utils/setupAfterEnv';
 
+function loadZipJs(): typeof import('@zip.js/zip.js') {
+  Object.assign(globalThis, jest.requireActual('node:stream/web'));
+  const zip = jest.requireActual('@zip.js/zip.js');
+  zip.configure({ useWebWorkers: false });
+  return zip;
+}
+
 const jestDescribe = globalThis.describe;
 let describe: (name: string, fn: () => void) => void = jestDescribe;
 if (process.env.INDIE_WEB_SKIP_LOCALHOST_TESTS === '1') {
@@ -392,6 +399,54 @@ describe('drag-and-drop import & organize', () => {
 
       const stagingRoot = join(getServer().mountDir, '.music-staging');
       await expect(readdir(stagingRoot)).rejects.toThrow();
+    });
+
+    it('extracts the MP3s and folder art from a dropped zip', async () => {
+      const zip = loadZipJs();
+      jest.spyOn(document.head, 'appendChild').mockImplementation((node) => {
+        (window as any).zip = zip;
+        setTimeout(() =>
+          (node as HTMLScriptElement).onload?.(new Event('load')),
+        );
+        return node;
+      });
+      const writer = new zip.ZipWriter(new zip.BlobWriter('application/zip'));
+      await writer.add(
+        'Album/kaneda.mp3',
+        new zip.BlobReader(
+          new Blob([
+            new Uint8Array(
+              buildMp3WithTags({ title: 'Kaneda', artist: 'Geinoh' }),
+            ),
+          ]),
+        ),
+      );
+      await writer.add(
+        'Album/Folder.jpg',
+        new zip.BlobReader(new Blob([new Uint8Array(buildJpegBytes())])),
+      );
+      await writer.add('__MACOSX/Album/._kaneda.mp3', new zip.TextReader('x'));
+      await writer.add('Album/notes.txt', new zip.TextReader('x'));
+      const archive = new File([await writer.close()], 'Album.zip', {
+        type: 'application/zip',
+      });
+
+      const { store } = await renderMusicApp({ server: getServer() });
+      const zone = await dropZone();
+
+      await act(async () => {
+        fireEvent.drop(zone, { dataTransfer: makeDataTransfer([archive]) });
+        await waitForNetworkIdle();
+      });
+
+      await waitForStagingPool(store, 1);
+      await act(async () => {
+        await waitForNetworkIdle();
+      });
+
+      const pool = $.getMusicStagingPool(store.getState());
+      expect(pool[0].title).toBe('Kaneda');
+      expect(pool[0].folderArtworkPath).toBeTruthy();
     });
 
     it('recurses into a dropped folder, staging its MP3s and ignoring everything else', async () => {
