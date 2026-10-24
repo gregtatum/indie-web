@@ -233,7 +233,6 @@ describe('Connect', () => {
       expect(persistedState.fileStoreServers.read()).toEqual(existingServers);
       expect(persistedState.fileStoreName.read()).toBe('browser');
       expect(persistedState.fileStoreServer.read()).toBeNull();
-      expect(fetchMock.callHistory.calls()).toHaveLength(0);
     },
   );
 });

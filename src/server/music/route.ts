@@ -13,12 +13,12 @@ import { parseFile } from 'music-metadata';
 import { throttle } from '../../shared/utils.ts';
 import {
   APP_FRAME_IDS,
+  MUSIC_INDEX_FILENAME,
   MUSIC_INDEX_VERSION,
   resolveTagValue,
   isStagedPath,
 } from '../../shared/music.ts';
 import {
-  MUSIC_INDEX_FILENAME,
   validateTagChanges,
   cleanUpDirectoriesAfterTrackDeletion,
   addStagedTracks,
@@ -47,8 +47,6 @@ import type {
   EmbedArtworkFailure,
   WriteTrackTagsForPathResult,
 } from './logic.ts';
-
-export { MUSIC_INDEX_FILENAME };
 
 export function musicRoute(mountPath: MountPath) {
   const route = new ApiRoute();

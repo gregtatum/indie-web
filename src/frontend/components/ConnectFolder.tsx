@@ -5,6 +5,10 @@ import './ConnectFolder.css';
 import { dedent, sluggify } from 'frontend/utils';
 import { $, $$, A, T, Hooks } from 'frontend';
 import { InfoLink } from './InfoLink';
+import { ServerFS } from 'frontend/logic/file-store/server-fs';
+import { MUSIC_INDEX_FILENAME } from 'shared/music';
+
+const DEFAULT_SERVER_URL = 'http://localhost:6543';
 
 export function ConnectFolder() {
   const experimentalFeatures = $$.getExperimentalFeatures();
@@ -12,6 +16,7 @@ export function ConnectFolder() {
   const navigate = Router.useNavigate();
   const nameRef = React.useRef<null | HTMLInputElement>(null);
   const urlRef = React.useRef<null | HTMLInputElement>(null);
+  const detectedUrlRef = React.useRef<string | undefined>(DEFAULT_SERVER_URL);
   const { error, setError } = Hooks.useError();
   const [storeType, setStoreType] =
     React.useState<T.FileStoreServer['storeType']>('files');
@@ -34,6 +39,36 @@ export function ConnectFolder() {
       dispatch(A.addFileStoreServer(server));
       dispatch(A.changeFileStore('server', server));
       navigate('/');
+    }
+  }
+
+  async function detectStoreType() {
+    const enteredUrl = urlRef.current?.value;
+    if (enteredUrl === detectedUrlRef.current) {
+      return;
+    }
+    detectedUrlRef.current = enteredUrl;
+    const url = normalizeServerUrl(enteredUrl);
+    if (!url) {
+      return;
+    }
+    let hasMusicIndex = false;
+    try {
+      const server: T.FileStoreServer = {
+        url,
+        name: '',
+        id: '',
+        storeType: 'files',
+      };
+      const listing = await new ServerFS(server, false, null).listFiles('');
+      hasMusicIndex = listing.some(
+        (file) => file.name === MUSIC_INDEX_FILENAME,
+      );
+    } catch {
+      return;
+    }
+    if (urlRef.current?.value === enteredUrl) {
+      setStoreType(hasMusicIndex ? 'music' : 'files');
     }
   }
 
@@ -70,7 +105,7 @@ export function ConnectFolder() {
         <p>Follow the installation instructions.</p>
 
         <h3>2: Connect the Folder</h3>
-        <form onSubmit={(event) => addFileServer(event.nativeEvent)}>
+        <form onSubmit={(event) => void addFileServer(event.nativeEvent)}>
           <div className="connectFolderInput">
             <label htmlFor="storage-provider-name">Name</label>
             <input
@@ -87,7 +122,12 @@ export function ConnectFolder() {
               type="text"
               id="storage-provider-address"
               ref={urlRef}
-              defaultValue="http://localhost:6543"
+              onBlur={() => {
+                detectStoreType().catch((error) => {
+                  console.error('Failed to detect the store type', error);
+                });
+              }}
+              defaultValue={DEFAULT_SERVER_URL}
             ></input>
           </div>
           {experimentalFeatures ? (
@@ -248,6 +288,25 @@ export function ConnectedFoldersSettings({
   );
 }
 
+function normalizeServerUrl(url: string | undefined): string | null {
+  if (!url) {
+    return null;
+  }
+  try {
+    new URL(url);
+  } catch {
+    url = 'http://' + url;
+    try {
+      new URL(url);
+    } catch {
+      return null;
+    }
+  }
+  // Strip trailing slashes so that URLs built by concatenation (e.g.
+  // `${server.url}/music/music-index`) don't end up with a double slash.
+  return url.replace(/\/+$/, '');
+}
+
 function validateFileStoreServer(
   name: string | undefined,
   url: string | undefined,
@@ -267,22 +326,12 @@ function validateFileStoreServer(
 
   const id = sluggify(name);
 
-  // Validate the URL.
-  try {
-    new URL(url);
-  } catch {
-    url = 'http://' + url;
-    try {
-      new URL(url);
-    } catch {
-      setError('The address of the server was not a valid URL.');
-      return null;
-    }
+  const normalizedUrl = normalizeServerUrl(url);
+  if (!normalizedUrl) {
+    setError('The address of the server was not a valid URL.');
+    return null;
   }
-
-  // Strip trailing slashes so that URLs built by concatenation (e.g.
-  // `${server.url}/music/music-index`) don't end up with a double slash.
-  url = url.replace(/\/+$/, '');
+  url = normalizedUrl;
 
   if (name.length > 200) {
     setError('The server name should be less than 200 characters.');

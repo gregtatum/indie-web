@@ -9,6 +9,7 @@ import type { TrackMetadata, TrackTagsResponse } from './@types/shared.ts';
  * field is added.
  */
 export const MUSIC_INDEX_VERSION = 10 as const;
+export const MUSIC_INDEX_FILENAME = '.music-index.json';
 
 /**
  * App-owned ID3 user-defined text (TXXX) description. Normal music players

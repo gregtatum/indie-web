@@ -1,6 +1,8 @@
+import * as React from 'react';
 import {
   cleanup,
   fireEvent,
+  render,
   screen,
   waitFor,
   within,
@@ -10,7 +12,12 @@ import { act } from 'react';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router-dom';
 import { A } from 'frontend';
+import { AppRoutes } from 'frontend/components/App';
+import { persistedState } from 'frontend/logic/persisted-state';
+import { createStore } from 'frontend/store/create-store';
 import { MUSIC_INDEX_VERSION } from 'shared/music';
 import {
   buildMinimalMp3,
@@ -19,7 +26,9 @@ import {
   renderMusicApp,
   useMusicTestServer,
   waitForNetworkIdle,
+  writeMusicIndex,
 } from './utils/music';
+import { settleApp } from './utils/fixtures';
 
 const v1Fixture = readFileSync(
   join(__dirname, 'fixtures/music-index-v1.json'),
@@ -56,6 +65,7 @@ describe('<Music> with real server', () => {
     // describe block. Tests that write .music-index.json (e.g. the v1 upgrade
     // tests) would otherwise leave stale state that silently affects later tests.
     await removeMusicIndex(getServer());
+    window.localStorage.clear();
   });
 
   async function setup(search = '') {
@@ -818,5 +828,64 @@ describe('<Music> with real server', () => {
     } finally {
       confirmSpy.mockRestore();
     }
+  }, 30_000);
+
+  it('selects music storage when the server address has a music index', async () => {
+    const server = getServer();
+    writeMusicIndex(server, []);
+    const store = createStore();
+    store.dispatch(A.setExperimentalFeatures(true));
+    render(
+      <MemoryRouter initialEntries={['/connect-folder']}>
+        <Provider store={store as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+    await settleApp();
+
+    const fileRadio = screen.getByRole('radio', { name: /File Storage/ });
+    const musicRadio = screen.getByRole('radio', { name: /Music Storage/ });
+    expect(fileRadio).toHaveProperty('checked', true);
+
+    async function changeAddress(address: string) {
+      await userEvent.clear(screen.getByLabelText('Server Address'));
+      await userEvent.type(screen.getByLabelText('Server Address'), address);
+      await act(async () => {
+        await userEvent.tab();
+        await waitForNetworkIdle();
+      });
+    }
+
+    await changeAddress(server.baseUrl);
+    await waitFor(() => {
+      expect(musicRadio).toHaveProperty('checked', true);
+    });
+
+    await removeMusicIndex(server);
+    await changeAddress(server.baseUrl + '/');
+    await waitFor(() => {
+      expect(fileRadio).toHaveProperty('checked', true);
+    });
+
+    writeMusicIndex(server, []);
+    await changeAddress(server.baseUrl);
+    await waitFor(() => {
+      expect(musicRadio).toHaveProperty('checked', true);
+    });
+
+    await userEvent.type(screen.getByLabelText('Name'), 'My Music');
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Connect Folder' }),
+      );
+    });
+    await waitFor(() => {
+      expect(
+        persistedState.fileStoreServers
+          .read()
+          ?.find((server) => server.name === 'My Music')?.storeType,
+      ).toBe('music');
+    });
   }, 30_000);
 });

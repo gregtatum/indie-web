@@ -9,6 +9,7 @@ import { hashAudioPayload } from './audio-hash.ts';
 import {
   APP_FRAME_IDS,
   ID3V1_TAG_SIZE,
+  MUSIC_INDEX_FILENAME,
   MUSIC_INDEX_VERSION,
   PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION,
   IMPORTABLE_AUDIO_EXTENSIONS,
@@ -44,8 +45,6 @@ import {
   writeM4aTags,
 } from './m4a.ts';
 import { isIgnorableOsFile } from '../../shared/utils.ts';
-
-export const MUSIC_INDEX_FILENAME = '.music-index.json';
 
 const AUDIO_EXTENSIONS = new Set([
   '.mp3',
