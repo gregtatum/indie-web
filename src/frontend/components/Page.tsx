@@ -14,11 +14,130 @@ import { ConnectedFoldersSettings } from './ConnectFolder';
 import { InfoLink } from './InfoLink';
 import './Page.css';
 
-type CacheEstimate = {
-  status: 'loading' | 'ready' | 'error';
-  size: number | null;
-  error: string | null;
-};
+type CacheUsage =
+  | { status: 'loading' }
+  | { status: 'error'; error: string }
+  | { status: 'ready'; size: number; fileCount: number };
+
+export function StoreCache({
+  label,
+  dbName,
+}: {
+  label: string;
+  dbName: string;
+}) {
+  const enabled = $$.getFileStoreCacheEnabled();
+  const workerClient = $$.getWorkerClient();
+  const [expanded, setExpanded] = React.useState(false);
+  const [usage, setUsage] = React.useState<CacheUsage>({ status: 'loading' });
+  const isMountedRef = React.useRef(true);
+
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const refresh = React.useCallback(async () => {
+    setUsage({ status: 'loading' });
+    try {
+      const cache = await openIDBFS(dbName, workerClient);
+      const [size, fileCount] = await Promise.all([
+        cache.getApproximateSize(),
+        cache.getFileCount(),
+      ]);
+      if (isMountedRef.current) {
+        setUsage({ status: 'ready', size, fileCount });
+      }
+    } catch (error) {
+      console.error(error);
+      if (isMountedRef.current) {
+        setUsage({ status: 'error', error: 'Could not estimate cache size.' });
+      }
+    }
+  }, [dbName, workerClient]);
+
+  React.useEffect(() => {
+    if (enabled) {
+      void refresh();
+    }
+  }, [enabled, refresh]);
+
+  if (!enabled) {
+    return null;
+  }
+
+  async function clear() {
+    if (
+      !window.confirm(
+        `Clear the ${label} cache? Files will be downloaded again the next time you view them.`,
+      )
+    ) {
+      return;
+    }
+    setUsage({ status: 'loading' });
+    try {
+      const cache = await openIDBFS(dbName, workerClient);
+      await cache.clear();
+      await refresh();
+    } catch (error) {
+      console.error(error);
+      if (isMountedRef.current) {
+        setUsage({ status: 'error', error: 'Could not clear cache.' });
+      }
+    }
+  }
+
+  let summary = 'Estimating...';
+  let details: string | null = null;
+  if (usage.status === 'error') {
+    summary = usage.error;
+  } else if (usage.status === 'ready') {
+    if (usage.fileCount === 0) {
+      summary = 'Empty';
+      details = 'No files cached.';
+    } else {
+      summary = formatBytes(usage.size);
+      details = `${usage.fileCount} file${usage.fileCount === 1 ? '' : 's'}.`;
+    }
+  }
+  const canClear =
+    usage.status === 'error' ||
+    (usage.status === 'ready' && usage.fileCount !== 0);
+
+  return (
+    <div className="storeCache">
+      <div className="storeCacheSummary">
+        <button
+          type="button"
+          className="storeCacheToggle"
+          aria-expanded={expanded}
+          aria-label={`${label} cache: ${summary}`}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <span className="disclosureChevron" aria-hidden="true" />
+          <span className="storeCacheTitle">Cache</span>
+          <span className="storeCacheSummaryText">{summary}</span>
+        </button>
+      </div>
+      {expanded && (
+        <div className="storeCacheDetails">
+          <p>{details ?? summary}</p>
+          <button
+            type="button"
+            className="button"
+            aria-label={`Clear ${label} Cache`}
+            disabled={!canClear}
+            onClick={clear}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Settings() {
   const experimentalFeatures = $$.getExperimentalFeatures();
@@ -34,93 +153,8 @@ export function Settings() {
   } else if (dropboxOauth) {
     nonServerFallbackStorage = 'dropbox';
   }
-  const workerClient = $$.getWorkerClient();
   const dispatch = Hooks.useDispatch();
-  const [cacheEstimates, setCacheEstimates] = React.useState<
-    Record<string, CacheEstimate>
-  >({});
-  const isMountedRef = React.useRef(true);
   Hooks.useRetainScroll();
-
-  const cacheTargets = React.useMemo(() => {
-    const targets: Array<{ id: string; label: string; dbName: string }> = [];
-    if (dropboxOauth) {
-      targets.push({
-        id: 'dropbox',
-        label: 'Dropbox',
-        dbName: IDB_CACHE_NAME,
-      });
-    }
-    for (const server of servers) {
-      targets.push({
-        id: `server:${server.id}`,
-        label: server.name,
-        dbName: `server-fs-cache(${server.id})`,
-      });
-    }
-    return targets;
-  }, [dropboxOauth, servers]);
-  const estimateCacheSizeForTarget = React.useCallback(
-    async (target: { id: string; dbName: string }) => {
-      try {
-        const cache = await openIDBFS(target.dbName, workerClient);
-        const size = await cache.getApproximateSize();
-        if (!isMountedRef.current) {
-          return;
-        }
-        setCacheEstimates((prev) => ({
-          ...prev,
-          [target.id]: {
-            status: 'ready',
-            size,
-            error: null,
-          },
-        }));
-      } catch (error) {
-        console.error(error);
-        if (!isMountedRef.current) {
-          return;
-        }
-        setCacheEstimates((prev) => ({
-          ...prev,
-          [target.id]: {
-            status: 'error',
-            size: null,
-            error: 'Could not estimate cache size.',
-          },
-        }));
-      }
-    },
-    [workerClient],
-  );
-
-  React.useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (cacheTargets.length === 0 || !fileStoreCacheEnabled) {
-      setCacheEstimates({});
-      return undefined;
-    }
-    const startingEstimates: Record<string, CacheEstimate> = {};
-    for (const target of cacheTargets) {
-      startingEstimates[target.id] = {
-        status: 'loading',
-        size: null,
-        error: null,
-      };
-    }
-    setCacheEstimates(startingEstimates);
-    void Promise.all(
-      cacheTargets.map(async (target) => {
-        await estimateCacheSizeForTarget(target);
-      }),
-    );
-    return undefined;
-  }, [cacheTargets, estimateCacheSizeForTarget, fileStoreCacheEnabled]);
 
   return (
     <div className="page">
@@ -229,62 +263,10 @@ export function Settings() {
                 Enable offline file caching
               </label>
             </p>
-            {fileStoreCacheEnabled && cacheTargets.length === 0 && (
-              <p>Files you view will appear here for offline use.</p>
-            )}
-            {fileStoreCacheEnabled && cacheTargets.length > 0 && (
-              <div>
-                {cacheTargets.map((target) => {
-                  const estimate = cacheEstimates[target.id];
-                  let label = `${target.label}: Estimating...`;
-                  if (estimate?.status === 'error') {
-                    label = `${target.label}: ${estimate.error}`;
-                  } else if (estimate?.status === 'ready') {
-                    label = `${target.label}: ${formatBytes(estimate.size ?? 0)}`;
-                  }
-                  return (
-                    <div key={target.id}>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          setCacheEstimates((prev) => ({
-                            ...prev,
-                            [target.id]: {
-                              status: 'loading',
-                              size: null,
-                              error: null,
-                            },
-                          }));
-                          try {
-                            const cache = await openIDBFS(
-                              target.dbName,
-                              workerClient,
-                            );
-                            await cache.clear();
-                            await estimateCacheSizeForTarget(target);
-                          } catch (error) {
-                            console.error(error);
-                            if (!isMountedRef.current) {
-                              return;
-                            }
-                            setCacheEstimates((prev) => ({
-                              ...prev,
-                              [target.id]: {
-                                status: 'error',
-                                size: null,
-                                error: 'Could not clear cache.',
-                              },
-                            }));
-                          }
-                        }}
-                      >
-                        Clear Cache
-                      </button>{' '}
-                      {label}
-                    </div>
-                  );
-                })}
-              </div>
+            {fileStoreCacheEnabled && (
+              <p>
+                Each storage location lists its cache under Storage Providers.
+              </p>
             )}
           </div>
           <div className="settingsCard settingsSectionCard">
@@ -580,6 +562,7 @@ function DropboxStorageProvider() {
           </a>
         )}
       </div>
+      {dropbox && <StoreCache label="Dropbox" dbName={IDB_CACHE_NAME} />}
     </section>
   );
 }

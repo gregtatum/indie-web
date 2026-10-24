@@ -5,7 +5,11 @@ import './ConnectFolder.css';
 import { dedent, sluggify } from 'frontend/utils';
 import { $, $$, A, T, Hooks } from 'frontend';
 import { InfoLink } from './InfoLink';
-import { ServerFS } from 'frontend/logic/file-store/server-fs';
+import {
+  ServerFS,
+  getServerCacheName,
+} from 'frontend/logic/file-store/server-fs';
+import { StoreCache } from './Page';
 import { MUSIC_INDEX_FILENAME } from 'shared/music';
 
 const DEFAULT_SERVER_URL = 'http://localhost:6543';
@@ -285,6 +289,10 @@ export function ConnectedFoldersSettings({
             >
               Remove
             </button>
+            <StoreCache
+              label={server.name}
+              dbName={getServerCacheName(server.id)}
+            />
           </form>
         ))}
       </div>

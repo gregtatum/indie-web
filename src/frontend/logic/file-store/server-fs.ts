@@ -27,6 +27,10 @@ function uploadWithProgress(
   });
 }
 
+export function getServerCacheName(serverId: string) {
+  return `server-fs-cache(${serverId})`;
+}
+
 export class ServerFS extends FileStore {
   apiBaseUrl: string;
   cachePromise?: Promise<void>;
@@ -45,7 +49,7 @@ export class ServerFS extends FileStore {
 
     if (cacheEnabled) {
       this.cachePromise = openIDBFS(
-        `server-fs-cache(${server.id})`,
+        getServerCacheName(server.id),
         workerClient,
       ).then((IDBFS) => {
         this.cache = IDBFS;

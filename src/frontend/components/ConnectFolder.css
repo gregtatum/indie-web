@@ -42,12 +42,12 @@
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 24px;
 
   & > form {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
-    gap: 10px;
+    gap: 4px 10px;
     margin: 0;
 
     @media (max-width: 600px) {

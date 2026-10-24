@@ -101,29 +101,6 @@ function OpenExternalIcon() {
   );
 }
 
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      className={
-        open
-          ? 'artworkEmbeddedChevron artworkEmbeddedChevron-open'
-          : 'artworkEmbeddedChevron'
-      }
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m9 6 6 6-6 6" />
-    </svg>
-  );
-}
-
 function PictureIcon() {
   return (
     <svg
@@ -979,7 +956,7 @@ function EmbeddedArtworkRow({
         aria-expanded={expanded}
         onClick={() => setExpanded((value) => !value)}
       >
-        <ChevronIcon open={expanded} />
+        <span className="disclosureChevron" aria-hidden="true" />
         <span className="artworkEmbeddedThumb">
           {!imgError && (
             <img

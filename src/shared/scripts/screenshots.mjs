@@ -206,6 +206,18 @@ const SHOTS = [
     },
   },
   {
+    name: 'settings-storage',
+    surface: 'files',
+    route: '/settings',
+    waitFor: '.settingsCard',
+    describe: 'Settings: storage providers with expanded cache rows',
+    prepare: async (page) => {
+      await page.waitForSelector('.storeCacheToggle', { timeout: 10000 });
+      await page.locator('.storeCacheToggle').first().click();
+      await page.locator('.connectedFolderList').scrollIntoViewIfNeeded();
+    },
+  },
+  {
     name: 'floppydisk-files',
     surface: 'files',
     route: '/files/folder/',

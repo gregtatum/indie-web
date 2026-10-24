@@ -634,17 +634,6 @@
   background: var(--modal-bg);
 }
 
-.artworkEmbeddedChevron {
-  flex: 0 0 auto;
-  display: block;
-  color: var(--text-label);
-  transition: transform 120ms ease;
-}
-
-.artworkEmbeddedChevron-open {
-  transform: rotate(90deg);
-}
-
 .artworkEmbeddedThumb {
   flex: 0 0 auto;
   width: 44px;

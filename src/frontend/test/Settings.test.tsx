@@ -10,7 +10,11 @@ import { A, T } from 'frontend';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
-import { mockDropboxListFolder, settleApp } from './utils/fixtures';
+import {
+  buildTestFiles,
+  mockDropboxListFolder,
+  settleApp,
+} from './utils/fixtures';
 
 type Store = ReturnType<typeof createStore>;
 
@@ -149,6 +153,7 @@ async function expectOnboardingHomeScreen() {
 
 describe('Settings', () => {
   const { getIDBFS } = useTestIDBFS('settings-test-db');
+  const { getIDBFS: getDropboxCache } = useTestIDBFS(IDB_CACHE_NAME);
 
   it('returns to the onboarding home screen after deleting the last storage', async () => {
     const store = createStore();
@@ -219,6 +224,83 @@ describe('Settings', () => {
     ).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Developer' })).toBeTruthy();
     expect(screen.queryByText(/On your storage/)).toBeNull();
+  });
+
+  it('shows each store cache in a disclosure and clears it after confirming', async () => {
+    const store = createStore();
+    onboard(store);
+    connectDropbox(store);
+    store.dispatch(A.setFileStoreCacheEnabled(true));
+    addNasStorage(store);
+    await buildTestFiles(getDropboxCache(), ['/a.md', '/b.md']);
+    const confirm = confirmPrompts();
+
+    await renderSettings(store);
+
+    expect(
+      await screen.findByRole('button', {
+        name: 'NAS Storage cache: Empty',
+      }),
+    ).toBeTruthy();
+    const toggle = await screen.findByRole('button', {
+      name: /^Dropbox cache: \d.* [KMG]?B$/,
+      expanded: false,
+    });
+    expect(screen.queryByText('2 files.')).toBeNull();
+
+    await act(async () => {
+      await userEvent.click(toggle);
+    });
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('2 files.')).toBeTruthy();
+
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Clear Dropbox Cache' }),
+      );
+    });
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Dropbox'));
+    expect(
+      await screen.findByRole('button', {
+        name: 'Dropbox cache: Empty',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('keeps the cache when clearing is not confirmed', async () => {
+    const store = createStore();
+    onboard(store);
+    connectDropbox(store);
+    store.dispatch(A.setFileStoreCacheEnabled(true));
+    await buildTestFiles(getDropboxCache(), ['/a.md']);
+    jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+    await renderSettings(store);
+    const toggle = await screen.findByRole('button', {
+      name: /^Dropbox cache: \d.* [KMG]?B$/,
+    });
+    await act(async () => {
+      await userEvent.click(toggle);
+    });
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Clear Dropbox Cache' }),
+      );
+    });
+
+    expect(toggle.getAttribute('aria-label')).toMatch(/[KMG]?B$/);
+  });
+
+  it('hides the store caches when offline caching is disabled', async () => {
+    const store = createStore();
+    onboard(store);
+    connectDropbox(store);
+    addNasStorage(store);
+
+    await renderSettings(store);
+
+    expect(screen.queryByRole('button', { name: /cache:/ })).toBeNull();
   });
 
   it('returns to onboarding after removing Dropbox as the last storage', async () => {
