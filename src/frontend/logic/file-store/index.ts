@@ -79,6 +79,19 @@ async function getCacheBudget(): Promise<number> {
   return quota ? quota * CACHE_QUOTA_FRACTION : FALLBACK_CACHE_BUDGET;
 }
 
+export const DROPBOX_CACHE_KEY = 'dropbox';
+
+export function getServerCacheKey(serverId: string) {
+  return `server:${serverId}`;
+}
+
+export function isCacheEnabled(
+  settings: Record<string, boolean>,
+  cacheKey: string,
+): boolean {
+  return settings[cacheKey] ?? process.env.NODE_ENV !== 'test';
+}
+
 export abstract class FileStoreCache extends FileStore {
   abstract addFolderListing(
     path: string,

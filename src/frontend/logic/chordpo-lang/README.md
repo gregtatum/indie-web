@@ -1,4 +1,3 @@
-
 This is a vendor of:
 
 https://github.com/chordbook/codemirror-lang-chordpro

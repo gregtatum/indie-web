@@ -9,6 +9,7 @@ import {
   ServerFS,
   getServerCacheName,
 } from 'frontend/logic/file-store/server-fs';
+import { getServerCacheKey } from 'frontend/logic/file-store';
 import { StoreCache } from './Page';
 import { MUSIC_INDEX_FILENAME } from 'shared/music';
 
@@ -291,6 +292,7 @@ export function ConnectedFoldersSettings({
             </button>
             <StoreCache
               label={server.name}
+              cacheKey={getServerCacheKey(server.id)}
               dbName={getServerCacheName(server.id)}
             />
           </form>

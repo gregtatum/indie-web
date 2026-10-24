@@ -8,6 +8,10 @@ import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
 import { A, T } from 'frontend';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
+import {
+  DROPBOX_CACHE_KEY,
+  getServerCacheKey,
+} from 'frontend/logic/file-store';
 import { BROWSER_FILES_DB_NAME } from 'frontend/logic/file-store/indexeddb-fs';
 import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 import {
@@ -35,11 +39,16 @@ function onboard(store: Store) {
 
 function connectDropbox(store: Store) {
   store.dispatch(A.setDropboxAccessToken('token', 1000, 'refresh-token'));
-  store.dispatch(A.setFileStoreCacheEnabled(false));
 }
 
 function addNasStorage(store: Store) {
   store.dispatch(A.addFileStoreServer(NAS_STORAGE));
+}
+
+function enableCaches(store: Store, ...cacheKeys: string[]) {
+  for (const cacheKey of cacheKeys) {
+    store.dispatch(A.setFileStoreCacheEnabled(cacheKey, true));
+  }
 }
 
 async function renderSettings(store: Store) {
@@ -230,8 +239,8 @@ describe('Settings', () => {
     const store = createStore();
     onboard(store);
     connectDropbox(store);
-    store.dispatch(A.setFileStoreCacheEnabled(true));
     addNasStorage(store);
+    enableCaches(store, DROPBOX_CACHE_KEY, getServerCacheKey(NAS_STORAGE.id));
     await buildTestFiles(getDropboxCache(), ['/a.md', '/b.md']);
     const confirm = confirmPrompts();
 
@@ -272,7 +281,7 @@ describe('Settings', () => {
     const store = createStore();
     onboard(store);
     connectDropbox(store);
-    store.dispatch(A.setFileStoreCacheEnabled(true));
+    enableCaches(store, DROPBOX_CACHE_KEY);
     await buildTestFiles(getDropboxCache(), ['/a.md']);
     jest.spyOn(window, 'confirm').mockReturnValue(false);
 
@@ -292,15 +301,39 @@ describe('Settings', () => {
     expect(toggle.getAttribute('aria-label')).toMatch(/[KMG]?B$/);
   });
 
-  it('hides the store caches when offline caching is disabled', async () => {
+  it('turns caching on for a single store from inside its disclosure', async () => {
     const store = createStore();
     onboard(store);
     connectDropbox(store);
     addNasStorage(store);
+    await buildTestFiles(getDropboxCache(), ['/a.md']);
 
     await renderSettings(store);
 
-    expect(screen.queryByRole('button', { name: /cache:/ })).toBeNull();
+    expect(
+      await screen.findByRole('button', { name: 'Dropbox cache: Off' }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole('button', { name: 'NAS Storage cache: Off' }),
+    ).toBeTruthy();
+
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Dropbox cache: Off' }),
+      );
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByLabelText('Enable offline caching'));
+    });
+
+    expect(
+      await screen.findByRole('button', {
+        name: /^Dropbox cache: \d.* [KMG]?B$/,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'NAS Storage cache: Off' }),
+    ).toBeTruthy();
   });
 
   it('returns to onboarding after removing Dropbox as the last storage', async () => {

@@ -322,9 +322,10 @@ export function setExperimentalFeatures(value: boolean) {
   };
 }
 
-export function setFileStoreCacheEnabled(value: boolean) {
+export function setFileStoreCacheEnabled(cacheKey: string, value: boolean) {
   return {
     type: 'set-file-store-cache-enabled' as const,
+    cacheKey,
     value,
   };
 }

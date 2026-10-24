@@ -17,7 +17,12 @@ import {
 import { parseSearchString } from 'frontend/logic/search';
 import { marked } from 'marked';
 import { DropboxFS } from 'frontend/logic/file-store/dropbox-fs';
-import { FileStore } from 'frontend/logic/file-store';
+import {
+  DROPBOX_CACHE_KEY,
+  FileStore,
+  getServerCacheKey,
+  isCacheEnabled,
+} from 'frontend/logic/file-store';
 import { ServerFS } from 'frontend/logic/file-store/server-fs';
 import * as AppLogic from 'frontend/logic/app-logic';
 
@@ -82,7 +87,7 @@ export function getExperimentalFeatures(state: State) {
   return state.experimentalFeatures;
 }
 
-export function getFileStoreCacheEnabled(state: State) {
+export function getFileStoreCacheSettings(state: State) {
   return state.fileStoreCacheEnabled;
 }
 
@@ -238,9 +243,14 @@ export const getDropboxOrNull = createSelector(
   },
 );
 
+export const getDropboxCacheEnabled = createSelector(
+  getFileStoreCacheSettings,
+  (settings) => isCacheEnabled(settings, DROPBOX_CACHE_KEY),
+);
+
 export const getDropboxFSOrNull = createSelector(
   getDropboxOrNull,
-  getFileStoreCacheEnabled,
+  getDropboxCacheEnabled,
   getWorkerClient,
   (dropbox, cacheEnabled, workerClient) =>
     dropbox ? new DropboxFS(dropbox, cacheEnabled, workerClient) : null,
@@ -279,9 +289,16 @@ export const getCurrentServer = dangerousSelector(
   'The current server is not available.',
 );
 
+export const getCurrentServerCacheEnabled = createSelector(
+  getCurrentServerOrNull,
+  getFileStoreCacheSettings,
+  (server, settings) =>
+    server ? isCacheEnabled(settings, getServerCacheKey(server.id)) : false,
+);
+
 export const getServerFSOrNull = createSelector(
   getCurrentServerOrNull,
-  getFileStoreCacheEnabled,
+  getCurrentServerCacheEnabled,
   getWorkerClient,
   (server, cacheEnabled, workerClient) => {
     if (!server) {

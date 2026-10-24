@@ -3,7 +3,11 @@ import { combineReducers } from 'redux';
 import { getDirName, updatePathRoot } from 'frontend/utils';
 import { FilesIndex } from 'frontend/logic/files-index';
 import type { ImportQualitySettings } from 'shared';
-import type { FileStoreCache } from 'frontend/logic/file-store';
+import {
+  DROPBOX_CACHE_KEY,
+  getServerCacheKey,
+  type FileStoreCache,
+} from 'frontend/logic/file-store';
 import type { WorkerClient } from 'frontend/worker/client';
 import { toFileStoreName } from 'frontend/logic/app-logic';
 import { persistedState } from 'frontend/logic/persisted-state';
@@ -754,23 +758,41 @@ function detectedPointerType(
 }
 
 function fileStoreCacheEnabled(
-  state: boolean = getFileStoreCacheEnabledDefault(),
+  state: Record<string, boolean> = getFileStoreCacheEnabledDefault(),
   action: T.Action,
-): boolean {
+): Record<string, boolean> {
   switch (action.type) {
-    case 'set-file-store-cache-enabled':
-      persistedState.fileStoreCacheEnabled.write(action.value);
-      return action.value;
+    case 'set-file-store-cache-enabled': {
+      const settings = { ...state, [action.cacheKey]: action.value };
+      persistedState.fileStoreCacheSettings.write(settings);
+      return settings;
+    }
     default:
       return state;
   }
 }
 
-function getFileStoreCacheEnabledDefault(): boolean {
-  if (process.env.NODE_ENV === 'test') {
-    return false;
+function getFileStoreCacheEnabledDefault(): Record<string, boolean> {
+  const settings = persistedState.fileStoreCacheSettings.read();
+  if (persistedState.fileStoreCacheEnabled.read() !== false) {
+    return settings;
   }
-  return persistedState.fileStoreCacheEnabled.read() ?? true;
+  // Migrate the old global "off" switch to each existing store, then drop it.
+  // The old key was a bare "true"/"false" string. The new one is a JSON map of
+  // cache key to boolean, where a missing key means on.
+  const migrated = { ...settings };
+  const cacheKeys = [
+    DROPBOX_CACHE_KEY,
+    ...persistedState.fileStoreServers
+      .read()
+      .map((server) => getServerCacheKey(server.id)),
+  ];
+  for (const cacheKey of cacheKeys) {
+    migrated[cacheKey] ??= false;
+  }
+  persistedState.fileStoreCacheSettings.write(migrated);
+  persistedState.fileStoreCacheEnabled.remove();
+  return migrated;
 }
 
 function editorAutocompleteSettings(

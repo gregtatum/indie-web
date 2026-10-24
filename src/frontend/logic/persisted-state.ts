@@ -206,6 +206,21 @@ export const persistedState = {
   inputMode: new StringStorage(),
   detectedPointerType: new StringStorage(),
   fileStoreCacheEnabled: new BooleanStorage(),
+  fileStoreCacheSettings: new JsonStorage({
+    defaultValue: {} as Record<string, boolean>,
+    parse(value): Record<string, boolean> | null {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return null;
+      }
+      const settings: Record<string, boolean> = {};
+      for (const [key, enabled] of Object.entries(value)) {
+        if (typeof enabled === 'boolean') {
+          settings[key] = enabled;
+        }
+      }
+      return settings;
+    },
+  }),
   dropboxCodeVerifier: new StringStorage(),
   dropboxRedirectURL: new StringStorage(),
   musicLastPlayedTrackPath: new StringStorage(),

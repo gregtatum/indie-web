@@ -7,6 +7,7 @@ import {
   getBrowserName,
 } from 'frontend/logic/app-logic';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
+import { DROPBOX_CACHE_KEY, isCacheEnabled } from 'frontend/logic/file-store';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { formatBytes, getEnv } from 'frontend/utils';
 import { useCodeVerifier } from 'frontend/hooks/pcse';
@@ -21,12 +22,15 @@ type CacheUsage =
 
 export function StoreCache({
   label,
+  cacheKey,
   dbName,
 }: {
   label: string;
+  cacheKey: string;
   dbName: string;
 }) {
-  const enabled = $$.getFileStoreCacheEnabled();
+  const dispatch = Hooks.useDispatch();
+  const enabled = isCacheEnabled($$.getFileStoreCacheSettings(), cacheKey);
   const workerClient = $$.getWorkerClient();
   const [expanded, setExpanded] = React.useState(false);
   const [usage, setUsage] = React.useState<CacheUsage>({ status: 'loading' });
@@ -59,14 +63,8 @@ export function StoreCache({
   }, [dbName, workerClient]);
 
   React.useEffect(() => {
-    if (enabled) {
-      void refresh();
-    }
-  }, [enabled, refresh]);
-
-  if (!enabled) {
-    return null;
-  }
+    void refresh();
+  }, [refresh]);
 
   async function clear() {
     if (
@@ -102,6 +100,10 @@ export function StoreCache({
       details = `${usage.fileCount} file${usage.fileCount === 1 ? '' : 's'}.`;
     }
   }
+  const usageSummary = summary;
+  if (!enabled) {
+    summary = 'Off';
+  }
   const canClear =
     usage.status === 'error' ||
     (usage.status === 'ready' && usage.fileCount !== 0);
@@ -122,17 +124,31 @@ export function StoreCache({
         </button>
       </div>
       {expanded && (
-        <div className="storeCacheDetails">
-          <p>{details ?? summary}</p>
-          <button
-            type="button"
-            className="button"
-            aria-label={`Clear ${label} Cache`}
-            disabled={!canClear}
-            onClick={clear}
-          >
-            Clear
-          </button>
+        <div className="storeCacheBody">
+          <label className="storeCacheOption">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(event) =>
+                dispatch(
+                  A.setFileStoreCacheEnabled(cacheKey, event.target.checked),
+                )
+              }
+            />
+            Enable offline caching
+          </label>
+          <div className="storeCacheDetails">
+            <p>{details ?? usageSummary}</p>
+            <button
+              type="button"
+              className="button"
+              aria-label={`Clear ${label} Cache`}
+              disabled={!canClear}
+              onClick={clear}
+            >
+              Clear
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -143,7 +159,6 @@ export function Settings() {
   const experimentalFeatures = $$.getExperimentalFeatures();
   const editorAutocomplete = $$.getEditorAutocompleteSettings();
   const inputMode = $$.getInputMode();
-  const fileStoreCacheEnabled = $$.getFileStoreCacheEnabled();
   const dropboxOauth = $$.getDropboxOauth();
   const idbfs = $$.getIDBFSOrNull();
   const servers = $$.getServers();
@@ -234,41 +249,6 @@ export function Settings() {
           )}
         </div>
         <div className="settingsSectionGrid">
-          <div className="settingsCard settingsSectionCard">
-            <div className="settingsSectionHeading">
-              <div className="settingsSectionTitleRow">
-                <img
-                  className="settingsSectionIcon"
-                  src="/svg/offline.svg"
-                  alt=""
-                />
-                <h2>Offline & Cache</h2>
-              </div>
-              <p>
-                Cache files in your browser for faster access and offline use.
-              </p>
-            </div>
-            <p>
-              <input
-                type="checkbox"
-                id="file-store-cache"
-                defaultChecked={fileStoreCacheEnabled}
-                onChange={(event) => {
-                  dispatch(
-                    A.setFileStoreCacheEnabled(Boolean(event.target.checked)),
-                  );
-                }}
-              />
-              <label htmlFor="file-store-cache">
-                Enable offline file caching
-              </label>
-            </p>
-            {fileStoreCacheEnabled && (
-              <p>
-                Each storage location lists its cache under Storage Providers.
-              </p>
-            )}
-          </div>
           <div className="settingsCard settingsSectionCard">
             <div className="settingsSectionHeading">
               <div className="settingsSectionTitleRow">
@@ -562,7 +542,13 @@ function DropboxStorageProvider() {
           </a>
         )}
       </div>
-      {dropbox && <StoreCache label="Dropbox" dbName={IDB_CACHE_NAME} />}
+      {dropbox && (
+        <StoreCache
+          label="Dropbox"
+          cacheKey={DROPBOX_CACHE_KEY}
+          dbName={IDB_CACHE_NAME}
+        />
+      )}
     </section>
   );
 }
