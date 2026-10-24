@@ -62,9 +62,12 @@ export function StoreCache({
     }
   }, [dbName, workerClient]);
 
+  const needsUsage = enabled || expanded;
   React.useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (needsUsage) {
+      void refresh();
+    }
+  }, [needsUsage, refresh]);
 
   async function clear() {
     if (
