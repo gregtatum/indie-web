@@ -258,6 +258,14 @@ describe('Settings', () => {
     expect(screen.queryByRole('table')).toBeNull();
 
     await act(async () => {
+      await userEvent.hover(screen.getByRole('img', { name: 'Audio' }));
+    });
+    expect(await screen.findByRole('tooltip')).toHaveProperty(
+      'textContent',
+      expect.stringMatching(/^Audio · .* \(36\.8%\)$/),
+    );
+
+    await act(async () => {
       await userEvent.click(toggle);
     });
     expect(toggle.getAttribute('aria-expanded')).toBe('true');

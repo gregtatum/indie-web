@@ -6,6 +6,8 @@ import './Tooltip.css';
 interface TooltipProps {
   text: string;
   children: any;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 const tooltipMargin = 10;
@@ -149,7 +151,8 @@ export function Tooltip(props: TooltipProps) {
 
   return (
     <span
-      className="tooltip"
+      className={props.className ? `tooltip ${props.className}` : 'tooltip'}
+      style={props.style}
       ref={anchorRef}
       onMouseEnter={open}
       onMouseLeave={close}

@@ -13,6 +13,7 @@ import { FILE_CATEGORIES, formatBytes, getEnv } from 'frontend/utils';
 import { useCodeVerifier } from 'frontend/hooks/pcse';
 import { ConnectedFoldersSettings } from './ConnectFolder';
 import { InfoLink } from './InfoLink';
+import { Tooltip } from './Tooltip';
 import './Page.css';
 
 const CATEGORY_LABELS: Record<T.FileCategory, string> = {
@@ -113,6 +114,18 @@ export function StoreCache({
       usage.fileCount === 0 ? 'Empty' : formatBytes(usage.totalBytes);
   }
   const summary = enabled ? usageSummary : 'Off';
+  const categoryRows =
+    usage.status === 'ready'
+      ? FILE_CATEGORIES.filter(
+          (category) => usage.categories[category].files > 0,
+        ).map((category) => {
+          const { bytes } = usage.categories[category];
+          const percent = usage.totalBytes
+            ? ((bytes / usage.totalBytes) * 100).toFixed(1)
+            : '0.0';
+          return { category, bytes, percent };
+        })
+      : [];
   const canClear =
     usage.status === 'error' ||
     (usage.status === 'ready' && usage.fileCount !== 0);
@@ -130,6 +143,24 @@ export function StoreCache({
           <span className="disclosureChevron" aria-hidden="true" />
           <span className="storeCacheTitle">Cache</span>
           <span className="storeCacheSummaryText">{summary}</span>
+          <span className="storeCacheBar">
+            {(enabled ? categoryRows : []).map(
+              ({ category, bytes, percent }) => (
+                <Tooltip
+                  key={category}
+                  className={`storeCacheBarSegment storeCacheCategory-${category}`}
+                  style={{ flexGrow: bytes }}
+                  text={`${CATEGORY_LABELS[category]} · ${formatBytes(bytes)} (${percent}%)`}
+                >
+                  <span
+                    className="storeCacheBarFill"
+                    role="img"
+                    aria-label={CATEGORY_LABELS[category]}
+                  />
+                </Tooltip>
+              ),
+            )}
+          </span>
         </button>
       </div>
       {expanded && (
@@ -160,13 +191,7 @@ export function StoreCache({
           {usage.status === 'ready' && usage.fileCount > 0 ? (
             <table className="storeCacheTable">
               <tbody>
-                {FILE_CATEGORIES.filter(
-                  (category) => usage.categories[category].files > 0,
-                ).map((category) => {
-                  const { bytes } = usage.categories[category];
-                  const percent = usage.totalBytes
-                    ? ((bytes / usage.totalBytes) * 100).toFixed(1)
-                    : '0.0';
+                {categoryRows.map(({ category, bytes, percent }) => {
                   return (
                     <tr
                       key={category}

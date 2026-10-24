@@ -296,18 +296,49 @@
   color: inherit;
   cursor: pointer;
   display: flex;
+  flex: 1;
   font: inherit;
   gap: 10px;
+  min-width: 0;
   padding: 0;
   text-align: left;
 }
 
 .storeCacheTitle {
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .storeCacheSummaryText {
+  flex: 0 0 6em;
   opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.storeCacheBar {
+  background-color: #ddd;
+  border-radius: 5px;
+  display: flex;
+  flex: 1 1 0;
+  height: 10px;
+  min-width: 40px;
+  overflow: hidden;
+}
+
+.storeCacheBarSegment {
+  flex-basis: 0;
+  min-width: 2px;
+
+  & + & {
+    border-inline-start: 1px solid #eee;
+  }
+}
+
+.storeCacheBarFill {
+  background-color: var(--storeCacheCategoryColor);
+  flex: 1;
 }
 
 .storeCacheBody {
