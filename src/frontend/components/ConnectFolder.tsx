@@ -39,6 +39,10 @@ export function ConnectFolder() {
       dispatch(A.addFileStoreServer(server));
       dispatch(A.changeFileStore('server', server));
       navigate('/');
+    } else if (!name) {
+      nameRef.current?.focus();
+    } else if (!normalizeServerUrl(url)) {
+      urlRef.current?.focus();
     }
   }
 

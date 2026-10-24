@@ -46,6 +46,26 @@ describe('Connect', () => {
     ).toBeTruthy();
   });
 
+  it('focuses the name field when it is missing', async () => {
+    render(
+      <MemoryRouter initialEntries={['/add-storage-provider']}>
+        <Provider store={createStore() as any}>
+          <AppRoutes />
+        </Provider>
+      </MemoryRouter>,
+    );
+    await settleApp();
+
+    const button = await screen.findByRole('button', {
+      name: 'Connect Folder',
+    });
+    await act(async () => {
+      await userEvent.click(button);
+    });
+
+    expect(document.activeElement).toBe(screen.getByLabelText('Name'));
+  });
+
   it('does not select Dropbox before Dropbox auth completes', async () => {
     render(
       <MemoryRouter initialEntries={['/connect']}>
