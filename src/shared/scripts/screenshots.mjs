@@ -213,8 +213,59 @@ const SHOTS = [
     describe: 'Settings: storage providers with expanded cache rows',
     prepare: async (page) => {
       await page.waitForSelector('.storeCacheToggle', { timeout: 10000 });
-      await page.locator('.storeCacheToggle').first().click();
-      await page.locator('.connectedFolderList').scrollIntoViewIfNeeded();
+      await page.waitForFunction(
+        // eslint-disable-next-line no-undef
+        () => !document.body.innerText.includes('Estimating'),
+        null,
+        { timeout: 10000 },
+      );
+      await page.evaluate(async () => {
+        /* eslint-disable no-undef */
+        const databases = await indexedDB.databases();
+        const names = databases
+          .map((database) => database.name)
+          .filter((name) => name?.startsWith('server-fs-cache('));
+        let db = null;
+        for (const name of names) {
+          const opened = await new Promise((resolve, reject) => {
+            const request = indexedDB.open(name);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+          if (opened.objectStoreNames.contains('files')) {
+            db = opened;
+            break;
+          }
+          opened.close();
+        }
+        if (!db) {
+          throw new Error('No cache database found among ' + names);
+        }
+        const tx = db.transaction('files', 'readwrite');
+        const sizes = {
+          '/song.mp3': 50.8e6,
+          '/notes.md': 1.1e6,
+          '/cover.jpg': 18e6,
+          '/score.pdf': 0.9e6,
+          '/data.bin': 0.2e6,
+        };
+        for (const [path, size] of Object.entries(sizes)) {
+          tx.objectStore('files').put({
+            metadata: { path, size, name: path.slice(1) },
+            storedAt: new Date(),
+            accessedAt: new Date(),
+            type: 'text',
+            text: '',
+          });
+        }
+        await new Promise((resolve) => (tx.oncomplete = resolve));
+        db.close();
+        /* eslint-enable no-undef */
+      });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.storeCacheToggle', { timeout: 10000 });
+      await page.locator('.storeCacheToggle').last().click();
+      await page.locator('.storeCacheTable').scrollIntoViewIfNeeded();
     },
   },
   {

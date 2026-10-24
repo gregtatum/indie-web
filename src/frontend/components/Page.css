@@ -306,8 +306,7 @@
   font-weight: 600;
 }
 
-.storeCacheSummaryText,
-.storeCacheDetails p {
+.storeCacheSummaryText {
   opacity: 0.7;
 }
 
@@ -316,6 +315,13 @@
   flex-direction: column;
   gap: 8px;
   margin: 8px 0 0 24px;
+}
+
+.storeCacheOptions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
 }
 
 .storeCacheOption {
@@ -328,13 +334,80 @@
   }
 }
 
-.storeCacheDetails {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
+.storeCacheMessage {
+  margin: 0;
+  opacity: 0.7;
+}
 
-  & p {
-    margin: 0;
+.storeCacheTable {
+  border-collapse: collapse;
+  width: 100%;
+
+  & tr + tr {
+    border-top: 1px solid #ddd;
   }
+
+  & th,
+  & td {
+    font-weight: normal;
+    padding: 6px 0;
+    text-align: left;
+  }
+
+  & th {
+    width: 50%;
+  }
+}
+
+.storeCacheCategoryIconCell {
+  width: 28px;
+}
+
+.storeCacheCategoryIcon {
+  background-color: var(--storeCacheCategoryColor);
+  display: block;
+  height: 18px;
+  mask-image: var(--storeCacheCategoryIcon);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  width: 18px;
+}
+
+.storeCacheCategoryDot {
+  background-color: var(--storeCacheCategoryColor);
+  border-radius: 50%;
+  display: inline-block;
+  height: 10px;
+  margin-inline-end: 8px;
+  width: 10px;
+}
+
+.storeCachePercent {
+  opacity: 0.7;
+}
+
+.storeCacheCategory-audio {
+  --storeCacheCategoryColor: #6d3cf0;
+  --storeCacheCategoryIcon: url('/data/common/svg/music.svg');
+}
+
+.storeCacheCategory-text {
+  --storeCacheCategoryColor: #2f80ed;
+  --storeCacheCategoryIcon: url('/data/common/svg/file-alt.svg');
+}
+
+.storeCacheCategory-images {
+  --storeCacheCategoryColor: #27a35a;
+  --storeCacheCategoryIcon: url('/data/common/svg/image-square.svg');
+}
+
+.storeCacheCategory-pdf {
+  --storeCacheCategoryColor: #f2994a;
+  --storeCacheCategoryIcon: url('/data/common/svg/file.svg');
+}
+
+.storeCacheCategory-other {
+  --storeCacheCategoryColor: #7b7f8e;
+  --storeCacheCategoryIcon: url('/data/common/svg/three-dots.svg');
 }

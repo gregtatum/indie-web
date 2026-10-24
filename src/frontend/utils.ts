@@ -1,4 +1,5 @@
 import { ensureExists } from 'shared/utils';
+import type { T } from 'frontend';
 
 export * from 'shared/utils';
 
@@ -203,6 +204,45 @@ export const imageExtensions = new Set([
   'tif',
   'tiff',
 ]);
+
+const audioExtensions = new Set([
+  'mp3',
+  'm4a',
+  'flac',
+  'wav',
+  'ogg',
+  'opus',
+  'aac',
+]);
+
+const plainTextExtensions = new Set(['md', 'markdown', 'txt']);
+
+export const FILE_CATEGORIES: ReadonlyArray<T.FileCategory> = [
+  'audio',
+  'text',
+  'images',
+  'pdf',
+  'other',
+];
+
+export function getFileCategory(path: string): T.FileCategory {
+  const extension = splitOutFileExtension(getPathFileName(path))
+    .extension.slice(1)
+    .toLowerCase();
+  if (audioExtensions.has(extension)) {
+    return 'audio';
+  }
+  if (plainTextExtensions.has(extension) || isChordProExtension(extension)) {
+    return 'text';
+  }
+  if (imageExtensions.has(extension)) {
+    return 'images';
+  }
+  if (extension === 'pdf') {
+    return 'pdf';
+  }
+  return 'other';
+}
 
 export function getUrlForFile(fsName: string, path: string): string | null {
   let extension;

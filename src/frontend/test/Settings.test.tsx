@@ -241,7 +241,7 @@ describe('Settings', () => {
     connectDropbox(store);
     addNasStorage(store);
     enableCaches(store, DROPBOX_CACHE_KEY, getServerCacheKey(NAS_STORAGE.id));
-    await buildTestFiles(getDropboxCache(), ['/a.md', '/b.md']);
+    await buildTestFiles(getDropboxCache(), ['/a.md', '/b.md', '/song.mp3']);
     const confirm = confirmPrompts();
 
     await renderSettings(store);
@@ -255,13 +255,24 @@ describe('Settings', () => {
       name: /^Dropbox cache: \d.* [KMG]?B$/,
       expanded: false,
     });
-    expect(screen.queryByText('2 files.')).toBeNull();
+    expect(screen.queryByRole('table')).toBeNull();
 
     await act(async () => {
       await userEvent.click(toggle);
     });
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByText('2 files.')).toBeTruthy();
+    const table = screen.getByRole('table');
+    expect(
+      within(within(table).getByRole('row', { name: /Text/ })).getByText(
+        /\(63\.2%\)/,
+      ),
+    ).toBeTruthy();
+    expect(
+      within(within(table).getByRole('row', { name: /Audio/ })).getByText(
+        /\(36\.8%\)/,
+      ),
+    ).toBeTruthy();
+    expect(within(table).queryByRole('row', { name: /Images/ })).toBeNull();
 
     await act(async () => {
       await userEvent.click(

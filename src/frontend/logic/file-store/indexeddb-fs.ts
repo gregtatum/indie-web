@@ -3,6 +3,8 @@ import { FileStoreCache, FileStoreError } from 'frontend/logic/file-store';
 import { type T } from 'frontend';
 import type { WorkerClient } from 'frontend/worker/client';
 import {
+  FILE_CATEGORIES,
+  getFileCategory,
   getPathFileName,
   getDirName,
   isSameFileVersion,
@@ -24,6 +26,19 @@ const ACCESS_TOUCH_INTERVAL_MS = 60 * 60 * 1000;
  */
 function isLargeSize(metadata: T.FileMetadata | undefined) {
   return metadata && metadata.size >= LARGE_FILE_BYTES ? metadata.size : 0;
+}
+
+function getRowSize(row: T.StoredBlobFile | T.StoredTextFile): number {
+  if (typeof row.metadata?.size === 'number') {
+    return row.metadata.size;
+  }
+  if ('blob' in row && row.blob instanceof Blob) {
+    return row.blob.size;
+  }
+  if ('text' in row && typeof row.text === 'string') {
+    return row.text.length;
+  }
+  return 0;
 }
 
 function withAccess<R extends { metadata: T.FileMetadata }>(
@@ -187,8 +202,8 @@ class WorkerIDBFS extends FileStoreCache {
     return this.#request('isCached', path);
   }
 
-  async getApproximateSize(): Promise<number> {
-    return this.#request('getApproximateSize');
+  async getUsageByCategory(): Promise<T.CacheCategoryUsage> {
+    return this.#request('getUsageByCategory');
   }
 
   async clear(): Promise<void> {
@@ -327,24 +342,20 @@ export class IDBFS extends FileStoreCache {
     return Boolean(row);
   }
 
-  async getApproximateSize(): Promise<number> {
+  async getUsageByCategory(): Promise<T.CacheCategoryUsage> {
+    const usage = Object.fromEntries(
+      FILE_CATEGORIES.map((category) => [category, { bytes: 0, files: 0 }]),
+    ) as T.CacheCategoryUsage;
     const tx = this.#db.transaction('files', 'readonly');
-    const store = tx.objectStore('files');
-    let total = 0;
-    let cursor = await store.openCursor();
+    let cursor = await tx.store.openCursor();
     while (cursor) {
-      const row = cursor.value as T.StoredBlobFile | T.StoredTextFile;
-      if (typeof row.metadata?.size === 'number') {
-        total += row.metadata.size;
-      } else if ('blob' in row && row.blob instanceof Blob) {
-        total += row.blob.size;
-      } else if ('text' in row && typeof row.text === 'string') {
-        total += row.text.length;
-      }
+      const category = usage[getFileCategory(cursor.key)];
+      category.bytes += getRowSize(cursor.value);
+      category.files += 1;
       cursor = await cursor.continue();
     }
     await tx.done;
-    return total;
+    return usage;
   }
 
   async clear(): Promise<void> {

@@ -9,16 +9,29 @@ import {
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import { DROPBOX_CACHE_KEY, isCacheEnabled } from 'frontend/logic/file-store';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
-import { formatBytes, getEnv } from 'frontend/utils';
+import { FILE_CATEGORIES, formatBytes, getEnv } from 'frontend/utils';
 import { useCodeVerifier } from 'frontend/hooks/pcse';
 import { ConnectedFoldersSettings } from './ConnectFolder';
 import { InfoLink } from './InfoLink';
 import './Page.css';
 
+const CATEGORY_LABELS: Record<T.FileCategory, string> = {
+  audio: 'Audio',
+  text: 'Text',
+  images: 'Images',
+  pdf: 'PDFs',
+  other: 'Other',
+};
+
 type CacheUsage =
   | { status: 'loading' }
   | { status: 'error'; error: string }
-  | { status: 'ready'; size: number; fileCount: number };
+  | {
+      status: 'ready';
+      categories: T.CacheCategoryUsage;
+      totalBytes: number;
+      fileCount: number;
+    };
 
 export function StoreCache({
   label,
@@ -47,12 +60,14 @@ export function StoreCache({
     setUsage({ status: 'loading' });
     try {
       const cache = await openIDBFS(dbName, workerClient);
-      const [size, fileCount] = await Promise.all([
-        cache.getApproximateSize(),
-        cache.getFileCount(),
-      ]);
+      const categories = await cache.getUsageByCategory();
       if (isMountedRef.current) {
-        setUsage({ status: 'ready', size, fileCount });
+        setUsage({
+          status: 'ready',
+          categories,
+          totalBytes: sumCategories(categories, 'bytes'),
+          fileCount: sumCategories(categories, 'files'),
+        });
       }
     } catch (error) {
       console.error(error);
@@ -90,23 +105,14 @@ export function StoreCache({
     }
   }
 
-  let summary = 'Estimating...';
-  let details: string | null = null;
+  let usageSummary = 'Estimating...';
   if (usage.status === 'error') {
-    summary = usage.error;
+    usageSummary = usage.error;
   } else if (usage.status === 'ready') {
-    if (usage.fileCount === 0) {
-      summary = 'Empty';
-      details = 'No files cached.';
-    } else {
-      summary = formatBytes(usage.size);
-      details = `${usage.fileCount} file${usage.fileCount === 1 ? '' : 's'}.`;
-    }
+    usageSummary =
+      usage.fileCount === 0 ? 'Empty' : formatBytes(usage.totalBytes);
   }
-  const usageSummary = summary;
-  if (!enabled) {
-    summary = 'Off';
-  }
+  const summary = enabled ? usageSummary : 'Off';
   const canClear =
     usage.status === 'error' ||
     (usage.status === 'ready' && usage.fileCount !== 0);
@@ -128,20 +134,19 @@ export function StoreCache({
       </div>
       {expanded && (
         <div className="storeCacheBody">
-          <label className="storeCacheOption">
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={(event) =>
-                dispatch(
-                  A.setFileStoreCacheEnabled(cacheKey, event.target.checked),
-                )
-              }
-            />
-            Enable offline caching
-          </label>
-          <div className="storeCacheDetails">
-            <p>{details ?? usageSummary}</p>
+          <div className="storeCacheOptions">
+            <label className="storeCacheOption">
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(event) =>
+                  dispatch(
+                    A.setFileStoreCacheEnabled(cacheKey, event.target.checked),
+                  )
+                }
+              />
+              Enable offline caching
+            </label>
             <button
               type="button"
               className="button"
@@ -152,9 +157,59 @@ export function StoreCache({
               Clear
             </button>
           </div>
+          {usage.status === 'ready' && usage.fileCount > 0 ? (
+            <table className="storeCacheTable">
+              <tbody>
+                {FILE_CATEGORIES.filter(
+                  (category) => usage.categories[category].files > 0,
+                ).map((category) => {
+                  const { bytes } = usage.categories[category];
+                  const percent = usage.totalBytes
+                    ? ((bytes / usage.totalBytes) * 100).toFixed(1)
+                    : '0.0';
+                  return (
+                    <tr
+                      key={category}
+                      className={`storeCacheCategory-${category}`}
+                    >
+                      <td className="storeCacheCategoryIconCell">
+                        <span
+                          className="storeCacheCategoryIcon"
+                          aria-hidden="true"
+                        />
+                      </td>
+                      <th scope="row">{CATEGORY_LABELS[category]}</th>
+                      <td>
+                        <span
+                          className="storeCacheCategoryDot"
+                          aria-hidden="true"
+                        />
+                        {formatBytes(bytes)}{' '}
+                        <span className="storeCachePercent">({percent}%)</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p className="storeCacheMessage">
+              {usage.status === 'ready' ? 'No files cached.' : usageSummary}
+            </p>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function sumCategories(
+  categories: T.CacheCategoryUsage,
+  field: 'bytes' | 'files',
+): number {
+  return FILE_CATEGORIES.reduce(
+    (total, category) => total + categories[category][field],
+    0,
   );
 }
 

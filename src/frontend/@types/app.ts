@@ -105,6 +105,13 @@ export interface FolderListingRow {
 
 export type FileRow = StoredTextFile | StoredBlobFile;
 
+export type FileCategory = 'audio' | 'text' | 'images' | 'pdf' | 'other';
+
+export type CacheCategoryUsage = Record<
+  FileCategory,
+  { bytes: number; files: number }
+>;
+
 export type StoredTextFile = {
   metadata: FileMetadata;
   storedAt: Date;
