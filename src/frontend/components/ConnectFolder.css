@@ -36,10 +36,6 @@
 }
 
 .connectedFolderList {
-  border: 1px solid #ddd;
-  background-color: #eee;
-  border-radius: 4px;
-  padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -47,7 +43,7 @@
   & > form {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
-    gap: 4px 10px;
+    gap: 12px 10px;
     margin: 0;
 
     @media (max-width: 600px) {

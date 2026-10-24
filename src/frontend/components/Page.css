@@ -277,7 +277,11 @@
 }
 
 .storeCache {
+  background-color: #eee;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   grid-column: 1 / -1;
+  padding: 8px;
 }
 
 .storeCacheSummary {
