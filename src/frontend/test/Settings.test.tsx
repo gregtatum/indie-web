@@ -281,6 +281,11 @@ describe('Settings', () => {
       ),
     ).toBeTruthy();
     expect(within(table).queryByRole('row', { name: /Images/ })).toBeNull();
+    expect(
+      screen.getByText(
+        /of .* budget used by large files\. Text is not counted\./,
+      ),
+    ).toBeTruthy();
 
     await act(async () => {
       await userEvent.click(

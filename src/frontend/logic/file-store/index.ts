@@ -74,7 +74,7 @@ export abstract class FileStore {
 const FALLBACK_CACHE_BUDGET = 512 * 1024 * 1024;
 const CACHE_QUOTA_FRACTION = 0.25;
 
-async function getCacheBudget(): Promise<number> {
+export async function getCacheBudget(): Promise<number> {
   const quota = (await navigator.storage?.estimate?.())?.quota;
   return quota ? quota * CACHE_QUOTA_FRACTION : FALLBACK_CACHE_BUDGET;
 }

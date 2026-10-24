@@ -245,10 +245,19 @@
   height: 10px;
   min-width: 40px;
   overflow: hidden;
+  position: relative;
+}
+
+.storeCacheBarLimit {
+  background-color: #444;
+  bottom: 0;
+  position: absolute;
+  top: 0;
+  width: 2px;
 }
 
 .storeCacheBarSegment {
-  flex-basis: 0;
+  flex: 0 0 auto;
   min-width: 2px;
 
   & + & {

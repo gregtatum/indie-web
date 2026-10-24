@@ -7,7 +7,11 @@ import {
   getBrowserName,
 } from 'frontend/logic/app-logic';
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
-import { DROPBOX_CACHE_KEY, isCacheEnabled } from 'frontend/logic/file-store';
+import {
+  DROPBOX_CACHE_KEY,
+  getCacheBudget,
+  isCacheEnabled,
+} from 'frontend/logic/file-store';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { FILE_CATEGORIES, formatBytes, getEnv } from 'frontend/utils';
 import { useCodeVerifier } from 'frontend/hooks/pcse';
@@ -32,6 +36,7 @@ type CacheUsage =
       categories: T.CacheCategoryUsage;
       totalBytes: number;
       fileCount: number;
+      budgetBytes: number;
     };
 
 export function StoreCache({
@@ -61,13 +66,17 @@ export function StoreCache({
     setUsage({ status: 'loading' });
     try {
       const cache = await openIDBFS(dbName, workerClient);
-      const categories = await cache.getUsageByCategory();
+      const [categories, budgetBytes] = await Promise.all([
+        cache.getUsageByCategory(),
+        getCacheBudget(),
+      ]);
       if (isMountedRef.current) {
         setUsage({
           status: 'ready',
           categories,
           totalBytes: sumCategories(categories, 'bytes'),
           fileCount: sumCategories(categories, 'files'),
+          budgetBytes,
         });
       }
     } catch (error) {
@@ -126,6 +135,15 @@ export function StoreCache({
           return { category, bytes, percent };
         })
       : [];
+  const textBytes = usage.status === 'ready' ? usage.categories.text.bytes : 0;
+  const largeBytes =
+    usage.status === 'ready' ? usage.totalBytes - textBytes : 0;
+  const budgetBytes = usage.status === 'ready' ? usage.budgetBytes : 0;
+  const barBytes = textBytes + Math.max(budgetBytes, largeBytes);
+  const barRows = [
+    ...categoryRows.filter(({ category }) => category === 'text'),
+    ...categoryRows.filter(({ category }) => category !== 'text'),
+  ];
   const canClear =
     usage.status === 'error' ||
     (usage.status === 'ready' && usage.fileCount !== 0);
@@ -144,21 +162,27 @@ export function StoreCache({
           <span className="storeCacheTitle">Cache</span>
           <span className="storeCacheSummaryText">{summary}</span>
           <span className="storeCacheBar">
-            {(enabled ? categoryRows : []).map(
-              ({ category, bytes, percent }) => (
-                <Tooltip
-                  key={category}
-                  className={`storeCacheBarSegment storeCacheCategory-${category}`}
-                  style={{ flexGrow: bytes }}
-                  text={`${CATEGORY_LABELS[category]} · ${formatBytes(bytes)} (${percent}%)`}
-                >
-                  <span
-                    className="storeCacheBarFill"
-                    role="img"
-                    aria-label={CATEGORY_LABELS[category]}
-                  />
-                </Tooltip>
-              ),
+            {(enabled ? barRows : []).map(({ category, bytes, percent }) => (
+              <Tooltip
+                key={category}
+                className={`storeCacheBarSegment storeCacheCategory-${category}`}
+                style={{ flexBasis: `${(bytes / barBytes) * 100}%` }}
+                text={`${CATEGORY_LABELS[category]} · ${formatBytes(bytes)} (${percent}%)`}
+              >
+                <span
+                  className="storeCacheBarFill"
+                  role="img"
+                  aria-label={CATEGORY_LABELS[category]}
+                />
+              </Tooltip>
+            ))}
+            {enabled && usage.status === 'ready' && barBytes > 0 && (
+              <span
+                className="storeCacheBarLimit"
+                style={{
+                  insetInlineStart: `${((textBytes + budgetBytes) / barBytes) * 100}%`,
+                }}
+              />
             )}
           </span>
         </button>
@@ -188,6 +212,12 @@ export function StoreCache({
               Clear
             </button>
           </div>
+          {usage.status === 'ready' && (
+            <p className="storeCacheMessage">
+              {formatBytes(largeBytes)} of {formatBytes(budgetBytes)} budget
+              used by large files. Text is not counted.
+            </p>
+          )}
           {usage.status === 'ready' && usage.fileCount > 0 ? (
             <table className="storeCacheTable">
               <tbody>
