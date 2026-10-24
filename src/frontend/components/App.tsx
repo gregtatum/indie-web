@@ -13,7 +13,8 @@ import { ViewMarkdown } from './ViewMarkdown';
 
 import { Messages } from './Messages';
 import { ensureNever, UnhandledCaseError } from 'frontend/utils';
-import { Settings, Connect } from './Page';
+import { Connect } from './Connect';
+import { Settings } from './Settings';
 import { useFilesIndex } from 'frontend/logic/files-index';
 
 import { toFileStoreName } from 'frontend/logic/app-logic';

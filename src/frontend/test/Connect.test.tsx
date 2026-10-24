@@ -5,7 +5,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import userEvent from '@testing-library/user-event';
 import { AppRoutes } from 'frontend/components/App';
-import { Connect } from 'frontend/components/Page';
+import { Connect } from 'frontend/components/Connect';
 import { persistedState } from 'frontend/logic/persisted-state';
 import { createStore } from 'frontend/store/create-store';
 import { A } from 'frontend';

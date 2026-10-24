@@ -10,7 +10,7 @@ import {
   getServerCacheName,
 } from 'frontend/logic/file-store/server-fs';
 import { getServerCacheKey } from 'frontend/logic/file-store';
-import { StoreCache } from './Page';
+import { StoreCache } from './Settings';
 import { MUSIC_INDEX_FILENAME } from 'shared/music';
 
 const DEFAULT_SERVER_URL = 'http://localhost:6543';
