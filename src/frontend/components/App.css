@@ -450,3 +450,38 @@ code {
     transform: rotate(90deg);
   }
 }
+
+.page {
+  width: 100%;
+  justify-content: center;
+  display: flex;
+  line-height: 1.4;
+}
+
+.page .button {
+  font-size: var(--font-size-normal);
+  padding: 0.2em 0.5em;
+}
+
+.pageInner {
+  width: 100%;
+  margin: 40px;
+  @media (max-width: 600px) {
+    & {
+      width: calc(100% - 30px);
+    }
+  }
+}
+
+.pageInner > h1:first-child,
+.pageInner > h2:first-child,
+.pageInner > h3:first-child,
+.pageInner > h4:first-child {
+  margin-top: 0;
+}
+
+@media (min-width: 900px) {
+  .pageInner {
+    max-width: var(--page-max-width);
+  }
+}

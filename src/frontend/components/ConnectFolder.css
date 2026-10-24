@@ -59,3 +59,21 @@
     padding: 0.5rem;
   }
 }
+
+.connectFolderBeta {
+  text-transform: uppercase;
+  margin: 0 0.5em;
+  font-size: 0.5em;
+  padding: 0.6em 0.5em 0.5em;
+  display: inline-block;
+  background: #ccc;
+  border-radius: 0.5em;
+  line-height: 0.7;
+  position: relative;
+  top: -0.3em;
+}
+
+.connectFolderExperimental {
+  background: #f5a623;
+  color: #fff;
+}

@@ -2,7 +2,6 @@ import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { A, Hooks } from 'frontend';
 import { getBrowserName } from 'frontend/logic/app-logic';
-import './Page.css';
 import './Connect.css';
 
 export function Connect() {
@@ -19,7 +18,7 @@ export function Connect() {
           from your computer, home server, or NAS. You can always add another
           storage location later.
         </p>
-        <div className="pageButtonList">
+        <div className="connectButtonList">
           <button
             type="button"
             className="button button-primary"
@@ -48,7 +47,7 @@ export function Connect() {
               navigate('/connect-folder');
             }}
           >
-            Connect Folder <span className="pageButtonBeta">Beta</span>
+            Connect Folder <span className="connectButtonBeta">Beta</span>
           </button>
         </div>
       </div>

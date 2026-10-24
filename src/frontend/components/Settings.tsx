@@ -14,7 +14,6 @@ import { useCodeVerifier } from 'frontend/hooks/pcse';
 import { ConnectedFoldersSettings } from './ConnectFolder';
 import { InfoLink } from './InfoLink';
 import { Tooltip } from './Tooltip';
-import './Page.css';
 import './Settings.css';
 
 const CATEGORY_LABELS: Record<T.FileCategory, string> = {

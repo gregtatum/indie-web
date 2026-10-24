@@ -86,7 +86,7 @@ export function ConnectFolder() {
       <div className="pageInner">
         <h1>
           Connect a Folder
-          <span className="pageBeta">Beta</span>
+          <span className="connectFolderBeta">Beta</span>
         </h1>
         <h2>
           Local &amp; Network Storage{' '}
@@ -162,7 +162,7 @@ export function ConnectFolder() {
                     onChange={() => setStoreType('music')}
                   />
                   {' Music Storage '}
-                  <span className="pageBeta pageExperimental">
+                  <span className="connectFolderBeta connectFolderExperimental">
                     Experimental
                   </span>
                 </label>

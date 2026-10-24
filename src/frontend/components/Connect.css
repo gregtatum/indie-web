@@ -1,4 +1,4 @@
-.pageButtonList {
+.connectButtonList {
   flex-direction: column;
   display: flex;
   gap: 1em;
@@ -9,7 +9,7 @@
   }
 }
 
-.pageButtonBeta {
+.connectButtonBeta {
   text-transform: uppercase;
   margin: 0 0.5em;
   font-size: 0.5em;
