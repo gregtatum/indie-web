@@ -97,7 +97,7 @@ export class ServerFS extends FileStore {
 
     const metadata = await response.json();
     log('saveBlob completed', metadata);
-    this.cache?.saveBlob(metadata, mode, contents).catch(console.error);
+    this.cacheBlob(metadata, mode, contents);
 
     return metadata;
   }
@@ -130,7 +130,7 @@ export class ServerFS extends FileStore {
 
     const blobFile = { metadata, blob };
     log('loadBlob completed', metadata);
-    this.cache?.saveBlob(metadata, 'overwrite', blob).catch(console.error);
+    this.cacheBlob(metadata, 'overwrite', blob);
 
     return blobFile;
   }
@@ -141,7 +141,7 @@ export class ServerFS extends FileStore {
       path,
     });
     log('listFiles completed', listing);
-    this.cache?.addFolderListing(path, listing).catch(console.error);
+    this.cache?.syncFolderListing(path, listing).catch(console.error);
     return listing;
   }
 

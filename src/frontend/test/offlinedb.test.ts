@@ -1,3 +1,4 @@
+import * as idb from 'idb';
 import {
   createFileMetadata,
   foldersFromPaths,
@@ -626,6 +627,79 @@ describe('offline db', () => {
     await idbfs.delete(`${folder}/02 Doomed (Remix) (1).mp3`);
 
     expect(await idbfs.listFiles(folder)).toEqual([tracks[0]]);
+    idbfs.close();
+  });
+
+  it('drops cached files that a synced listing no longer has', async () => {
+    const idbfs = await openIDBFS('test-db');
+    const folder = '/Album';
+    const keep = createFileMetadata(`${folder}/01 Keep.mp3`);
+    const gone = createFileMetadata(`${folder}/02 Gone.mp3`);
+    await idbfs.saveText(keep, 'overwrite', 'keep');
+    await idbfs.saveText(gone, 'overwrite', 'gone');
+
+    await idbfs.syncFolderListing(folder, [keep]);
+
+    expect(await idbfs.isCached(keep.path)).toBe(true);
+    expect(await idbfs.isCached(gone.path)).toBe(false);
+    expect(await idbfs.listFiles(folder)).toEqual([keep]);
+    idbfs.close();
+  });
+
+  it('replaces a cached file when only the revision changed', async () => {
+    const idbfs = await openIDBFS('test-db');
+    const metadata = { ...createFileMetadata('/song.mp3'), hash: '' };
+    await idbfs.saveText(metadata, 'overwrite', 'old');
+    await idbfs.saveText({ ...metadata, rev: 'rev:2' }, 'overwrite', 'new');
+
+    expect((await idbfs.loadText(metadata.path)).text).toBe('new');
+    idbfs.close();
+  });
+
+  it('backfills when files were last accessed for version 1 databases', async () => {
+    const v1 = await idb.openDB('test-db', 1, {
+      upgrade(db) {
+        const files = db.createObjectStore('files', {
+          keyPath: 'metadata.path',
+        });
+        files.createIndex('by-hash', 'metadata.hash');
+        files.createIndex('by-id', 'metadata.id');
+        db.createObjectStore('folderListings', { keyPath: 'path' });
+      },
+    });
+    const storedAt = new Date('2024-01-01T00:00:00Z');
+    await v1.put('files', {
+      metadata: { ...createFileMetadata('/old.mp3'), size: 2 * 1024 * 1024 },
+      storedAt,
+      text: 'old',
+    });
+    v1.close();
+
+    const idbfs = await openIDBFS('test-db');
+    await idbfs.evictLargeFiles(0);
+
+    expect(await idbfs.isCached('/old.mp3')).toBe(false);
+    idbfs.close();
+  });
+
+  it('evicts the least recently used large files and keeps small ones', async () => {
+    const idbfs = await openIDBFS('test-db');
+    const megabyte = 1024 * 1024;
+    const save = (path: string, size: number) =>
+      idbfs.saveText({ ...createFileMetadata(path), size }, 'overwrite', path);
+    await save('/old.mp3', 4 * megabyte);
+    await save('/recent.mp3', 4 * megabyte);
+    await save('/notes.md', 100);
+
+    await idbfs.loadBlob('/old.mp3');
+    jest.spyOn(Date, 'now').mockReturnValue(Date.now() + 2 * 60 * 60 * 1000);
+    await idbfs.loadBlob('/recent.mp3');
+
+    await idbfs.evictLargeFiles(5 * megabyte);
+
+    expect(await idbfs.isCached('/old.mp3')).toBe(false);
+    expect(await idbfs.isCached('/recent.mp3')).toBe(true);
+    expect(await idbfs.isCached('/notes.md')).toBe(true);
     idbfs.close();
   });
 });

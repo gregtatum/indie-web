@@ -7,6 +7,7 @@ import {
   dropboxErrorMessage,
   ensureExists,
   getDirName,
+  isSameFileVersion,
   getGeneration,
   getPathFileName,
   insertTextAtLine,
@@ -318,7 +319,7 @@ export function downloadFile(path: string): Thunk<Promise<void>> {
     try {
       const { text, metadata } = await fileStore.loadText(path);
       // The file blob was left off of this type.
-      if (cachedFile?.metadata.hash === metadata.hash) {
+      if (cachedFile && isSameFileVersion(cachedFile.metadata, metadata)) {
         // The files are the same.
         return;
       }
@@ -342,26 +343,47 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
   return async (dispatch, getState) => {
     dispatch(PlainInternal.downloadBlobRequested(path));
 
+    const folder = getDirName(path);
+
     const handleBlob = (blobFile: T.BlobFile) => {
       dispatch(PlainInternal.downloadBlobReceived(path, blobFile));
+    };
 
-      // For things like back and next, ensure we have a copy of the prev/next
-      // tracks in the folder.
-      const cache = $.getListFilesCache(getState());
-      const folder = getDirName(path);
-      if (!cache.get(folder)) {
-        dispatch(listFiles(folder)).catch((error) => {
-          console.error('Failed to list files after downloading a blob', error);
-        });
+    // For things like back and next, ensure we have a copy of the prev/next
+    // tracks in the folder.
+    const getFreshFileMetadata = async () => {
+      if ($.getListFilesCache(getState()).get(folder)?.isCache !== false) {
+        await dispatch(listFiles(folder));
       }
+      const listing = $.getListFilesCache(getState()).get(folder);
+      if (listing?.isCache === false) {
+        return getMetadataFromCache(
+          $.getListFilesCache(getState()),
+          folder,
+          path,
+        );
+      }
+      return undefined;
     };
 
     const fileStore = $.getCurrentFS(getState());
+    let cachedBlob: T.BlobFile | undefined;
     if (fileStore.cache) {
       try {
-        handleBlob(await fileStore.cache.loadBlob(path));
+        cachedBlob = await fileStore.cache.loadBlob(path);
+        handleBlob(cachedBlob);
       } catch (error) {
         console.error('Error with indexeddb', error);
+      }
+    }
+
+    if (cachedBlob) {
+      const current = await getFreshFileMetadata();
+      if (
+        current?.type === 'file' &&
+        isSameFileVersion(cachedBlob.metadata, current)
+      ) {
+        return;
       }
     }
 
@@ -371,6 +393,10 @@ export function downloadBlob(path: string): Thunk<Promise<void>> {
       dispatch(
         PlainInternal.downloadFileError(path, dropboxErrorMessage(error)),
       );
+    }
+
+    if (!cachedBlob) {
+      await getFreshFileMetadata();
     }
   };
 }

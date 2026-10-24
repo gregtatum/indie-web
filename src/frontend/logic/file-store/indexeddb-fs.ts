@@ -5,12 +5,36 @@ import type { WorkerClient } from 'frontend/worker/client';
 import {
   getPathFileName,
   getDirName,
+  isSameFileVersion,
   randomUuid,
   updatePathRoot,
 } from 'frontend/utils';
 import * as AppLogic from 'frontend/logic/app-logic';
 
 export const BROWSER_FILES_DB_NAME = 'browser-files';
+
+// 0.5 MiB
+const LARGE_FILE_BYTES = 512 * 1024;
+// Only update the LRU cache every hour. Ignores frequent cache hits.
+const ACCESS_TOUCH_INTERVAL_MS = 60 * 60 * 1000;
+
+/**
+ * Only large files are indexed by access time, so evicting never has to walk
+ * the small files.
+ */
+function isLargeSize(metadata: T.FileMetadata | undefined) {
+  return metadata && metadata.size >= LARGE_FILE_BYTES ? metadata.size : 0;
+}
+
+function withAccess<R extends { metadata: T.FileMetadata }>(
+  row: R,
+  accessedAt: Date,
+) {
+  const evictionOrder = isLargeSize(row.metadata)
+    ? accessedAt.getTime()
+    : undefined;
+  return { ...row, accessedAt, evictionOrder };
+}
 
 /**
  * This files implements a browser-based file system abstraction layer called IDBFS,
@@ -79,7 +103,7 @@ export async function openIDBFS(
   }
   let idbfs: IDBFS | null = null;
 
-  const db = await idb.openDB<T.IDBFSSchema>(name, 1, {
+  const db = await idb.openDB<T.IDBFSSchema>(name, 2, {
     /**
      * Called if this version of the database has never been opened before. Use it to
      * specify the schema for the database.
@@ -90,16 +114,27 @@ export async function openIDBFS(
      * @param transaction The transaction for this upgrade. This is useful if you need to get data
      * from other stores as part of a migration.
      */
-    upgrade(db, _oldVersion, _newVersion, _transaction): void {
-      const files = db.createObjectStore('files', {
-        keyPath: 'metadata.path',
-      });
-      files.createIndex('by-hash', 'metadata.hash');
-      files.createIndex('by-id', 'metadata.id');
+    async upgrade(db, oldVersion, _newVersion, transaction): Promise<void> {
+      if (oldVersion < 1) {
+        const files = db.createObjectStore('files', {
+          keyPath: 'metadata.path',
+        });
+        files.createIndex('by-hash', 'metadata.hash');
+        files.createIndex('by-id', 'metadata.id');
 
-      db.createObjectStore('folderListings', {
-        keyPath: 'path',
-      });
+        db.createObjectStore('folderListings', {
+          keyPath: 'path',
+        });
+      }
+      if (oldVersion < 2) {
+        const files = transaction.objectStore('files');
+        files.createIndex('by-eviction-order', 'evictionOrder');
+        let cursor = await files.openCursor();
+        while (cursor) {
+          await cursor.update(withAccess(cursor.value, cursor.value.storedAt));
+          cursor = await cursor.continue();
+        }
+      }
     },
 
     /**
@@ -170,6 +205,17 @@ class WorkerIDBFS extends FileStoreCache {
 
   async createFolder(path: string): Promise<T.FolderMetadata> {
     return this.#request('createFolder', path);
+  }
+
+  async syncFolderListing(
+    path: string,
+    files: T.FolderListing,
+  ): Promise<T.FolderListingRow> {
+    return this.#request('syncFolderListing', path, files);
+  }
+
+  async evictLargeFiles(budgetBytes: number): Promise<void> {
+    await this.#request('evictLargeFiles', budgetBytes);
   }
 
   async addFolderListing(
@@ -249,6 +295,8 @@ class WorkerIDBFS extends FileStoreCache {
  */
 export class IDBFS extends FileStoreCache {
   #db: idb.IDBPDatabase<T.IDBFSSchema>;
+  // Null when it needs to be recomputed.
+  #largeBytes: number | null = null;
   open = true;
   constructor(
     db: idb.IDBPDatabase<T.IDBFSSchema>,
@@ -300,6 +348,7 @@ export class IDBFS extends FileStoreCache {
   }
 
   async clear(): Promise<void> {
+    this.#largeBytes = null;
     const tx = this.#db.transaction(['files', 'folderListings'], 'readwrite');
     await Promise.all([
       tx.objectStore('files').clear(),
@@ -329,6 +378,52 @@ export class IDBFS extends FileStoreCache {
     }
     await tx.done;
     return cached;
+  }
+
+  async syncFolderListing(
+    path: string,
+    files: T.FolderListing,
+  ): Promise<T.FolderListingRow> {
+    const previous = await this.#db.get('folderListings', normalizePath(path));
+    const row = await this.addFolderListing(path, files);
+    const current = new Set(files.map((file) => file.path));
+    for (const entry of previous?.files ?? []) {
+      if (!current.has(entry.path)) {
+        await this.delete(entry.path);
+      }
+    }
+    return row;
+  }
+
+  async #sumLargeBytes(): Promise<number> {
+    const index = this.#db
+      .transaction('files')
+      .store.index('by-eviction-order');
+    let total = 0;
+    let cursor = await index.openCursor();
+    while (cursor) {
+      total += cursor.value.metadata.size;
+      cursor = await cursor.continue();
+    }
+    return total;
+  }
+
+  async evictLargeFiles(budgetBytes: number): Promise<void> {
+    let total = this.#largeBytes ?? (await this.#sumLargeBytes());
+    this.#largeBytes = total;
+    if (total <= budgetBytes) {
+      return;
+    }
+    const tx = this.#db.transaction('files', 'readwrite');
+    let cursor = await tx.store.index('by-eviction-order').openCursor();
+    while (cursor && total > budgetBytes) {
+      total -= cursor.value.metadata.size;
+      log('evictLargeFiles', cursor.value.metadata.path);
+      await cursor.delete();
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+    this.#largeBytes = total;
   }
 
   async createFolder(path: string): Promise<T.FolderMetadata> {
@@ -432,6 +527,10 @@ export class IDBFS extends FileStoreCache {
     const row = await this.#db.get('files', path);
     log('getFile', path, { metadata: row?.metadata });
     if (row) {
+      const lastUsed = row.accessedAt.getTime();
+      if (Date.now() - lastUsed > ACCESS_TOUCH_INTERVAL_MS) {
+        await this.#db.put('files', withAccess(row, new Date()));
+      }
       if (process.env.NODE_ENV === 'test') {
         // @ts-expect-error - Blob text doesn't work correctly in Node and Jest. Fake it.
         const { text, metadata } = row;
@@ -463,11 +562,11 @@ export class IDBFS extends FileStoreCache {
     const tx = this.#getReadWriteTX();
     const store = tx.objectStore('files');
     const offline = await store.get(metadata.path);
-    if (offline && offline.metadata.hash === metadata.hash) {
+    if (offline && isSameFileVersion(offline.metadata, metadata)) {
       // No need to update the offline file.
       return null;
     }
-    return store;
+    return { store, replaced: offline?.metadata };
   }
 
   async saveBlob(
@@ -478,15 +577,22 @@ export class IDBFS extends FileStoreCache {
     const oldPath =
       typeof pathOrMetadata === 'string' ? null : pathOrMetadata.path;
     const metadata = await getFileMetadata(pathOrMetadata, blob);
-    const store = await this.#getFileStoreIfNeedsUpdating(metadata);
-    if (store) {
+    const update = await this.#getFileStoreIfNeedsUpdating(metadata);
+    if (update) {
+      const { store, replaced } = update;
+      const now = new Date();
       /* istanbul ignore else */
       if (process.env.NODE_ENV === 'test') {
         // Blob text doesn't work correctly in Node and Jest. Fake it by saving text.
         const text: string = await blob.text();
-        await store.put({ metadata, storedAt: new Date(), text } as any);
+        await store.put(
+          withAccess({ metadata, storedAt: now, text }, now) as any,
+        );
       } else {
-        await store.put({ metadata, storedAt: new Date(), blob });
+        await store.put(withAccess({ metadata, storedAt: now, blob }, now));
+      }
+      if (this.#largeBytes !== null) {
+        this.#largeBytes += isLargeSize(metadata) - isLargeSize(replaced);
       }
       log('saveBlob', metadata.path, { metadata });
       await this.#updateFileInFolderListings(oldPath, metadata);
@@ -585,6 +691,7 @@ export class IDBFS extends FileStoreCache {
   async #deleteFileFromFiles(path: string) {
     const tx = this.#getReadWriteTX();
     const files = tx.objectStore('files');
+    this.#largeBytes = null;
     await files.delete(path);
     await tx.done;
   }
@@ -650,6 +757,7 @@ export class IDBFS extends FileStoreCache {
     for (const folderPath of foldersToDelete) {
       await folderListings.delete(folderPath);
     }
+    this.#largeBytes = null;
     for (const filePath of filesToDelete) {
       await files.delete(filePath);
     }
@@ -661,7 +769,9 @@ export class IDBFS extends FileStoreCache {
   async delete(path: string) {
     try {
       // See if this is a file.
-      await this.loadBlob(path);
+      if (!(await this.fileExists(path))) {
+        throw IDBError.notFound();
+      }
       await this.#deleteFileFromFiles(path);
       await this.#deleteFileFromFolderListing(path);
     } catch {

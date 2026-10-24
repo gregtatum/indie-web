@@ -54,6 +54,29 @@ export abstract class FileStore {
   abstract delete(path: string): Promise<void>;
 
   cache?: FileStoreCache;
+
+  protected cacheBlob(
+    metadata: T.FileMetadata,
+    mode: T.SaveMode,
+    blob: Blob,
+  ): void {
+    const cache = this.cache;
+    if (!cache) {
+      return;
+    }
+    cache
+      .saveBlob(metadata, mode, blob)
+      .then(async () => cache.evictLargeFiles(await getCacheBudget()))
+      .catch((error) => console.error('Failed to cache blob', error));
+  }
+}
+
+const FALLBACK_CACHE_BUDGET = 512 * 1024 * 1024;
+const CACHE_QUOTA_FRACTION = 0.25;
+
+async function getCacheBudget(): Promise<number> {
+  const quota = (await navigator.storage?.estimate?.())?.quota;
+  return quota ? quota * CACHE_QUOTA_FRACTION : FALLBACK_CACHE_BUDGET;
 }
 
 export abstract class FileStoreCache extends FileStore {
@@ -73,6 +96,21 @@ export abstract class FileStoreCache extends FileStore {
    * Determines which items in a folder listing are cached or not.
    */
   abstract getCachedFolderListing(files: T.FolderListing): Promise<Set<string>>;
+
+  /**
+   * Adds a listing fetched from the origin, and drops cached entries that the
+   * origin no longer has.
+   */
+  abstract syncFolderListing(
+    path: string,
+    files: T.FolderListing,
+  ): Promise<T.FolderListingRow>;
+
+  /**
+   * Evicts the least recently used large files until the large files fit in the
+   * budget. Small files, like text, are always kept.
+   */
+  abstract evictLargeFiles(budgetBytes: number): Promise<void>;
 
   /**
    * Clears the cache.

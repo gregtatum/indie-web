@@ -309,6 +309,13 @@ export function downloadBlobForUser(fileName: string, blob: Blob): void {
   a.remove();
 }
 
+export function isSameFileVersion(
+  a: { rev: string; size: number; hash: string },
+  b: { rev: string; size: number; hash: string },
+) {
+  return a.rev === b.rev && a.size === b.size && a.hash === b.hash;
+}
+
 export function isChordProFilePath(path: string) {
   const parts = path.split('.');
   const extension = parts[parts.length - 1].toLocaleLowerCase();

@@ -108,6 +108,8 @@ export type FileRow = StoredTextFile | StoredBlobFile;
 export type StoredTextFile = {
   metadata: FileMetadata;
   storedAt: Date;
+  accessedAt: Date;
+  evictionOrder?: number;
   type: 'text';
   text: string;
 };
@@ -115,6 +117,8 @@ export type StoredTextFile = {
 export type StoredBlobFile = {
   metadata: FileMetadata;
   storedAt: Date;
+  accessedAt: Date;
+  evictionOrder?: number;
   blob: Blob;
 };
 
@@ -123,8 +127,12 @@ export interface IDBFSSchema extends idb.DBSchema {
     value: StoredBlobFile;
     key: string;
     indexes: {
+      // Find a cached file by its content hash.
       'by-hash': string;
+      // Find a cached file by its file store id.
       'by-id': string;
+      // Lists the files that can be evicted, with the least recently used first.
+      'by-eviction-order': number;
     };
   };
   folderListings: {

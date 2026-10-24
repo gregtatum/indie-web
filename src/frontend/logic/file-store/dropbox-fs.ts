@@ -84,9 +84,7 @@ export class DropboxFS extends FileStore {
 
       .then((response) => {
         const metadata = fixupFileMetadata(response.result);
-        this.cache?.saveBlob(metadata, mode, contents).catch((error) => {
-          console.error('Failed to save blob to IDBFS cache', error);
-        });
+        this.cacheBlob(metadata, mode, contents);
         return metadata;
       }, DropboxError.wrap);
   }
@@ -99,9 +97,7 @@ export class DropboxFS extends FileStore {
       .then((response): T.BlobFile => {
         const metadata = fixupFileMetadata(response.result);
         const blob = (response as T.FilesDownloadResponse).result.fileBlob;
-        this.cache?.saveBlob(metadata, 'overwrite', blob).catch((error) => {
-          console.error('Failed to save blob to IDBFS', error);
-        });
+        this.cacheBlob(metadata, 'overwrite', blob);
         return { metadata, blob };
       }, DropboxError.wrap);
   }
@@ -132,7 +128,7 @@ export class DropboxFS extends FileStore {
           return a.name.localeCompare(b.name);
         });
 
-        this.cache?.addFolderListing(path, files).catch((error) => {
+        this.cache?.syncFolderListing(path, files).catch((error) => {
           console.error('Failed to update folder listing in IDBFS', error);
         });
 
