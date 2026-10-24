@@ -217,15 +217,21 @@ export function MusicLibraryView({
         signal: fetchController.signal,
       }).catch(() => null);
 
-      // The first index check happened at version 8, so assume version 7 if none exists.
-      let maxMusicIndexVersion = 7;
+      // The first index check happened at version 8, so a reachable server that
+      // doesn't report one is version 7. An unreachable server is unknown.
+      let maxMusicIndexVersion: number | null = null;
       if (serverInfoResponse?.ok) {
         const serverInfo = await serverInfoResponse.json().catch(() => null);
-        if (typeof serverInfo?.maxMusicIndexVersion === 'number') {
-          maxMusicIndexVersion = serverInfo.maxMusicIndexVersion;
-        }
+        maxMusicIndexVersion =
+          typeof serverInfo?.maxMusicIndexVersion === 'number'
+            ? serverInfo.maxMusicIndexVersion
+            : 7;
+      } else if (serverInfoResponse?.status === 404) {
+        maxMusicIndexVersion = 7;
       }
-      dispatch(A.setMusicServerMaxIndexVersion(maxMusicIndexVersion));
+      if (maxMusicIndexVersion !== null && !fetchController.signal.aborted) {
+        dispatch(A.setMusicServerMaxIndexVersion(maxMusicIndexVersion));
+      }
 
       const fileStoreInfoResponse = await fetch(
         `${currentServer.url}/file-store/`,
