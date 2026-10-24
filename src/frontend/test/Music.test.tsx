@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { A } from 'frontend';
@@ -111,6 +111,22 @@ describe('<Music> with real server', () => {
     await screen.findByText('Music library not found. Run a scan first.');
     expect(
       screen.queryByRole('link', { name: 'Server update needed' }),
+    ).toBeNull();
+  });
+
+  it('asks for an app update when the served index is newer than the frontend', async () => {
+    writeFileSync(
+      join(getServer().mountDir, '.music-index.json'),
+      JSON.stringify({
+        version: MUSIC_INDEX_VERSION + 1,
+        scannedAt: '2024-01-01T00:00:00Z',
+        tracks: [],
+      }),
+    );
+    await setup();
+    await screen.findByRole('button', { name: 'App update needed' });
+    expect(
+      screen.queryByRole('button', { name: /updates detected/ }),
     ).toBeNull();
   });
 

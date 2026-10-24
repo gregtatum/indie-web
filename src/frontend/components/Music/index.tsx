@@ -132,7 +132,20 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const serverOutdated =
     serverMaxIndexVersion !== null &&
     serverMaxIndexVersion < CURRENT_MUSIC_INDEX_VERSION;
-  const showRescanPrompt = needsRescan && !serverOutdated;
+  const frontendOutdated =
+    (serverMaxIndexVersion !== null &&
+      serverMaxIndexVersion > CURRENT_MUSIC_INDEX_VERSION) ||
+    (servedIndexVersion !== null &&
+      servedIndexVersion > CURRENT_MUSIC_INDEX_VERSION);
+  const showRescanPrompt = needsRescan && !serverOutdated && !frontendOutdated;
+
+  async function reloadApp() {
+    const registrations = await navigator.serviceWorker
+      ?.getRegistrations()
+      .catch(() => []);
+    await Promise.all((registrations ?? []).map((r) => r.unregister()));
+    window.location.reload();
+  }
 
   const updateDocsHref = containerName
     ? `/docs/update-docker.html?containerName=${encodeURIComponent(containerName)}`
@@ -182,6 +195,15 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
         >
           Server update needed
         </a>
+      ) : null}
+      {frontendOutdated ? (
+        <button
+          type="button"
+          className="button button-primary"
+          onClick={reloadApp}
+        >
+          App update needed
+        </button>
       ) : null}
       <div className="musicViewToggle">
         <Link
