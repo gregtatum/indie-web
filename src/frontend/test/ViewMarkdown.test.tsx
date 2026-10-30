@@ -111,9 +111,13 @@ describe('<ViewMarkdown>', () => {
               <h1>
                 Great ideas
               </h1>
+              
+
               <p>
                 Come up with some great ideas.
               </p>
+              
+
               <ul>
                 
 
@@ -128,6 +132,8 @@ describe('<ViewMarkdown>', () => {
                 
 
               </ul>
+              
+
             </div>
           </div>
         </div>

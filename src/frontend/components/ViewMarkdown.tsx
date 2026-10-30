@@ -261,8 +261,7 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
       node.remove();
     }
 
-    // Add the elements to the page.
-    for (let node of doc.body.childNodes) {
+    for (let node of [...doc.body.childNodes]) {
       if ((node as any).tagName === 'TABLE') {
         const div = document.createElement('div');
         div.className = 'viewMarkdownTable';

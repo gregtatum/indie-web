@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { createStore } from 'frontend/store/create-store';
 import { AppRoutes } from 'frontend/components/App';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
 import {
@@ -31,6 +31,25 @@ const ClozeText = stripIndent`
   Je {{c1::suis::être}} étudiant.
   {{c1::Je}} {{c2::vais}} {{c3::à la gare}} demain matin.
   \`\`\`
+`;
+
+const InterleavedText = stripIndent`
+  # French Study Notes
+
+  Some vocabulary to start with.
+
+  \`\`\`anki
+  Hello;Bonjour
+  \`\`\`
+
+  Now some grammar practice with cloze sentences.
+
+  \`\`\`anki
+  #notetype:Cloze
+  Je {{c1::suis::être}} étudiant.
+  \`\`\`
+
+  That's everything for today.
 `;
 
 describe('<AnkiDeck>', () => {
@@ -196,5 +215,31 @@ describe('<AnkiDeck>', () => {
     });
     expect(screen.getByText('[être]')).toBeTruthy();
     expect(screen.queryByText('suis')).toBeNull();
+  });
+
+  it('renders multiple anki blocks interleaved with regular markdown text', async () => {
+    setup(InterleavedText);
+    await waitFor(() => screen.getAllByTestId('ankiDeck'));
+
+    // The surrounding markdown text rendered, in order, around both blocks.
+    expect(screen.getByText('Some vocabulary to start with.')).toBeTruthy();
+    expect(
+      screen.getByText('Now some grammar practice with cloze sentences.'),
+    ).toBeTruthy();
+    expect(screen.getByText("That's everything for today.")).toBeTruthy();
+
+    const decks = screen.getAllByTestId('ankiDeck');
+    expect(decks).toHaveLength(2);
+    const [basicDeck, clozeDeck] = decks;
+
+    // The first block only has the Basic card's content.
+    expect(within(basicDeck).getByText('Hello')).toBeTruthy();
+    expect(within(basicDeck).getByText('Show answer')).toBeTruthy();
+    expect(within(basicDeck).queryByText('[être]')).toBeNull();
+
+    // The second block only has the Cloze card's content.
+    expect(within(clozeDeck).getByText('[être]')).toBeTruthy();
+    expect(within(clozeDeck).queryByText('Hello')).toBeNull();
+    expect(within(clozeDeck).queryByText('Show answer')).toBeNull();
   });
 });
