@@ -11,6 +11,33 @@
   padding: 16px;
 }
 
+.ankiDeckModeToggle {
+  align-self: flex-start;
+}
+
+.ankiDeckCarousel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  outline: none;
+}
+
+/* Tints the card border when keyboard focus is anywhere inside the carousel,
+   signaling that Space/Enter/Arrow keys are live for this deck. */
+.ankiDeckCarousel:focus-within .ankiDeckCard {
+  border-color: var(--accent);
+}
+
+.ankiDeckCarouselProgress {
+  color: var(--muted);
+  font-size: var(--font-size-small);
+}
+
+.ankiDeckCarouselNav {
+  display: flex;
+  gap: 8px;
+}
+
 .ankiDeckCardFront {
   font-weight: 600;
   margin-bottom: 8px;

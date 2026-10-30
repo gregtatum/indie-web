@@ -210,6 +210,52 @@ const SHOTS = [
     describe: 'ChordPro: split source editor + rendered chart',
     prepare: openSplitEditor,
   },
+  {
+    name: 'anki-study-mode',
+    surface: 'files',
+    route: '/files/md/French/Basic Vocabulary.md',
+    waitFor: '.ankiDeck',
+    waitState: 'attached',
+    settleMs: 1000,
+    describe: 'Anki block: default study-mode carousel, answer hidden',
+  },
+  {
+    name: 'anki-study-mode-revealed',
+    surface: 'files',
+    route: '/files/md/French/Basic Vocabulary.md',
+    waitFor: '.ankiDeck',
+    waitState: 'attached',
+    settleMs: 1000,
+    describe: 'Anki block: study-mode carousel, answer revealed',
+    prepare: async (page) => {
+      await page.locator('.ankiDeckCardReveal').click();
+    },
+  },
+  {
+    name: 'anki-full-list',
+    surface: 'files',
+    route: '/files/md/French/Basic Vocabulary.md',
+    waitFor: '.ankiDeck',
+    waitState: 'attached',
+    settleMs: 1000,
+    describe: 'Anki block: full-list view (all cards, answers hidden)',
+    prepare: async (page) => {
+      await page.locator('.ankiDeckModeToggle').click();
+    },
+  },
+  {
+    name: 'anki-study-mode-focused',
+    surface: 'files',
+    route: '/files/md/French/Basic Vocabulary.md',
+    waitFor: '.ankiDeck',
+    waitState: 'attached',
+    settleMs: 1000,
+    describe:
+      'Anki block: carousel with keyboard focus (accent border, arrow/space keys live)',
+    prepare: async (page) => {
+      await page.locator('.ankiDeckCarousel').click();
+    },
+  },
 ];
 
 // The "hide editor" flag is persisted to localStorage, so once any editor shot

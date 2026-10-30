@@ -28,6 +28,16 @@ Come up with some great ideas.
  * Learn to paint?
 `;
 
+const AnkiText = stripIndent`
+# French Vocabulary
+
+\`\`\`anki
+Hello;Bonjour
+\`\`\`
+
+More notes below.
+`;
+
 describe('<ViewMarkdown>', () => {
   // TODO - This would be better across the entire test suite.
   beforeEach(() => {
@@ -39,7 +49,7 @@ describe('<ViewMarkdown>', () => {
     jest.useRealTimers();
   });
 
-  function setup() {
+  function setup(text = IdeasText) {
     const store = createStore();
     store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
@@ -63,7 +73,7 @@ describe('<ViewMarkdown>', () => {
     mockDropboxFilesDownload([
       {
         metadata: getFileMetadata('/Ideas.md'),
-        text: IdeasText,
+        text,
       },
     ]);
 
@@ -224,5 +234,27 @@ describe('<ViewMarkdown>', () => {
 
     expect(screen.queryByTestId('list-files')).toBeNull();
     expect(screen.getByTestId('textAreaMount')).toBeTruthy();
+  });
+
+  it('removes an anki block while editing without crashing', async () => {
+    const { store } = setup(AnkiText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+    const renderedMarkdown = screen.getByTestId('renderedMarkdown');
+
+    // This is the same action TextArea.tsx dispatches on every keystroke, so
+    // this simulates the user deleting the anki block out of the editor.
+    await act(async () => {
+      store.dispatch(
+        A.modifyActiveFile(
+          '# French Vocabulary\n\nMore notes below.',
+          '/Ideas.md',
+          true,
+        ),
+      );
+      await jest.runAllTimersAsync();
+    });
+
+    await waitFor(() => getByText(renderedMarkdown, /More notes below\./));
+    expect(screen.queryByTestId('ankiDeck')).toBeNull();
   });
 });
