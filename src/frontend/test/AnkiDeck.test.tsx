@@ -23,6 +23,21 @@ const FrenchText = stripIndent`
   \`\`\`
 `;
 
+const EightCardText = stripIndent`
+  # French Vocabulary
+
+  \`\`\`anki
+  Hello;Bonjour
+  Goodbye;Au revoir
+  Thanks;Merci
+  Please;S'il vous plaît
+  Yes;Oui
+  No;Non
+  Good night;Bonne nuit
+  Excuse me;Excusez-moi
+  \`\`\`
+`;
+
 const ClozeText = stripIndent`
   # French Grammar
 
@@ -134,6 +149,18 @@ describe('<AnkiDeck>', () => {
             2
           </div>
           <div
+            aria-valuemax="1"
+            aria-valuemin="0"
+            aria-valuenow="1"
+            class="ankiDeckCarouselBar"
+            role="progressbar"
+          >
+            <div
+              class="ankiDeckCarouselBarFill"
+              style="width: 100%;"
+            />
+          </div>
+          <div
             class="ankiDeckCard"
           >
             <div
@@ -207,6 +234,36 @@ describe('<AnkiDeck>', () => {
     expect((screen.getByText('Previous') as HTMLButtonElement).disabled).toBe(
       true,
     );
+  });
+
+  it('fills one bar segment per card, completing the bar on the last card', async () => {
+    setup(EightCardText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    function progressBar() {
+      return screen.getByRole('progressbar');
+    }
+
+    // 8 cards means 7 logical segments (the gaps between them).
+    expect(progressBar().getAttribute('aria-valuemax')).toBe('7');
+
+    // Card 1 of 8: the first segment is already filled.
+    expect(progressBar().getAttribute('aria-valuenow')).toBe('1');
+
+    const user = userEvent.setup();
+    for (let card = 2; card <= 8; card++) {
+      await act(async () => {
+        await Promise.all([
+          user.click(screen.getByText('Next')),
+          jest.runAllTimersAsync(),
+        ]);
+      });
+      // Card N fills segment N, capped at 7 — so card 8 (the last) completes
+      // the bar instead of leaving a trailing empty segment.
+      expect(progressBar().getAttribute('aria-valuenow')).toBe(
+        String(Math.min(card, 7)),
+      );
+    }
   });
 
   it('reveals and advances with Space, but only while focus is inside the carousel', async () => {

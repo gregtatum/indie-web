@@ -51,6 +51,11 @@ function AnkiStudyCarousel({ notes }: AnkiStudyCarouselProps) {
   const [index, setIndex] = React.useState(0);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cardRef = React.useRef<AnkiCardHandle>(null);
+  // The bar has one fewer segment than there are cards (the gaps between
+  // them), so the first card already fills one segment and the last card
+  // completes the bar, rather than leaving a trailing empty segment.
+  const totalSegments = Math.max(notes.length - 1, 1);
+  const filledSegments = Math.min(index + 1, totalSegments);
 
   const goPrevious = React.useCallback(() => {
     setIndex((value) => Math.max(value - 1, 0));
@@ -99,6 +104,18 @@ function AnkiStudyCarousel({ notes }: AnkiStudyCarouselProps) {
     >
       <div className="ankiDeckCarouselProgress">
         Card {index + 1} / {notes.length}
+      </div>
+      <div
+        className="ankiDeckCarouselBar"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={totalSegments}
+        aria-valuenow={filledSegments}
+      >
+        <div
+          className="ankiDeckCarouselBarFill"
+          style={{ width: `${(filledSegments / totalSegments) * 100}%` }}
+        />
       </div>
       {renderNote(notes[index], index, cardRef)}
       <div className="ankiDeckCarouselNav">
