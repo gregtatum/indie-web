@@ -299,9 +299,17 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
         </div>
         <div className="viewMarkdownDiv" ref={markdownDiv} />
       </div>
-      {ankiMounts.map(({ id, element }) =>
-        createPortal(<AnkiDeck parsed={ankiBlocks[id]} />, element, id),
-      )}
+      {ankiMounts.map(({ id, element }) => {
+        // ankiMounts is only updated by the effect above once it re-scans the
+        // freshly parsed HTML, so for one render after an edit it can still
+        // reference an id that the new ankiBlocks (from the latest parse) no
+        // longer has, e.g. when the edit deleted an anki block outright.
+        const parsed = ankiBlocks[id];
+        if (!parsed) {
+          return null;
+        }
+        return createPortal(<AnkiDeck parsed={parsed} />, element, id);
+      })}
     </div>
   );
 }

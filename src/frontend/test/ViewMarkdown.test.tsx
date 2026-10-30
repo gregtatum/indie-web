@@ -19,12 +19,24 @@ import { T, $, A } from 'frontend';
 import { ensureExists, dedent } from 'frontend/utils';
 import { MemoryRouter } from 'react-router-dom';
 
+const fence = '```';
+
 const IdeasText = dedent`
 # Great ideas
 
 Come up with some great ideas.
  * Build something?
  * Learn to paint?
+`;
+
+const AnkiText = dedent`
+# French Vocabulary
+
+${fence}anki
+Hello;Bonjour
+${fence}
+
+More notes below.
 `;
 
 describe('<ViewMarkdown>', () => {
@@ -38,7 +50,7 @@ describe('<ViewMarkdown>', () => {
     jest.useRealTimers();
   });
 
-  function setup() {
+  function setup(text = IdeasText) {
     const store = createStore();
     store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
@@ -62,7 +74,7 @@ describe('<ViewMarkdown>', () => {
     mockDropboxFilesDownload([
       {
         metadata: getFileMetadata('/Ideas.md'),
-        text: IdeasText,
+        text,
       },
     ]);
 
@@ -223,5 +235,27 @@ describe('<ViewMarkdown>', () => {
 
     expect(screen.queryByTestId('list-files')).toBeNull();
     expect(screen.getByTestId('textAreaMount')).toBeTruthy();
+  });
+
+  it('removes an anki block while editing without crashing', async () => {
+    const { store } = setup(AnkiText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+    const renderedMarkdown = screen.getByTestId('renderedMarkdown');
+
+    // This is the same action TextArea.tsx dispatches on every keystroke, so
+    // this simulates the user deleting the anki block out of the editor.
+    await act(async () => {
+      store.dispatch(
+        A.modifyActiveFile(
+          '# French Vocabulary\n\nMore notes below.',
+          '/Ideas.md',
+          true,
+        ),
+      );
+      await jest.runAllTimersAsync();
+    });
+
+    await waitFor(() => getByText(renderedMarkdown, /More notes below\./));
+    expect(screen.queryByTestId('ankiDeck')).toBeNull();
   });
 });

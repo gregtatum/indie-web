@@ -99,93 +99,221 @@ describe('<AnkiDeck>', () => {
     return { store, ...renderResults };
   }
 
-  it('renders an anki block as cards with the answers hidden', async () => {
+  it('defaults to study mode, showing one card at a time with the answer hidden', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
+    expect(screen.getByText('Card 1 / 2')).toBeTruthy();
     expect(screen.getByText('Hello')).toBeTruthy();
-    expect(screen.getByText('Goodbye')).toBeTruthy();
+    expect(screen.queryByText('Goodbye')).toBeNull();
     expect(screen.queryByText('Bonjour')).toBeNull();
-    expect(screen.queryByText('Au revoir')).toBeNull();
-    expect(screen.getAllByText('Show answer')).toHaveLength(2);
+    expect(screen.getByText('Show answer')).toBeTruthy();
 
     expect(screen.getByTestId('ankiDeck')).toMatchInlineSnapshot(`
       <div
         class="ankiDeck"
         data-testid="ankiDeck"
       >
+        <button
+          class="button ankiDeckModeToggle"
+          type="button"
+        >
+          Show full list
+        </button>
         <div
-          class="ankiDeckCard"
+          class="ankiDeckCarousel"
+          data-testid="ankiDeckCarousel"
+          tabindex="0"
         >
           <div
-            class="ankiDeckCardFront"
+            class="ankiDeckCarouselProgress"
           >
-            Hello
+            Card 
+            1
+             / 
+            2
           </div>
-          <button
-            class="button ankiDeckCardReveal"
-            type="button"
-          >
-            Show answer
-          </button>
-        </div>
-        <div
-          class="ankiDeckCard"
-        >
           <div
-            class="ankiDeckCardFront"
+            class="ankiDeckCard"
           >
-            Goodbye
+            <div
+              class="ankiDeckCardFront"
+            >
+              Hello
+            </div>
+            <button
+              class="button ankiDeckCardReveal"
+              type="button"
+            >
+              Show answer
+            </button>
           </div>
-          <button
-            class="button ankiDeckCardReveal"
-            type="button"
+          <div
+            class="ankiDeckCarouselNav"
           >
-            Show answer
-          </button>
+            <button
+              class="button"
+              disabled=""
+              type="button"
+            >
+              Previous
+            </button>
+            <button
+              class="button"
+              type="button"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     `);
   });
 
-  it('reveals a card answer independently of other cards', async () => {
+  it('advances through cards one at a time, resetting the reveal state', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
-    const [helloReveal] = screen.getAllByText('Show answer');
-    await act(async () => {
-      await Promise.all([user.click(helloReveal), jest.runAllTimersAsync()]);
-    });
-
-    expect(screen.getByText('Bonjour')).toBeTruthy();
-    expect(screen.getByText('Hide answer')).toBeTruthy();
-
-    // The second card is untouched.
-    expect(screen.queryByText('Au revoir')).toBeNull();
-    expect(screen.getByText('Show answer')).toBeTruthy();
-
     await act(async () => {
       await Promise.all([
-        user.click(screen.getByText('Hide answer')),
+        user.click(screen.getByText('Show answer')),
         jest.runAllTimersAsync(),
       ]);
     });
+    expect(screen.getByText('Bonjour')).toBeTruthy();
+
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByText('Next')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+    expect(screen.getByText('Card 2 / 2')).toBeTruthy();
+    expect(screen.getByText('Goodbye')).toBeTruthy();
+    // The new card starts with its answer hidden again.
+    expect(screen.queryByText('Au revoir')).toBeNull();
+    expect(screen.getByText('Show answer')).toBeTruthy();
+    expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByText('Previous')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+    expect(screen.getByText('Card 1 / 2')).toBeTruthy();
+    expect(screen.getByText('Hello')).toBeTruthy();
+    expect((screen.getByText('Previous') as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+  });
+
+  it('reveals and advances with Space, but only while focus is inside the carousel', async () => {
+    setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+
+    // Nothing is focused inside the carousel yet, so Space is a no-op.
+    await act(async () => {
+      await Promise.all([user.keyboard('[Space]'), jest.runAllTimersAsync()]);
+    });
     expect(screen.queryByText('Bonjour')).toBeNull();
+
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByTestId('ankiDeckCarousel')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    // First Space reveals the current card's answer.
+    await act(async () => {
+      await Promise.all([user.keyboard('[Space]'), jest.runAllTimersAsync()]);
+    });
+    expect(screen.getByText('Bonjour')).toBeTruthy();
+    expect(screen.getByText('Card 1 / 2')).toBeTruthy();
+
+    // A second Space, with the answer already shown, advances to the next card.
+    await act(async () => {
+      await Promise.all([user.keyboard('[Space]'), jest.runAllTimersAsync()]);
+    });
+    expect(screen.getByText('Card 2 / 2')).toBeTruthy();
+    expect(screen.queryByText('Au revoir')).toBeNull();
+  });
+
+  it('navigates cards with the ArrowLeft/ArrowRight keys', async () => {
+    setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByTestId('ankiDeckCarousel')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    await act(async () => {
+      await Promise.all([
+        user.keyboard('[ArrowRight]'),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+    expect(screen.getByText('Card 2 / 2')).toBeTruthy();
+
+    await act(async () => {
+      await Promise.all([
+        user.keyboard('[ArrowLeft]'),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+    expect(screen.getByText('Card 1 / 2')).toBeTruthy();
+  });
+
+  it('switches to the full list view and back to study mode', async () => {
+    setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByText('Show full list')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    // Both cards are visible at once, in the full list view.
+    expect(screen.getByText('Hello')).toBeTruthy();
+    expect(screen.getByText('Goodbye')).toBeTruthy();
     expect(screen.getAllByText('Show answer')).toHaveLength(2);
+    expect(screen.queryByText(/Card \d \/ \d/)).toBeNull();
+
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByText('Study mode')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    // Back in study mode, the carousel starts over from the first card.
+    expect(screen.getByText('Card 1 / 2')).toBeTruthy();
+    expect(screen.queryByText('Goodbye')).toBeNull();
   });
 
   it('renders cloze blanks hidden, using the hint as a placeholder', async () => {
     setup(ClozeText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
+    expect(screen.getByText('Card 1 / 2')).toBeTruthy();
     expect(screen.getByText('[être]')).toBeTruthy();
     expect(screen.queryByText('suis')).toBeNull();
-    expect(screen.getAllByText('[...]')).toHaveLength(3);
-    expect(screen.getByText(/demain matin\./)).toBeTruthy();
+    expect(screen.queryByText('[...]')).toBeNull();
+    expect(screen.getByText(/étudiant\./)).toBeTruthy();
   });
 
-  it('reveals a cloze blank independently by number', async () => {
+  it('reveals a cloze blank independently by number, resetting on the next card', async () => {
     setup(ClozeText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
@@ -199,22 +327,23 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByText('suis')).toBeTruthy();
     expect(screen.queryByText('[être]')).toBeNull();
 
-    // Revealing one blank in the second note doesn't touch the others.
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByText('Next')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    // The second card's blanks are independent, and start out hidden.
+    expect(screen.getByText('Card 2 / 2')).toBeTruthy();
+    expect(screen.getAllByText('[...]')).toHaveLength(3);
+
     const [firstBlank] = screen.getAllByText('[...]');
     await act(async () => {
       await Promise.all([user.click(firstBlank), jest.runAllTimersAsync()]);
     });
     expect(screen.getByText('Je')).toBeTruthy();
     expect(screen.getAllByText('[...]')).toHaveLength(2);
-
-    await act(async () => {
-      await Promise.all([
-        user.click(screen.getByText('suis')),
-        jest.runAllTimersAsync(),
-      ]);
-    });
-    expect(screen.getByText('[être]')).toBeTruthy();
-    expect(screen.queryByText('suis')).toBeNull();
   });
 
   it('renders multiple anki blocks interleaved with regular markdown text', async () => {
