@@ -10,6 +10,7 @@ import {
   romanChordText,
   SongKey,
 } from 'frontend/logic/parse-chords';
+import { parseCloze, parseAnkiText } from 'frontend/logic/parse-anki';
 import { stripIndent } from 'common-tags';
 
 describe('parser', () => {
@@ -632,5 +633,254 @@ describe('ultimateGuitarToChordPro', () => {
     expect(ultimateGuitarToChordPro(text)).toMatchInlineSnapshot(
       `"[A]One [Bm]two [Cm]three [D]four [E]five [Fm]six."`,
     );
+  });
+});
+
+describe('parseCloze', () => {
+  it('returns plain text untouched', () => {
+    expect(parseCloze('Canberra was founded in 1913.')).toEqual([
+      { type: 'text', text: 'Canberra was founded in 1913.' },
+    ]);
+  });
+
+  it('parses a single cloze with no hint', () => {
+    expect(parseCloze('Canberra was founded in {{c1::1913}}.')).toEqual([
+      { type: 'text', text: 'Canberra was founded in ' },
+      { type: 'cloze', num: 1, answer: '1913', hint: null },
+      { type: 'text', text: '.' },
+    ]);
+  });
+
+  it('parses a cloze with a hint', () => {
+    expect(
+      parseCloze('{{c1::Canberra::capital city}} was founded in 1913.'),
+    ).toEqual([
+      { type: 'cloze', num: 1, answer: 'Canberra', hint: 'capital city' },
+      { type: 'text', text: ' was founded in 1913.' },
+    ]);
+  });
+
+  it('parses multiple clozes sharing the same number', () => {
+    expect(
+      parseCloze('{{c2::Canberra}} was founded in {{c1::1913}}.'),
+    ).toEqual([
+      { type: 'cloze', num: 2, answer: 'Canberra', hint: null },
+      { type: 'text', text: ' was founded in ' },
+      { type: 'cloze', num: 1, answer: '1913', hint: null },
+      { type: 'text', text: '.' },
+    ]);
+  });
+
+  it('treats an unterminated cloze as literal text', () => {
+    expect(parseCloze('Canberra was founded in {{c1::1913.')).toEqual([
+      { type: 'text', text: 'Canberra was founded in {{c1::1913.' },
+    ]);
+  });
+
+  it('treats a missing "::" separator as literal text', () => {
+    expect(parseCloze('{{c1:1913}}')).toEqual([
+      { type: 'text', text: '{{c1:1913}}' },
+    ]);
+  });
+
+  it('allows an empty answer', () => {
+    expect(parseCloze('{{c1::}}')).toEqual([
+      { type: 'cloze', num: 1, answer: '', hint: null },
+    ]);
+  });
+
+  it('does not support nested clozes, but still parses the inner one', () => {
+    expect(
+      parseCloze('{{c1::Canberra was {{c2::founded}}}} in 1913.'),
+    ).toEqual([
+      { type: 'text', text: '{{c1::Canberra was ' },
+      { type: 'cloze', num: 2, answer: 'founded', hint: null },
+      { type: 'text', text: '}} in 1913.' },
+    ]);
+  });
+});
+
+describe('parseAnkiText', () => {
+  it('parses a basic file with no headers, defaulting to Semicolon', () => {
+    const result = parseAnkiText(stripIndent`
+      apple;banana;grape
+      first field;second field;third field
+    `);
+    expect(result.headers.separator).toEqual(';');
+    expect(result.headers.notetype).toEqual(null);
+    expect(result.headers.deck).toEqual(null);
+    expect(result.notes).toEqual([
+      {
+        fields: ['apple', 'banana', 'grape'],
+        clozeSpans: null,
+        tags: [],
+        notetype: null,
+        deck: null,
+        guid: null,
+      },
+      {
+        fields: ['first field', 'second field', 'third field'],
+        clozeSpans: null,
+        tags: [],
+        notetype: null,
+        deck: null,
+        guid: null,
+      },
+    ]);
+  });
+
+  it('ignores a leading plain "#" comment line', () => {
+    const result = parseAnkiText(stripIndent`
+      # this is a comment and is ignored
+      foo bar;bar baz;baz quux
+      field1;field2;field3
+    `);
+    expect(result.notes.map((note) => note.fields)).toEqual([
+      ['foo bar', 'bar baz', 'baz quux'],
+      ['field1', 'field2', 'field3'],
+    ]);
+  });
+
+  it('parses a quoted field with an embedded newline and separator', () => {
+    const result = parseAnkiText(stripIndent`
+      hello;"this is
+      a two line answer"
+      two;this is a one line field
+      "this includes a ; (semicolon)";another field
+    `);
+    expect(result.notes.map((note) => note.fields)).toEqual([
+      ['hello', 'this is\na two line answer'],
+      ['two', 'this is a one line field'],
+      ['this includes a ; (semicolon)', 'another field'],
+    ]);
+  });
+
+  it('un-escapes doubled quotes inside a quoted field', () => {
+    const result = parseAnkiText(
+      'field one;"field two with ""escaped quotes"" inside it"',
+    );
+    expect(result.notes[0].fields).toEqual([
+      'field one',
+      'field two with "escaped quotes" inside it',
+    ]);
+  });
+
+  it('applies #notetype and #deck headers to every note', () => {
+    const result = parseAnkiText(stripIndent`
+      #separator:Semicolon
+      #notetype:Basic
+      #deck:Geography
+      Capital of Australia;Canberra
+      Year Canberra was founded;1913
+    `);
+    expect(result.headers.notetype).toEqual('Basic');
+    expect(result.headers.deck).toEqual('Geography');
+    expect(result.notes).toEqual([
+      {
+        fields: ['Capital of Australia', 'Canberra'],
+        clozeSpans: null,
+        tags: [],
+        notetype: 'Basic',
+        deck: 'Geography',
+        guid: null,
+      },
+      {
+        fields: ['Year Canberra was founded', '1913'],
+        clozeSpans: null,
+        tags: [],
+        notetype: 'Basic',
+        deck: 'Geography',
+        guid: null,
+      },
+    ]);
+  });
+
+  it('pulls tags out of a "#tags column" and excludes it from fields', () => {
+    const result = parseAnkiText(stripIndent`
+      #separator:Semicolon
+      #columns:Front;Back;Tags
+      #tags column:3
+      Capital of France;Paris;geography europe
+    `);
+    expect(result.headers.columns).toEqual(['Front', 'Back', 'Tags']);
+    expect(result.headers.tagsColumn).toEqual(3);
+    expect(result.notes).toEqual([
+      {
+        fields: ['Capital of France', 'Paris'],
+        clozeSpans: null,
+        tags: ['geography', 'europe'],
+        notetype: null,
+        deck: null,
+        guid: null,
+      },
+    ]);
+  });
+
+  it('applies a "#tags" header to every note', () => {
+    const result = parseAnkiText(stripIndent`
+      #tags:geography important
+      Capital of Australia;Canberra
+    `);
+    expect(result.notes[0].tags).toEqual(['geography', 'important']);
+  });
+
+  it('auto-populates clozeSpans for Cloze notetype notes', () => {
+    const result = parseAnkiText(stripIndent`
+      #notetype:Cloze
+      Canberra was founded in {{c1::1913}}.
+      The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell.
+    `);
+    expect(result.headers.notetype).toEqual('Cloze');
+    expect(result.notes[0].clozeSpans).toEqual([
+      { type: 'text', text: 'Canberra was founded in ' },
+      { type: 'cloze', num: 1, answer: '1913', hint: null },
+      { type: 'text', text: '.' },
+    ]);
+    expect(result.notes[1].clozeSpans).toEqual([
+      { type: 'text', text: 'The ' },
+      { type: 'cloze', num: 1, answer: 'mitochondria', hint: null },
+      { type: 'text', text: ' is the ' },
+      { type: 'cloze', num: 2, answer: 'powerhouse', hint: null },
+      { type: 'text', text: ' of the cell.' },
+    ]);
+  });
+
+  it('leaves clozeSpans null for non-Cloze notetypes', () => {
+    const result = parseAnkiText(stripIndent`
+      #notetype:Basic
+      Capital of Australia;Canberra
+    `);
+    expect(result.notes[0].clozeSpans).toEqual(null);
+  });
+
+  it('mixes notetypes in a single block via a "#notetype column"', () => {
+    const result = parseAnkiText(stripIndent`
+      #separator:Semicolon
+      #notetype column:1
+      Basic;Capital of Australia;Canberra
+      Cloze;Canberra was founded in {{c1::1913}}.
+    `);
+    expect(result.notes).toEqual([
+      {
+        fields: ['Capital of Australia', 'Canberra'],
+        clozeSpans: null,
+        tags: [],
+        notetype: 'Basic',
+        deck: null,
+        guid: null,
+      },
+      {
+        fields: ['Canberra was founded in {{c1::1913}}.'],
+        clozeSpans: [
+          { type: 'text', text: 'Canberra was founded in ' },
+          { type: 'cloze', num: 1, answer: '1913', hint: null },
+          { type: 'text', text: '.' },
+        ],
+        tags: [],
+        notetype: 'Cloze',
+        deck: null,
+        guid: null,
+      },
+    ]);
   });
 });
