@@ -7,12 +7,17 @@ interface AnkiDeckProps {
 }
 
 export function AnkiDeck({ parsed }: AnkiDeckProps) {
-  const basicNotes = parsed.notes.filter(isBasicNote);
   return (
     <div className="ankiDeck" data-testid="ankiDeck">
-      {basicNotes.map((note, index) => (
-        <AnkiBasicCard key={index} note={note} />
-      ))}
+      {parsed.notes.map((note, index) => {
+        if (note.clozeSpans !== null) {
+          return <AnkiClozeCard key={index} note={note} />;
+        }
+        if (isBasicNote(note)) {
+          return <AnkiBasicCard key={index} note={note} />;
+        }
+        return null;
+      })}
     </div>
   );
 }
@@ -43,4 +48,59 @@ function AnkiBasicCard({ note }: AnkiBasicCardProps) {
       ) : null}
     </div>
   );
+}
+
+interface AnkiClozeCardProps {
+  note: T.AnkiNote;
+}
+
+function AnkiClozeCard({ note }: AnkiClozeCardProps) {
+  const [revealedNums, setRevealedNums] = React.useState<Set<number>>(
+    new Set(),
+  );
+  const spans = note.clozeSpans ?? [];
+
+  function toggle(num: number) {
+    setRevealedNums((prev) => {
+      const next = new Set(prev);
+      if (next.has(num)) {
+        next.delete(num);
+      } else {
+        next.add(num);
+      }
+      return next;
+    });
+  }
+
+  return (
+    <div className="ankiDeckCard">
+      <p className="ankiDeckClozeText">
+        {spans.map((span, index) =>
+          span.type === 'text' ? (
+            <React.Fragment key={index}>{span.text}</React.Fragment>
+          ) : (
+            <button
+              key={index}
+              type="button"
+              className="ankiDeckClozeBlank"
+              aria-pressed={revealedNums.has(span.num)}
+              onClick={() => toggle(span.num)}
+            >
+              {clozeBlankText(span, revealedNums.has(span.num))}
+            </button>
+          ),
+        )}
+      </p>
+    </div>
+  );
+}
+
+function clozeBlankText(
+  span: Extract<T.TextOrCloze, { type: 'cloze' }>,
+  revealed: boolean,
+): string {
+  if (revealed) {
+    return span.answer;
+  }
+  return span.hint ? `[${span.hint}]` : '[...]';
 }

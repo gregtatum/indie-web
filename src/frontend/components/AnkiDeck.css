@@ -21,3 +21,22 @@
   padding-top: 8px;
   border-top: 1px solid var(--line);
 }
+
+.ankiDeckClozeText {
+  margin: 0;
+}
+
+.ankiDeckClozeBlank {
+  margin: 0;
+  padding: 0 2px;
+  border: none;
+  border-bottom: 1px dashed var(--accent);
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ankiDeckClozeBlank:hover {
+  background: var(--accent-tint);
+}
