@@ -127,7 +127,9 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByTestId('ankiDeck')).toMatchInlineSnapshot(`
       <div
         class="ankiDeck"
+        data-mode="study"
         data-testid="ankiDeck"
+        tabindex="0"
       >
         <button
           class="button ankiDeckModeToggle"
@@ -136,62 +138,56 @@ describe('<AnkiDeck>', () => {
           Show full list
         </button>
         <div
-          class="ankiDeckCarousel"
-          data-testid="ankiDeckCarousel"
-          tabindex="0"
+          class="ankiDeckCarouselProgress"
+        >
+          Card 
+          1
+           / 
+          2
+        </div>
+        <div
+          aria-valuemax="1"
+          aria-valuemin="0"
+          aria-valuenow="1"
+          class="ankiDeckCarouselBar"
+          role="progressbar"
         >
           <div
-            class="ankiDeckCarouselProgress"
-          >
-            Card 
-            1
-             / 
-            2
-          </div>
+            class="ankiDeckCarouselBarFill"
+            style="width: 100%;"
+          />
+        </div>
+        <div
+          class="ankiDeckCard"
+        >
           <div
-            aria-valuemax="1"
-            aria-valuemin="0"
-            aria-valuenow="1"
-            class="ankiDeckCarouselBar"
-            role="progressbar"
+            class="ankiDeckCardFront"
           >
-            <div
-              class="ankiDeckCarouselBarFill"
-              style="width: 100%;"
-            />
+            Hello
           </div>
-          <div
-            class="ankiDeckCard"
+          <button
+            class="button ankiDeckCardReveal"
+            type="button"
           >
-            <div
-              class="ankiDeckCardFront"
-            >
-              Hello
-            </div>
-            <button
-              class="button ankiDeckCardReveal"
-              type="button"
-            >
-              Show answer
-            </button>
-          </div>
-          <div
-            class="ankiDeckCarouselNav"
+            Show answer
+          </button>
+        </div>
+        <div
+          class="ankiDeckCarouselNav"
+        >
+          <button
+            class="button"
+            disabled=""
+            type="button"
           >
-            <button
-              class="button"
-              disabled=""
-              type="button"
-            >
-              Previous
-            </button>
-            <button
-              class="button"
-              type="button"
-            >
-              Next
-            </button>
-          </div>
+            Previous
+          </button>
+          <button
+            class="button"
+            type="button"
+          >
+            Next
+          </button>
         </div>
       </div>
     `);
@@ -280,7 +276,7 @@ describe('<AnkiDeck>', () => {
 
     await act(async () => {
       await Promise.all([
-        user.click(screen.getByTestId('ankiDeckCarousel')),
+        user.click(screen.getByTestId('ankiDeck')),
         jest.runAllTimersAsync(),
       ]);
     });
@@ -307,7 +303,7 @@ describe('<AnkiDeck>', () => {
     const user = userEvent.setup();
     await act(async () => {
       await Promise.all([
-        user.click(screen.getByTestId('ankiDeckCarousel')),
+        user.click(screen.getByTestId('ankiDeck')),
         jest.runAllTimersAsync(),
       ]);
     });
