@@ -58,6 +58,37 @@ export interface ParsedChordPro {
   lines: LineType[];
 }
 
+export type TextOrCloze =
+  | { type: 'text'; text: string }
+  | { type: 'cloze'; num: number; answer: string; hint: string | null };
+
+export interface AnkiHeaders {
+  separator: string;
+  html: boolean;
+  tags: string[];
+  columns: string[] | null;
+  notetype: string | null;
+  deck: string | null;
+  notetypeColumn: number | null;
+  deckColumn: number | null;
+  tagsColumn: number | null;
+  guidColumn: number | null;
+}
+
+export interface AnkiNote {
+  fields: string[];
+  clozeSpans: TextOrCloze[] | null;
+  tags: string[];
+  notetype: string | null;
+  deck: string | null;
+  guid: string | null;
+}
+
+export interface ParsedAnkiFile {
+  headers: AnkiHeaders;
+  notes: AnkiNote[];
+}
+
 export type View =
   | 'view-file'
   | 'view-pdf'
