@@ -1,4 +1,5 @@
 import * as T from 'frontend/@types';
+import { marked } from 'marked';
 
 const namedSeparators: Record<string, string> = {
   comma: ',',
@@ -291,4 +292,36 @@ function matchClozeAt(
     span: { type: 'cloze', num: Number(numText), answer, hint },
     end: end + 2,
   };
+}
+
+/**
+ * Parses a markdown document to HTML. A ```anki fenced code block is
+ * replaced with a placeholder div (keyed by `data-anki-id`) so the caller
+ * can mount a real renderer for it; the parsed block data for each one is
+ * returned alongside the HTML.
+ */
+export function parseMarkdown(text: string): T.ParsedMarkdown {
+  const ankiBlocks: T.ParsedAnkiFile[] = [];
+  const renderer = new marked.Renderer();
+  const defaultCode = renderer.code.bind(renderer);
+  renderer.code = (code, infostring, escaped) => {
+    if (infostring !== 'anki') {
+      return defaultCode(code, infostring, escaped);
+    }
+    const id = ankiBlocks.length;
+    ankiBlocks.push(parseAnkiText(code));
+    return `<div class="anki-mount" data-anki-id="${id}"></div>`;
+  };
+
+  const htmlText = marked.parse(text, {
+    async: false,
+    pedantic: false,
+    // Github Flavored Markdown
+    gfm: true,
+    renderer,
+  });
+  if (typeof htmlText !== 'string') {
+    throw new Error('Expected a string.');
+  }
+  return { htmlText, ankiBlocks };
 }
