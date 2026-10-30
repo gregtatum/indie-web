@@ -23,6 +23,16 @@ const FrenchText = stripIndent`
   \`\`\`
 `;
 
+const ClozeText = stripIndent`
+  # French Grammar
+
+  \`\`\`anki
+  #notetype:Cloze
+  Je {{c1::suis::être}} étudiant.
+  {{c1::Je}} {{c2::vais}} {{c3::à la gare}} demain matin.
+  \`\`\`
+`;
+
 describe('<AnkiDeck>', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -33,7 +43,7 @@ describe('<AnkiDeck>', () => {
     jest.useRealTimers();
   });
 
-  function setup() {
+  function setup(text = FrenchText) {
     const store = createStore();
     store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
@@ -55,7 +65,7 @@ describe('<AnkiDeck>', () => {
     mockDropboxFilesDownload([
       {
         metadata: getFileMetadata('/French.md'),
-        text: FrenchText,
+        text,
       },
     ]);
 
@@ -144,5 +154,47 @@ describe('<AnkiDeck>', () => {
     });
     expect(screen.queryByText('Bonjour')).toBeNull();
     expect(screen.getAllByText('Show answer')).toHaveLength(2);
+  });
+
+  it('renders cloze blanks hidden, using the hint as a placeholder', async () => {
+    setup(ClozeText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    expect(screen.getByText('[être]')).toBeTruthy();
+    expect(screen.queryByText('suis')).toBeNull();
+    expect(screen.getAllByText('[...]')).toHaveLength(3);
+    expect(screen.getByText(/demain matin\./)).toBeTruthy();
+  });
+
+  it('reveals a cloze blank independently by number', async () => {
+    setup(ClozeText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByText('[être]')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+    expect(screen.getByText('suis')).toBeTruthy();
+    expect(screen.queryByText('[être]')).toBeNull();
+
+    // Revealing one blank in the second note doesn't touch the others.
+    const [firstBlank] = screen.getAllByText('[...]');
+    await act(async () => {
+      await Promise.all([user.click(firstBlank), jest.runAllTimersAsync()]);
+    });
+    expect(screen.getByText('Je')).toBeTruthy();
+    expect(screen.getAllByText('[...]')).toHaveLength(2);
+
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByText('suis')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+    expect(screen.getByText('[être]')).toBeTruthy();
+    expect(screen.queryByText('suis')).toBeNull();
   });
 });
