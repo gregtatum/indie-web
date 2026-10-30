@@ -3,30 +3,39 @@
   flex-direction: column;
   gap: 12px;
   margin: 1em 0;
-}
-
-.ankiDeckCard {
   background: var(--raised);
   border-radius: 8px;
   padding: 16px;
+  outline: none;
+}
+
+.ankiDeck[data-mode='study']:focus-within {
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 
 .ankiDeckModeToggle {
   align-self: flex-start;
 }
 
-.ankiDeckCarousel {
+.ankiDeckList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  outline: none;
 }
 
-/* Rings the card when keyboard focus is anywhere inside the carousel,
-   signaling that Space/Enter/Arrow keys are live for this deck. A box-shadow
-   keeps the ring from nudging the card's size the way a border would. */
-.ankiDeckCarousel:focus-within .ankiDeckCard {
-  box-shadow: inset 0 0 0 2px var(--accent);
+.ankiDeckList .ankiDeckCard {
+  padding: 12px 0;
+}
+
+.ankiDeckList .ankiDeckCard:first-child {
+  padding-top: 0;
+}
+
+.ankiDeckList .ankiDeckCard:last-child {
+  padding-bottom: 0;
+}
+
+.ankiDeckList .ankiDeckCard + .ankiDeckCard {
+  border-top: 1px solid var(--line);
 }
 
 .ankiDeckCarouselProgress {

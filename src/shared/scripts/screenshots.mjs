@@ -253,7 +253,7 @@ const SHOTS = [
     describe:
       'Anki block: carousel with keyboard focus (accent border, arrow/space keys live)',
     prepare: async (page) => {
-      await page.locator('.ankiDeckCarousel').click();
+      await page.locator('.ankiDeck').click();
     },
   },
 ];
