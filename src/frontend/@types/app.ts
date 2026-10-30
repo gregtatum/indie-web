@@ -89,6 +89,11 @@ export interface ParsedAnkiFile {
   notes: AnkiNote[];
 }
 
+export interface ParsedMarkdown {
+  htmlText: string;
+  ankiBlocks: ParsedAnkiFile[];
+}
+
 export type View =
   | 'view-file'
   | 'view-pdf'

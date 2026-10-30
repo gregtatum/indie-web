@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { EditorView } from '@codemirror/view';
 import { markdown } from '@codemirror/lang-markdown';
 import { type default as TurndownService } from 'turndown';
@@ -9,6 +10,7 @@ import { useExitToFolderShortcut, useRetainScroll } from '../hooks';
 import { NextPrevLinks, useNextPrevSwipe } from './NextPrev';
 import { Splitter } from './Splitter';
 import { TextArea } from './TextArea';
+import { AnkiDeck } from './AnkiDeck';
 import './ViewMarkdown.css';
 
 export function ViewMarkdown() {
@@ -197,11 +199,14 @@ interface RenderedMarkdownProps {
 function RenderedMarkdown({ view }: RenderedMarkdownProps) {
   const fileStore = $$.getCurrentFS();
   const hideEditor = $$.getHideEditor();
-  const htmlText = $$.getActiveFileMarkdown();
+  const { htmlText, ankiBlocks } = $$.getActiveFileMarkdown();
   const containerRef = React.useRef(null);
   const markdownDiv = React.useRef<HTMLDivElement | null>(null);
   const displayPath = $$.getActiveFileDisplayPath();
   const dispatch = Hooks.useDispatch();
+  const [ankiMounts, setAnkiMounts] = React.useState<
+    Array<{ id: number; element: HTMLElement }>
+  >([]);
 
   useNextPrevSwipe(containerRef);
   uploadFileHook(containerRef, displayPath);
@@ -266,6 +271,12 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
       }
       div.append(node);
     }
+
+    const mounts: Array<{ id: number; element: HTMLElement }> = [];
+    for (const element of div.querySelectorAll<HTMLElement>('.anki-mount')) {
+      mounts.push({ id: Number(element.dataset.ankiId), element });
+    }
+    setAnkiMounts(mounts);
   }, [htmlText, view, displayPath]);
 
   return (
@@ -289,6 +300,9 @@ function RenderedMarkdown({ view }: RenderedMarkdownProps) {
         </div>
         <div className="viewMarkdownDiv" ref={markdownDiv} />
       </div>
+      {ankiMounts.map(({ id, element }) =>
+        createPortal(<AnkiDeck parsed={ankiBlocks[id]} />, element, id),
+      )}
     </div>
   );
 }
