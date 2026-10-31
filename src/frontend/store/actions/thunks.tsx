@@ -1556,6 +1556,31 @@ export function insertTextAtLineInActiveFile(
   };
 }
 
+export function recordAnkiRun(update: T.AnkiRunUpdate): Thunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    const { addAnkiRun } = await import(
+      /* webpackChunkName: "anki" */ 'frontend/logic/anki'
+    );
+    const path = $.getPath(getState());
+    const wasModified = $.getIsActiveFileModified(getState());
+    const newText = addAnkiRun($.getActiveFileText(getState()), update);
+    if (newText === null) {
+      dispatch(
+        addMessage({
+          message: 'Unable to save study stats to the YAML frontmatter.',
+        }),
+      );
+      return;
+    }
+    dispatch(Plain.modifyActiveFile(newText, path, true));
+    if (!wasModified) {
+      await dispatch(saveTextFile(path, newText)).catch(() => {
+        // The error is handled in the action.
+      });
+    }
+  };
+}
+
 export function selectNextStem(direction: -1 | 1): Thunk<number> {
   return (dispatch, getState) => {
     const stems = $.getUnknownStems(getState());

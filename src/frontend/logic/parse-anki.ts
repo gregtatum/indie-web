@@ -317,6 +317,47 @@ function matchClozeAt(
   };
 }
 
+export function noteSummary(note: T.AnkiNote): string {
+  if (note.clozeSpans === null) {
+    return note.fields[0];
+  }
+  return note.clozeSpans
+    .map((span) => (span.type === 'text' ? span.text : span.answer))
+    .join('');
+}
+
+const TERM_MAX_LENGTH = 40;
+
+export function noteTerm(note: T.AnkiNote): string {
+  return (noteSummary(note) ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, TERM_MAX_LENGTH);
+}
+
+const FRONTMATTER_FENCE = '---';
+
+export function splitFrontmatter(text: string): {
+  frontmatter: string | null;
+  body: string;
+} {
+  if (!text.startsWith(FRONTMATTER_FENCE)) {
+    return { frontmatter: null, body: text };
+  }
+  const lines = text.split('\n');
+  const isFence = (line: string) => line.trimEnd() === FRONTMATTER_FENCE;
+  const end = isFence(lines[0])
+    ? lines.findIndex((line, index) => index > 0 && isFence(line))
+    : -1;
+  if (end === -1) {
+    return { frontmatter: null, body: text };
+  }
+  return {
+    frontmatter: lines.slice(1, end).join('\n').replace(/\r$/, ''),
+    body: lines.slice(end + 1).join('\n'),
+  };
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')

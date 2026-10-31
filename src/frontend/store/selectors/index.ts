@@ -14,7 +14,7 @@ import {
   transposeSongKeyByHalfSteps,
   transposeParsedSong,
 } from 'frontend/logic/parse-chords';
-import { parseMarkdown } from 'frontend/logic/parse-anki';
+import { parseMarkdown, splitFrontmatter } from 'frontend/logic/parse-anki';
 import { parseSearchString } from 'frontend/logic/search';
 import { DropboxFS } from 'frontend/logic/file-store/dropbox-fs';
 import {
@@ -399,13 +399,18 @@ export const getActiveFileParsedOrNull = createSelector(
   },
 );
 
-export const getActiveFileMarkdownOrNull = createSelector(
+const getActiveFileMarkdownBodyOrNull = createSelector(
   getActiveFileTextOrNull,
-  (text): T.ParsedMarkdown | null => {
-    if (text === null) {
+  (text): string | null => (text === null ? null : splitFrontmatter(text).body),
+);
+
+export const getActiveFileMarkdownOrNull = createSelector(
+  getActiveFileMarkdownBodyOrNull,
+  (body): T.ParsedMarkdown | null => {
+    if (body === null) {
       return null;
     }
-    return parseMarkdown(text);
+    return parseMarkdown(body);
   },
 );
 

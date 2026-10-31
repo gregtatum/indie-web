@@ -163,7 +163,10 @@ export function mockDropboxFilesDownload(mocks: MockedFilesDownload[] = []) {
       return {
         status: 200,
         headers: {
-          'Dropbox-Api-Result': JSON.stringify(mock.metadata),
+          'Dropbox-Api-Result': JSON.stringify({
+            ...mock.metadata,
+            path_display: mock.metadata.path,
+          }),
         },
         body: mock.text,
       };

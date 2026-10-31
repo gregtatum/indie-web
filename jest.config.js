@@ -29,6 +29,9 @@ export default {
     // import { Hunspell, loadModule } from 'hunspell-asm';
     '^nanoid(/(.*)|$)': 'nanoid$1',
 
+    // The jsdom environment resolves the browser build, which is ESM only.
+    '^yaml$': '<rootDir>/node_modules/yaml/dist/index.js',
+
     // Babel handles the aliasing in babel.config.js
   },
 

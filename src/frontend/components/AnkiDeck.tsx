@@ -1,7 +1,12 @@
 import * as React from 'react';
 import * as T from 'frontend/@types';
 import { getKeyboardString } from 'frontend/utils';
-import { splitDeckPath } from 'frontend/logic/parse-anki';
+import { A, Hooks } from 'frontend';
+import {
+  noteSummary,
+  noteTerm,
+  splitDeckPath,
+} from 'frontend/logic/parse-anki';
 import './AnkiDeck.css';
 
 interface AnkiDeckProps {
@@ -93,11 +98,13 @@ interface StudySession {
   startedAt: number;
   shownAt: number;
   finishedAt: number | null;
+  retry: boolean;
 }
 
 function createStudySession(
   source: T.AnkiNote[],
   deck: T.AnkiNote[] = source,
+  retry = false,
 ): StudySession {
   const now = Date.now();
   return {
@@ -110,6 +117,28 @@ function createStudySession(
     startedAt: now,
     shownAt: now,
     finishedAt: null,
+    retry,
+  };
+}
+
+function createRunUpdate(session: StudySession): T.AnkiRunUpdate {
+  const { deck, progress, source } = session;
+  const terms = (keep: (card: CardProgress) => boolean) =>
+    deck.filter((_, id) => keep(progress[id])).map(noteTerm);
+  return {
+    deck: source[0]?.deck ?? null,
+    run: {
+      first: progress.filter((card) => card.misses === 0).length,
+      of: deck.length,
+      answers: session.step,
+      seconds: Math.round(
+        ((session.finishedAt ?? session.startedAt) - session.startedAt) / 1000,
+      ),
+    },
+    retry: session.retry,
+    missed: terms((card) => card.misses > 0),
+    clean: terms((card) => card.misses === 0),
+    current: source.map(noteTerm),
   };
 }
 
@@ -181,6 +210,7 @@ function AnkiStudyCarousel({
   const [lastFocused, setLastFocused] = React.useState<GroupButton | null>(
     null,
   );
+  const dispatch = Hooks.useDispatch();
   const currentId = session.queue[0];
   const { deck } = session;
   const isFinished = deck.length > 0 && currentId === undefined;
@@ -192,6 +222,13 @@ function AnkiStudyCarousel({
     focusGroupOnReveal.current = false;
     setLastFocused(null);
   }, [revealed, session.step]);
+
+  const { finishedAt } = session;
+  React.useEffect(() => {
+    if (finishedAt !== null) {
+      void dispatch(A.recordAnkiRun(createRunUpdate(session)));
+    }
+  }, [finishedAt]);
 
   const reveal = React.useCallback(() => {
     focusGroupOnReveal.current = true;
@@ -209,8 +246,8 @@ function AnkiStudyCarousel({
     ]?.focus();
   }, []);
   const startSession = React.useCallback(
-    (deck: T.AnkiNote[]) => {
-      setSession(createStudySession(notes, deck));
+    (deck: T.AnkiNote[], retry = false) => {
+      setSession(createStudySession(notes, deck, retry));
       setRevealed(false);
       containerRef.current?.focus();
     },
@@ -400,7 +437,7 @@ function AnkiStudyCarousel({
               const missed = deck.filter(
                 (_, id) => session.progress[id].misses,
               );
-              startSession(random ? shuffled(missed) : missed);
+              startSession(random ? shuffled(missed) : missed, true);
             }}
           />
         ) : (
@@ -421,15 +458,6 @@ function formatDuration(ms: number): string {
   const totalSeconds = Math.round(ms / 1000);
   const seconds = String(totalSeconds % 60).padStart(2, '0');
   return `${Math.floor(totalSeconds / 60)}:${seconds}`;
-}
-
-function noteSummary(note: T.AnkiNote): string {
-  if (note.clozeSpans === null) {
-    return note.fields[0];
-  }
-  return note.clozeSpans
-    .map((span) => (span.type === 'text' ? span.text : span.answer))
-    .join('');
 }
 
 interface AnkiStudySummaryProps {

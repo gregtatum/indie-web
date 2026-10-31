@@ -89,6 +89,15 @@ export interface ParsedAnkiFile {
   notes: AnkiNote[];
 }
 
+export interface AnkiRunUpdate {
+  deck: string | null;
+  run: { first: number; of: number; answers: number; seconds: number };
+  retry: boolean;
+  missed: string[];
+  clean: string[];
+  current: string[];
+}
+
 export interface ParsedMarkdown {
   htmlText: string;
   ankiBlocks: ParsedAnkiFile[];

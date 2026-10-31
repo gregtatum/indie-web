@@ -81,6 +81,7 @@
     "react-redux": "^9.0.4",
     "react-router-dom": "^7.18.2",
     "redux": "^5.0.1",
-    "turndown": "^7.1.2"
+    "turndown": "^7.1.2",
+    "yaml": "^2.9.1"
   }
 }

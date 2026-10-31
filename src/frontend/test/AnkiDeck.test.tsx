@@ -8,6 +8,7 @@ import {
   mockDropboxAccessToken,
   mockDropboxFilesDownload,
   mockDropboxListFolder,
+  spyOnDropboxFilesUpload,
 } from './utils/fixtures';
 import { T, A } from 'frontend';
 import { ensureExists, dedent } from 'frontend/utils';
@@ -88,6 +89,7 @@ describe('<AnkiDeck>', () => {
   });
 
   function setup(text = FrenchText) {
+    const uploads = spyOnDropboxFilesUpload();
     const store = createStore();
     store.dispatch(A.changeFileStore('dropbox'));
     mockDropboxAccessToken(store);
@@ -121,7 +123,7 @@ describe('<AnkiDeck>', () => {
       </MemoryRouter>,
     );
 
-    return { store, ...renderResults };
+    return { store, uploads, ...renderResults };
   }
 
   type User = ReturnType<typeof userEvent.setup>;
@@ -665,5 +667,119 @@ describe('<AnkiDeck>', () => {
     // The second block only has the Cloze card's content.
     expect(within(clozeDeck).getByText('[être]')).toBeTruthy();
     expect(within(clozeDeck).queryByText('Hello')).toBeNull();
+  });
+
+  describe('study stats in frontmatter', () => {
+    async function study(text: string, answers: Array<'Right' | 'Wrong'>) {
+      const { uploads } = setup(text);
+      await waitFor(() => screen.getByTestId('ankiDeck'));
+      const user = userEvent.setup();
+      for (const answer of answers) {
+        await click(user, 'Show');
+        await click(user, answer);
+      }
+      return { uploads, user };
+    }
+
+    function normalizeTimes(text: string) {
+      return text
+        .replace(/at: [\w:-]+/g, 'at: AT')
+        .replace(/seconds: \d+/g, 'seconds: S');
+    }
+
+    it('saves a run and the missed terms into new frontmatter, keeping the study summary', async () => {
+      const { uploads } = await study(FrenchText, ['Wrong', 'Right', 'Right']);
+
+      expect(uploads.map((upload) => normalizeTimes(upload.body))).toEqual([
+        [
+          '---',
+          'anki:',
+          '  default:',
+          '    weak: [ Hello ]',
+          '    runs:',
+          '      - { at: AT, first: 1, of: 2, answers: 3, seconds: S }',
+          '---',
+          FrenchText,
+        ].join('\n'),
+      ]);
+      expect(screen.getByText('Study again')).toBeTruthy();
+      expect(screen.queryByText(/anki:/)).toBeNull();
+    });
+
+    it('appends to existing frontmatter, clearing weak terms answered right and keeping other keys', async () => {
+      const { uploads } = await study(
+        [
+          '---',
+          'title: French # keep me',
+          'anki:',
+          '  default:',
+          '    weak: [ Hello, Gone ]',
+          '    runs:',
+          '      - { at: 2026-10-30T17:12Z, first: 1, of: 2, answers: 3, seconds: 9 }',
+          '---',
+          FrenchText,
+        ].join('\n'),
+        ['Right', 'Wrong', 'Right'],
+      );
+
+      expect(uploads.map((upload) => normalizeTimes(upload.body))).toEqual([
+        [
+          '---',
+          'title: French # keep me',
+          'anki:',
+          '  default:',
+          '    weak: [ Goodbye ]',
+          '    runs:',
+          '      - { at: AT, first: 1, of: 2, answers: 3, seconds: S }',
+          '      - { at: AT, first: 1, of: 2, answers: 3, seconds: S }',
+          '---',
+          FrenchText,
+        ].join('\n'),
+      ]);
+    });
+
+    it.each([
+      ['CRLF line endings', '\r\n', '---', '---'],
+      ['trailing spaces after the fences', '\n', '---  ', '--- \t'],
+    ])('reads frontmatter with %s', async (_, eol, open, close) => {
+      const { uploads } = await study(
+        [open, 'title: French', close, FrenchText].join(eol),
+        ['Right', 'Right'],
+      );
+
+      expect(uploads.map((upload) => normalizeTimes(upload.body))).toEqual([
+        [
+          '---',
+          'title: French',
+          'anki:',
+          '  default:',
+          '    runs:',
+          '      - { at: AT, first: 2, of: 2, answers: 2, seconds: S }',
+          '---',
+          FrenchText,
+        ].join('\n'),
+      ]);
+    });
+
+    it('flags Study missed runs as retries and keeps their weak terms', async () => {
+      const { uploads, user } = await study(FrenchText, [
+        'Wrong',
+        'Right',
+        'Right',
+      ]);
+      await click(user, 'Study missed 1');
+      await click(user, 'Show');
+      await click(user, 'Right');
+
+      expect(uploads).toHaveLength(2);
+      expect(normalizeTimes(uploads[1].body)).toContain(
+        [
+          '    weak: [ Hello ]',
+          '    runs:',
+          '      - { at: AT, first: 1, of: 2, answers: 3, seconds: S }',
+          '      - { at: AT, first: 1, of: 1, answers: 1, seconds: S, retry: true }',
+        ].join('\n'),
+      );
+    });
   });
 });
