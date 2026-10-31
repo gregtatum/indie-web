@@ -205,29 +205,11 @@ describe('<AnkiDeck>', () => {
             role="toolbar"
           >
             <button
-              aria-label="Previous card"
-              class="button ankiDeckCarouselNavButton"
-              disabled=""
-              tabindex="-1"
-              type="button"
-            >
-              ←
-            </button>
-            <button
               class="button ankiDeckCarouselShowNext"
               tabindex="0"
               type="button"
             >
               Show
-            </button>
-            <button
-              aria-label="Next card"
-              class="button ankiDeckCarouselNavButton"
-              disabled=""
-              tabindex="-1"
-              type="button"
-            >
-              →
             </button>
           </div>
         </div>
@@ -270,43 +252,22 @@ describe('<AnkiDeck>', () => {
     `);
   });
 
-  it('grades a card to advance, and only lets you go back to re-grade', async () => {
+  it('grades a card to advance to the next one with its answer hidden', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
-    const nextButton = () =>
-      screen.getByRole('button', { name: 'Next card' }) as HTMLButtonElement;
-    const previousButton = () =>
-      screen.getByRole('button', {
-        name: 'Previous card',
-      }) as HTMLButtonElement;
-
-    expect(nextButton().disabled).toBe(true);
     await click(user, 'Show');
     expect(screen.getByText('Bonjour')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Show' })).toBeNull();
 
-    await click(user, 'Right');
+    await click(user, 'Wrong');
     expect(screen.getByText('2 / 2')).toBeTruthy();
     expect(screen.getByText('Goodbye')).toBeTruthy();
     expect(screen.getByText('Au revoir').getAttribute('aria-hidden')).toBe(
       'true',
     );
     expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
-    expect(nextButton().disabled).toBe(true);
-
-    await click(user, 'Previous card');
-    expect(screen.getByText('1 / 2')).toBeTruthy();
-    expect(screen.getByText('Hello')).toBeTruthy();
-    expect(previousButton().disabled).toBe(true);
-    expect(nextButton().disabled).toBe(false);
-
-    expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
-      'false',
-    );
-    await click(user, 'Wrong');
-    expect(screen.getByText('2 / 2')).toBeTruthy();
     expect(segmentStates()).toBe('incorrect current');
   });
 
@@ -404,7 +365,7 @@ describe('<AnkiDeck>', () => {
     expect(segmentStates()).toBe('incorrect current');
   });
 
-  it('walks focus across Back, Wrong, Right and Next with the arrow keys, skipping disabled buttons', async () => {
+  it('walks focus between Wrong and Right with the arrow keys, stopping at the ends', async () => {
     setup(EightCardText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
@@ -417,27 +378,18 @@ describe('<AnkiDeck>', () => {
       ]);
     });
 
-    await press(user, '[Space]');
-    expect(focused()).toBe('Right');
-    // Back and Next are both disabled on the first, ungraded card.
+    // Arrows do nothing while the focus is on the card.
     await press(user, '[ArrowRight]');
-    expect(focused()).toBe('Right');
-    await press(user, '[ArrowLeft]');
-    expect(focused()).toBe('Wrong');
-    await press(user, '[ArrowLeft]');
-    expect(focused()).toBe('Wrong');
+    expect(screen.getByText('1 / 8')).toBeTruthy();
 
-    await press(user, '3');
     await press(user, '[Space]');
-    await press(user, '[ArrowLeft]');
-    await press(user, '[ArrowLeft]');
-    expect(screen.getByRole('button', { name: 'Previous card' })).toBe(
-      document.activeElement,
-    );
-    await press(user, '[ArrowRight]');
-    await press(user, '[ArrowRight]');
+    expect(focused()).toBe('Right');
     await press(user, '[ArrowRight]');
     expect(focused()).toBe('Right');
+    await press(user, '[ArrowLeft]');
+    expect(focused()).toBe('Wrong');
+    await press(user, '[ArrowLeft]');
+    expect(focused()).toBe('Wrong');
   });
 
   it('treats the card controls as a single tab stop that the arrows move within', async () => {
@@ -498,55 +450,6 @@ describe('<AnkiDeck>', () => {
 
     await press(user, '[Space]');
     expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
-  });
-
-  it('remembers whether a card was revealed when going back to it', async () => {
-    setup(ClozeText);
-    await waitFor(() => screen.getByTestId('ankiDeck'));
-
-    const user = userEvent.setup();
-    await click(user, 'Show');
-    expect(screen.getByText('suis')).toBeTruthy();
-    await click(user, 'Right');
-
-    await click(user, 'Previous card');
-    expect(screen.getByText('1 / 2')).toBeTruthy();
-    expect(screen.getByText('suis')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
-
-    await click(user, 'Next card');
-    expect(screen.getByText('2 / 2')).toBeTruthy();
-    expect(screen.getAllByText('[...]')).toHaveLength(3);
-  });
-
-  it('navigates back and forth over graded cards with ArrowLeft/ArrowRight, but never ahead', async () => {
-    setup();
-    await waitFor(() => screen.getByTestId('ankiDeck'));
-
-    const user = userEvent.setup();
-    await act(async () => {
-      await Promise.all([
-        user.click(screen.getByTestId('ankiDeck')),
-        jest.runAllTimersAsync(),
-      ]);
-    });
-
-    await press(user, '[ArrowRight]');
-    expect(screen.getByText('1 / 2')).toBeTruthy();
-
-    await press(user, '[Space]');
-    await press(user, '3');
-    expect(screen.getByText('2 / 2')).toBeTruthy();
-
-    await press(user, '[ArrowLeft]');
-    expect(screen.getByText('1 / 2')).toBeTruthy();
-
-    expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
-    await press(user, '[ArrowRight]');
-    expect(screen.getByText('2 / 2')).toBeTruthy();
-
-    await press(user, '[ArrowRight]');
-    expect(screen.getByText('2 / 2')).toBeTruthy();
   });
 
   it('shuffles the cards by default and restores deck order when Random is unchecked', async () => {
