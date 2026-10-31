@@ -10,6 +10,7 @@ type DeckMode = 'study' | 'full';
 
 export function AnkiDeck({ parsed }: AnkiDeckProps) {
   const [mode, setMode] = React.useState<DeckMode>('study');
+  const [random, setRandom] = React.useState(true);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { notes } = parsed;
   const isStudyMode = mode === 'study';
@@ -26,6 +27,8 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
         <AnkiStudyCarousel
           notes={notes}
           containerRef={containerRef}
+          random={random}
+          onRandomChange={setRandom}
           onShowAll={() => setMode('full')}
         />
       ) : (
@@ -51,6 +54,8 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
 interface AnkiStudyCarouselProps {
   notes: T.AnkiNote[];
   containerRef: React.RefObject<HTMLDivElement | null>;
+  random: boolean;
+  onRandomChange: (random: boolean) => void;
   onShowAll: () => void;
 }
 
@@ -58,17 +63,48 @@ interface AnkiCardHandle {
   revealAll: () => void;
 }
 
+type CardResult = 'correct' | 'incorrect';
+type SegmentState = 'unanswered' | 'current' | CardResult;
+
+function segmentState(
+  index: number,
+  currentIndex: number,
+  results: Partial<Record<number, CardResult>>,
+): SegmentState {
+  if (index === currentIndex) {
+    return 'current';
+  }
+  if (index < currentIndex) {
+    return results[index] ?? 'correct';
+  }
+  return 'unanswered';
+}
+
+function shuffled<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 function AnkiStudyCarousel({
-  notes,
+  notes: orderedNotes,
   containerRef,
+  random,
+  onRandomChange,
   onShowAll,
 }: AnkiStudyCarouselProps) {
+  const notes = React.useMemo(
+    () => (random ? shuffled(orderedNotes) : orderedNotes),
+    [orderedNotes, random],
+  );
   const [index, setIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
   const cardRef = React.useRef<AnkiCardHandle>(null);
   const safeIndex = Math.min(index, Math.max(notes.length - 1, 0));
-  const totalSegments = Math.max(notes.length - 1, 1);
-  const filledSegments = Math.min(safeIndex + 1, totalSegments);
+  const [results] = React.useState<Partial<Record<number, CardResult>>>({});
 
   React.useEffect(() => {
     setIndex((value) => Math.min(value, Math.max(notes.length - 1, 0)));
@@ -139,6 +175,18 @@ function AnkiStudyCarousel({
           >
             Show all
           </button>
+          <label className="ankiDeckCarouselRandom">
+            <input
+              type="checkbox"
+              checked={random}
+              onChange={(event) => {
+                onRandomChange(event.target.checked);
+                setIndex(0);
+                setRevealed(false);
+              }}
+            />
+            Random
+          </label>
         </div>
         <div className="ankiDeckCarouselNav">
           <button
@@ -173,13 +221,16 @@ function AnkiStudyCarousel({
         className="ankiDeckCarouselBar"
         role="progressbar"
         aria-valuemin={0}
-        aria-valuemax={totalSegments}
-        aria-valuenow={filledSegments}
+        aria-valuemax={notes.length}
+        aria-valuenow={safeIndex + 1}
       >
-        <div
-          className="ankiDeckCarouselBarFill"
-          style={{ width: `${(filledSegments / totalSegments) * 100}%` }}
-        />
+        {notes.map((_, i) => (
+          <div
+            key={i}
+            className="ankiDeckCarouselSegment"
+            data-state={segmentState(i, safeIndex, results)}
+          />
+        ))}
       </div>
       <div className="ankiDeckCarouselStage">
         {renderNote(

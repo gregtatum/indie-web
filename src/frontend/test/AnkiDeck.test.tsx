@@ -78,9 +78,11 @@ const InterleavedText = dedent`
 describe('<AnkiDeck>', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    jest.spyOn(Math, 'random').mockReturnValue(0.999);
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
@@ -160,6 +162,15 @@ describe('<AnkiDeck>', () => {
             >
               Show all
             </button>
+            <label
+              class="ankiDeckCarouselRandom"
+            >
+              <input
+                checked=""
+                type="checkbox"
+              />
+              Random
+            </label>
           </div>
           <div
             class="ankiDeckCarouselNav"
@@ -188,15 +199,19 @@ describe('<AnkiDeck>', () => {
           </div>
         </div>
         <div
-          aria-valuemax="1"
+          aria-valuemax="2"
           aria-valuemin="0"
           aria-valuenow="1"
           class="ankiDeckCarouselBar"
           role="progressbar"
         >
           <div
-            class="ankiDeckCarouselBarFill"
-            style="width: 100%;"
+            class="ankiDeckCarouselSegment"
+            data-state="current"
+          />
+          <div
+            class="ankiDeckCarouselSegment"
+            data-state="unanswered"
           />
         </div>
         <div
@@ -278,11 +293,19 @@ describe('<AnkiDeck>', () => {
       return screen.getByRole('progressbar');
     }
 
-    // 8 cards means 7 logical segments (the gaps between them).
-    expect(progressBar().getAttribute('aria-valuemax')).toBe('7');
+    function segmentStates() {
+      return Array.from(
+        progressBar().querySelectorAll('.ankiDeckCarouselSegment'),
+      )
+        .map((segment) => segment.getAttribute('data-state'))
+        .join(' ');
+    }
 
-    // Card 1 of 8: the first segment is already filled.
+    expect(progressBar().getAttribute('aria-valuemax')).toBe('8');
     expect(progressBar().getAttribute('aria-valuenow')).toBe('1');
+    expect(segmentStates()).toBe(
+      'current unanswered unanswered unanswered unanswered unanswered unanswered unanswered',
+    );
 
     const user = userEvent.setup();
     for (let card = 2; card <= 8; card++) {
@@ -292,12 +315,11 @@ describe('<AnkiDeck>', () => {
           jest.runAllTimersAsync(),
         ]);
       });
-      // Card N fills segment N, capped at 7 — so card 8 (the last) completes
-      // the bar instead of leaving a trailing empty segment.
-      expect(progressBar().getAttribute('aria-valuenow')).toBe(
-        String(Math.min(card, 7)),
-      );
+      expect(progressBar().getAttribute('aria-valuenow')).toBe(String(card));
     }
+    expect(segmentStates()).toBe(
+      'correct correct correct correct correct correct correct current',
+    );
   });
 
   it('reveals and advances with Space, but only while focus is inside the carousel', async () => {
@@ -364,6 +386,24 @@ describe('<AnkiDeck>', () => {
         jest.runAllTimersAsync(),
       ]);
     });
+    expect(screen.getByText('1 / 2')).toBeTruthy();
+  });
+
+  it('shuffles the cards by default and restores deck order when Random is unchecked', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+    const checkbox = screen.getByLabelText('Random') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    expect(screen.getByText('Goodbye')).toBeTruthy();
+    expect(screen.queryByText('Hello')).toBeNull();
+
+    await act(() => user.click(checkbox));
+
+    expect(checkbox.checked).toBe(false);
+    expect(screen.getByText('Hello')).toBeTruthy();
     expect(screen.getByText('1 / 2')).toBeTruthy();
   });
 
