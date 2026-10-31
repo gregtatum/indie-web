@@ -48,6 +48,13 @@ const ClozeText = stripIndent`
   \`\`\`
 `;
 
+const EmptyText = stripIndent`
+  # French Vocabulary
+
+  \`\`\`anki
+  \`\`\`
+`;
+
 const InterleavedText = stripIndent`
   # French Study Notes
 
@@ -340,6 +347,14 @@ describe('<AnkiDeck>', () => {
       ]);
     });
     expect(screen.getByText('Card 1 / 2')).toBeTruthy();
+  });
+
+  it('renders an empty anki block without crashing, e.g. while mid-edit', async () => {
+    setup(EmptyText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    expect(screen.getByText('No cards yet.')).toBeTruthy();
+    expect(screen.queryByText(/Card \d \/ \d/)).toBeNull();
   });
 
   it('switches to the full list view and back to study mode', async () => {
