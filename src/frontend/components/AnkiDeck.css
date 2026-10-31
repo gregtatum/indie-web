@@ -38,6 +38,10 @@
   border-top: 1px solid var(--line);
 }
 
+.ankiDeckEmpty {
+  color: var(--muted);
+}
+
 .ankiDeckCarouselTop {
   display: flex;
   align-items: center;

@@ -55,8 +55,13 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
   const [index, setIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
   const cardRef = React.useRef<AnkiCardHandle>(null);
+  const safeIndex = Math.min(index, Math.max(notes.length - 1, 0));
   const totalSegments = Math.max(notes.length - 1, 1);
-  const filledSegments = Math.min(index + 1, totalSegments);
+  const filledSegments = Math.min(safeIndex + 1, totalSegments);
+
+  React.useEffect(() => {
+    setIndex((value) => Math.min(value, Math.max(notes.length - 1, 0)));
+  }, [notes.length]);
 
   const goPrevious = React.useCallback(() => {
     setIndex((value) => Math.max(value - 1, 0));
@@ -105,18 +110,22 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
     return () => document.body.removeEventListener('keydown', handleKeyDown);
   }, [containerRef, goPrevious, goNext, revealed]);
 
+  if (notes.length === 0) {
+    return <div className="ankiDeckEmpty">No cards yet.</div>;
+  }
+
   return (
     <>
       <div className="ankiDeckCarouselTop">
         <div className="ankiDeckCarouselProgress">
-          Card {index + 1} / {notes.length}
+          Card {safeIndex + 1} / {notes.length}
         </div>
         <div className="ankiDeckCarouselNav">
           <button
             className="button ankiDeckCarouselNavButton"
             type="button"
             aria-label="Previous card"
-            disabled={index === 0}
+            disabled={safeIndex === 0}
             onClick={goPrevious}
           >
             ←
@@ -124,7 +133,7 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
           <button
             className="button ankiDeckCarouselShowNext"
             type="button"
-            disabled={revealed && index === notes.length - 1}
+            disabled={revealed && safeIndex === notes.length - 1}
             onClick={showOrNext}
           >
             {revealed ? 'Next' : 'Show'}
@@ -133,7 +142,7 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
             className="button button-primary ankiDeckCarouselNavButton"
             type="button"
             aria-label="Next card"
-            disabled={index === notes.length - 1}
+            disabled={safeIndex === notes.length - 1}
             onClick={goNext}
           >
             →
@@ -153,7 +162,13 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
         />
       </div>
       <div className="ankiDeckCarouselStage">
-        {renderNote(notes[index], index, cardRef, 'carousel', setRevealed)}
+        {renderNote(
+          notes[safeIndex],
+          safeIndex,
+          cardRef,
+          'carousel',
+          setRevealed,
+        )}
       </div>
     </>
   );
@@ -162,12 +177,15 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
 type AnkiCardVariant = 'carousel' | 'list';
 
 function renderNote(
-  note: T.AnkiNote,
+  note: T.AnkiNote | undefined,
   key: number,
   ref: React.Ref<AnkiCardHandle> | undefined,
   variant: AnkiCardVariant,
   onRevealedChange?: (revealed: boolean) => void,
 ) {
+  if (!note) {
+    return null;
+  }
   if (note.clozeSpans !== null) {
     return (
       <AnkiClozeCard

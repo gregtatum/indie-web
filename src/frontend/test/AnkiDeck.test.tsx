@@ -10,23 +10,24 @@ import {
   mockDropboxListFolder,
 } from './utils/fixtures';
 import { T, A } from 'frontend';
-import { ensureExists } from 'frontend/utils';
-import { stripIndent } from 'common-tags';
+import { ensureExists, dedent } from 'frontend/utils';
 import { MemoryRouter } from 'react-router-dom';
 
-const FrenchText = stripIndent`
+const fence = '```';
+
+const FrenchText = dedent`
   # French Vocabulary
 
-  \`\`\`anki
+  ${fence}anki
   Hello;Bonjour
   Goodbye;Au revoir
-  \`\`\`
+  ${fence}
 `;
 
-const EightCardText = stripIndent`
+const EightCardText = dedent`
   # French Vocabulary
 
-  \`\`\`anki
+  ${fence}anki
   Hello;Bonjour
   Goodbye;Au revoir
   Thanks;Merci
@@ -35,34 +36,41 @@ const EightCardText = stripIndent`
   No;Non
   Good night;Bonne nuit
   Excuse me;Excusez-moi
-  \`\`\`
+  ${fence}
 `;
 
-const ClozeText = stripIndent`
+const ClozeText = dedent`
   # French Grammar
 
-  \`\`\`anki
+  ${fence}anki
   #notetype:Cloze
   Je {{c1::suis::être}} étudiant.
   {{c1::Je}} {{c2::vais}} {{c3::à la gare}} demain matin.
-  \`\`\`
+  ${fence}
 `;
 
-const InterleavedText = stripIndent`
+const EmptyText = dedent`
+  # French Vocabulary
+
+  ${fence}anki
+  ${fence}
+`;
+
+const InterleavedText = dedent`
   # French Study Notes
 
   Some vocabulary to start with.
 
-  \`\`\`anki
+  ${fence}anki
   Hello;Bonjour
-  \`\`\`
+  ${fence}
 
   Now some grammar practice with cloze sentences.
 
-  \`\`\`anki
+  ${fence}anki
   #notetype:Cloze
   Je {{c1::suis::être}} étudiant.
-  \`\`\`
+  ${fence}
 
   That's everything for today.
 `;
@@ -340,6 +348,14 @@ describe('<AnkiDeck>', () => {
       ]);
     });
     expect(screen.getByText('Card 1 / 2')).toBeTruthy();
+  });
+
+  it('renders an empty anki block without crashing, e.g. while mid-edit', async () => {
+    setup(EmptyText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    expect(screen.getByText('No cards yet.')).toBeTruthy();
+    expect(screen.queryByText(/Card \d \/ \d/)).toBeNull();
   });
 
   it('switches to the full list view and back to study mode', async () => {
