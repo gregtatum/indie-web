@@ -49,6 +49,12 @@
   gap: 8px;
 }
 
+.ankiDeckCarouselInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .ankiDeckCarouselProgress {
   color: var(--muted);
   font-size: 11px;

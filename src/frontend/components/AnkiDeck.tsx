@@ -22,21 +22,27 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
       ref={containerRef}
       tabIndex={isStudyMode ? 0 : undefined}
     >
-      <button
-        className="button ankiDeckModeToggle"
-        type="button"
-        onClick={() => setMode(isStudyMode ? 'full' : 'study')}
-      >
-        {isStudyMode ? 'Show full list' : 'Study mode'}
-      </button>
       {isStudyMode ? (
-        <AnkiStudyCarousel notes={notes} containerRef={containerRef} />
+        <AnkiStudyCarousel
+          notes={notes}
+          containerRef={containerRef}
+          onShowAll={() => setMode('full')}
+        />
       ) : (
-        <div className="ankiDeckList">
-          {notes.map((note, index) =>
-            renderNote(note, index, undefined, 'list'),
-          )}
-        </div>
+        <>
+          <button
+            className="button ankiDeckModeToggle"
+            type="button"
+            onClick={() => setMode('study')}
+          >
+            Study mode
+          </button>
+          <div className="ankiDeckList">
+            {notes.map((note, index) =>
+              renderNote(note, index, undefined, 'list'),
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -45,13 +51,18 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
 interface AnkiStudyCarouselProps {
   notes: T.AnkiNote[];
   containerRef: React.RefObject<HTMLDivElement | null>;
+  onShowAll: () => void;
 }
 
 interface AnkiCardHandle {
   revealAll: () => void;
 }
 
-function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
+function AnkiStudyCarousel({
+  notes,
+  containerRef,
+  onShowAll,
+}: AnkiStudyCarouselProps) {
   const [index, setIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
   const cardRef = React.useRef<AnkiCardHandle>(null);
@@ -117,8 +128,17 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
   return (
     <>
       <div className="ankiDeckCarouselTop">
-        <div className="ankiDeckCarouselProgress">
-          Card {safeIndex + 1} / {notes.length}
+        <div className="ankiDeckCarouselInfo">
+          <div className="ankiDeckCarouselProgress">
+            {safeIndex + 1} / {notes.length}
+          </div>
+          <button
+            className="button ankiDeckModeToggle"
+            type="button"
+            onClick={onShowAll}
+          >
+            Show all
+          </button>
         </div>
         <div className="ankiDeckCarouselNav">
           <button
