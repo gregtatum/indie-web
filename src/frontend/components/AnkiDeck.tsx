@@ -143,24 +143,6 @@ function gradeCurrentCard(
   };
 }
 
-type SegmentState = 'unanswered' | 'current' | 'repeat' | 'mastered';
-
-function segmentState(
-  session: StudySession,
-  id: number,
-  isFinished: boolean,
-): SegmentState {
-  if (session.mastered.includes(id)) {
-    return isFinished && session.progress[id].misses > 0
-      ? 'repeat'
-      : 'mastered';
-  }
-  if (session.queue[0] === id) {
-    return 'current';
-  }
-  return session.progress[id].attempts > 0 ? 'repeat' : 'unanswered';
-}
-
 function shuffled<T>(items: T[]): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
@@ -301,6 +283,10 @@ function AnkiStudyCarousel({
     return <div className="ankiDeckEmpty">No cards yet.</div>;
   }
 
+  const retryCount = session.queue.filter(
+    (id) => session.progress[id].misses > 0,
+  ).length;
+
   const enabledButtons: Record<GroupButton, boolean> = {
     show: !revealed && !isFinished,
     incorrect: revealed,
@@ -325,9 +311,6 @@ function AnkiStudyCarousel({
     <>
       <div className="ankiDeckCarouselTop">
         <div className="ankiDeckCarouselInfo">
-          <div className="ankiDeckCarouselProgress">
-            {Math.min(session.mastered.length + 1, deck.length)} / {deck.length}
-          </div>
           <button
             className="button ankiDeckModeToggle"
             type="button"
@@ -384,22 +367,26 @@ function AnkiStudyCarousel({
           )}
         </div>
       </div>
-      <div
-        className="ankiDeckCarouselBar"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={deck.length}
-        aria-valuenow={session.mastered.length}
-        style={{ '--count': deck.length } as React.CSSProperties}
-      >
-        {deck.map((_, id) => (
-          <div
-            key={id}
-            className="ankiDeckCarouselSegment"
-            data-state={segmentState(session, id, isFinished)}
-            style={{ '--pos': slotOf(session, id) } as React.CSSProperties}
-          />
-        ))}
+      <div className="ankiDeckCarouselProgressRow">
+        <div className="ankiDeckCarouselProgress">
+          {Math.min(session.mastered.length + 1, deck.length)} / {deck.length}
+        </div>
+        <div
+          className="ankiDeckCarouselBar"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={deck.length}
+          aria-valuenow={session.mastered.length}
+          style={
+            {
+              '--mastered': session.mastered.length / deck.length,
+              '--retry': retryCount / deck.length,
+            } as React.CSSProperties
+          }
+        >
+          <div className="ankiDeckCarouselFill" data-fill="mastered" />
+          <div className="ankiDeckCarouselFill" data-fill="retry" />
+        </div>
       </div>
       <div className="ankiDeckCarouselStage">
         {currentId === undefined ? (
@@ -538,13 +525,6 @@ function AnkiStudySummary({
       </div>
     </div>
   );
-}
-
-function slotOf(session: StudySession, id: number): number {
-  const masteredSlot = session.mastered.indexOf(id);
-  return masteredSlot === -1
-    ? session.mastered.length + session.queue.indexOf(id)
-    : masteredSlot;
 }
 
 type AnkiCardVariant = 'carousel' | 'list';

@@ -141,19 +141,11 @@ describe('<AnkiDeck>', () => {
     });
   }
 
-  function segmentStates() {
-    return Array.from(
-      screen
-        .getByRole('progressbar')
-        .querySelectorAll<HTMLElement>('.ankiDeckCarouselSegment'),
-    )
-      .sort(
-        (a, b) =>
-          Number(a.style.getPropertyValue('--pos')) -
-          Number(b.style.getPropertyValue('--pos')),
-      )
-      .map((segment) => segment.getAttribute('data-state'))
-      .join(' ');
+  function barFill() {
+    const bar = screen.getByRole('progressbar');
+    const fraction = (name: string) =>
+      Number(bar.style.getPropertyValue(name)) || 0;
+    return `solid ${fraction('--mastered')} dashed ${fraction('--retry')}`;
   }
 
   it('defaults to study mode, showing one card at a time with the answer hidden', async () => {
@@ -181,13 +173,6 @@ describe('<AnkiDeck>', () => {
           <div
             class="ankiDeckCarouselInfo"
           >
-            <div
-              class="ankiDeckCarouselProgress"
-            >
-              1
-               / 
-              2
-            </div>
             <button
               class="button ankiDeckModeToggle"
               type="button"
@@ -219,23 +204,32 @@ describe('<AnkiDeck>', () => {
           </div>
         </div>
         <div
-          aria-valuemax="2"
-          aria-valuemin="0"
-          aria-valuenow="0"
-          class="ankiDeckCarouselBar"
-          role="progressbar"
-          style="--count: 2;"
+          class="ankiDeckCarouselProgressRow"
         >
           <div
-            class="ankiDeckCarouselSegment"
-            data-state="current"
-            style="--pos: 0;"
-          />
+            class="ankiDeckCarouselProgress"
+          >
+            1
+             / 
+            2
+          </div>
           <div
-            class="ankiDeckCarouselSegment"
-            data-state="unanswered"
-            style="--pos: 1;"
-          />
+            aria-valuemax="2"
+            aria-valuemin="0"
+            aria-valuenow="0"
+            class="ankiDeckCarouselBar"
+            role="progressbar"
+            style="--mastered: 0; --retry: 0;"
+          >
+            <div
+              class="ankiDeckCarouselFill"
+              data-fill="mastered"
+            />
+            <div
+              class="ankiDeckCarouselFill"
+              data-fill="retry"
+            />
+          </div>
         </div>
         <div
           class="ankiDeckCarouselStage"
@@ -276,7 +270,7 @@ describe('<AnkiDeck>', () => {
       'true',
     );
     expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
-    expect(segmentStates()).toBe('current repeat');
+    expect(barFill()).toBe('solid 0 dashed 0.5');
   });
 
   it('masters a card right away when first answered right, but sends a missed card to the far right until it is the last one left', async () => {
@@ -289,7 +283,7 @@ describe('<AnkiDeck>', () => {
 
     expect(progressBar().getAttribute('aria-valuemax')).toBe('2');
     expect(progressBar().getAttribute('aria-valuenow')).toBe('0');
-    expect(segmentStates()).toBe('current unanswered');
+    expect(barFill()).toBe('solid 0 dashed 0');
 
     async function grade(name: 'Right' | 'Wrong') {
       await click(user, 'Show');
@@ -299,20 +293,20 @@ describe('<AnkiDeck>', () => {
     await grade('Wrong');
     expect(screen.getByText('Goodbye')).toBeTruthy();
     expect(screen.getByText('1 / 2')).toBeTruthy();
-    expect(segmentStates()).toBe('current repeat');
+    expect(barFill()).toBe('solid 0 dashed 0.5');
 
     await grade('Right');
     expect(screen.getByText('Hello')).toBeTruthy();
     expect(screen.getByText('2 / 2')).toBeTruthy();
     expect(progressBar().getAttribute('aria-valuenow')).toBe('1');
-    expect(segmentStates()).toBe('mastered current');
+    expect(barFill()).toBe('solid 0.5 dashed 0.5');
 
     // A missed card needs two rights in a row, unless it's the only one left.
     jest.setSystemTime(new Date(75_000));
     await grade('Right');
     expect(progressBar().getAttribute('aria-valuenow')).toBe('2');
     // Cards that needed a repeat stay hatched on the finished bar.
-    expect(segmentStates()).toBe('mastered repeat');
+    expect(barFill()).toBe('solid 1 dashed 0');
 
     const stats = Object.fromEntries(
       Array.from(document.querySelectorAll('.ankiDeckSummaryStats > div')).map(
@@ -364,7 +358,7 @@ describe('<AnkiDeck>', () => {
 
     await click(user, 'Study again');
     expect(screen.getByText('1 / 2')).toBeTruthy();
-    expect(segmentStates()).toBe('current unanswered');
+    expect(barFill()).toBe('solid 0 dashed 0');
   });
 
   it('reveals with Space/Enter, then grades with the Anki number keys, y/n, or Space', async () => {
@@ -398,9 +392,7 @@ describe('<AnkiDeck>', () => {
       }
       await press(user, key);
     }
-    expect(segmentStates()).toBe(
-      'mastered mastered mastered mastered mastered current repeat repeat',
-    );
+    expect(barFill()).toBe('solid 0.625 dashed 0.375');
 
     for (let i = 0; i < 30 && !screen.queryByRole('table'); i++) {
       await press(user, '[Enter]');
@@ -433,7 +425,7 @@ describe('<AnkiDeck>', () => {
     await press(user, '[Enter]');
 
     expect(screen.getByText('Goodbye')).toBeTruthy();
-    expect(segmentStates()).toBe('current repeat');
+    expect(barFill()).toBe('solid 0 dashed 0.5');
   });
 
   it('walks focus between Wrong and Right with the arrow keys, stopping at the ends', async () => {
