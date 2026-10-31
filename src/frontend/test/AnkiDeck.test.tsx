@@ -200,18 +200,22 @@ describe('<AnkiDeck>', () => {
             </label>
           </div>
           <div
+            aria-label="Card controls"
             class="ankiDeckCarouselNav"
+            role="toolbar"
           >
             <button
               aria-label="Previous card"
               class="button ankiDeckCarouselNavButton"
               disabled=""
+              tabindex="-1"
               type="button"
             >
               ←
             </button>
             <button
               class="button ankiDeckCarouselShowNext"
+              tabindex="0"
               type="button"
             >
               Show
@@ -220,6 +224,7 @@ describe('<AnkiDeck>', () => {
               aria-label="Next card"
               class="button ankiDeckCarouselNavButton"
               disabled=""
+              tabindex="-1"
               type="button"
             >
               →
@@ -297,7 +302,9 @@ describe('<AnkiDeck>', () => {
     expect(previousButton().disabled).toBe(true);
     expect(nextButton().disabled).toBe(false);
 
-    await click(user, 'Show');
+    expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
+      'false',
+    );
     await click(user, 'Wrong');
     expect(screen.getByText('2 / 2')).toBeTruthy();
     expect(segmentStates()).toBe('incorrect current');
@@ -433,6 +440,39 @@ describe('<AnkiDeck>', () => {
     expect(focused()).toBe('Right');
   });
 
+  it('treats the card controls as a single tab stop that the arrows move within', async () => {
+    setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+    const toolbar = screen.getByRole('toolbar');
+    const tabStops = () =>
+      within(toolbar)
+        .getAllByRole('button')
+        .filter((button) => button.tabIndex === 0)
+        .map((button) => button.textContent);
+
+    expect(tabStops()).toEqual(['Show']);
+
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByTestId('ankiDeck')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+    await press(user, '[Tab][Tab][Tab]');
+    expect(toolbar.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement?.textContent).toBe('Show');
+
+    await press(user, '[Enter]');
+    expect(tabStops()).toEqual(['Right']);
+    await press(user, '[ArrowLeft]');
+    expect(tabStops()).toEqual(['Wrong']);
+
+    await press(user, '[Tab]');
+    expect(toolbar.contains(document.activeElement)).toBe(false);
+  });
+
   it('hides the shown answer with Escape, keeping the keyboard usable', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
@@ -460,6 +500,25 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
   });
 
+  it('remembers whether a card was revealed when going back to it', async () => {
+    setup(ClozeText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+    await click(user, 'Show');
+    expect(screen.getByText('suis')).toBeTruthy();
+    await click(user, 'Right');
+
+    await click(user, 'Previous card');
+    expect(screen.getByText('1 / 2')).toBeTruthy();
+    expect(screen.getByText('suis')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
+
+    await click(user, 'Next card');
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(screen.getAllByText('[...]')).toHaveLength(3);
+  });
+
   it('navigates back and forth over graded cards with ArrowLeft/ArrowRight, but never ahead', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
@@ -482,6 +541,7 @@ describe('<AnkiDeck>', () => {
     await press(user, '[ArrowLeft]');
     expect(screen.getByText('1 / 2')).toBeTruthy();
 
+    expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
     await press(user, '[ArrowRight]');
     expect(screen.getByText('2 / 2')).toBeTruthy();
 

@@ -65,6 +65,21 @@ interface AnkiCardHandle {
   hideAll: () => void;
 }
 
+type RevealedParts = ReadonlySet<number>;
+
+const BASIC_ANSWER_PART = 0;
+const NOTHING_REVEALED: RevealedParts = new Set();
+
+type GroupButton = 'previous' | 'show' | 'incorrect' | 'correct' | 'next';
+
+const GROUP_BUTTONS: GroupButton[] = [
+  'previous',
+  'show',
+  'incorrect',
+  'correct',
+  'next',
+];
+
 type CardResult = 'correct' | 'incorrect';
 type SegmentState = 'unanswered' | 'current' | CardResult;
 
@@ -102,11 +117,18 @@ function AnkiStudyCarousel({
   const [index, setIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
   const [results, setResults] = React.useState<CardResult[]>([]);
+  const [revealedParts, setRevealedParts] = React.useState<
+    Record<number, RevealedParts>
+  >({});
   const cardRef = React.useRef<AnkiCardHandle>(null);
-  const previousRef = React.useRef<HTMLButtonElement>(null);
-  const incorrectRef = React.useRef<HTMLButtonElement>(null);
-  const correctRef = React.useRef<HTMLButtonElement>(null);
-  const nextRef = React.useRef<HTMLButtonElement>(null);
+  const groupRef = React.useRef<HTMLDivElement>(null);
+  const buttonRefs = React.useRef<
+    Partial<Record<GroupButton, HTMLButtonElement | null>>
+  >({});
+  const focusGroupOnReveal = React.useRef(false);
+  const [lastFocused, setLastFocused] = React.useState<GroupButton | null>(
+    null,
+  );
   const safeIndex = Math.min(index, notes.length);
   const isFinished = notes.length > 0 && safeIndex === notes.length;
   const answeredCount = results.length;
@@ -117,10 +139,17 @@ function AnkiStudyCarousel({
   }, [notes.length]);
 
   React.useEffect(() => {
-    if (revealed) {
-      correctRef.current?.focus();
+    if (revealed && focusGroupOnReveal.current) {
+      buttonRefs.current.correct?.focus();
     }
-  }, [revealed]);
+    focusGroupOnReveal.current = false;
+    setLastFocused(null);
+  }, [revealed, safeIndex]);
+
+  const reveal = React.useCallback(() => {
+    focusGroupOnReveal.current = true;
+    cardRef.current?.revealAll();
+  }, []);
 
   const goPrevious = React.useCallback(() => {
     setIndex((value) => Math.max(value - 1, 0));
@@ -132,16 +161,22 @@ function AnkiStudyCarousel({
     setRevealed(false);
     containerRef.current?.focus();
   }, [answeredCount, containerRef]);
+  const rememberRevealedParts = React.useCallback(
+    (parts: RevealedParts) =>
+      setRevealedParts((value) =>
+        value[safeIndex] === parts ? value : { ...value, [safeIndex]: parts },
+      ),
+    [safeIndex],
+  );
   const moveFocus = React.useCallback((direction: -1 | 1) => {
-    const buttons = [previousRef, incorrectRef, correctRef, nextRef]
-      .map((ref) => ref.current)
-      .filter((button) => button && !button.disabled);
+    const buttons = GROUP_BUTTONS.map((id) => buttonRefs.current[id]).filter(
+      (button) => button && !button.disabled,
+    );
     const current = buttons.indexOf(
       document.activeElement as HTMLButtonElement,
     );
-    const from = current === -1 ? buttons.indexOf(correctRef.current) : current;
     buttons[
-      Math.min(Math.max(from + direction, 0), buttons.length - 1)
+      Math.min(Math.max(current + direction, 0), buttons.length - 1)
     ]?.focus();
   }, []);
   const grade = React.useCallback(
@@ -165,10 +200,11 @@ function AnkiStudyCarousel({
         return;
       }
       const canGrade = revealed && !isFinished;
+      const isInGroup = groupRef.current?.contains(active);
       switch (getKeyboardString(event)) {
         case 'ArrowLeft':
           event.preventDefault();
-          if (revealed) {
+          if (isInGroup) {
             moveFocus(-1);
           } else {
             goPrevious();
@@ -176,7 +212,7 @@ function AnkiStudyCarousel({
           break;
         case 'ArrowRight':
           event.preventDefault();
-          if (revealed) {
+          if (isInGroup) {
             moveFocus(1);
           } else {
             goNext();
@@ -189,7 +225,7 @@ function AnkiStudyCarousel({
           }
           if (!revealed) {
             event.preventDefault();
-            cardRef.current?.revealAll();
+            reveal();
           } else if (!(active instanceof HTMLButtonElement)) {
             event.preventDefault();
             grade('correct');
@@ -228,12 +264,35 @@ function AnkiStudyCarousel({
     goNext,
     moveFocus,
     grade,
+    reveal,
     revealed,
     isFinished,
   ]);
 
   if (notes.length === 0) {
     return <div className="ankiDeckEmpty">No cards yet.</div>;
+  }
+
+  const enabledButtons: Record<GroupButton, boolean> = {
+    previous: safeIndex > 0,
+    show: !revealed && !isFinished,
+    incorrect: revealed,
+    correct: revealed,
+    next: safeIndex < answeredCount,
+  };
+  const primaryButton: GroupButton = revealed ? 'correct' : 'show';
+  const tabStop = [lastFocused, primaryButton, ...GROUP_BUTTONS].find(
+    (id) => id && enabledButtons[id],
+  );
+
+  function groupButtonProps(id: GroupButton) {
+    return {
+      ref: (button: HTMLButtonElement | null) => {
+        buttonRefs.current[id] = button;
+      },
+      tabIndex: id === tabStop ? 0 : -1,
+      onFocus: () => setLastFocused(id),
+    };
   }
 
   return (
@@ -258,20 +317,26 @@ function AnkiStudyCarousel({
                 onRandomChange(event.target.checked);
                 setIndex(0);
                 setResults([]);
+                setRevealedParts({});
                 setRevealed(false);
               }}
             />
             Random
           </label>
         </div>
-        <div className="ankiDeckCarouselNav">
+        <div
+          className="ankiDeckCarouselNav"
+          role="toolbar"
+          aria-label="Card controls"
+          ref={groupRef}
+        >
           <button
             className="button ankiDeckCarouselNavButton"
             type="button"
-            ref={previousRef}
             aria-label="Previous card"
             disabled={safeIndex === 0}
             onClick={goPrevious}
+            {...groupButtonProps('previous')}
           >
             ←
           </button>
@@ -280,16 +345,16 @@ function AnkiStudyCarousel({
               <button
                 className="button ankiDeckCarouselGrade"
                 type="button"
-                ref={incorrectRef}
                 onClick={() => grade('incorrect')}
+                {...groupButtonProps('incorrect')}
               >
                 Wrong
               </button>
               <button
                 className="button button-primary ankiDeckCarouselGrade"
                 type="button"
-                ref={correctRef}
                 onClick={() => grade('correct')}
+                {...groupButtonProps('correct')}
               >
                 Right
               </button>
@@ -299,7 +364,8 @@ function AnkiStudyCarousel({
               className="button ankiDeckCarouselShowNext"
               type="button"
               disabled={isFinished}
-              onClick={() => cardRef.current?.revealAll()}
+              onClick={reveal}
+              {...groupButtonProps('show')}
             >
               Show
             </button>
@@ -307,10 +373,10 @@ function AnkiStudyCarousel({
           <button
             className="button ankiDeckCarouselNavButton"
             type="button"
-            ref={nextRef}
             aria-label="Next card"
             disabled={safeIndex >= answeredCount}
             onClick={goNext}
+            {...groupButtonProps('next')}
           >
             →
           </button>
@@ -344,6 +410,8 @@ function AnkiStudyCarousel({
             cardRef,
             'carousel',
             setRevealed,
+            revealedParts[safeIndex],
+            rememberRevealedParts,
           )
         )}
       </div>
@@ -359,6 +427,8 @@ function renderNote(
   ref: React.Ref<AnkiCardHandle> | undefined,
   variant: AnkiCardVariant,
   onRevealedChange?: (revealed: boolean) => void,
+  initialRevealed?: RevealedParts,
+  onRevealedPartsChange?: (parts: RevealedParts) => void,
 ) {
   if (!note) {
     return null;
@@ -371,6 +441,8 @@ function renderNote(
         ref={ref}
         variant={variant}
         onRevealedChange={onRevealedChange}
+        initialRevealed={initialRevealed}
+        onRevealedPartsChange={onRevealedPartsChange}
       />
     );
   }
@@ -382,6 +454,8 @@ function renderNote(
         ref={ref}
         variant={variant}
         onRevealedChange={onRevealedChange}
+        initialRevealed={initialRevealed}
+        onRevealedPartsChange={onRevealedPartsChange}
       />
     );
   }
@@ -408,18 +482,26 @@ interface AnkiBasicCardProps {
   note: T.AnkiNote;
   variant: AnkiCardVariant;
   onRevealedChange?: (revealed: boolean) => void;
+  initialRevealed?: RevealedParts;
+  onRevealedPartsChange?: (parts: RevealedParts) => void;
 }
 
 const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
-  function AnkiBasicCard({ note, variant, onRevealedChange }, ref) {
-    const [revealed, setRevealed] = React.useState(false);
+  function AnkiBasicCard(
+    { note, variant, onRevealedChange, initialRevealed, onRevealedPartsChange },
+    ref,
+  ) {
+    const [revealedParts, setRevealedParts] = React.useState(
+      initialRevealed ?? NOTHING_REVEALED,
+    );
+    const revealed = revealedParts.has(BASIC_ANSWER_PART);
     const isStage = variant === 'carousel';
 
     React.useImperativeHandle(
       ref,
       () => ({
-        revealAll: () => setRevealed(true),
-        hideAll: () => setRevealed(false),
+        revealAll: () => setRevealedParts(new Set([BASIC_ANSWER_PART])),
+        hideAll: () => setRevealedParts(NOTHING_REVEALED),
       }),
       [],
     );
@@ -427,6 +509,10 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
     React.useEffect(() => {
       onRevealedChange?.(revealed);
     }, [revealed, onRevealedChange]);
+
+    React.useEffect(() => {
+      onRevealedPartsChange?.(revealedParts);
+    }, [revealedParts, onRevealedPartsChange]);
 
     return (
       <div
@@ -441,7 +527,11 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
             <button
               className="button ankiDeckCardReveal"
               type="button"
-              onClick={() => setRevealed((value) => !value)}
+              onClick={() =>
+                setRevealedParts(
+                  revealed ? NOTHING_REVEALED : new Set([BASIC_ANSWER_PART]),
+                )
+              }
             >
               {revealed ? 'Hide answer' : 'Show answer'}
             </button>
@@ -471,12 +561,17 @@ interface AnkiClozeCardProps {
   note: T.AnkiNote;
   variant: AnkiCardVariant;
   onRevealedChange?: (revealed: boolean) => void;
+  initialRevealed?: RevealedParts;
+  onRevealedPartsChange?: (parts: RevealedParts) => void;
 }
 
 const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
-  function AnkiClozeCard({ note, variant, onRevealedChange }, ref) {
-    const [revealedNums, setRevealedNums] = React.useState<Set<number>>(
-      new Set(),
+  function AnkiClozeCard(
+    { note, variant, onRevealedChange, initialRevealed, onRevealedPartsChange },
+    ref,
+  ) {
+    const [revealedNums, setRevealedNums] = React.useState<RevealedParts>(
+      initialRevealed ?? NOTHING_REVEALED,
     );
     const spans = note.clozeSpans ?? [];
     const clozeNums = spans
@@ -492,7 +587,7 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
       ref,
       () => ({
         revealAll: () => setRevealedNums(new Set(clozeNums)),
-        hideAll: () => setRevealedNums(new Set()),
+        hideAll: () => setRevealedNums(NOTHING_REVEALED),
       }),
       [clozeNums],
     );
@@ -500,6 +595,10 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
     React.useEffect(() => {
       onRevealedChange?.(isFullyRevealed);
     }, [isFullyRevealed, onRevealedChange]);
+
+    React.useEffect(() => {
+      onRevealedPartsChange?.(revealedNums);
+    }, [revealedNums, onRevealedPartsChange]);
 
     function toggle(num: number) {
       setRevealedNums((prev) => {
