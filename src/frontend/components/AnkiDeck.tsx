@@ -115,7 +115,8 @@ function gradeCurrentCard(
   };
   const missed = progress[id].misses > 0;
   const isMastered =
-    result === 'correct' && (!missed || streak >= STREAK_TO_MASTER_AFTER_MISS);
+    result === 'correct' &&
+    (!missed || streak >= STREAK_TO_MASTER_AFTER_MISS || rest.length === 0);
   return {
     ...session,
     queue: isMastered ? rest : [...rest, id],

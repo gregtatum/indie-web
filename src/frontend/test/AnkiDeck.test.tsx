@@ -280,7 +280,7 @@ describe('<AnkiDeck>', () => {
     expect(segmentStates()).toBe('current repeat');
   });
 
-  it('masters a card right away when first answered right, but sends a missed card to the far right', async () => {
+  it('masters a card right away when first answered right, but sends a missed card to the far right until it is the last one left', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
@@ -307,14 +307,7 @@ describe('<AnkiDeck>', () => {
     expect(progressBar().getAttribute('aria-valuenow')).toBe('1');
     expect(segmentStates()).toBe('mastered current');
 
-    // After a miss, the card needs two rights in a row. It comes straight
-    // back as the last card, with its answer hidden again.
-    await grade('Right');
-    expect(screen.getByText('Hello')).toBeTruthy();
-    expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
-      'true',
-    );
-
+    // A missed card needs two rights in a row, unless it's the only one left.
     await grade('Right');
     expect(screen.getByText('Done: 2 cards, 1 needed a repeat.')).toBeTruthy();
     expect(progressBar().getAttribute('aria-valuenow')).toBe('2');
