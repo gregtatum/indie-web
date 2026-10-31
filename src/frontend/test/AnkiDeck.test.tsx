@@ -4,15 +4,12 @@ import { AppRoutes } from 'frontend/components/App';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
-import {
-  mockDropboxAccessToken,
-  mockDropboxFilesDownload,
-  mockDropboxListFolder,
-  spyOnDropboxFilesUpload,
-} from './utils/fixtures';
-import { T, A } from 'frontend';
-import { ensureExists, dedent } from 'frontend/utils';
+import { settleApp } from './utils/fixtures';
+import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
+import { A } from 'frontend';
+import { dedent } from 'frontend/utils';
 import { MemoryRouter } from 'react-router-dom';
+import { setImmediate as realSetImmediate } from 'timers';
 
 const fence = '```';
 
@@ -76,7 +73,20 @@ const InterleavedText = dedent`
   That's everything for today.
 `;
 
+async function flushStorage() {
+  await act(async () => {
+    for (let i = 0; i < 10; i++) {
+      await jest.runAllTimersAsync();
+      await new Promise((resolve) => realSetImmediate(resolve));
+    }
+  });
+}
+
 describe('<AnkiDeck>', () => {
+  afterEach(flushStorage);
+
+  const { getIDBFS } = useTestIDBFS();
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.spyOn(Math, 'random').mockReturnValue(0.999);
@@ -88,42 +98,28 @@ describe('<AnkiDeck>', () => {
     jest.useRealTimers();
   });
 
-  function setup(text = FrenchText) {
-    const uploads = spyOnDropboxFilesUpload();
+  async function setup(text = FrenchText) {
+    const idbfs = getIDBFS();
     const store = createStore();
-    store.dispatch(A.changeFileStore('dropbox'));
-    mockDropboxAccessToken(store);
-    const listFiles = mockDropboxListFolder([
-      { type: 'file', path: '/French.md' },
-    ]);
-
-    function getFileMetadata(path: string): T.FileMetadata {
-      const file = ensureExists(
-        listFiles.find((file) => file.path === path),
-        'Failed to find the file.',
-      );
-      if (file.type !== 'file') {
-        throw new Error('Found a folder not a file.');
-      }
-      return file;
-    }
-
-    mockDropboxFilesDownload([
-      {
-        metadata: getFileMetadata('/French.md'),
-        text,
-      },
-    ]);
+    store.dispatch(A.changeFileStore('browser'));
+    await connectBrowserFiles(store, idbfs, []);
+    await idbfs.saveText('/French.md', 'overwrite', text);
 
     const renderResults = render(
-      <MemoryRouter initialEntries={['/dropbox/md/French.md']}>
+      <MemoryRouter initialEntries={['/browser/md/French.md']}>
         <Provider store={store as any}>
           <AppRoutes />
         </Provider>
       </MemoryRouter>,
     );
 
-    return { store, uploads, ...renderResults };
+    await settleApp();
+
+    async function readSavedText() {
+      return (await idbfs.loadBlob('/French.md')).blob.text();
+    }
+
+    return { store, readSavedText, ...renderResults };
   }
 
   type User = ReturnType<typeof userEvent.setup>;
@@ -151,7 +147,7 @@ describe('<AnkiDeck>', () => {
   }
 
   it('renders a separate deck for each #deck section', async () => {
-    setup(dedent`
+    await setup(dedent`
       # French
 
       ${fence}anki
@@ -181,7 +177,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('defaults to study mode, showing one card at a time with the answer hidden', async () => {
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     expect(screen.getByText('1 / 2')).toBeTruthy();
@@ -287,7 +283,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('grades a card to advance to the next one with its answer hidden', async () => {
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -307,7 +303,7 @@ describe('<AnkiDeck>', () => {
 
   it('masters a card right away when first answered right, but sends a missed card to the far right until it is the last one left', async () => {
     jest.setSystemTime(new Date(0));
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const progressBar = () => screen.getByRole('progressbar');
@@ -369,7 +365,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('restarts the whole deck with Study again, or only the missed cards with Study missed', async () => {
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -394,7 +390,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('reveals with Space/Enter, then grades with the Anki number keys, y/n, or Space', async () => {
-    setup(EightCardText);
+    await setup(EightCardText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -435,7 +431,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('moves between the Wrong and Right buttons with the arrow keys, grading with Enter', async () => {
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -461,7 +457,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('walks focus between Wrong and Right with the arrow keys, stopping at the ends', async () => {
-    setup(EightCardText);
+    await setup(EightCardText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -488,7 +484,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('treats the card controls as a single tab stop that the arrows move within', async () => {
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -521,7 +517,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('hides the shown answer with Escape, keeping the keyboard usable', async () => {
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -549,7 +545,7 @@ describe('<AnkiDeck>', () => {
 
   it('shuffles the cards by default and restores deck order when Random is unchecked', async () => {
     jest.spyOn(Math, 'random').mockReturnValue(0);
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
@@ -566,7 +562,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('renders an empty anki block without crashing, e.g. while mid-edit', async () => {
-    setup(EmptyText);
+    await setup(EmptyText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     expect(screen.getByText('No cards yet.')).toBeTruthy();
@@ -574,7 +570,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('switches to the full list view and back to study mode', async () => {
-    setup();
+    await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -604,7 +600,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('renders cloze blanks hidden, using the hint as a placeholder', async () => {
-    setup(ClozeText);
+    await setup(ClozeText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     expect(screen.getByText('1 / 2')).toBeTruthy();
@@ -615,7 +611,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('reveals a cloze blank independently by number, resetting on the next card', async () => {
-    setup(ClozeText);
+    await setup(ClozeText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
@@ -643,7 +639,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('renders multiple anki blocks interleaved with regular markdown text', async () => {
-    setup(InterleavedText);
+    await setup(InterleavedText);
     await waitFor(() => screen.getAllByTestId('ankiDeck'));
 
     // The surrounding markdown text rendered, in order, around both blocks.
@@ -671,14 +667,15 @@ describe('<AnkiDeck>', () => {
 
   describe('study stats in frontmatter', () => {
     async function study(text: string, answers: Array<'Right' | 'Wrong'>) {
-      const { uploads } = setup(text);
+      const { readSavedText } = await setup(text);
       await waitFor(() => screen.getByTestId('ankiDeck'));
       const user = userEvent.setup();
       for (const answer of answers) {
         await click(user, 'Show');
         await click(user, answer);
       }
-      return { uploads, user };
+      await flushStorage();
+      return { readSavedText, user };
     }
 
     function normalizeTimes(text: string) {
@@ -688,9 +685,13 @@ describe('<AnkiDeck>', () => {
     }
 
     it('saves a run and the missed terms into new frontmatter, keeping the study summary', async () => {
-      const { uploads } = await study(FrenchText, ['Wrong', 'Right', 'Right']);
+      const { readSavedText } = await study(FrenchText, [
+        'Wrong',
+        'Right',
+        'Right',
+      ]);
 
-      expect(uploads.map((upload) => normalizeTimes(upload.body))).toEqual([
+      expect(normalizeTimes(await readSavedText())).toEqual(
         [
           '---',
           'anki:',
@@ -701,13 +702,13 @@ describe('<AnkiDeck>', () => {
           '---',
           FrenchText,
         ].join('\n'),
-      ]);
+      );
       expect(screen.getByText('Study again')).toBeTruthy();
       expect(screen.queryByText(/anki:/)).toBeNull();
     });
 
     it('appends to existing frontmatter, clearing weak terms answered right and keeping other keys', async () => {
-      const { uploads } = await study(
+      const { readSavedText } = await study(
         [
           '---',
           'title: French # keep me',
@@ -722,7 +723,7 @@ describe('<AnkiDeck>', () => {
         ['Right', 'Wrong', 'Right'],
       );
 
-      expect(uploads.map((upload) => normalizeTimes(upload.body))).toEqual([
+      expect(normalizeTimes(await readSavedText())).toEqual(
         [
           '---',
           'title: French # keep me',
@@ -735,19 +736,19 @@ describe('<AnkiDeck>', () => {
           '---',
           FrenchText,
         ].join('\n'),
-      ]);
+      );
     });
 
     it.each([
       ['CRLF line endings', '\r\n', '---', '---'],
       ['trailing spaces after the fences', '\n', '---  ', '--- \t'],
     ])('reads frontmatter with %s', async (_, eol, open, close) => {
-      const { uploads } = await study(
+      const { readSavedText } = await study(
         [open, 'title: French', close, FrenchText].join(eol),
         ['Right', 'Right'],
       );
 
-      expect(uploads.map((upload) => normalizeTimes(upload.body))).toEqual([
+      expect(normalizeTimes(await readSavedText())).toEqual(
         [
           '---',
           'title: French',
@@ -758,11 +759,11 @@ describe('<AnkiDeck>', () => {
           '---',
           FrenchText,
         ].join('\n'),
-      ]);
+      );
     });
 
     it('flags Study missed runs as retries and keeps their weak terms', async () => {
-      const { uploads, user } = await study(FrenchText, [
+      const { readSavedText, user } = await study(FrenchText, [
         'Wrong',
         'Right',
         'Right',
@@ -771,8 +772,7 @@ describe('<AnkiDeck>', () => {
       await click(user, 'Show');
       await click(user, 'Right');
 
-      expect(uploads).toHaveLength(2);
-      expect(normalizeTimes(uploads[1].body)).toContain(
+      expect(normalizeTimes(await readSavedText())).toContain(
         [
           '    weak: [ Hello ]',
           '    runs:',
