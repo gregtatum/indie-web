@@ -158,19 +158,33 @@ describe('<AnkiDeck>', () => {
           />
         </div>
         <div
-          class="ankiDeckCard"
+          class="ankiDeckCarouselStage"
         >
           <div
-            class="ankiDeckCardFront"
+            class="ankiDeckCard ankiDeckCardStage"
           >
-            Hello
+            <div
+              class="ankiDeckCardFront"
+            >
+              Hello
+            </div>
+            <div
+              class="ankiDeckCardRevealRow"
+            >
+              <button
+                class="button ankiDeckCardReveal"
+                type="button"
+              >
+                Show answer
+              </button>
+              <span
+                aria-hidden="true"
+                class="ankiDeckKbd"
+              >
+                Space
+              </span>
+            </div>
           </div>
-          <button
-            class="button ankiDeckCardReveal"
-            type="button"
-          >
-            Show answer
-          </button>
         </div>
         <div
           class="ankiDeckCarouselNav"
@@ -183,7 +197,7 @@ describe('<AnkiDeck>', () => {
             Previous
           </button>
           <button
-            class="button"
+            class="button button-primary"
             type="button"
           >
             Next

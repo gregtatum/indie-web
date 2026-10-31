@@ -33,7 +33,9 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
         <AnkiStudyCarousel notes={notes} containerRef={containerRef} />
       ) : (
         <div className="ankiDeckList">
-          {notes.map((note, index) => renderNote(note, index))}
+          {notes.map((note, index) =>
+            renderNote(note, index, undefined, 'list'),
+          )}
         </div>
       )}
     </div>
@@ -111,7 +113,9 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
           style={{ width: `${(filledSegments / totalSegments) * 100}%` }}
         />
       </div>
-      {renderNote(notes[index], index, cardRef)}
+      <div className="ankiDeckCarouselStage">
+        {renderNote(notes[index], index, cardRef, 'carousel')}
+      </div>
       <div className="ankiDeckCarouselNav">
         <button
           className="button"
@@ -122,7 +126,7 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
           Previous
         </button>
         <button
-          className="button"
+          className="button button-primary"
           type="button"
           disabled={index === notes.length - 1}
           onClick={goNext}
@@ -134,18 +138,33 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
   );
 }
 
+type AnkiCardVariant = 'carousel' | 'list';
+
 function renderNote(
   note: T.AnkiNote,
   key: number,
-  ref?: React.Ref<AnkiCardHandle>,
+  ref: React.Ref<AnkiCardHandle> | undefined,
+  variant: AnkiCardVariant,
 ) {
   if (note.clozeSpans !== null) {
-    return <AnkiClozeCard key={key} note={note} ref={ref} />;
+    return <AnkiClozeCard key={key} note={note} ref={ref} variant={variant} />;
   }
   if (isBasicNote(note)) {
-    return <AnkiBasicCard key={key} note={note} ref={ref} />;
+    return <AnkiBasicCard key={key} note={note} ref={ref} variant={variant} />;
   }
   return null;
+}
+
+/**
+ * Anki deck paths use "::" to separate a deck from its subdecks, e.g.
+ * "French::Basics". Render that the same way as the app's own breadcrumbs.
+ */
+function formatDeckPath(deck: string): string {
+  return deck
+    .split('::')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(' » ');
 }
 
 function isBasicNote(note: T.AnkiNote): boolean {
@@ -154,11 +173,13 @@ function isBasicNote(note: T.AnkiNote): boolean {
 
 interface AnkiBasicCardProps {
   note: T.AnkiNote;
+  variant: AnkiCardVariant;
 }
 
 const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
-  function AnkiBasicCard({ note }, ref) {
+  function AnkiBasicCard({ note, variant }, ref) {
     const [revealed, setRevealed] = React.useState(false);
+    const isStage = variant === 'carousel';
 
     React.useImperativeHandle(
       ref,
@@ -170,15 +191,27 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
     );
 
     return (
-      <div className="ankiDeckCard">
+      <div
+        className={isStage ? 'ankiDeckCard ankiDeckCardStage' : 'ankiDeckCard'}
+      >
+        {isStage && note.deck ? (
+          <div className="ankiDeckDeckLabel">{formatDeckPath(note.deck)}</div>
+        ) : null}
         <div className="ankiDeckCardFront">{note.fields[0]}</div>
-        <button
-          className="button ankiDeckCardReveal"
-          type="button"
-          onClick={() => setRevealed((value) => !value)}
-        >
-          {revealed ? 'Hide answer' : 'Show answer'}
-        </button>
+        <div className="ankiDeckCardRevealRow">
+          <button
+            className="button ankiDeckCardReveal"
+            type="button"
+            onClick={() => setRevealed((value) => !value)}
+          >
+            {revealed ? 'Hide answer' : 'Show answer'}
+          </button>
+          {isStage ? (
+            <span className="ankiDeckKbd" aria-hidden="true">
+              Space
+            </span>
+          ) : null}
+        </div>
         {revealed ? (
           <div className="ankiDeckCardBack">{note.fields[1]}</div>
         ) : null}
@@ -189,10 +222,11 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
 
 interface AnkiClozeCardProps {
   note: T.AnkiNote;
+  variant: AnkiCardVariant;
 }
 
 const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
-  function AnkiClozeCard({ note }, ref) {
+  function AnkiClozeCard({ note, variant }, ref) {
     const [revealedNums, setRevealedNums] = React.useState<Set<number>>(
       new Set(),
     );
@@ -225,8 +259,15 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
       });
     }
 
+    const isStage = variant === 'carousel';
+
     return (
-      <div className="ankiDeckCard">
+      <div
+        className={isStage ? 'ankiDeckCard ankiDeckCardStage' : 'ankiDeckCard'}
+      >
+        {isStage && note.deck ? (
+          <div className="ankiDeckDeckLabel">{formatDeckPath(note.deck)}</div>
+        ) : null}
         <p className="ankiDeckClozeText">
           {spans.map((span, index) =>
             span.type === 'text' ? (
@@ -244,6 +285,14 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
             ),
           )}
         </p>
+        {isStage ? (
+          <div className="ankiDeckClozeHint">
+            <span className="ankiDeckKbd" aria-hidden="true">
+              Space
+            </span>{' '}
+            reveals all
+          </div>
+        ) : null}
       </div>
     );
   },
