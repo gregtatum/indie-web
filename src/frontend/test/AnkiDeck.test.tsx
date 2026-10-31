@@ -124,6 +124,33 @@ describe('<AnkiDeck>', () => {
     return { store, ...renderResults };
   }
 
+  type User = ReturnType<typeof userEvent.setup>;
+
+  async function click(user: User, name: string) {
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByRole('button', { name })),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+  }
+
+  async function press(user: User, keys: string) {
+    await act(async () => {
+      await Promise.all([user.keyboard(keys), jest.runAllTimersAsync()]);
+    });
+  }
+
+  function segmentStates() {
+    return Array.from(
+      screen
+        .getByRole('progressbar')
+        .querySelectorAll('.ankiDeckCarouselSegment'),
+    )
+      .map((segment) => segment.getAttribute('data-state'))
+      .join(' ');
+  }
+
   it('defaults to study mode, showing one card at a time with the answer hidden', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
@@ -191,7 +218,8 @@ describe('<AnkiDeck>', () => {
             </button>
             <button
               aria-label="Next card"
-              class="button button-primary ankiDeckCarouselNavButton"
+              class="button ankiDeckCarouselNavButton"
+              disabled=""
               type="button"
             >
               →
@@ -237,69 +265,49 @@ describe('<AnkiDeck>', () => {
     `);
   });
 
-  it('advances through cards one at a time, resetting the reveal state', async () => {
+  it('grades a card to advance, and only lets you go back to re-grade', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
-    await act(async () => {
-      await Promise.all([
-        user.click(screen.getByRole('button', { name: 'Show' })),
-        jest.runAllTimersAsync(),
-      ]);
-    });
-    expect(screen.getByText('Bonjour')).toBeTruthy();
+    const nextButton = () =>
+      screen.getByRole('button', { name: 'Next card' }) as HTMLButtonElement;
+    const previousButton = () =>
+      screen.getByRole('button', {
+        name: 'Previous card',
+      }) as HTMLButtonElement;
 
-    await act(async () => {
-      await Promise.all([
-        user.click(screen.getByRole('button', { name: 'Next card' })),
-        jest.runAllTimersAsync(),
-      ]);
-    });
+    expect(nextButton().disabled).toBe(true);
+    await click(user, 'Show');
+    expect(screen.getByText('Bonjour')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Show' })).toBeNull();
+
+    await click(user, 'Right');
     expect(screen.getByText('2 / 2')).toBeTruthy();
     expect(screen.getByText('Goodbye')).toBeTruthy();
-    // The new card starts with its answer hidden again.
     expect(screen.getByText('Au revoir').getAttribute('aria-hidden')).toBe(
       'true',
     );
     expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
-    expect(
-      (screen.getByRole('button', { name: 'Next card' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    expect(nextButton().disabled).toBe(true);
 
-    await act(async () => {
-      await Promise.all([
-        user.click(screen.getByRole('button', { name: 'Previous card' })),
-        jest.runAllTimersAsync(),
-      ]);
-    });
+    await click(user, 'Previous card');
     expect(screen.getByText('1 / 2')).toBeTruthy();
     expect(screen.getByText('Hello')).toBeTruthy();
-    expect(
-      (
-        screen.getByRole('button', {
-          name: 'Previous card',
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    expect(previousButton().disabled).toBe(true);
+    expect(nextButton().disabled).toBe(false);
+
+    await click(user, 'Show');
+    await click(user, 'Wrong');
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(segmentStates()).toBe('incorrect current');
   });
 
-  it('fills one bar segment per card, completing the bar on the last card', async () => {
+  it('gives each card its own bar segment, colored by its result', async () => {
     setup(EightCardText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
-    function progressBar() {
-      return screen.getByRole('progressbar');
-    }
-
-    function segmentStates() {
-      return Array.from(
-        progressBar().querySelectorAll('.ankiDeckCarouselSegment'),
-      )
-        .map((segment) => segment.getAttribute('data-state'))
-        .join(' ');
-    }
+    const progressBar = () => screen.getByRole('progressbar');
 
     expect(progressBar().getAttribute('aria-valuemax')).toBe('8');
     expect(progressBar().getAttribute('aria-valuenow')).toBe('1');
@@ -308,30 +316,34 @@ describe('<AnkiDeck>', () => {
     );
 
     const user = userEvent.setup();
-    for (let card = 2; card <= 8; card++) {
-      await act(async () => {
-        await Promise.all([
-          user.click(screen.getByRole('button', { name: 'Next card' })),
-          jest.runAllTimersAsync(),
-        ]);
-      });
-      expect(progressBar().getAttribute('aria-valuenow')).toBe(String(card));
+    for (let card = 1; card <= 7; card++) {
+      await click(user, 'Show');
+      await click(user, card === 1 ? 'Wrong' : 'Right');
+      expect(progressBar().getAttribute('aria-valuenow')).toBe(
+        String(card + 1),
+      );
     }
     expect(segmentStates()).toBe(
-      'correct correct correct correct correct correct correct current',
+      'incorrect correct correct correct correct correct correct current',
+    );
+
+    await click(user, 'Show');
+    await click(user, 'Right');
+    expect(screen.getByText('Done: 7 right, 1 wrong.')).toBeTruthy();
+    expect(progressBar().getAttribute('aria-valuenow')).toBe('8');
+    expect(segmentStates()).toBe(
+      'incorrect correct correct correct correct correct correct correct',
     );
   });
 
-  it('reveals and advances with Space, but only while focus is inside the carousel', async () => {
-    setup();
+  it('reveals with Space/Enter, then grades with the Anki number keys, y/n, or Space', async () => {
+    setup(EightCardText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
 
     // Nothing is focused inside the carousel yet, so Space is a no-op.
-    await act(async () => {
-      await Promise.all([user.keyboard('[Space]'), jest.runAllTimersAsync()]);
-    });
+    await press(user, '[Space]');
     expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
       'true',
     );
@@ -343,24 +355,23 @@ describe('<AnkiDeck>', () => {
       ]);
     });
 
-    // First Space reveals the current card's answer.
-    await act(async () => {
-      await Promise.all([user.keyboard('[Space]'), jest.runAllTimersAsync()]);
-    });
+    await press(user, '[Space]');
     expect(screen.getByText('Bonjour')).toBeTruthy();
-    expect(screen.getByText('1 / 2')).toBeTruthy();
+    expect(screen.getByText('1 / 8')).toBeTruthy();
 
-    // A second Space, with the answer already shown, advances to the next card.
-    await act(async () => {
-      await Promise.all([user.keyboard('[Space]'), jest.runAllTimersAsync()]);
-    });
-    expect(screen.getByText('2 / 2')).toBeTruthy();
-    expect(screen.getByText('Au revoir').getAttribute('aria-hidden')).toBe(
-      'true',
+    const keys = ['1', '3', '2', '4', 'n', 'y', '[Space]'];
+    for (const [i, key] of keys.entries()) {
+      if (i > 0) {
+        await press(user, '[Enter]');
+      }
+      await press(user, key);
+    }
+    expect(segmentStates()).toBe(
+      'incorrect correct incorrect correct incorrect correct correct current',
     );
   });
 
-  it('navigates cards with the ArrowLeft/ArrowRight keys', async () => {
+  it('moves between the Wrong and Right buttons with the arrow keys, grading with Enter', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
@@ -372,21 +383,47 @@ describe('<AnkiDeck>', () => {
       ]);
     });
 
+    await press(user, '[Space]');
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Right' }),
+    );
+    await press(user, '[ArrowLeft]');
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Wrong' }),
+    );
+    await press(user, '[Enter]');
+
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(segmentStates()).toBe('incorrect current');
+  });
+
+  it('navigates back and forth over graded cards with ArrowLeft/ArrowRight, but never ahead', async () => {
+    setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
     await act(async () => {
       await Promise.all([
-        user.keyboard('[ArrowRight]'),
+        user.click(screen.getByTestId('ankiDeck')),
         jest.runAllTimersAsync(),
       ]);
     });
+
+    await press(user, '[ArrowRight]');
+    expect(screen.getByText('1 / 2')).toBeTruthy();
+
+    await press(user, '[Space]');
+    await press(user, '3');
     expect(screen.getByText('2 / 2')).toBeTruthy();
 
-    await act(async () => {
-      await Promise.all([
-        user.keyboard('[ArrowLeft]'),
-        jest.runAllTimersAsync(),
-      ]);
-    });
+    await press(user, '[ArrowLeft]');
     expect(screen.getByText('1 / 2')).toBeTruthy();
+
+    await press(user, '[ArrowRight]');
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+
+    await press(user, '[ArrowRight]');
+    expect(screen.getByText('2 / 2')).toBeTruthy();
   });
 
   it('shuffles the cards by default and restores deck order when Random is unchecked', async () => {
@@ -470,12 +507,7 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByText('suis')).toBeTruthy();
     expect(screen.queryByText('[être]')).toBeNull();
 
-    await act(async () => {
-      await Promise.all([
-        user.click(screen.getByRole('button', { name: 'Next card' })),
-        jest.runAllTimersAsync(),
-      ]);
-    });
+    await click(user, 'Right');
 
     // The second card's blanks are independent, and start out hidden.
     expect(screen.getByText('2 / 2')).toBeTruthy();

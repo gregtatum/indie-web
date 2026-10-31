@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as T from 'frontend/@types';
+import { getKeyboardString } from 'frontend/utils';
 import './AnkiDeck.css';
 
 interface AnkiDeckProps {
@@ -69,15 +70,12 @@ type SegmentState = 'unanswered' | 'current' | CardResult;
 function segmentState(
   index: number,
   currentIndex: number,
-  results: Partial<Record<number, CardResult>>,
+  results: CardResult[],
 ): SegmentState {
   if (index === currentIndex) {
     return 'current';
   }
-  if (index < currentIndex) {
-    return results[index] ?? 'correct';
-  }
-  return 'unanswered';
+  return results[index] ?? 'unanswered';
 }
 
 function shuffled<T>(items: T[]): T[] {
@@ -102,52 +100,97 @@ function AnkiStudyCarousel({
   );
   const [index, setIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
+  const [results, setResults] = React.useState<CardResult[]>([]);
   const cardRef = React.useRef<AnkiCardHandle>(null);
-  const safeIndex = Math.min(index, Math.max(notes.length - 1, 0));
-  const [results] = React.useState<Partial<Record<number, CardResult>>>({});
+  const incorrectRef = React.useRef<HTMLButtonElement>(null);
+  const correctRef = React.useRef<HTMLButtonElement>(null);
+  const safeIndex = Math.min(index, notes.length);
+  const isFinished = notes.length > 0 && safeIndex === notes.length;
+  const answeredCount = results.length;
 
   React.useEffect(() => {
-    setIndex((value) => Math.min(value, Math.max(notes.length - 1, 0)));
+    setIndex((value) => Math.min(value, notes.length));
+    setResults((value) => value.slice(0, notes.length));
   }, [notes.length]);
+
+  React.useEffect(() => {
+    if (revealed) {
+      correctRef.current?.focus();
+    }
+  }, [revealed]);
 
   const goPrevious = React.useCallback(() => {
     setIndex((value) => Math.max(value - 1, 0));
     setRevealed(false);
   }, []);
   const goNext = React.useCallback(() => {
-    setIndex((value) => Math.min(value + 1, notes.length - 1));
+    setIndex((value) => Math.min(value + 1, answeredCount));
     setRevealed(false);
-  }, [notes.length]);
-  const showOrNext = React.useCallback(() => {
-    if (revealed) {
-      goNext();
-    } else {
-      cardRef.current?.revealAll();
-    }
-  }, [revealed, goNext]);
+  }, [answeredCount]);
+  const grade = React.useCallback(
+    (result: CardResult) => {
+      setResults((value) => {
+        const next = [...value];
+        next[safeIndex] = result;
+        return next;
+      });
+      setIndex(safeIndex + 1);
+      setRevealed(false);
+      containerRef.current?.focus();
+    },
+    [containerRef, safeIndex],
+  );
 
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (!containerRef.current?.contains(document.activeElement)) {
+      const active = document.activeElement;
+      if (!containerRef.current?.contains(active)) {
         return;
       }
-      switch (event.key) {
-        case ' ':
-        case 'Enter':
+      const canGrade = revealed && !isFinished;
+      switch (getKeyboardString(event)) {
+        case 'ArrowLeft':
           event.preventDefault();
           if (revealed) {
-            goNext();
+            incorrectRef.current?.focus();
           } else {
-            cardRef.current?.revealAll();
+            goPrevious();
           }
           break;
         case 'ArrowRight':
           event.preventDefault();
-          goNext();
+          if (revealed) {
+            correctRef.current?.focus();
+          } else {
+            goNext();
+          }
           break;
-        case 'ArrowLeft':
-          event.preventDefault();
-          goPrevious();
+        case ' ':
+        case 'Enter':
+          if (isFinished) {
+            break;
+          }
+          if (!revealed) {
+            event.preventDefault();
+            cardRef.current?.revealAll();
+          } else if (!(active instanceof HTMLButtonElement)) {
+            event.preventDefault();
+            grade('correct');
+          }
+          break;
+        case '1':
+        case '2':
+        case 'N':
+          if (canGrade) {
+            grade('incorrect');
+          }
+          break;
+        case '3':
+        case '4':
+        case 'Y':
+          if (canGrade) {
+            grade('correct');
+          }
           break;
         default:
           break;
@@ -155,7 +198,7 @@ function AnkiStudyCarousel({
     }
     document.body.addEventListener('keydown', handleKeyDown);
     return () => document.body.removeEventListener('keydown', handleKeyDown);
-  }, [containerRef, goPrevious, goNext, revealed]);
+  }, [containerRef, goPrevious, goNext, grade, revealed, isFinished]);
 
   if (notes.length === 0) {
     return <div className="ankiDeckEmpty">No cards yet.</div>;
@@ -166,7 +209,7 @@ function AnkiStudyCarousel({
       <div className="ankiDeckCarouselTop">
         <div className="ankiDeckCarouselInfo">
           <div className="ankiDeckCarouselProgress">
-            {safeIndex + 1} / {notes.length}
+            {Math.min(safeIndex + 1, notes.length)} / {notes.length}
           </div>
           <button
             className="button ankiDeckModeToggle"
@@ -182,6 +225,7 @@ function AnkiStudyCarousel({
               onChange={(event) => {
                 onRandomChange(event.target.checked);
                 setIndex(0);
+                setResults([]);
                 setRevealed(false);
               }}
             />
@@ -198,19 +242,40 @@ function AnkiStudyCarousel({
           >
             ←
           </button>
+          {revealed ? (
+            <>
+              <button
+                className="button ankiDeckCarouselGrade"
+                type="button"
+                ref={incorrectRef}
+                onClick={() => grade('incorrect')}
+              >
+                Wrong
+              </button>
+              <button
+                className="button button-primary ankiDeckCarouselGrade"
+                type="button"
+                ref={correctRef}
+                onClick={() => grade('correct')}
+              >
+                Right
+              </button>
+            </>
+          ) : (
+            <button
+              className="button ankiDeckCarouselShowNext"
+              type="button"
+              disabled={isFinished}
+              onClick={() => cardRef.current?.revealAll()}
+            >
+              Show
+            </button>
+          )}
           <button
-            className="button ankiDeckCarouselShowNext"
-            type="button"
-            disabled={revealed && safeIndex === notes.length - 1}
-            onClick={showOrNext}
-          >
-            {revealed ? 'Next' : 'Show'}
-          </button>
-          <button
-            className="button button-primary ankiDeckCarouselNavButton"
+            className="button ankiDeckCarouselNavButton"
             type="button"
             aria-label="Next card"
-            disabled={safeIndex === notes.length - 1}
+            disabled={safeIndex >= answeredCount}
             onClick={goNext}
           >
             →
@@ -222,7 +287,7 @@ function AnkiStudyCarousel({
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={notes.length}
-        aria-valuenow={safeIndex + 1}
+        aria-valuenow={Math.min(safeIndex + 1, notes.length)}
       >
         {notes.map((_, i) => (
           <div
@@ -233,12 +298,19 @@ function AnkiStudyCarousel({
         ))}
       </div>
       <div className="ankiDeckCarouselStage">
-        {renderNote(
-          notes[safeIndex],
-          safeIndex,
-          cardRef,
-          'carousel',
-          setRevealed,
+        {isFinished ? (
+          <div className="ankiDeckCarouselSummary">
+            Done: {results.filter((r) => r === 'correct').length} right,{' '}
+            {results.filter((r) => r === 'incorrect').length} wrong.
+          </div>
+        ) : (
+          renderNote(
+            notes[safeIndex],
+            safeIndex,
+            cardRef,
+            'carousel',
+            setRevealed,
+          )
         )}
       </div>
     </>

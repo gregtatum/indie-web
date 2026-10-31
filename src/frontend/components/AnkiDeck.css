@@ -96,6 +96,19 @@
   padding: 0;
 }
 
+.ankiDeckCarouselGrade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 26px;
+  padding: 0 8px;
+}
+
+.ankiDeckCarouselSummary {
+  color: var(--muted);
+}
+
 .ankiDeckCarouselBar {
   display: flex;
   gap: 2px;
