@@ -772,6 +772,19 @@ function fileStoreCacheEnabled(
   }
 }
 
+function fileStoreCacheBudget(
+  state: number | null = persistedState.fileStoreCacheBudget.read(),
+  action: T.Action,
+): number | null {
+  switch (action.type) {
+    case 'set-file-store-cache-budget':
+      persistedState.fileStoreCacheBudget.write(action.value);
+      return action.value;
+    default:
+      return state;
+  }
+}
+
 function getFileStoreCacheEnabledDefault(): Record<string, boolean> {
   const settings = persistedState.fileStoreCacheSettings.read();
   if (persistedState.fileStoreCacheEnabled.read() !== false) {
@@ -962,6 +975,7 @@ export const reducers = combineReducers({
   detectedPointerType,
   experimentalFeatures,
   fileStoreCacheEnabled,
+  fileStoreCacheBudget,
   filesIndex,
   inputMode,
   serverId,

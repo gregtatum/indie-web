@@ -1,5 +1,6 @@
 import { T } from 'frontend';
 import type { WorkerClient } from 'frontend/worker/client';
+import { persistedState } from 'frontend/logic/persisted-state';
 
 export abstract class FileStore {
   // Await on this during initialization.
@@ -71,12 +72,25 @@ export abstract class FileStore {
   }
 }
 
-const FALLBACK_CACHE_BUDGET = 512 * 1024 * 1024;
-const CACHE_QUOTA_FRACTION = 0.25;
+export const DEFAULT_CACHE_BUDGET = 500_000_000;
+
+export async function getMaxCacheBudget(): Promise<number> {
+  const quota = (await navigator.storage?.estimate?.())?.quota;
+  return quota ?? DEFAULT_CACHE_BUDGET;
+}
+
+export function resolveCacheBudget(
+  setting: number | null,
+  maxBudget: number,
+): number {
+  return Math.min(setting ?? DEFAULT_CACHE_BUDGET, maxBudget);
+}
 
 export async function getCacheBudget(): Promise<number> {
-  const quota = (await navigator.storage?.estimate?.())?.quota;
-  return quota ? quota * CACHE_QUOTA_FRACTION : FALLBACK_CACHE_BUDGET;
+  return resolveCacheBudget(
+    persistedState.fileStoreCacheBudget.read(),
+    await getMaxCacheBudget(),
+  );
 }
 
 export const DROPBOX_CACHE_KEY = 'dropbox';

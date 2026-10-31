@@ -294,6 +294,16 @@
   }
 }
 
+.storeCacheHelp {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: help;
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+}
+
 .storeCacheMessage {
   margin: 0;
   opacity: 0.7;

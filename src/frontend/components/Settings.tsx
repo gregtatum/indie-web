@@ -9,8 +9,9 @@ import {
 import { IDB_CACHE_NAME } from 'frontend/logic/file-store/dropbox-fs';
 import {
   DROPBOX_CACHE_KEY,
-  getCacheBudget,
+  getMaxCacheBudget,
   isCacheEnabled,
+  resolveCacheBudget,
 } from 'frontend/logic/file-store';
 import { openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import { FILE_CATEGORIES, formatBytes, getEnv } from 'frontend/utils';
@@ -36,7 +37,7 @@ type CacheUsage =
       categories: T.CacheCategoryUsage;
       totalBytes: number;
       fileCount: number;
-      budgetBytes: number;
+      maxBudgetBytes: number;
     };
 
 export function StoreCache({
@@ -51,6 +52,7 @@ export function StoreCache({
   const dispatch = Hooks.useDispatch();
   const enabled = isCacheEnabled($$.getFileStoreCacheSettings(), cacheKey);
   const workerClient = $$.getWorkerClient();
+  const budgetSetting = $$.getFileStoreCacheBudget();
   const [expanded, setExpanded] = React.useState(false);
   const [usage, setUsage] = React.useState<CacheUsage>({ status: 'loading' });
   const isMountedRef = React.useRef(true);
@@ -66,9 +68,9 @@ export function StoreCache({
     setUsage({ status: 'loading' });
     try {
       const cache = await openIDBFS(dbName, workerClient);
-      const [categories, budgetBytes] = await Promise.all([
+      const [categories, maxBudgetBytes] = await Promise.all([
         cache.getUsageByCategory(),
-        getCacheBudget(),
+        getMaxCacheBudget(),
       ]);
       if (isMountedRef.current) {
         setUsage({
@@ -76,7 +78,7 @@ export function StoreCache({
           categories,
           totalBytes: sumCategories(categories, 'bytes'),
           fileCount: sumCategories(categories, 'files'),
-          budgetBytes,
+          maxBudgetBytes,
         });
       }
     } catch (error) {
@@ -93,6 +95,17 @@ export function StoreCache({
       void refresh();
     }
   }, [needsUsage, refresh]);
+
+  async function changeBudget(value: number) {
+    dispatch(A.setFileStoreCacheBudget(value));
+    try {
+      const cache = await openIDBFS(dbName, workerClient);
+      await cache.evictLargeFiles(resolveCacheBudget(value, maxBudgetBytes));
+      await refresh();
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   async function clear() {
     if (
@@ -138,7 +151,8 @@ export function StoreCache({
   const textBytes = usage.status === 'ready' ? usage.categories.text.bytes : 0;
   const largeBytes =
     usage.status === 'ready' ? usage.totalBytes - textBytes : 0;
-  const budgetBytes = usage.status === 'ready' ? usage.budgetBytes : 0;
+  const maxBudgetBytes = usage.status === 'ready' ? usage.maxBudgetBytes : 0;
+  const budgetBytes = resolveCacheBudget(budgetSetting, maxBudgetBytes);
   const barBytes = textBytes + Math.max(budgetBytes, largeBytes);
   const barRows = [
     ...categoryRows.filter(({ category }) => category === 'text'),
@@ -213,10 +227,31 @@ export function StoreCache({
             </button>
           </div>
           {usage.status === 'ready' && (
-            <p className="storeCacheMessage">
-              {formatBytes(largeBytes)} of {formatBytes(budgetBytes)} budget
-              used by large files. Text is not counted.
-            </p>
+            <div className="storeCacheOption">
+              <Tooltip text="Music, images, and other large files are saved for offline use up to this limit. Notes and other small text files are always saved.">
+                <button
+                  type="button"
+                  className="storeCacheHelp"
+                  aria-label="About the limit"
+                >
+                  <span className="infoLinkIcon" />
+                </button>
+              </Tooltip>
+              <label htmlFor="storeCacheLimit">Limit</label>
+              <select
+                id="storeCacheLimit"
+                value={budgetBytes}
+                onChange={(event) =>
+                  void changeBudget(Number(event.target.value))
+                }
+              >
+                {getBudgetChoices(budgetBytes, maxBudgetBytes).map((bytes) => (
+                  <option key={bytes} value={bytes}>
+                    {formatBytes(bytes)}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
           {usage.status === 'ready' && usage.fileCount > 0 ? (
             <table className="storeCacheTable">
@@ -256,6 +291,17 @@ export function StoreCache({
       )}
     </div>
   );
+}
+
+const BUDGET_PRESETS = [
+  100_000_000, 250_000_000, 500_000_000, 1_000_000_000, 2_000_000_000,
+  5_000_000_000, 10_000_000_000, 25_000_000_000, 50_000_000_000,
+];
+
+function getBudgetChoices(current: number, max: number): number[] {
+  const choices = new Set(BUDGET_PRESETS.filter((bytes) => bytes <= max));
+  choices.add(current);
+  return [...choices].sort((a, b) => a - b);
 }
 
 function sumCategories(

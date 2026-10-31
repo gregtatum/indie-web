@@ -139,7 +139,7 @@ class BooleanStorage extends Storage<boolean | null> {
 }
 
 /**
- * Stores numbers as strings for legacy layout values like splitter offsets.
+ * Stores numbers as strings, for values like splitter offsets and the cache budget.
  */
 class NumberEntry extends Storage<number | null> {
   readRaw(raw: string | null): number | null {
@@ -221,6 +221,7 @@ export const persistedState = {
       return settings;
     },
   }),
+  fileStoreCacheBudget: new NumberEntry(),
   dropboxCodeVerifier: new StringStorage(),
   dropboxRedirectURL: new StringStorage(),
   musicLastPlayedTrackPath: new StringStorage(),

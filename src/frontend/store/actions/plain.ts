@@ -330,6 +330,13 @@ export function setFileStoreCacheEnabled(cacheKey: string, value: boolean) {
   };
 }
 
+export function setFileStoreCacheBudget(value: number | null) {
+  return {
+    type: 'set-file-store-cache-budget' as const,
+    value,
+  };
+}
+
 export function setInputMode(value: T.InputMode) {
   return {
     type: 'set-input-mode' as const,

@@ -91,6 +91,10 @@ export function getFileStoreCacheSettings(state: State) {
   return state.fileStoreCacheEnabled;
 }
 
+export function getFileStoreCacheBudget(state: State) {
+  return state.fileStoreCacheBudget;
+}
+
 export function getInputMode(state: State) {
   return state.inputMode;
 }

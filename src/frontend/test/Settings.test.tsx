@@ -281,11 +281,23 @@ describe('Settings', () => {
       ),
     ).toBeTruthy();
     expect(within(table).queryByRole('row', { name: /Images/ })).toBeNull();
+    const budget = screen.getByRole('combobox', {
+      name: 'Limit',
+    }) as HTMLSelectElement;
+    expect(budget.value).toBe('500000000');
     expect(
-      screen.getByText(
-        /of .* budget used by large files\. Text is not counted\./,
-      ),
-    ).toBeTruthy();
+      within(budget)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['100 MB', '250 MB', '500 MB']);
+
+    await act(async () => {
+      await userEvent.selectOptions(budget, '100 MB');
+    });
+    expect(await screen.findByDisplayValue('100 MB')).toHaveProperty(
+      'value',
+      '100000000',
+    );
 
     await act(async () => {
       await userEvent.click(
