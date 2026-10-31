@@ -49,21 +49,30 @@ interface AnkiStudyCarouselProps {
 
 interface AnkiCardHandle {
   revealAll: () => void;
-  isFullyRevealed: () => boolean;
 }
 
 function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
   const [index, setIndex] = React.useState(0);
+  const [revealed, setRevealed] = React.useState(false);
   const cardRef = React.useRef<AnkiCardHandle>(null);
   const totalSegments = Math.max(notes.length - 1, 1);
   const filledSegments = Math.min(index + 1, totalSegments);
 
   const goPrevious = React.useCallback(() => {
     setIndex((value) => Math.max(value - 1, 0));
+    setRevealed(false);
   }, []);
   const goNext = React.useCallback(() => {
     setIndex((value) => Math.min(value + 1, notes.length - 1));
+    setRevealed(false);
   }, [notes.length]);
+  const showOrNext = React.useCallback(() => {
+    if (revealed) {
+      goNext();
+    } else {
+      cardRef.current?.revealAll();
+    }
+  }, [revealed, goNext]);
 
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -74,7 +83,7 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
         case ' ':
         case 'Enter':
           event.preventDefault();
-          if (cardRef.current?.isFullyRevealed()) {
+          if (revealed) {
             goNext();
           } else {
             cardRef.current?.revealAll();
@@ -94,12 +103,42 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
     }
     document.body.addEventListener('keydown', handleKeyDown);
     return () => document.body.removeEventListener('keydown', handleKeyDown);
-  }, [containerRef, goPrevious, goNext]);
+  }, [containerRef, goPrevious, goNext, revealed]);
 
   return (
     <>
-      <div className="ankiDeckCarouselProgress">
-        Card {index + 1} / {notes.length}
+      <div className="ankiDeckCarouselTop">
+        <div className="ankiDeckCarouselProgress">
+          Card {index + 1} / {notes.length}
+        </div>
+        <div className="ankiDeckCarouselNav">
+          <button
+            className="button ankiDeckCarouselNavButton"
+            type="button"
+            aria-label="Previous card"
+            disabled={index === 0}
+            onClick={goPrevious}
+          >
+            ←
+          </button>
+          <button
+            className="button ankiDeckCarouselShowNext"
+            type="button"
+            disabled={revealed && index === notes.length - 1}
+            onClick={showOrNext}
+          >
+            {revealed ? 'Next' : 'Show'}
+          </button>
+          <button
+            className="button button-primary ankiDeckCarouselNavButton"
+            type="button"
+            aria-label="Next card"
+            disabled={index === notes.length - 1}
+            onClick={goNext}
+          >
+            →
+          </button>
+        </div>
       </div>
       <div
         className="ankiDeckCarouselBar"
@@ -114,25 +153,7 @@ function AnkiStudyCarousel({ notes, containerRef }: AnkiStudyCarouselProps) {
         />
       </div>
       <div className="ankiDeckCarouselStage">
-        {renderNote(notes[index], index, cardRef, 'carousel')}
-      </div>
-      <div className="ankiDeckCarouselNav">
-        <button
-          className="button"
-          type="button"
-          disabled={index === 0}
-          onClick={goPrevious}
-        >
-          Previous
-        </button>
-        <button
-          className="button button-primary"
-          type="button"
-          disabled={index === notes.length - 1}
-          onClick={goNext}
-        >
-          Next
-        </button>
+        {renderNote(notes[index], index, cardRef, 'carousel', setRevealed)}
       </div>
     </>
   );
@@ -145,12 +166,29 @@ function renderNote(
   key: number,
   ref: React.Ref<AnkiCardHandle> | undefined,
   variant: AnkiCardVariant,
+  onRevealedChange?: (revealed: boolean) => void,
 ) {
   if (note.clozeSpans !== null) {
-    return <AnkiClozeCard key={key} note={note} ref={ref} variant={variant} />;
+    return (
+      <AnkiClozeCard
+        key={key}
+        note={note}
+        ref={ref}
+        variant={variant}
+        onRevealedChange={onRevealedChange}
+      />
+    );
   }
   if (isBasicNote(note)) {
-    return <AnkiBasicCard key={key} note={note} ref={ref} variant={variant} />;
+    return (
+      <AnkiBasicCard
+        key={key}
+        note={note}
+        ref={ref}
+        variant={variant}
+        onRevealedChange={onRevealedChange}
+      />
+    );
   }
   return null;
 }
@@ -174,10 +212,11 @@ function isBasicNote(note: T.AnkiNote): boolean {
 interface AnkiBasicCardProps {
   note: T.AnkiNote;
   variant: AnkiCardVariant;
+  onRevealedChange?: (revealed: boolean) => void;
 }
 
 const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
-  function AnkiBasicCard({ note, variant }, ref) {
+  function AnkiBasicCard({ note, variant, onRevealedChange }, ref) {
     const [revealed, setRevealed] = React.useState(false);
     const isStage = variant === 'carousel';
 
@@ -185,10 +224,13 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
       ref,
       () => ({
         revealAll: () => setRevealed(true),
-        isFullyRevealed: () => revealed,
       }),
-      [revealed],
+      [],
     );
+
+    React.useEffect(() => {
+      onRevealedChange?.(revealed);
+    }, [revealed, onRevealedChange]);
 
     return (
       <div
@@ -198,20 +240,17 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
           <div className="ankiDeckDeckLabel">{formatDeckPath(note.deck)}</div>
         ) : null}
         <div className="ankiDeckCardFront">{note.fields[0]}</div>
-        <div className="ankiDeckCardRevealRow">
-          <button
-            className="button ankiDeckCardReveal"
-            type="button"
-            onClick={() => setRevealed((value) => !value)}
-          >
-            {revealed ? 'Hide answer' : 'Show answer'}
-          </button>
-          {isStage ? (
-            <span className="ankiDeckKbd" aria-hidden="true">
-              Space
-            </span>
-          ) : null}
-        </div>
+        {isStage ? null : (
+          <div className="ankiDeckCardRevealRow">
+            <button
+              className="button ankiDeckCardReveal"
+              type="button"
+              onClick={() => setRevealed((value) => !value)}
+            >
+              {revealed ? 'Hide answer' : 'Show answer'}
+            </button>
+          </div>
+        )}
         {revealed ? (
           <div className="ankiDeckCardBack">{note.fields[1]}</div>
         ) : null}
@@ -223,10 +262,11 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
 interface AnkiClozeCardProps {
   note: T.AnkiNote;
   variant: AnkiCardVariant;
+  onRevealedChange?: (revealed: boolean) => void;
 }
 
 const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
-  function AnkiClozeCard({ note, variant }, ref) {
+  function AnkiClozeCard({ note, variant, onRevealedChange }, ref) {
     const [revealedNums, setRevealedNums] = React.useState<Set<number>>(
       new Set(),
     );
@@ -237,15 +277,20 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
           span.type === 'cloze',
       )
       .map((span) => span.num);
+    const isFullyRevealed =
+      clozeNums.length > 0 && clozeNums.every((num) => revealedNums.has(num));
 
     React.useImperativeHandle(
       ref,
       () => ({
         revealAll: () => setRevealedNums(new Set(clozeNums)),
-        isFullyRevealed: () => clozeNums.every((num) => revealedNums.has(num)),
       }),
-      [revealedNums, clozeNums],
+      [clozeNums],
     );
+
+    React.useEffect(() => {
+      onRevealedChange?.(isFullyRevealed);
+    }, [isFullyRevealed, onRevealedChange]);
 
     function toggle(num: number) {
       setRevealedNums((prev) => {
@@ -285,14 +330,6 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
             ),
           )}
         </p>
-        {isStage ? (
-          <div className="ankiDeckClozeHint">
-            <span className="ankiDeckKbd" aria-hidden="true">
-              Space
-            </span>{' '}
-            reveals all
-          </div>
-        ) : null}
       </div>
     );
   },
