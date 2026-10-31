@@ -9,6 +9,11 @@
   outline: none;
 }
 
+.viewMarkdownDiv .ankiDeck > h3 {
+  margin: 0;
+  padding: 0;
+}
+
 .ankiDeck[data-mode='study']:focus-within {
   box-shadow: inset 0 0 0 2px var(--accent);
 }
@@ -288,14 +293,6 @@
   box-shadow: 0 1px 3px #0000000d;
   padding: 40px 24px;
   text-align: center;
-}
-
-.ankiDeckDeckLabel {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 .ankiDeckCardStage .ankiDeckCardFront {

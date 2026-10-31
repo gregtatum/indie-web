@@ -1,6 +1,7 @@
 import * as React from 'react';
 import * as T from 'frontend/@types';
 import { getKeyboardString } from 'frontend/utils';
+import { splitDeckPath } from 'frontend/logic/parse-anki';
 import './AnkiDeck.css';
 
 interface AnkiDeckProps {
@@ -15,6 +16,7 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { notes } = parsed;
   const isStudyMode = mode === 'study';
+  const { title } = splitDeckPath(notes[0]?.deck);
 
   return (
     <div
@@ -24,6 +26,7 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
       ref={containerRef}
       tabIndex={isStudyMode ? 0 : undefined}
     >
+      {title ? <h3>{title}</h3> : null}
       {isStudyMode ? (
         <AnkiStudyCarousel
           notes={notes}
@@ -564,18 +567,6 @@ function renderNote(
   return null;
 }
 
-/**
- * Anki deck paths use "::" to separate a deck from its subdecks, e.g.
- * "French::Basics". Render that the same way as the app's own breadcrumbs.
- */
-function formatDeckPath(deck: string): string {
-  return deck
-    .split('::')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join(' » ');
-}
-
 function isBasicNote(note: T.AnkiNote): boolean {
   return note.notetype === null || note.notetype.toLowerCase() === 'basic';
 }
@@ -608,9 +599,6 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
       <div
         className={isStage ? 'ankiDeckCard ankiDeckCardStage' : 'ankiDeckCard'}
       >
-        {isStage && note.deck ? (
-          <div className="ankiDeckDeckLabel">{formatDeckPath(note.deck)}</div>
-        ) : null}
         <div className="ankiDeckCardFront">{note.fields[0]}</div>
         {isStage ? null : (
           <div className="ankiDeckCardRevealRow">
@@ -695,9 +683,6 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
       <div
         className={isStage ? 'ankiDeckCard ankiDeckCardStage' : 'ankiDeckCard'}
       >
-        {isStage && note.deck ? (
-          <div className="ankiDeckDeckLabel">{formatDeckPath(note.deck)}</div>
-        ) : null}
         <p className="ankiDeckClozeText">
           {spans.map((span, index) =>
             span.type === 'text' ? (

@@ -153,12 +153,15 @@ describe('<AnkiDeck>', () => {
       # French
 
       ${fence}anki
-      #deck:French Verbs
+      #deck:French::Verbs
       acheter;to buy
       aider;to help
 
-      #deck:French Nouns
+      #deck:French::Nouns
       maison;house
+
+      #deck:Spanish
+      casa;house
       ${fence}
     `);
     await waitFor(() => screen.getAllByTestId('ankiDeck'));
@@ -166,7 +169,13 @@ describe('<AnkiDeck>', () => {
     const decks = screen.getAllByTestId('ankiDeck');
     expect(
       decks.map((deck) => deck.textContent?.match(/\d \/ \d/)?.[0]),
-    ).toEqual(['1 / 2', '1 / 1']);
+    ).toEqual(['1 / 2', '1 / 1', '1 / 1']);
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
+    ).toEqual(['French']);
+    expect(
+      screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent),
+    ).toEqual(['Verbs', 'Nouns', 'Spanish']);
   });
 
   it('defaults to study mode, showing one card at a time with the answer hidden', async () => {

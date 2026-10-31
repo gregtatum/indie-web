@@ -317,6 +317,34 @@ function matchClozeAt(
   };
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Anki deck paths use "::" to separate a deck from its subdecks, e.g.
+ * "French::Basics". The first part is the parent, and the rest is the title.
+ */
+export function splitDeckPath(deck: string | null | undefined): {
+  parent: string | null;
+  title: string | null;
+} {
+  if (!deck) {
+    return { parent: null, title: null };
+  }
+  const [first, ...rest] = deck
+    .split('::')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (rest.length === 0) {
+    return { parent: null, title: first ?? null };
+  }
+  return { parent: first, title: rest.join(' » ') };
+}
+
 function splitByDeck(file: T.ParsedAnkiFile): T.ParsedAnkiFile[] {
   const files: T.ParsedAnkiFile[] = [];
   for (const note of file.notes) {
@@ -345,10 +373,17 @@ export function parseMarkdown(text: string): T.ParsedMarkdown {
     if (infostring !== 'anki') {
       return defaultCode(code, infostring, escaped);
     }
+    let previousParent: string | null = null;
     return splitByDeck(parseAnkiText(code))
       .map((file) => {
         const id = ankiBlocks.push(file) - 1;
-        return `<div class="anki-mount" data-anki-id="${id}"></div>`;
+        const parent = splitDeckPath(file.notes[0]?.deck).parent;
+        const heading =
+          parent && parent !== previousParent
+            ? `<h2>${escapeHtml(parent)}</h2>`
+            : '';
+        previousParent = parent;
+        return `${heading}<div class="anki-mount" data-anki-id="${id}"></div>`;
       })
       .join('');
   };
