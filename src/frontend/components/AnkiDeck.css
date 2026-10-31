@@ -38,6 +38,13 @@
   border-top: 1px solid var(--line);
 }
 
+.ankiDeckCarouselTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .ankiDeckCarouselProgress {
   color: var(--muted);
   font-size: 11px;
@@ -45,6 +52,31 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   font-variant-numeric: tabular-nums;
+}
+
+.ankiDeckCarouselNav {
+  display: flex;
+  gap: 6px;
+}
+
+.ankiDeckCarouselNavButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.ankiDeckCarouselShowNext {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 26px;
+  padding: 0;
 }
 
 .ankiDeckCarouselBar {
@@ -66,25 +98,6 @@
   display: flex;
 }
 
-.ankiDeckCarouselNav {
-  display: flex;
-  gap: 8px;
-}
-
-.ankiDeckCarouselNav .button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ankiDeckCarouselNav .button:first-child::before {
-  content: '←';
-}
-
-.ankiDeckCarouselNav .button:last-child::after {
-  content: '→';
-}
-
 .ankiDeckCardFront {
   font-weight: 600;
   margin-bottom: 8px;
@@ -94,8 +107,6 @@
   margin-top: 10px;
 }
 
-/* The study carousel is a presentation moment: give the card its own raised
-   surface, and let the content being tested take the display face. */
 .ankiDeckCardStage {
   flex: 1;
   display: flex;
@@ -142,22 +153,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.ankiDeckClozeHint {
-  color: var(--muted);
-  font-size: var(--font-size-small);
-}
-
-.ankiDeckKbd {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  padding: 2px 6px;
-  background: var(--raised);
 }
 
 .ankiDeckClozeText {

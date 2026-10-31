@@ -122,7 +122,7 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByText('Hello')).toBeTruthy();
     expect(screen.queryByText('Goodbye')).toBeNull();
     expect(screen.queryByText('Bonjour')).toBeNull();
-    expect(screen.getByText('Show answer')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
 
     expect(screen.getByTestId('ankiDeck')).toMatchInlineSnapshot(`
       <div
@@ -138,12 +138,41 @@ describe('<AnkiDeck>', () => {
           Show full list
         </button>
         <div
-          class="ankiDeckCarouselProgress"
+          class="ankiDeckCarouselTop"
         >
-          Card 
-          1
-           / 
-          2
+          <div
+            class="ankiDeckCarouselProgress"
+          >
+            Card 
+            1
+             / 
+            2
+          </div>
+          <div
+            class="ankiDeckCarouselNav"
+          >
+            <button
+              aria-label="Previous card"
+              class="button ankiDeckCarouselNavButton"
+              disabled=""
+              type="button"
+            >
+              ←
+            </button>
+            <button
+              class="button ankiDeckCarouselShowNext"
+              type="button"
+            >
+              Show
+            </button>
+            <button
+              aria-label="Next card"
+              class="button button-primary ankiDeckCarouselNavButton"
+              type="button"
+            >
+              →
+            </button>
+          </div>
         </div>
         <div
           aria-valuemax="1"
@@ -168,40 +197,7 @@ describe('<AnkiDeck>', () => {
             >
               Hello
             </div>
-            <div
-              class="ankiDeckCardRevealRow"
-            >
-              <button
-                class="button ankiDeckCardReveal"
-                type="button"
-              >
-                Show answer
-              </button>
-              <span
-                aria-hidden="true"
-                class="ankiDeckKbd"
-              >
-                Space
-              </span>
-            </div>
           </div>
-        </div>
-        <div
-          class="ankiDeckCarouselNav"
-        >
-          <button
-            class="button"
-            disabled=""
-            type="button"
-          >
-            Previous
-          </button>
-          <button
-            class="button button-primary"
-            type="button"
-          >
-            Next
-          </button>
         </div>
       </div>
     `);
@@ -214,7 +210,7 @@ describe('<AnkiDeck>', () => {
     const user = userEvent.setup();
     await act(async () => {
       await Promise.all([
-        user.click(screen.getByText('Show answer')),
+        user.click(screen.getByRole('button', { name: 'Show' })),
         jest.runAllTimersAsync(),
       ]);
     });
@@ -222,7 +218,7 @@ describe('<AnkiDeck>', () => {
 
     await act(async () => {
       await Promise.all([
-        user.click(screen.getByText('Next')),
+        user.click(screen.getByRole('button', { name: 'Next card' })),
         jest.runAllTimersAsync(),
       ]);
     });
@@ -230,20 +226,27 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByText('Goodbye')).toBeTruthy();
     // The new card starts with its answer hidden again.
     expect(screen.queryByText('Au revoir')).toBeNull();
-    expect(screen.getByText('Show answer')).toBeTruthy();
-    expect((screen.getByText('Next') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'Next card' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
 
     await act(async () => {
       await Promise.all([
-        user.click(screen.getByText('Previous')),
+        user.click(screen.getByRole('button', { name: 'Previous card' })),
         jest.runAllTimersAsync(),
       ]);
     });
     expect(screen.getByText('Card 1 / 2')).toBeTruthy();
     expect(screen.getByText('Hello')).toBeTruthy();
-    expect((screen.getByText('Previous') as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Previous card',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 
   it('fills one bar segment per card, completing the bar on the last card', async () => {
@@ -264,7 +267,7 @@ describe('<AnkiDeck>', () => {
     for (let card = 2; card <= 8; card++) {
       await act(async () => {
         await Promise.all([
-          user.click(screen.getByText('Next')),
+          user.click(screen.getByRole('button', { name: 'Next card' })),
           jest.runAllTimersAsync(),
         ]);
       });
@@ -396,7 +399,7 @@ describe('<AnkiDeck>', () => {
 
     await act(async () => {
       await Promise.all([
-        user.click(screen.getByText('Next')),
+        user.click(screen.getByRole('button', { name: 'Next card' })),
         jest.runAllTimersAsync(),
       ]);
     });
@@ -430,12 +433,13 @@ describe('<AnkiDeck>', () => {
 
     // The first block only has the Basic card's content.
     expect(within(basicDeck).getByText('Hello')).toBeTruthy();
-    expect(within(basicDeck).getByText('Show answer')).toBeTruthy();
+    expect(
+      within(basicDeck).getByRole('button', { name: 'Show' }),
+    ).toBeTruthy();
     expect(within(basicDeck).queryByText('[être]')).toBeNull();
 
     // The second block only has the Cloze card's content.
     expect(within(clozeDeck).getByText('[être]')).toBeTruthy();
     expect(within(clozeDeck).queryByText('Hello')).toBeNull();
-    expect(within(clozeDeck).queryByText('Show answer')).toBeNull();
   });
 });
