@@ -397,6 +397,69 @@ describe('<AnkiDeck>', () => {
     expect(segmentStates()).toBe('incorrect current');
   });
 
+  it('walks focus across Back, Wrong, Right and Next with the arrow keys, skipping disabled buttons', async () => {
+    setup(EightCardText);
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+    const focused = () => document.activeElement?.textContent;
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByTestId('ankiDeck')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    await press(user, '[Space]');
+    expect(focused()).toBe('Right');
+    // Back and Next are both disabled on the first, ungraded card.
+    await press(user, '[ArrowRight]');
+    expect(focused()).toBe('Right');
+    await press(user, '[ArrowLeft]');
+    expect(focused()).toBe('Wrong');
+    await press(user, '[ArrowLeft]');
+    expect(focused()).toBe('Wrong');
+
+    await press(user, '3');
+    await press(user, '[Space]');
+    await press(user, '[ArrowLeft]');
+    await press(user, '[ArrowLeft]');
+    expect(screen.getByRole('button', { name: 'Previous card' })).toBe(
+      document.activeElement,
+    );
+    await press(user, '[ArrowRight]');
+    await press(user, '[ArrowRight]');
+    await press(user, '[ArrowRight]');
+    expect(focused()).toBe('Right');
+  });
+
+  it('hides the shown answer with Escape, keeping the keyboard usable', async () => {
+    setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await Promise.all([
+        user.click(screen.getByTestId('ankiDeck')),
+        jest.runAllTimersAsync(),
+      ]);
+    });
+
+    await press(user, '[Space]');
+    expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
+      'false',
+    );
+
+    await press(user, '[Escape]');
+    expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
+
+    await press(user, '[Space]');
+    expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
+  });
+
   it('navigates back and forth over graded cards with ArrowLeft/ArrowRight, but never ahead', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));

@@ -62,6 +62,7 @@ interface AnkiStudyCarouselProps {
 
 interface AnkiCardHandle {
   revealAll: () => void;
+  hideAll: () => void;
 }
 
 type CardResult = 'correct' | 'incorrect';
@@ -102,8 +103,10 @@ function AnkiStudyCarousel({
   const [revealed, setRevealed] = React.useState(false);
   const [results, setResults] = React.useState<CardResult[]>([]);
   const cardRef = React.useRef<AnkiCardHandle>(null);
+  const previousRef = React.useRef<HTMLButtonElement>(null);
   const incorrectRef = React.useRef<HTMLButtonElement>(null);
   const correctRef = React.useRef<HTMLButtonElement>(null);
+  const nextRef = React.useRef<HTMLButtonElement>(null);
   const safeIndex = Math.min(index, notes.length);
   const isFinished = notes.length > 0 && safeIndex === notes.length;
   const answeredCount = results.length;
@@ -122,11 +125,25 @@ function AnkiStudyCarousel({
   const goPrevious = React.useCallback(() => {
     setIndex((value) => Math.max(value - 1, 0));
     setRevealed(false);
-  }, []);
+    containerRef.current?.focus();
+  }, [containerRef]);
   const goNext = React.useCallback(() => {
     setIndex((value) => Math.min(value + 1, answeredCount));
     setRevealed(false);
-  }, [answeredCount]);
+    containerRef.current?.focus();
+  }, [answeredCount, containerRef]);
+  const moveFocus = React.useCallback((direction: -1 | 1) => {
+    const buttons = [previousRef, incorrectRef, correctRef, nextRef]
+      .map((ref) => ref.current)
+      .filter((button) => button && !button.disabled);
+    const current = buttons.indexOf(
+      document.activeElement as HTMLButtonElement,
+    );
+    const from = current === -1 ? buttons.indexOf(correctRef.current) : current;
+    buttons[
+      Math.min(Math.max(from + direction, 0), buttons.length - 1)
+    ]?.focus();
+  }, []);
   const grade = React.useCallback(
     (result: CardResult) => {
       setResults((value) => {
@@ -152,7 +169,7 @@ function AnkiStudyCarousel({
         case 'ArrowLeft':
           event.preventDefault();
           if (revealed) {
-            incorrectRef.current?.focus();
+            moveFocus(-1);
           } else {
             goPrevious();
           }
@@ -160,7 +177,7 @@ function AnkiStudyCarousel({
         case 'ArrowRight':
           event.preventDefault();
           if (revealed) {
-            correctRef.current?.focus();
+            moveFocus(1);
           } else {
             goNext();
           }
@@ -176,6 +193,13 @@ function AnkiStudyCarousel({
           } else if (!(active instanceof HTMLButtonElement)) {
             event.preventDefault();
             grade('correct');
+          }
+          break;
+        case 'Escape':
+          if (!isFinished) {
+            event.preventDefault();
+            cardRef.current?.hideAll();
+            containerRef.current?.focus();
           }
           break;
         case '1':
@@ -198,7 +222,15 @@ function AnkiStudyCarousel({
     }
     document.body.addEventListener('keydown', handleKeyDown);
     return () => document.body.removeEventListener('keydown', handleKeyDown);
-  }, [containerRef, goPrevious, goNext, grade, revealed, isFinished]);
+  }, [
+    containerRef,
+    goPrevious,
+    goNext,
+    moveFocus,
+    grade,
+    revealed,
+    isFinished,
+  ]);
 
   if (notes.length === 0) {
     return <div className="ankiDeckEmpty">No cards yet.</div>;
@@ -236,6 +268,7 @@ function AnkiStudyCarousel({
           <button
             className="button ankiDeckCarouselNavButton"
             type="button"
+            ref={previousRef}
             aria-label="Previous card"
             disabled={safeIndex === 0}
             onClick={goPrevious}
@@ -274,6 +307,7 @@ function AnkiStudyCarousel({
           <button
             className="button ankiDeckCarouselNavButton"
             type="button"
+            ref={nextRef}
             aria-label="Next card"
             disabled={safeIndex >= answeredCount}
             onClick={goNext}
@@ -385,6 +419,7 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
       ref,
       () => ({
         revealAll: () => setRevealed(true),
+        hideAll: () => setRevealed(false),
       }),
       [],
     );
@@ -457,6 +492,7 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
       ref,
       () => ({
         revealAll: () => setRevealedNums(new Set(clozeNums)),
+        hideAll: () => setRevealedNums(new Set()),
       }),
       [clozeNums],
     );
