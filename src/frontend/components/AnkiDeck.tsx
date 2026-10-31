@@ -269,7 +269,19 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
             </button>
           </div>
         )}
-        {revealed ? (
+        {isStage ? (
+          <div
+            className={
+              revealed
+                ? 'ankiDeckCardBack ankiDeckCardBackRevealed'
+                : 'ankiDeckCardBack'
+            }
+            aria-hidden={!revealed}
+          >
+            {note.fields[1]}
+          </div>
+        ) : null}
+        {!isStage && revealed ? (
           <div className="ankiDeckCardBack">{note.fields[1]}</div>
         ) : null}
       </div>

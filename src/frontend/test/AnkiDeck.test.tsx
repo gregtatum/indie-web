@@ -129,7 +129,9 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByText('Card 1 / 2')).toBeTruthy();
     expect(screen.getByText('Hello')).toBeTruthy();
     expect(screen.queryByText('Goodbye')).toBeNull();
-    expect(screen.queryByText('Bonjour')).toBeNull();
+    expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
     expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
 
     expect(screen.getByTestId('ankiDeck')).toMatchInlineSnapshot(`
@@ -205,6 +207,12 @@ describe('<AnkiDeck>', () => {
             >
               Hello
             </div>
+            <div
+              aria-hidden="true"
+              class="ankiDeckCardBack"
+            >
+              Bonjour
+            </div>
           </div>
         </div>
       </div>
@@ -233,7 +241,9 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByText('Card 2 / 2')).toBeTruthy();
     expect(screen.getByText('Goodbye')).toBeTruthy();
     // The new card starts with its answer hidden again.
-    expect(screen.queryByText('Au revoir')).toBeNull();
+    expect(screen.getByText('Au revoir').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
     expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
     expect(
       (screen.getByRole('button', { name: 'Next card' }) as HTMLButtonElement)
@@ -297,7 +307,9 @@ describe('<AnkiDeck>', () => {
     await act(async () => {
       await Promise.all([user.keyboard('[Space]'), jest.runAllTimersAsync()]);
     });
-    expect(screen.queryByText('Bonjour')).toBeNull();
+    expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
 
     await act(async () => {
       await Promise.all([
@@ -318,7 +330,9 @@ describe('<AnkiDeck>', () => {
       await Promise.all([user.keyboard('[Space]'), jest.runAllTimersAsync()]);
     });
     expect(screen.getByText('Card 2 / 2')).toBeTruthy();
-    expect(screen.queryByText('Au revoir')).toBeNull();
+    expect(screen.getByText('Au revoir').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
   });
 
   it('navigates cards with the ArrowLeft/ArrowRight keys', async () => {

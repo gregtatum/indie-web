@@ -146,6 +146,12 @@
   font-size: 1.5em;
   color: var(--ink);
   margin: 0;
+  opacity: 0;
+  transition: opacity 80ms ease-out;
+}
+
+.ankiDeckCardStage .ankiDeckCardBackRevealed {
+  opacity: 1;
 }
 
 .ankiDeckCardStage .ankiDeckClozeText {
