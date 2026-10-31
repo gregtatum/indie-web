@@ -110,13 +110,17 @@
 }
 
 .ankiDeckCarouselBar {
-  display: flex;
-  gap: 2px;
+  position: relative;
+  height: 8px;
 }
 
 .ankiDeckCarouselSegment {
-  flex: 1;
-  min-width: 0;
+  position: absolute;
+  top: 0;
+  left: calc(var(--pos) * 100% / var(--count));
+  width: calc(100% / var(--count) - 2px);
+  margin: 0 1px;
+  box-sizing: border-box;
   height: 8px;
   border-radius: 999px;
   background: var(--line);
@@ -128,12 +132,12 @@
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 
-.ankiDeckCarouselSegment[data-state='correct'] {
+.ankiDeckCarouselSegment[data-state='mastered'] {
   background: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-.ankiDeckCarouselSegment[data-state='incorrect'] {
+.ankiDeckCarouselSegment[data-state='repeat'] {
   background: repeating-linear-gradient(
     135deg,
     var(--accent) 0 2px,

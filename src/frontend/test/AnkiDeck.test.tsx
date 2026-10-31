@@ -145,8 +145,13 @@ describe('<AnkiDeck>', () => {
     return Array.from(
       screen
         .getByRole('progressbar')
-        .querySelectorAll('.ankiDeckCarouselSegment'),
+        .querySelectorAll<HTMLElement>('.ankiDeckCarouselSegment'),
     )
+      .sort(
+        (a, b) =>
+          Number(a.style.getPropertyValue('--pos')) -
+          Number(b.style.getPropertyValue('--pos')),
+      )
       .map((segment) => segment.getAttribute('data-state'))
       .join(' ');
   }
@@ -180,7 +185,8 @@ describe('<AnkiDeck>', () => {
               class="ankiDeckCarouselProgress"
             >
               1
-               / 
+               /
+               
               2
             </div>
             <button
@@ -216,17 +222,20 @@ describe('<AnkiDeck>', () => {
         <div
           aria-valuemax="2"
           aria-valuemin="0"
-          aria-valuenow="1"
+          aria-valuenow="0"
           class="ankiDeckCarouselBar"
           role="progressbar"
+          style="--count: 2;"
         >
           <div
             class="ankiDeckCarouselSegment"
             data-state="current"
+            style="--pos: 0;"
           />
           <div
             class="ankiDeckCarouselSegment"
             data-state="unanswered"
+            style="--pos: 1;"
           />
         </div>
         <div
@@ -262,46 +271,54 @@ describe('<AnkiDeck>', () => {
     expect(screen.queryByRole('button', { name: 'Show' })).toBeNull();
 
     await click(user, 'Wrong');
-    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(screen.getByText('1 / 2')).toBeTruthy();
     expect(screen.getByText('Goodbye')).toBeTruthy();
     expect(screen.getByText('Au revoir').getAttribute('aria-hidden')).toBe(
       'true',
     );
     expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
-    expect(segmentStates()).toBe('incorrect current');
+    expect(segmentStates()).toBe('current repeat');
   });
 
-  it('gives each card its own bar segment, colored by its result', async () => {
-    setup(EightCardText);
+  it('masters a card right away when first answered right, but sends a missed card to the far right', async () => {
+    setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const progressBar = () => screen.getByRole('progressbar');
-
-    expect(progressBar().getAttribute('aria-valuemax')).toBe('8');
-    expect(progressBar().getAttribute('aria-valuenow')).toBe('1');
-    expect(segmentStates()).toBe(
-      'current unanswered unanswered unanswered unanswered unanswered unanswered unanswered',
-    );
-
     const user = userEvent.setup();
-    for (let card = 1; card <= 7; card++) {
+
+    expect(progressBar().getAttribute('aria-valuemax')).toBe('2');
+    expect(progressBar().getAttribute('aria-valuenow')).toBe('0');
+    expect(segmentStates()).toBe('current unanswered');
+
+    async function grade(name: 'Right' | 'Wrong') {
       await click(user, 'Show');
-      await click(user, card === 1 ? 'Wrong' : 'Right');
-      expect(progressBar().getAttribute('aria-valuenow')).toBe(
-        String(card + 1),
-      );
+      await click(user, name);
     }
-    expect(segmentStates()).toBe(
-      'incorrect correct correct correct correct correct correct current',
+
+    await grade('Wrong');
+    expect(screen.getByText('Goodbye')).toBeTruthy();
+    expect(screen.getByText('1 / 2')).toBeTruthy();
+    expect(segmentStates()).toBe('current repeat');
+
+    await grade('Right');
+    expect(screen.getByText('Hello')).toBeTruthy();
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(progressBar().getAttribute('aria-valuenow')).toBe('1');
+    expect(segmentStates()).toBe('mastered current');
+
+    // After a miss, the card needs two rights in a row. It comes straight
+    // back as the last card, with its answer hidden again.
+    await grade('Right');
+    expect(screen.getByText('Hello')).toBeTruthy();
+    expect(screen.getByText('Bonjour').getAttribute('aria-hidden')).toBe(
+      'true',
     );
 
-    await click(user, 'Show');
-    await click(user, 'Right');
-    expect(screen.getByText('Done: 7 right, 1 wrong.')).toBeTruthy();
-    expect(progressBar().getAttribute('aria-valuenow')).toBe('8');
-    expect(segmentStates()).toBe(
-      'incorrect correct correct correct correct correct correct correct',
-    );
+    await grade('Right');
+    expect(screen.getByText('Done: 2 cards, 1 needed a repeat.')).toBeTruthy();
+    expect(progressBar().getAttribute('aria-valuenow')).toBe('2');
+    expect(segmentStates()).toBe('mastered mastered');
   });
 
   it('reveals with Space/Enter, then grades with the Anki number keys, y/n, or Space', async () => {
@@ -327,7 +344,8 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByText('Bonjour')).toBeTruthy();
     expect(screen.getByText('1 / 8')).toBeTruthy();
 
-    const keys = ['1', '3', '2', '4', 'n', 'y', '[Space]'];
+    // Keys 1, 2 and n are wrong; 3, 4, y, Space and Enter are right.
+    const keys = ['1', '3', '2', '4', 'n', 'y', '[Space]', '[Enter]'];
     for (const [i, key] of keys.entries()) {
       if (i > 0) {
         await press(user, '[Enter]');
@@ -335,8 +353,14 @@ describe('<AnkiDeck>', () => {
       await press(user, key);
     }
     expect(segmentStates()).toBe(
-      'incorrect correct incorrect correct incorrect correct correct current',
+      'mastered mastered mastered mastered mastered current repeat repeat',
     );
+
+    for (let i = 0; i < 30 && !screen.queryByText(/^Done/); i++) {
+      await press(user, '[Enter]');
+      await press(user, '3');
+    }
+    expect(screen.getByText('Done: 8 cards, 3 needed a repeat.')).toBeTruthy();
   });
 
   it('moves between the Wrong and Right buttons with the arrow keys, grading with Enter', async () => {
@@ -361,8 +385,8 @@ describe('<AnkiDeck>', () => {
     );
     await press(user, '[Enter]');
 
-    expect(screen.getByText('2 / 2')).toBeTruthy();
-    expect(segmentStates()).toBe('incorrect current');
+    expect(screen.getByText('Goodbye')).toBeTruthy();
+    expect(segmentStates()).toBe('current repeat');
   });
 
   it('walks focus between Wrong and Right with the arrow keys, stopping at the ends', async () => {

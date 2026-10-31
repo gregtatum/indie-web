@@ -69,18 +69,72 @@ type GroupButton = 'show' | 'incorrect' | 'correct';
 
 const GROUP_BUTTONS: GroupButton[] = ['show', 'incorrect', 'correct'];
 
-type CardResult = 'correct' | 'incorrect';
-type SegmentState = 'unanswered' | 'current' | CardResult;
+const STREAK_TO_MASTER_AFTER_MISS = 2;
 
-function segmentState(
-  index: number,
-  currentIndex: number,
-  results: CardResult[],
-): SegmentState {
-  if (index === currentIndex) {
+type CardResult = 'correct' | 'incorrect';
+
+interface CardProgress {
+  attempts: number;
+  misses: number;
+  streak: number;
+}
+
+interface StudySession {
+  notes: T.AnkiNote[];
+  queue: number[];
+  mastered: number[];
+  progress: CardProgress[];
+  step: number;
+}
+
+function createStudySession(notes: T.AnkiNote[]): StudySession {
+  return {
+    notes,
+    queue: notes.map((_, id) => id),
+    mastered: [],
+    progress: notes.map(() => ({ attempts: 0, misses: 0, streak: 0 })),
+    step: 0,
+  };
+}
+
+function gradeCurrentCard(
+  session: StudySession,
+  result: CardResult,
+): StudySession {
+  const [id, ...rest] = session.queue;
+  if (id === undefined) {
+    return session;
+  }
+  const previous = session.progress[id];
+  const streak = result === 'correct' ? previous.streak + 1 : 0;
+  const progress = [...session.progress];
+  progress[id] = {
+    attempts: previous.attempts + 1,
+    misses: previous.misses + (result === 'correct' ? 0 : 1),
+    streak,
+  };
+  const missed = progress[id].misses > 0;
+  const isMastered =
+    result === 'correct' && (!missed || streak >= STREAK_TO_MASTER_AFTER_MISS);
+  return {
+    ...session,
+    queue: isMastered ? rest : [...rest, id],
+    mastered: isMastered ? [...session.mastered, id] : session.mastered,
+    progress,
+    step: session.step + 1,
+  };
+}
+
+type SegmentState = 'unanswered' | 'current' | 'repeat' | 'mastered';
+
+function segmentState(session: StudySession, id: number): SegmentState {
+  if (session.mastered.includes(id)) {
+    return 'mastered';
+  }
+  if (session.queue[0] === id) {
     return 'current';
   }
-  return results[index] ?? 'unanswered';
+  return session.progress[id].attempts > 0 ? 'repeat' : 'unanswered';
 }
 
 function shuffled<T>(items: T[]): T[] {
@@ -103,9 +157,12 @@ function AnkiStudyCarousel({
     () => (random ? shuffled(orderedNotes) : orderedNotes),
     [orderedNotes, random],
   );
-  const [index, setIndex] = React.useState(0);
+  const [session, setSession] = React.useState(() => createStudySession(notes));
   const [revealed, setRevealed] = React.useState(false);
-  const [results, setResults] = React.useState<CardResult[]>([]);
+  if (session.notes !== notes) {
+    setSession(createStudySession(notes));
+    setRevealed(false);
+  }
   const cardRef = React.useRef<AnkiCardHandle>(null);
   const groupRef = React.useRef<HTMLDivElement>(null);
   const buttonRefs = React.useRef<
@@ -115,13 +172,8 @@ function AnkiStudyCarousel({
   const [lastFocused, setLastFocused] = React.useState<GroupButton | null>(
     null,
   );
-  const safeIndex = Math.min(index, notes.length);
-  const isFinished = notes.length > 0 && safeIndex === notes.length;
-
-  React.useEffect(() => {
-    setIndex((value) => Math.min(value, notes.length));
-    setResults((value) => value.slice(0, notes.length));
-  }, [notes.length]);
+  const currentId = session.queue[0];
+  const isFinished = notes.length > 0 && currentId === undefined;
 
   React.useEffect(() => {
     if (revealed && focusGroupOnReveal.current) {
@@ -129,7 +181,7 @@ function AnkiStudyCarousel({
     }
     focusGroupOnReveal.current = false;
     setLastFocused(null);
-  }, [revealed, safeIndex]);
+  }, [revealed, session.step]);
 
   const reveal = React.useCallback(() => {
     focusGroupOnReveal.current = true;
@@ -148,16 +200,11 @@ function AnkiStudyCarousel({
   }, []);
   const grade = React.useCallback(
     (result: CardResult) => {
-      setResults((value) => {
-        const next = [...value];
-        next[safeIndex] = result;
-        return next;
-      });
-      setIndex(safeIndex + 1);
+      setSession((value) => gradeCurrentCard(value, result));
       setRevealed(false);
       containerRef.current?.focus();
     },
-    [containerRef, safeIndex],
+    [containerRef],
   );
 
   React.useEffect(() => {
@@ -246,7 +293,8 @@ function AnkiStudyCarousel({
       <div className="ankiDeckCarouselTop">
         <div className="ankiDeckCarouselInfo">
           <div className="ankiDeckCarouselProgress">
-            {Math.min(safeIndex + 1, notes.length)} / {notes.length}
+            {Math.min(session.mastered.length + 1, notes.length)} /{' '}
+            {notes.length}
           </div>
           <button
             className="button ankiDeckModeToggle"
@@ -261,9 +309,6 @@ function AnkiStudyCarousel({
               checked={random}
               onChange={(event) => {
                 onRandomChange(event.target.checked);
-                setIndex(0);
-                setResults([]);
-                setRevealed(false);
               }}
             />
             Random
@@ -312,26 +357,29 @@ function AnkiStudyCarousel({
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={notes.length}
-        aria-valuenow={Math.min(safeIndex + 1, notes.length)}
+        aria-valuenow={session.mastered.length}
+        style={{ '--count': notes.length } as React.CSSProperties}
       >
-        {notes.map((_, i) => (
+        {notes.map((_, id) => (
           <div
-            key={i}
+            key={id}
             className="ankiDeckCarouselSegment"
-            data-state={segmentState(i, safeIndex, results)}
+            data-state={segmentState(session, id)}
+            style={{ '--pos': slotOf(session, id) } as React.CSSProperties}
           />
         ))}
       </div>
       <div className="ankiDeckCarouselStage">
-        {isFinished ? (
+        {currentId === undefined ? (
           <div className="ankiDeckCarouselSummary">
-            Done: {results.filter((r) => r === 'correct').length} right,{' '}
-            {results.filter((r) => r === 'incorrect').length} wrong.
+            Done: {notes.length} cards,{' '}
+            {session.progress.filter((card) => card.misses > 0).length} needed a
+            repeat.
           </div>
         ) : (
           renderNote(
-            notes[safeIndex],
-            safeIndex,
+            notes[currentId],
+            session.step,
             cardRef,
             'carousel',
             setRevealed,
@@ -340,6 +388,13 @@ function AnkiStudyCarousel({
       </div>
     </>
   );
+}
+
+function slotOf(session: StudySession, id: number): number {
+  const masteredSlot = session.mastered.indexOf(id);
+  return masteredSlot === -1
+    ? session.mastered.length + session.queue.indexOf(id)
+    : masteredSlot;
 }
 
 type AnkiCardVariant = 'carousel' | 'list';
