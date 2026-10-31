@@ -148,6 +148,27 @@ describe('<AnkiDeck>', () => {
     return `solid ${fraction('--mastered')} dashed ${fraction('--retry')}`;
   }
 
+  it('renders a separate deck for each #deck section', async () => {
+    setup(dedent`
+      # French
+
+      ${fence}anki
+      #deck:French Verbs
+      acheter;to buy
+      aider;to help
+
+      #deck:French Nouns
+      maison;house
+      ${fence}
+    `);
+    await waitFor(() => screen.getAllByTestId('ankiDeck'));
+
+    const decks = screen.getAllByTestId('ankiDeck');
+    expect(
+      decks.map((deck) => deck.textContent?.match(/\d \/ \d/)?.[0]),
+    ).toEqual(['1 / 2', '1 / 1']);
+  });
+
   it('defaults to study mode, showing one card at a time with the answer hidden', async () => {
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));

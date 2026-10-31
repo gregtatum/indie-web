@@ -36,11 +36,37 @@ export function parseAnkiText(text: string): T.ParsedAnkiFile {
   }
 
   const headers = parseHeaders(headerLines);
-  const dataText = lines.slice(dataStartLine).join('\n');
-  const rows = parseRows(dataText, headers.separator);
-  const notes = buildNotes(rows, headers);
+  const notes = splitDeckSections(lines.slice(dataStartLine), headers).flatMap(
+    ({ deck, lines }) =>
+      buildNotes(parseRows(lines.join('\n'), headers.separator), {
+        ...headers,
+        deck,
+      }),
+  );
 
   return { headers, notes };
+}
+
+const matchDeckHeader = /^#\s*deck\s*:\s*(.*)$/i;
+
+/**
+ * A `#deck:` line after the data rows start begins a new section, and
+ * applies its deck to the rows that follow it.
+ */
+function splitDeckSections(
+  lines: string[],
+  headers: T.AnkiHeaders,
+): { deck: string | null; lines: string[] }[] {
+  const sections = [{ deck: headers.deck, lines: [] as string[] }];
+  for (const line of lines) {
+    const result = matchDeckHeader.exec(line);
+    if (result) {
+      sections.push({ deck: result[1].trim(), lines: [] });
+    } else {
+      sections[sections.length - 1].lines.push(line);
+    }
+  }
+  return sections;
 }
 
 function parseHeaders(headerLines: string[]): T.AnkiHeaders {
@@ -291,11 +317,25 @@ function matchClozeAt(
   };
 }
 
+function splitByDeck(file: T.ParsedAnkiFile): T.ParsedAnkiFile[] {
+  const files: T.ParsedAnkiFile[] = [];
+  for (const note of file.notes) {
+    const last = files[files.length - 1];
+    if (last && last.notes[last.notes.length - 1].deck === note.deck) {
+      last.notes.push(note);
+    } else {
+      files.push({ headers: file.headers, notes: [note] });
+    }
+  }
+  return files.length > 0 ? files : [file];
+}
+
 /**
  * Parses a markdown document to HTML. A ```anki fenced code block is
  * replaced with a placeholder div (keyed by `data-anki-id`) so the caller
  * can mount a real renderer for it; the parsed block data for each one is
- * returned alongside the HTML.
+ * returned alongside the HTML. Each consecutive run of notes in the same deck
+ * gets its own placeholder.
  */
 export function parseMarkdown(text: string): T.ParsedMarkdown {
   const ankiBlocks: T.ParsedAnkiFile[] = [];
@@ -305,9 +345,12 @@ export function parseMarkdown(text: string): T.ParsedMarkdown {
     if (infostring !== 'anki') {
       return defaultCode(code, infostring, escaped);
     }
-    const id = ankiBlocks.length;
-    ankiBlocks.push(parseAnkiText(code));
-    return `<div class="anki-mount" data-anki-id="${id}"></div>`;
+    return splitByDeck(parseAnkiText(code))
+      .map((file) => {
+        const id = ankiBlocks.push(file) - 1;
+        return `<div class="anki-mount" data-anki-id="${id}"></div>`;
+      })
+      .join('');
   };
 
   const htmlText = marked.parse(text, {

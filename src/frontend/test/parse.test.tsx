@@ -794,6 +794,22 @@ describe('parseAnkiText', () => {
     ]);
   });
 
+  it('applies each #deck section in the same file to the notes after it', () => {
+    const result = parseAnkiText(dedent`
+      #deck:French Verbs
+      acheter;to buy
+      aider;to help
+
+      #deck:French Nouns
+      maison;house
+    `);
+    expect(result.notes.map((note) => [note.fields[0], note.deck])).toEqual([
+      ['acheter', 'French Verbs'],
+      ['aider', 'French Verbs'],
+      ['maison', 'French Nouns'],
+    ]);
+  });
+
   it('pulls tags out of a "#tags column" and excludes it from fields', () => {
     const result = parseAnkiText(dedent`
       #separator:Semicolon
