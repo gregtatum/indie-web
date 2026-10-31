@@ -105,8 +105,124 @@
   padding: 0 8px;
 }
 
-.ankiDeckCarouselSummary {
+.ankiDeckSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.ankiDeckSummaryStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px 24px;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.ankiDeckSummaryStats dt {
   color: var(--muted);
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ankiDeckSummaryStats dd {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ankiDeckSummaryCardsWrap {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ankiDeckSummary .ankiDeckSummaryCards {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.ankiDeckSummary .ankiDeckSummaryCards th,
+.ankiDeckSummary .ankiDeckSummaryCards td {
+  padding: 10px 14px;
+  border: none;
+  text-align: right;
+}
+
+.ankiDeckSummary .ankiDeckSummaryCards tbody tr:nth-child(even) {
+  background: var(--accent-tint);
+}
+
+.ankiDeckSummary .ankiDeckSummaryCards th {
+  position: sticky;
+  top: 0;
+  background: var(--accent-wash);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ankiDeckSummary .ankiDeckSummaryCards th:first-child,
+.ankiDeckSummary .ankiDeckSummaryCards td:first-child {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ankiDeckSummary .ankiDeckSummaryCards th:last-child,
+.ankiDeckSummary .ankiDeckSummaryCards td:last-child {
+  width: 40%;
+  min-width: 140px;
+}
+
+.ankiDeckSummaryZero {
+  color: var(--line-strong);
+}
+
+.ankiDeckSummaryTime {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ankiDeckSummaryTimeTrack {
+  flex: 1;
+}
+
+.ankiDeckSummaryTimeBar {
+  height: 8px;
+  background: var(--accent);
+}
+
+.ankiDeckSummaryPill {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #fff3;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+}
+
+.ankiDeckSummaryActions {
+  display: flex;
+  gap: 8px;
 }
 
 .ankiDeckCarouselBar {

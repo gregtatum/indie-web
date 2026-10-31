@@ -185,8 +185,7 @@ describe('<AnkiDeck>', () => {
               class="ankiDeckCarouselProgress"
             >
               1
-               /
-               
+               / 
               2
             </div>
             <button
@@ -281,6 +280,7 @@ describe('<AnkiDeck>', () => {
   });
 
   it('masters a card right away when first answered right, but sends a missed card to the far right until it is the last one left', async () => {
+    jest.setSystemTime(new Date(0));
     setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
@@ -308,10 +308,63 @@ describe('<AnkiDeck>', () => {
     expect(segmentStates()).toBe('mastered current');
 
     // A missed card needs two rights in a row, unless it's the only one left.
+    jest.setSystemTime(new Date(75_000));
     await grade('Right');
-    expect(screen.getByText('Done: 2 cards, 1 needed a repeat.')).toBeTruthy();
     expect(progressBar().getAttribute('aria-valuenow')).toBe('2');
-    expect(segmentStates()).toBe('mastered mastered');
+    // Cards that needed a repeat stay hatched on the finished bar.
+    expect(segmentStates()).toBe('mastered repeat');
+
+    const stats = Object.fromEntries(
+      Array.from(document.querySelectorAll('.ankiDeckSummaryStats > div')).map(
+        (stat) => [
+          stat.querySelector('dt')?.textContent,
+          stat.querySelector('dd')?.textContent,
+        ],
+      ),
+    );
+    expect(stats).toEqual({
+      'First try': '1 of 2 (50%)',
+      Answers: '3',
+      Time: '1:15',
+      'Per answer': '25.0s',
+    });
+    const rows = within(screen.getByRole('table'))
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
+    expect(rows.map((row) => row.slice(0, 3))).toEqual([
+      ['Hello', '2', '1'],
+      ['Goodbye', '1', '0'],
+    ]);
+  });
+
+  it('restarts the whole deck with Study again, or only the missed cards with Study missed', async () => {
+    setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+
+    const user = userEvent.setup();
+    async function grade(name: 'Right' | 'Wrong') {
+      await click(user, 'Show');
+      await click(user, name);
+    }
+    await grade('Wrong');
+    await grade('Right');
+    await grade('Right');
+
+    await click(user, 'Study missed 1');
+    expect(screen.getByText('1 / 1')).toBeTruthy();
+    expect(screen.getByText('Hello')).toBeTruthy();
+    expect(screen.queryByText('Goodbye')).toBeNull();
+    await grade('Right');
+    expect(screen.queryByRole('button', { name: /Study missed/ })).toBeNull();
+
+    await click(user, 'Study again');
+    expect(screen.getByText('1 / 2')).toBeTruthy();
+    expect(segmentStates()).toBe('current unanswered');
   });
 
   it('reveals with Space/Enter, then grades with the Anki number keys, y/n, or Space', async () => {
@@ -349,11 +402,12 @@ describe('<AnkiDeck>', () => {
       'mastered mastered mastered mastered mastered current repeat repeat',
     );
 
-    for (let i = 0; i < 30 && !screen.queryByText(/^Done/); i++) {
+    for (let i = 0; i < 30 && !screen.queryByRole('table'); i++) {
       await press(user, '[Enter]');
       await press(user, '3');
     }
-    expect(screen.getByText('Done: 8 cards, 3 needed a repeat.')).toBeTruthy();
+    expect(screen.getByText('5 of 8 (63%)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Study missed 3' })).toBeTruthy();
   });
 
   it('moves between the Wrong and Right buttons with the arrow keys, grading with Enter', async () => {

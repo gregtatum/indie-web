@@ -77,23 +77,36 @@ interface CardProgress {
   attempts: number;
   misses: number;
   streak: number;
+  ms: number;
 }
 
 interface StudySession {
-  notes: T.AnkiNote[];
+  source: T.AnkiNote[];
+  deck: T.AnkiNote[];
   queue: number[];
   mastered: number[];
   progress: CardProgress[];
   step: number;
+  startedAt: number;
+  shownAt: number;
+  finishedAt: number | null;
 }
 
-function createStudySession(notes: T.AnkiNote[]): StudySession {
+function createStudySession(
+  source: T.AnkiNote[],
+  deck: T.AnkiNote[] = source,
+): StudySession {
+  const now = Date.now();
   return {
-    notes,
-    queue: notes.map((_, id) => id),
+    source,
+    deck,
+    queue: deck.map((_, id) => id),
     mastered: [],
-    progress: notes.map(() => ({ attempts: 0, misses: 0, streak: 0 })),
+    progress: deck.map(() => ({ attempts: 0, misses: 0, streak: 0, ms: 0 })),
     step: 0,
+    startedAt: now,
+    shownAt: now,
+    finishedAt: null,
   };
 }
 
@@ -105,6 +118,7 @@ function gradeCurrentCard(
   if (id === undefined) {
     return session;
   }
+  const now = Date.now();
   const previous = session.progress[id];
   const streak = result === 'correct' ? previous.streak + 1 : 0;
   const progress = [...session.progress];
@@ -112,6 +126,7 @@ function gradeCurrentCard(
     attempts: previous.attempts + 1,
     misses: previous.misses + (result === 'correct' ? 0 : 1),
     streak,
+    ms: previous.ms + now - session.shownAt,
   };
   const missed = progress[id].misses > 0;
   const isMastered =
@@ -123,14 +138,22 @@ function gradeCurrentCard(
     mastered: isMastered ? [...session.mastered, id] : session.mastered,
     progress,
     step: session.step + 1,
+    shownAt: now,
+    finishedAt: isMastered && rest.length === 0 ? now : null,
   };
 }
 
 type SegmentState = 'unanswered' | 'current' | 'repeat' | 'mastered';
 
-function segmentState(session: StudySession, id: number): SegmentState {
+function segmentState(
+  session: StudySession,
+  id: number,
+  isFinished: boolean,
+): SegmentState {
   if (session.mastered.includes(id)) {
-    return 'mastered';
+    return isFinished && session.progress[id].misses > 0
+      ? 'repeat'
+      : 'mastered';
   }
   if (session.queue[0] === id) {
     return 'current';
@@ -160,7 +183,7 @@ function AnkiStudyCarousel({
   );
   const [session, setSession] = React.useState(() => createStudySession(notes));
   const [revealed, setRevealed] = React.useState(false);
-  if (session.notes !== notes) {
+  if (session.source !== notes) {
     setSession(createStudySession(notes));
     setRevealed(false);
   }
@@ -174,7 +197,8 @@ function AnkiStudyCarousel({
     null,
   );
   const currentId = session.queue[0];
-  const isFinished = notes.length > 0 && currentId === undefined;
+  const { deck } = session;
+  const isFinished = deck.length > 0 && currentId === undefined;
 
   React.useEffect(() => {
     if (revealed && focusGroupOnReveal.current) {
@@ -199,6 +223,14 @@ function AnkiStudyCarousel({
       Math.min(Math.max(current + direction, 0), buttons.length - 1)
     ]?.focus();
   }, []);
+  const startSession = React.useCallback(
+    (deck: T.AnkiNote[]) => {
+      setSession(createStudySession(notes, deck));
+      setRevealed(false);
+      containerRef.current?.focus();
+    },
+    [notes, containerRef],
+  );
   const grade = React.useCallback(
     (result: CardResult) => {
       setSession((value) => gradeCurrentCard(value, result));
@@ -294,8 +326,7 @@ function AnkiStudyCarousel({
       <div className="ankiDeckCarouselTop">
         <div className="ankiDeckCarouselInfo">
           <div className="ankiDeckCarouselProgress">
-            {Math.min(session.mastered.length + 1, notes.length)} /{' '}
-            {notes.length}
+            {Math.min(session.mastered.length + 1, deck.length)} / {deck.length}
           </div>
           <button
             className="button ankiDeckModeToggle"
@@ -357,29 +388,34 @@ function AnkiStudyCarousel({
         className="ankiDeckCarouselBar"
         role="progressbar"
         aria-valuemin={0}
-        aria-valuemax={notes.length}
+        aria-valuemax={deck.length}
         aria-valuenow={session.mastered.length}
-        style={{ '--count': notes.length } as React.CSSProperties}
+        style={{ '--count': deck.length } as React.CSSProperties}
       >
-        {notes.map((_, id) => (
+        {deck.map((_, id) => (
           <div
             key={id}
             className="ankiDeckCarouselSegment"
-            data-state={segmentState(session, id)}
+            data-state={segmentState(session, id, isFinished)}
             style={{ '--pos': slotOf(session, id) } as React.CSSProperties}
           />
         ))}
       </div>
       <div className="ankiDeckCarouselStage">
         {currentId === undefined ? (
-          <div className="ankiDeckCarouselSummary">
-            Done: {notes.length} cards,{' '}
-            {session.progress.filter((card) => card.misses > 0).length} needed a
-            repeat.
-          </div>
+          <AnkiStudySummary
+            session={session}
+            onStudyAgain={() => startSession(notes)}
+            onStudyMissed={() => {
+              const missed = deck.filter(
+                (_, id) => session.progress[id].misses,
+              );
+              startSession(random ? shuffled(missed) : missed);
+            }}
+          />
         ) : (
           renderNote(
-            notes[currentId],
+            deck[currentId],
             session.step,
             cardRef,
             'carousel',
@@ -388,6 +424,119 @@ function AnkiStudyCarousel({
         )}
       </div>
     </>
+  );
+}
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  return `${Math.floor(totalSeconds / 60)}:${seconds}`;
+}
+
+function noteSummary(note: T.AnkiNote): string {
+  if (note.clozeSpans === null) {
+    return note.fields[0];
+  }
+  return note.clozeSpans
+    .map((span) => (span.type === 'text' ? span.text : span.answer))
+    .join('');
+}
+
+interface AnkiStudySummaryProps {
+  session: StudySession;
+  onStudyAgain: () => void;
+  onStudyMissed: () => void;
+}
+
+function AnkiStudySummary({
+  session,
+  onStudyAgain,
+  onStudyMissed,
+}: AnkiStudySummaryProps) {
+  const { deck, progress } = session;
+  const elapsed = (session.finishedAt ?? session.startedAt) - session.startedAt;
+  const firstTry = progress.filter((card) => card.misses === 0).length;
+  const missedCount = deck.length - firstTry;
+  const rows = deck
+    .map((note, id) => ({ note, ...progress[id] }))
+    .sort((a, b) => b.misses - a.misses || b.ms - a.ms);
+  const slowestMs = Math.max(1, ...rows.map((row) => row.ms));
+
+  return (
+    <div className="ankiDeckSummary">
+      <dl className="ankiDeckSummaryStats">
+        <div>
+          <dt>First try</dt>
+          <dd>
+            {firstTry} of {deck.length} (
+            {Math.round((firstTry / deck.length) * 100)}%)
+          </dd>
+        </div>
+        <div>
+          <dt>Answers</dt>
+          <dd>{session.step}</dd>
+        </div>
+        <div>
+          <dt>Time</dt>
+          <dd>{formatDuration(elapsed)}</dd>
+        </div>
+        <div>
+          <dt>Per answer</dt>
+          <dd>{(elapsed / session.step / 1000).toFixed(1)}s</dd>
+        </div>
+      </dl>
+      <div className="ankiDeckSummaryCardsWrap">
+        <table className="ankiDeckSummaryCards">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th>Tries</th>
+              <th>Misses</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ note, attempts, misses, ms }, i) => (
+              <tr key={i}>
+                <td className="ankiDeckSummaryCardName">{noteSummary(note)}</td>
+                <td>{attempts}</td>
+                <td
+                  className={misses === 0 ? 'ankiDeckSummaryZero' : undefined}
+                >
+                  {misses}
+                </td>
+                <td>
+                  <div className="ankiDeckSummaryTime">
+                    <div className="ankiDeckSummaryTimeTrack">
+                      <div
+                        className="ankiDeckSummaryTimeBar"
+                        style={{ width: `${(ms / slowestMs) * 100}%` }}
+                      />
+                    </div>
+                    <span>{formatDuration(ms)}</span>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="ankiDeckSummaryActions">
+        {missedCount > 0 ? (
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={onStudyMissed}
+          >
+            Study missed
+            <span className="ankiDeckSummaryPill">{missedCount}</span>
+          </button>
+        ) : null}
+        <button className="button" type="button" onClick={onStudyAgain}>
+          Study again
+        </button>
+      </div>
+    </div>
   );
 }
 
