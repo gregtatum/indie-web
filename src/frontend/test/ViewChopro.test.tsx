@@ -8,16 +8,13 @@ import {
 } from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
-import { dedent, ensureExists } from 'frontend/utils';
+import { dedent } from 'frontend/utils';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from 'frontend/components/App';
 import { createStore } from 'frontend/store/create-store';
-import { T, A, $ } from 'frontend';
-import {
-  mockDropboxAccessToken,
-  mockDropboxFilesDownload,
-  mockDropboxListFolder,
-} from './utils/fixtures';
+import { A, $ } from 'frontend';
+import { settleApp } from './utils/fixtures';
+import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
 
 const coldplayChordProText = dedent`
   {title: Clocks}
@@ -46,6 +43,8 @@ const kokomoChordProText = dedent`
 `;
 
 describe('<ViewChopro>', () => {
+  const { getIDBFS } = useTestIDBFS();
+
   function setupColdplay() {
     return setup({
       text: coldplayChordProText,
@@ -54,7 +53,7 @@ describe('<ViewChopro>', () => {
     });
   }
 
-  function setup({
+  async function setup({
     text,
     path,
     siblingPath,
@@ -63,43 +62,24 @@ describe('<ViewChopro>', () => {
     path: string;
     siblingPath?: string;
   }) {
+    const idbfs = getIDBFS();
     const store = createStore();
-    store.dispatch(A.changeFileStore('dropbox'));
-    mockDropboxAccessToken(store);
-    const files = [
-      { type: 'folder' as const, path: '/My Cool Band' },
-      { type: 'file' as const, path },
-    ];
-    if (siblingPath) {
-      files.push({ type: 'file' as const, path: siblingPath });
-    }
-    const listFiles = mockDropboxListFolder(files);
-
-    function getFileMetadata(filePath: string): T.FileMetadata {
-      const file = ensureExists(
-        listFiles.find((item) => item.path === filePath),
-        'Failed to find the file.',
-      );
-      if (file.type !== 'file') {
-        throw new Error('Found a folder not a file.');
-      }
-      return file;
-    }
-
-    mockDropboxFilesDownload([
-      {
-        metadata: getFileMetadata(path),
-        text,
-      },
-    ]);
+    store.dispatch(A.changeFileStore('browser'));
+    await connectBrowserFiles(
+      store,
+      idbfs,
+      siblingPath ? ['/My Cool Band/', siblingPath] : ['/My Cool Band/'],
+    );
+    await idbfs.saveText(path, 'overwrite', text);
 
     const renderResults = render(
-      <MemoryRouter initialEntries={[`/dropbox/file${path}`]}>
+      <MemoryRouter initialEntries={[`/browser/file${path}`]}>
         <Provider store={store as any}>
           <AppRoutes />
         </Provider>
       </MemoryRouter>,
     );
+    await settleApp();
 
     function getSongText() {
       return screen
@@ -112,7 +92,7 @@ describe('<ViewChopro>', () => {
   }
 
   it('view a chordpro file', async () => {
-    setupColdplay();
+    await setupColdplay();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
     });
@@ -131,7 +111,7 @@ describe('<ViewChopro>', () => {
             aria-label="Next"
             class="nextPrev nextPrevNext"
             data-discover="true"
-            href="/dropbox/file/Mellow Yellow - Donovan.chordpro"
+            href="/browser/file/Mellow Yellow - Donovan.chordpro"
             title="Mellow Yellow - Donovan.chordpro"
             type="button"
           />
@@ -259,7 +239,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('updates song info directives from the UI', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     const user = userEvent.setup();
     await waitFor(() => screen.getByText(/Lights go out and/));
 
@@ -301,7 +281,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('removes directives when cleared in the UI', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -343,7 +323,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('clears transpose when key matches the transposed key', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -395,7 +375,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('hides transpose dropdown when no key directive exists', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -427,7 +407,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('updates the key directive from the dropdown', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -465,7 +445,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('updates the capo directive from the dropdown', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -504,7 +484,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('clears transpose when adding a key to match the transposed key', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     const user = userEvent.setup();
     await screen.findByText(/Lights go out and/, {
       selector: 'span.renderedSongLineText',
@@ -562,7 +542,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('renders the song display as text', async () => {
-    const { getSongText } = setup({
+    const { getSongText } = await setup({
       text: kokomoChordProText,
       path: '/Kokomo - Beach Boys.chordpro',
     });
@@ -585,7 +565,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('renders the song display as text after transpose', async () => {
-    const { getSongText } = setup({
+    const { getSongText } = await setup({
       text: dedent`
         {transpose: D}
         ${kokomoChordProText}
@@ -611,7 +591,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('renders the song display as text after capo', async () => {
-    const { getSongText } = setup({
+    const { getSongText } = await setup({
       text: dedent`
         {capo: 2}
         ${kokomoChordProText}
@@ -637,7 +617,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('renders the song display as text after capo and transpose', async () => {
-    const { getSongText } = setup({
+    const { getSongText } = await setup({
       text: dedent`
         {transpose: D}
         {capo: 2}
@@ -664,7 +644,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('renders the song display as text with Nashville chords', async () => {
-    const { getSongText } = setup({
+    const { getSongText } = await setup({
       text: dedent`
         {chords: nashville}
         ${kokomoChordProText}
@@ -690,7 +670,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('ignores transpose with Nashville chords', async () => {
-    const { getSongText } = setup({
+    const { getSongText } = await setup({
       text: dedent`
         {chords: nashville}
         {transpose: D}
@@ -717,7 +697,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('renders the song display as text with Roman numerals', async () => {
-    const { getSongText } = setup({
+    const { getSongText } = await setup({
       text: dedent`
         {chords: roman}
         ${kokomoChordProText}
@@ -743,7 +723,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('ignores capo with Roman numerals', async () => {
-    const { getSongText } = setup({
+    const { getSongText } = await setup({
       text: dedent`
         {chords: roman}
         {capo: 2}
@@ -770,7 +750,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('navigates back to the file listing with Cmd+Up', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     act(() => {
       store.dispatch(A.setHasOnboarded(true));
     });
@@ -787,7 +767,7 @@ describe('<ViewChopro>', () => {
   });
 
   it('does not navigate away on Cmd+Up while editing', async () => {
-    const { store } = setupColdplay();
+    const { store } = await setupColdplay();
     act(() => {
       store.dispatch(A.setHasOnboarded(true));
     });
@@ -820,7 +800,7 @@ describe('<ViewChopro>', () => {
 
   // I can't figure out why this test doesn't work.
   xit('can generate tabs', async () => {
-    setupColdplay();
+    await setupColdplay();
     await waitFor(() => screen.getByText(/Lights go out and/));
 
     const getSong = () =>

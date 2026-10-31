@@ -5,11 +5,10 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import * as React from 'react';
 import { Provider } from 'react-redux';
 import { settleApp } from './utils/fixtures';
-import { connectBrowserFiles, useTestIDBFS } from './utils/idbfs';
+import { connectBrowserFiles, flushStorage, useTestIDBFS } from './utils/idbfs';
 import { A } from 'frontend';
 import { dedent } from 'frontend/utils';
 import { MemoryRouter } from 'react-router-dom';
-import { setImmediate as realSetImmediate } from 'timers';
 
 const fence = '```';
 
@@ -72,15 +71,6 @@ const InterleavedText = dedent`
 
   That's everything for today.
 `;
-
-async function flushStorage() {
-  await act(async () => {
-    for (let i = 0; i < 10; i++) {
-      await jest.runAllTimersAsync();
-      await new Promise((resolve) => realSetImmediate(resolve));
-    }
-  });
-}
 
 describe('<AnkiDeck>', () => {
   afterEach(flushStorage);

@@ -1,3 +1,5 @@
+import { act } from '@testing-library/react';
+import { setImmediate as realSetImmediate } from 'timers';
 import { A } from 'frontend';
 import { IDBFS, openIDBFS } from 'frontend/logic/file-store/indexeddb-fs';
 import type { createStore } from 'frontend/store/create-store';
@@ -44,4 +46,18 @@ export async function connectBrowserFiles(
 ) {
   store.dispatch(A.connectIDBFS(idbfs));
   await buildTestFiles(idbfs, paths);
+}
+
+/**
+ * IDBFS finishes its work on the real setImmediate, which jest's fake timers
+ * don't control. Alternate between both so that in-flight saves settle inside
+ * act before the test or the database goes away.
+ */
+export async function flushStorage() {
+  await act(async () => {
+    for (let i = 0; i < 3; i++) {
+      await jest.runAllTimersAsync();
+      await new Promise((resolve) => realSetImmediate(resolve));
+    }
+  });
 }

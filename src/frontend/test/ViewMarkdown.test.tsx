@@ -14,7 +14,10 @@ import {
   mockDropboxAccessToken,
   mockDropboxFilesDownload,
   mockDropboxListFolder,
+  settleApp,
+  spyOnDropboxFilesUpload,
 } from './utils/fixtures';
+import { connectBrowserFiles, flushStorage, useTestIDBFS } from './utils/idbfs';
 import { T, $, A } from 'frontend';
 import { ensureExists, dedent } from 'frontend/utils';
 import { MemoryRouter } from 'react-router-dom';
@@ -45,115 +48,39 @@ describe('<ViewMarkdown>', () => {
     jest.useFakeTimers();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await flushStorage();
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
 
-  function setup(text = IdeasText) {
+  const { getIDBFS } = useTestIDBFS();
+
+  async function setup(text = IdeasText) {
+    const idbfs = getIDBFS();
     const store = createStore();
-    store.dispatch(A.changeFileStore('dropbox'));
-    mockDropboxAccessToken(store);
-    const listFiles = mockDropboxListFolder([
-      { type: 'folder', path: '/My Cool Notes' },
-      { type: 'file', path: '/Ideas.md' },
-      { type: 'file', path: '/Groceries.md' },
+    store.dispatch(A.changeFileStore('browser'));
+    store.dispatch(A.hideEditor(true));
+    await connectBrowserFiles(store, idbfs, [
+      '/My Cool Notes/',
+      '/Groceries.md',
     ]);
-
-    function getFileMetadata(path: string): T.FileMetadata {
-      const file = ensureExists(
-        listFiles.find((file) => file.path === path),
-        'Failed to find the file.',
-      );
-      if (file.type !== 'file') {
-        throw new Error('Found a folder not a file.');
-      }
-      return file;
-    }
-
-    mockDropboxFilesDownload([
-      {
-        metadata: getFileMetadata('/Ideas.md'),
-        text,
-      },
-    ]);
+    await idbfs.saveText('/Ideas.md', 'overwrite', text);
 
     const renderResults = render(
-      <MemoryRouter initialEntries={['/dropbox/md/Ideas.md']}>
+      <MemoryRouter initialEntries={['/browser/md/Ideas.md']}>
         <Provider store={store as any}>
           <AppRoutes />
         </Provider>
       </MemoryRouter>,
     );
+    await settleApp();
 
     return { store, ...renderResults };
   }
 
-  it('view a markdown file', async () => {
-    setup();
-    await waitFor(() => screen.getByText(/Great ideas/));
-
-    expect(screen.getByTestId('viewMarkdown')).toMatchInlineSnapshot(`
-      <div
-        class="splitterSolo"
-        data-fullscreen="true"
-        data-testid="viewMarkdown"
-      >
-        <div
-          class="viewMarkdown"
-          data-testid="renderedMarkdown"
-        >
-          <div
-            class="viewMarkdownContainer"
-          >
-            <div
-              class="viewMarkdownStickyHeader"
-            >
-              <button
-                class="button"
-                type="button"
-              >
-                Edit
-              </button>
-            </div>
-            <div
-              class="viewMarkdownDiv"
-            >
-              <h1>
-                Great ideas
-              </h1>
-              
-
-              <p>
-                Come up with some great ideas.
-              </p>
-              
-
-              <ul>
-                
-
-                <li>
-                  Build something?
-                </li>
-                
-
-                <li>
-                  Learn to paint?
-                </li>
-                
-
-              </ul>
-              
-
-            </div>
-          </div>
-        </div>
-      </div>
-    `);
-  });
-
   it('can edit markdown files', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     const edit = await waitFor(() => screen.getByText(/Edit/));
     act(() => {
       edit.click();
@@ -188,7 +115,7 @@ describe('<ViewMarkdown>', () => {
   });
 
   it('navigates back to the file listing with Cmd+Up', async () => {
-    const { store } = setup();
+    const { store } = await setup();
     act(() => {
       store.dispatch(A.setHasOnboarded(true));
     });
@@ -207,7 +134,7 @@ describe('<ViewMarkdown>', () => {
   });
 
   it('does not navigate away on Cmd+Up while editing', async () => {
-    setup();
+    await setup();
     await waitFor(() =>
       expect(
         screen.queryByTestId('textAreaMount') ?? screen.queryByText(/Edit/),
@@ -238,7 +165,7 @@ describe('<ViewMarkdown>', () => {
   });
 
   it('removes an anki block while editing without crashing', async () => {
-    const { store } = setup(AnkiText);
+    const { store } = await setup(AnkiText);
     await waitFor(() => screen.getByTestId('ankiDeck'));
     const renderedMarkdown = screen.getByTestId('renderedMarkdown');
 
@@ -257,5 +184,137 @@ describe('<ViewMarkdown>', () => {
 
     await waitFor(() => getByText(renderedMarkdown, /More notes below\./));
     expect(screen.queryByTestId('ankiDeck')).toBeNull();
+  });
+
+  describe('on Dropbox', () => {
+    function setupDropbox(text = IdeasText) {
+      const uploads = spyOnDropboxFilesUpload();
+      const store = createStore();
+      store.dispatch(A.changeFileStore('dropbox'));
+      store.dispatch(A.hideEditor(true));
+      mockDropboxAccessToken(store);
+      const listFiles = mockDropboxListFolder([
+        { type: 'folder', path: '/My Cool Notes' },
+        { type: 'file', path: '/Ideas.md' },
+        { type: 'file', path: '/Groceries.md' },
+      ]);
+
+      function getFileMetadata(path: string): T.FileMetadata {
+        const file = ensureExists(
+          listFiles.find((file) => file.path === path),
+          'Failed to find the file.',
+        );
+        if (file.type !== 'file') {
+          throw new Error('Found a folder not a file.');
+        }
+        return file;
+      }
+
+      mockDropboxFilesDownload([
+        {
+          metadata: getFileMetadata('/Ideas.md'),
+          text,
+        },
+      ]);
+
+      const renderResults = render(
+        <MemoryRouter initialEntries={['/dropbox/md/Ideas.md']}>
+          <Provider store={store as any}>
+            <AppRoutes />
+          </Provider>
+        </MemoryRouter>,
+      );
+
+      return { store, uploads, ...renderResults };
+    }
+
+    it('view a markdown file', async () => {
+      setupDropbox();
+      await waitFor(() => screen.getByText(/Great ideas/));
+
+      expect(screen.getByTestId('viewMarkdown')).toMatchInlineSnapshot(`
+        <div
+          class="splitterSolo"
+          data-fullscreen="true"
+          data-testid="viewMarkdown"
+        >
+          <div
+            class="viewMarkdown"
+            data-testid="renderedMarkdown"
+          >
+            <div
+              class="viewMarkdownContainer"
+            >
+              <div
+                class="viewMarkdownStickyHeader"
+              >
+                <button
+                  class="button"
+                  type="button"
+                >
+                  Edit
+                </button>
+              </div>
+              <div
+                class="viewMarkdownDiv"
+              >
+                <h1>
+                  Great ideas
+                </h1>
+                
+
+                <p>
+                  Come up with some great ideas.
+                </p>
+                
+
+                <ul>
+                  
+
+                  <li>
+                    Build something?
+                  </li>
+                  
+
+                  <li>
+                    Learn to paint?
+                  </li>
+                  
+
+                </ul>
+                
+
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+    });
+
+    it('saves edits back to Dropbox', async () => {
+      const { uploads } = setupDropbox();
+      const edit = await waitFor(() => screen.getByText(/Edit/));
+      act(() => {
+        edit.click();
+      });
+      const line = getByText(
+        screen.getByTestId('textAreaMount'),
+        /Come up with some great ideas\./,
+      );
+
+      await act(async () => {
+        const user = userEvent.setup();
+        await Promise.all([user.click(line), jest.runAllTimersAsync()]);
+        await Promise.all([user.keyboard('hello\n'), jest.runAllTimersAsync()]);
+        await Promise.all([
+          user.keyboard('{Control>}s{/Control}'),
+          jest.runAllTimersAsync(),
+        ]);
+      });
+
+      await waitFor(() => expect(uploads).toHaveLength(1));
+      expect(uploads[0].path).toBe('/Ideas.md');
+      expect(uploads[0].body).toMatch(/^hello\n# Great ideas/);
+    });
   });
 });
