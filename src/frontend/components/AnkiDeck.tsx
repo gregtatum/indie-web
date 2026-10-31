@@ -457,10 +457,7 @@ function AnkiStudySummary({
       <dl className="ankiDeckSummaryStats">
         <div>
           <dt>First try</dt>
-          <dd>
-            {firstTry} of {deck.length} (
-            {Math.round((firstTry / deck.length) * 100)}%)
-          </dd>
+          <dd>{Math.round((firstTry / deck.length) * 100)}%</dd>
         </div>
         <div>
           <dt>Answers</dt>

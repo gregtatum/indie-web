@@ -347,7 +347,7 @@ describe('<AnkiDeck>', () => {
       ),
     );
     expect(stats).toEqual({
-      'First try': '1 of 2 (50%)',
+      'First try': '50%',
       Answers: '3',
       Time: '1:15',
       'Per answer': '25.0s',
@@ -428,7 +428,7 @@ describe('<AnkiDeck>', () => {
       await press(user, '[Enter]');
       await press(user, '3');
     }
-    expect(screen.getByText('5 of 8 (63%)')).toBeTruthy();
+    expect(screen.getByText('63%')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Study missed 3' })).toBeTruthy();
   });
 
