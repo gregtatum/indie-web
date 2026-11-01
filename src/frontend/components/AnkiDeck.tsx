@@ -17,9 +17,18 @@ interface AnkiDeckProps {
 
 type DeckMode = 'study' | 'full';
 
+type AnswerMode = 'reveal' | 'type';
+
+const ANSWER_MODES: Array<{ id: AnswerMode; label: string }> = [
+  { id: 'reveal', label: 'Reveal' },
+  { id: 'type', label: 'Type' },
+];
+
 export function AnkiDeck({ parsed }: AnkiDeckProps) {
   const [mode, setMode] = React.useState<DeckMode>('study');
   const [random, setRandom] = React.useState(true);
+  const [answerMode, setAnswerMode] = React.useState<AnswerMode>('reveal');
+  const [reverse, setReverse] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { notes } = parsed;
   const isStudyMode = mode === 'study';
@@ -55,6 +64,10 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
             containerRef={containerRef}
             random={random}
             onRandomChange={setRandom}
+            answerMode={answerMode}
+            onAnswerModeChange={setAnswerMode}
+            reverse={reverse}
+            onReverseChange={setReverse}
             onModeChange={setMode}
           />
         )
@@ -65,6 +78,10 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
             onModeChange={setMode}
             random={random}
             onRandomChange={setRandom}
+            answerMode={answerMode}
+            onAnswerModeChange={setAnswerMode}
+            reverse={reverse}
+            onReverseChange={setReverse}
           />
           <div className="ankiDeckList">
             {notes.map((note, index) => (
@@ -103,6 +120,10 @@ interface AnkiStudyCarouselProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   random: boolean;
   onRandomChange: (random: boolean) => void;
+  answerMode: AnswerMode;
+  onAnswerModeChange: (answerMode: AnswerMode) => void;
+  reverse: boolean;
+  onReverseChange: (reverse: boolean) => void;
   onModeChange: (mode: DeckMode) => void;
 }
 
@@ -241,6 +262,10 @@ function AnkiStudyCarousel({
   containerRef,
   random,
   onRandomChange,
+  answerMode,
+  onAnswerModeChange,
+  reverse,
+  onReverseChange,
   onModeChange,
 }: AnkiStudyCarouselProps) {
   const notes = React.useMemo(
@@ -321,6 +346,13 @@ function AnkiStudyCarousel({
         return;
       }
       const canGrade = revealed && !isFinished;
+      if (active instanceof HTMLInputElement) {
+        if (event.key === 'Enter' && !revealed && !isFinished) {
+          event.preventDefault();
+          reveal();
+        }
+        return;
+      }
       switch (getKeyboardString(event)) {
         case 'ArrowLeft':
         case 'ArrowRight':
@@ -434,7 +466,14 @@ function AnkiStudyCarousel({
         {currentId === undefined ? (
           <AnkiStudySummary session={session} />
         ) : (
-          renderNote(deck[currentId], session.step, cardRef, setRevealed)
+          renderNote(
+            deck[currentId],
+            session.step,
+            cardRef,
+            answerMode,
+            reverse,
+            setRevealed,
+          )
         )}
       </div>
       <div className="ankiDeckCarouselTop">
@@ -443,6 +482,10 @@ function AnkiStudyCarousel({
           onModeChange={onModeChange}
           random={random}
           onRandomChange={onRandomChange}
+          answerMode={answerMode}
+          onAnswerModeChange={onAnswerModeChange}
+          reverse={reverse}
+          onReverseChange={onReverseChange}
         />
         <div
           className="ankiDeckCarouselNav"
@@ -512,6 +555,10 @@ interface AnkiOptionsMenuProps {
   onModeChange: (mode: DeckMode) => void;
   random: boolean;
   onRandomChange: (random: boolean) => void;
+  answerMode: AnswerMode;
+  onAnswerModeChange: (answerMode: AnswerMode) => void;
+  reverse: boolean;
+  onReverseChange: (reverse: boolean) => void;
 }
 
 function AnkiOptionsMenu({
@@ -519,6 +566,10 @@ function AnkiOptionsMenu({
   onModeChange,
   random,
   onRandomChange,
+  answerMode,
+  onAnswerModeChange,
+  reverse,
+  onReverseChange,
 }: AnkiOptionsMenuProps) {
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
   const [openGeneration, setOpenGeneration] = React.useState(0);
@@ -551,6 +602,40 @@ function AnkiOptionsMenu({
           >
             {mode === 'study' ? 'Show all' : 'Study mode'}
           </button>
+          {mode === 'study' ? (
+            <div
+              className="ankiDeckOptionsGroup"
+              role="radiogroup"
+              aria-label="Answer mode"
+            >
+              {ANSWER_MODES.map(({ id, label }) => (
+                <button
+                  key={id}
+                  className={
+                    answerMode === id
+                      ? 'ankiDeckOptionsGroupButton ankiDeckOptionsGroupButton-active'
+                      : 'ankiDeckOptionsGroupButton'
+                  }
+                  type="button"
+                  role="radio"
+                  aria-checked={answerMode === id}
+                  onClick={() => onAnswerModeChange(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {mode === 'study' ? (
+            <label className="ankiDeckOptionsRandom">
+              <input
+                type="checkbox"
+                checked={reverse}
+                onChange={(event) => onReverseChange(event.target.checked)}
+              />
+              Reverse
+            </label>
+          ) : null}
           <label className="ankiDeckOptionsRandom">
             <input
               type="checkbox"
@@ -651,6 +736,8 @@ function renderNote(
   note: T.AnkiNote | undefined,
   key: number,
   ref: React.Ref<AnkiCardHandle> | undefined,
+  answerMode: AnswerMode,
+  reverse: boolean,
   onRevealedChange?: (revealed: boolean) => void,
 ) {
   if (!note) {
@@ -671,6 +758,8 @@ function renderNote(
       <AnkiBasicCard
         key={key}
         note={note}
+        answerMode={answerMode}
+        reverse={reverse}
         ref={ref}
         onRevealedChange={onRevealedChange}
       />
@@ -707,18 +796,30 @@ function AnkiListRow({ note }: { note: T.AnkiNote }) {
   );
 }
 
+function isTypedMatch(typed: string, answer: string): boolean {
+  const normalize = (text: string) => text.trim().toLowerCase();
+  return normalize(typed) === normalize(answer);
+}
+
 function isBasicNote(note: T.AnkiNote): boolean {
   return note.notetype === null || note.notetype.toLowerCase() === 'basic';
 }
 
 interface AnkiBasicCardProps {
   note: T.AnkiNote;
+  answerMode: AnswerMode;
+  reverse: boolean;
   onRevealedChange?: (revealed: boolean) => void;
 }
 
 const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
-  function AnkiBasicCard({ note, onRevealedChange }, ref) {
+  function AnkiBasicCard({ note, answerMode, reverse, onRevealedChange }, ref) {
     const [revealed, setRevealed] = React.useState(false);
+    const [typed, setTyped] = React.useState('');
+    const [question, answer] = reverse
+      ? [note.fields[1], note.fields[0]]
+      : [note.fields[0], note.fields[1]];
+    const isTyping = answerMode === 'type';
     React.useImperativeHandle(
       ref,
       () => ({
@@ -734,7 +835,22 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
 
     return (
       <div className="ankiDeckCard ankiDeckCardStage">
-        <div className="ankiDeckCardFront">{note.fields[0]}</div>
+        <div className="ankiDeckCardFront">{question}</div>
+        {isTyping ? (
+          <input
+            className="ankiDeckCardTyped"
+            type="text"
+            aria-label="Your answer"
+            autoFocus
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            readOnly={revealed}
+            value={typed}
+            data-match={revealed ? isTypedMatch(typed, answer) : undefined}
+            onChange={(event) => setTyped(event.target.value)}
+          />
+        ) : null}
         <div
           className={
             revealed
@@ -743,7 +859,7 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
           }
           aria-hidden={!revealed}
         >
-          {note.fields[1]}
+          {answer}
         </div>
       </div>
     );

@@ -554,6 +554,30 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByText('1 / 2')).toBeTruthy();
   });
 
+  it('studies in reverse and with typed answers from the options menu', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    await setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+    await click(user, 'Options');
+    await act(() => user.click(screen.getByLabelText('Reverse')));
+    expect(
+      screen.getByText('Au revoir').getAttribute('aria-hidden'),
+    ).toBeNull();
+    expect(screen.getByText('Goodbye').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
+
+    await act(() => user.click(screen.getByRole('radio', { name: 'Type' })));
+    await click(user, 'Options');
+    const input = screen.getByRole('textbox', { name: 'Your answer' });
+    await act(() => user.type(input, 'goodbye'));
+    await press(user, '[Enter]');
+    expect(input.getAttribute('data-match')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
+  });
+
   it('renders an empty anki block without crashing, e.g. while mid-edit', async () => {
     await setup(EmptyText);
     await waitFor(() => screen.getByTestId('ankiDeck'));

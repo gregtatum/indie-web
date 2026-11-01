@@ -67,6 +67,61 @@
   font-size: var(--font-size-small);
 }
 
+.ankiDeckOptionsGroup {
+  display: flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--button-border-radius);
+  background: var(--selection-hover);
+}
+
+.ankiDeckOptionsGroupButton {
+  position: relative;
+  flex: 1;
+  margin: 0;
+  padding: 0.2em 0.5em;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-family: system-ui, sans-serif;
+  font-size: var(--font-size-small);
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.ankiDeckOptionsGroupButton:first-child {
+  border-radius: calc(var(--button-border-radius) - 1px) 0 0
+    calc(var(--button-border-radius) - 1px);
+}
+
+.ankiDeckOptionsGroupButton:last-child {
+  border-radius: 0 calc(var(--button-border-radius) - 1px)
+    calc(var(--button-border-radius) - 1px) 0;
+}
+
+.ankiDeckOptionsGroupButton + .ankiDeckOptionsGroupButton {
+  border-left: 1px solid var(--line-strong);
+}
+
+.ankiDeckOptionsGroupButton:hover {
+  color: var(--accent-strong);
+}
+
+.ankiDeckOptionsGroupButton:focus-visible {
+  z-index: 1;
+  outline: var(--outline-focus);
+}
+
+.ankiDeckOptionsGroupButton:active {
+  z-index: 1;
+  outline: var(--outline-active);
+}
+
+.ankiDeckOptionsGroupButton-active,
+.ankiDeckOptionsGroupButton-active:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
 .ankiDeckOptionsRandom {
   display: flex;
   align-items: center;
@@ -365,4 +420,20 @@
 .ankiDeckStats span + span::before {
   content: '·';
   margin-right: 6px;
+}
+
+.ankiDeckCardTyped {
+  width: 100%;
+  max-width: 320px;
+  font-size: 1.25em;
+  text-align: center;
+}
+
+.ankiDeckCardTyped[data-match='true'] {
+  border-color: var(--success-color);
+}
+
+.ankiDeckCardTyped[data-match='false'] {
+  border-color: var(--muted);
+  text-decoration: line-through;
 }
