@@ -250,25 +250,12 @@ describe('<AnkiDeck>', () => {
         <div
           class="ankiDeckCarouselTop"
         >
-          <div
-            class="ankiDeckCarouselInfo"
+          <button
+            class="button ankiDeckOptionsButton"
+            type="button"
           >
-            <button
-              class="button ankiDeckModeToggle"
-              type="button"
-            >
-              Show all
-            </button>
-            <label
-              class="ankiDeckCarouselRandom"
-            >
-              <input
-                checked=""
-                type="checkbox"
-              />
-              Random
-            </label>
-          </div>
+            Options
+          </button>
           <div
             aria-label="Card controls"
             class="ankiDeckCarouselNav"
@@ -369,7 +356,7 @@ describe('<AnkiDeck>', () => {
     ]);
   });
 
-  it('restarts the whole deck with Study again, or only the missed cards with Study missed', async () => {
+  it('restarts the whole deck with Study again, or only the missed cards with Study weak', async () => {
     await setup();
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
@@ -382,12 +369,12 @@ describe('<AnkiDeck>', () => {
     await grade('Right');
     await grade('Right');
 
-    await click(user, 'Study missed 1');
+    await click(user, 'Study weak 1');
     expect(screen.getByText('1 / 1')).toBeTruthy();
     expect(screen.getByText('Hello')).toBeTruthy();
     expect(screen.queryByText('Goodbye')).toBeNull();
     await grade('Right');
-    expect(screen.queryByRole('button', { name: /Study missed/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Study weak/ })).toBeNull();
 
     await click(user, 'Study again');
     expect(screen.getByText('1 / 2')).toBeTruthy();
@@ -432,7 +419,7 @@ describe('<AnkiDeck>', () => {
       await press(user, '3');
     }
     expect(screen.getByText('63%')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Study missed 3' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Study weak 3' })).toBeTruthy();
   });
 
   it('moves between the Wrong and Right buttons with the arrow keys, grading with Enter', async () => {
@@ -508,7 +495,7 @@ describe('<AnkiDeck>', () => {
         jest.runAllTimersAsync(),
       ]);
     });
-    await press(user, '[Tab][Tab][Tab]');
+    await press(user, '[Tab][Tab]');
     expect(toolbar.contains(document.activeElement)).toBe(true);
     expect(document.activeElement?.textContent).toBe('Show');
 
@@ -554,6 +541,7 @@ describe('<AnkiDeck>', () => {
     await waitFor(() => screen.getByTestId('ankiDeck'));
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
+    await click(user, 'Options');
     const checkbox = screen.getByLabelText('Random') as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
     expect(screen.getByText('Goodbye')).toBeTruthy();
@@ -579,6 +567,7 @@ describe('<AnkiDeck>', () => {
     await waitFor(() => screen.getByTestId('ankiDeck'));
 
     const user = userEvent.setup();
+    await click(user, 'Options');
     await act(async () => {
       await Promise.all([
         user.click(screen.getByText('Show all')),
@@ -589,9 +578,11 @@ describe('<AnkiDeck>', () => {
     // Both cards are visible at once, in the full list view.
     expect(screen.getByText('Hello')).toBeTruthy();
     expect(screen.getByText('Goodbye')).toBeTruthy();
-    expect(screen.getAllByText('Show answer')).toHaveLength(2);
+    expect(screen.getByText('Bonjour')).toBeTruthy();
+    expect(screen.getByText('Au revoir')).toBeTruthy();
     expect(screen.queryByText(/\d \/ \d/)).toBeNull();
 
+    await click(user, 'Options');
     await act(async () => {
       await Promise.all([
         user.click(screen.getByText('Study mode')),
@@ -799,13 +790,13 @@ describe('<AnkiDeck>', () => {
       expect(seen.slice(2)).not.toContain('Thanks');
     });
 
-    it('flags Study missed runs as retries and keeps their weak terms', async () => {
+    it('flags Study weak runs as retries and keeps their weak terms', async () => {
       const { readSavedText, user } = await study(FrenchText, [
         'Wrong',
         'Right',
         'Right',
       ]);
-      await click(user, 'Study missed 1');
+      await click(user, 'Study weak 1');
       await click(user, 'Show');
       await click(user, 'Right');
 

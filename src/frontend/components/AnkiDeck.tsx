@@ -2,6 +2,8 @@ import * as React from 'react';
 import * as T from 'frontend/@types';
 import { getKeyboardString } from 'frontend/utils';
 import { A, Hooks, $$ } from 'frontend';
+import { overlayPortal } from 'frontend/hooks';
+import { Popup } from './Popup';
 import {
   noteSummary,
   noteTerm,
@@ -53,22 +55,21 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
             containerRef={containerRef}
             random={random}
             onRandomChange={setRandom}
-            onShowAll={() => setMode('full')}
+            onModeChange={setMode}
           />
         )
       ) : (
         <>
-          <button
-            className="button ankiDeckModeToggle"
-            type="button"
-            onClick={() => setMode('study')}
-          >
-            Study mode
-          </button>
+          <AnkiOptionsMenu
+            mode={mode}
+            onModeChange={setMode}
+            random={random}
+            onRandomChange={setRandom}
+          />
           <div className="ankiDeckList">
-            {notes.map((note, index) =>
-              renderNote(note, index, undefined, 'list'),
-            )}
+            {notes.map((note, index) => (
+              <AnkiListRow key={index} note={note} />
+            ))}
           </div>
         </>
       )}
@@ -102,7 +103,7 @@ interface AnkiStudyCarouselProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   random: boolean;
   onRandomChange: (random: boolean) => void;
-  onShowAll: () => void;
+  onModeChange: (mode: DeckMode) => void;
 }
 
 interface AnkiCardHandle {
@@ -240,7 +241,7 @@ function AnkiStudyCarousel({
   containerRef,
   random,
   onRandomChange,
-  onShowAll,
+  onModeChange,
 }: AnkiStudyCarouselProps) {
   const notes = React.useMemo(
     () => weakFirst(orderedNotes, weakTerms, random),
@@ -374,6 +375,14 @@ function AnkiStudyCarousel({
     return <div className="ankiDeckEmpty">No cards yet.</div>;
   }
 
+  const missedCount = deck.filter(
+    (_, id) => session.progress[id].misses,
+  ).length;
+  const studyMissed = () => {
+    const missed = deck.filter((_, id) => session.progress[id].misses);
+    startSession(random ? shuffled(missed) : missed, true);
+  };
+
   const retryCount = session.queue.filter(
     (id) => session.progress[id].misses > 0,
   ).length;
@@ -423,53 +432,46 @@ function AnkiStudyCarousel({
       </div>
       <div className="ankiDeckCarouselStage">
         {currentId === undefined ? (
-          <AnkiStudySummary
-            session={session}
-            onStudyAgain={() => startSession(notes)}
-            onStudyMissed={() => {
-              const missed = deck.filter(
-                (_, id) => session.progress[id].misses,
-              );
-              startSession(random ? shuffled(missed) : missed, true);
-            }}
-          />
+          <AnkiStudySummary session={session} />
         ) : (
-          renderNote(
-            deck[currentId],
-            session.step,
-            cardRef,
-            'carousel',
-            setRevealed,
-          )
+          renderNote(deck[currentId], session.step, cardRef, setRevealed)
         )}
       </div>
       <div className="ankiDeckCarouselTop">
-        <div className="ankiDeckCarouselInfo">
-          <button
-            className="button ankiDeckModeToggle"
-            type="button"
-            onClick={onShowAll}
-          >
-            Show all
-          </button>
-          <label className="ankiDeckCarouselRandom">
-            <input
-              type="checkbox"
-              checked={random}
-              onChange={(event) => {
-                onRandomChange(event.target.checked);
-              }}
-            />
-            Random
-          </label>
-        </div>
+        <AnkiOptionsMenu
+          mode="study"
+          onModeChange={onModeChange}
+          random={random}
+          onRandomChange={onRandomChange}
+        />
         <div
           className="ankiDeckCarouselNav"
           role="toolbar"
           aria-label="Card controls"
           ref={groupRef}
         >
-          {revealed ? (
+          {isFinished ? (
+            <>
+              {missedCount > 0 ? (
+                <button
+                  className="button ankiDeckCarouselGrade"
+                  type="button"
+                  onClick={studyMissed}
+                >
+                  Study weak
+                  <span className="ankiDeckSummaryPill">{missedCount}</span>
+                </button>
+              ) : null}
+              <button
+                className="button button-primary ankiDeckCarouselGrade"
+                type="button"
+                onClick={() => startSession(notes)}
+              >
+                Study again
+              </button>
+            </>
+          ) : null}
+          {!isFinished && revealed ? (
             <>
               <button
                 className="button ankiDeckCarouselGrade"
@@ -488,19 +490,80 @@ function AnkiStudyCarousel({
                 Right
               </button>
             </>
-          ) : (
+          ) : null}
+          {!isFinished && !revealed ? (
             <button
               className="button button-primary ankiDeckCarouselShowNext"
               type="button"
-              disabled={isFinished}
               onClick={reveal}
               {...groupButtonProps('show')}
             >
               Show
             </button>
-          )}
+          ) : null}
         </div>
       </div>
+    </>
+  );
+}
+
+interface AnkiOptionsMenuProps {
+  mode: DeckMode;
+  onModeChange: (mode: DeckMode) => void;
+  random: boolean;
+  onRandomChange: (random: boolean) => void;
+}
+
+function AnkiOptionsMenu({
+  mode,
+  onModeChange,
+  random,
+  onRandomChange,
+}: AnkiOptionsMenuProps) {
+  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+  const [openGeneration, setOpenGeneration] = React.useState(0);
+  const [openEventDetail, setOpenEventDetail] = React.useState(-1);
+
+  return (
+    <>
+      <button
+        className="button ankiDeckOptionsButton"
+        type="button"
+        ref={buttonRef}
+        onClick={(event) => {
+          setOpenGeneration((generation) => generation + 1);
+          setOpenEventDetail(event.detail);
+        }}
+      >
+        Options
+      </button>
+      {overlayPortal(
+        <Popup
+          clickedElement={buttonRef}
+          openEventDetail={openEventDetail}
+          openGeneration={openGeneration}
+          className="ankiDeckOptionsMenu"
+        >
+          <button
+            className="button ankiDeckModeToggle"
+            type="button"
+            onClick={() => onModeChange(mode === 'study' ? 'full' : 'study')}
+          >
+            {mode === 'study' ? 'Show all' : 'Study mode'}
+          </button>
+          <label className="ankiDeckOptionsRandom">
+            <input
+              type="checkbox"
+              checked={random}
+              onChange={(event) => {
+                onRandomChange(event.target.checked);
+              }}
+            />
+            Random
+          </label>
+        </Popup>,
+        'anki-options-menu',
+      )}
     </>
   );
 }
@@ -513,19 +576,12 @@ function formatDuration(ms: number): string {
 
 interface AnkiStudySummaryProps {
   session: StudySession;
-  onStudyAgain: () => void;
-  onStudyMissed: () => void;
 }
 
-function AnkiStudySummary({
-  session,
-  onStudyAgain,
-  onStudyMissed,
-}: AnkiStudySummaryProps) {
+function AnkiStudySummary({ session }: AnkiStudySummaryProps) {
   const { deck, progress } = session;
   const elapsed = (session.finishedAt ?? session.startedAt) - session.startedAt;
   const firstTry = progress.filter((card) => card.misses === 0).length;
-  const missedCount = deck.length - firstTry;
   const rows = deck
     .map((note, id) => ({ note, ...progress[id] }))
     .sort((a, b) => b.misses - a.misses || b.ms - a.ms);
@@ -587,32 +643,14 @@ function AnkiStudySummary({
           </tbody>
         </table>
       </div>
-      <div className="ankiDeckSummaryActions">
-        {missedCount > 0 ? (
-          <button
-            className="button button-primary"
-            type="button"
-            onClick={onStudyMissed}
-          >
-            Study missed
-            <span className="ankiDeckSummaryPill">{missedCount}</span>
-          </button>
-        ) : null}
-        <button className="button" type="button" onClick={onStudyAgain}>
-          Study again
-        </button>
-      </div>
     </div>
   );
 }
-
-type AnkiCardVariant = 'carousel' | 'list';
 
 function renderNote(
   note: T.AnkiNote | undefined,
   key: number,
   ref: React.Ref<AnkiCardHandle> | undefined,
-  variant: AnkiCardVariant,
   onRevealedChange?: (revealed: boolean) => void,
 ) {
   if (!note) {
@@ -624,7 +662,6 @@ function renderNote(
         key={key}
         note={note}
         ref={ref}
-        variant={variant}
         onRevealedChange={onRevealedChange}
       />
     );
@@ -635,12 +672,39 @@ function renderNote(
         key={key}
         note={note}
         ref={ref}
-        variant={variant}
         onRevealedChange={onRevealedChange}
       />
     );
   }
   return null;
+}
+
+function AnkiListRow({ note }: { note: T.AnkiNote }) {
+  if (note.clozeSpans !== null) {
+    const spans = note.clozeSpans;
+    const answers = spans.flatMap((span) =>
+      span.type === 'cloze' ? [span.answer] : [],
+    );
+    return (
+      <div className="ankiDeckListRow">
+        <div className="ankiDeckListQuestion">
+          {spans.map((span) =>
+            span.type === 'text' ? span.text : clozeBlankText(span, false),
+          )}
+        </div>
+        <div className="ankiDeckListAnswer">{answers.join(', ')}</div>
+      </div>
+    );
+  }
+  if (!isBasicNote(note)) {
+    return null;
+  }
+  return (
+    <div className="ankiDeckListRow">
+      <div className="ankiDeckListQuestion">{note.fields[0]}</div>
+      <div className="ankiDeckListAnswer">{note.fields[1]}</div>
+    </div>
+  );
 }
 
 function isBasicNote(note: T.AnkiNote): boolean {
@@ -649,15 +713,12 @@ function isBasicNote(note: T.AnkiNote): boolean {
 
 interface AnkiBasicCardProps {
   note: T.AnkiNote;
-  variant: AnkiCardVariant;
   onRevealedChange?: (revealed: boolean) => void;
 }
 
 const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
-  function AnkiBasicCard({ note, variant, onRevealedChange }, ref) {
+  function AnkiBasicCard({ note, onRevealedChange }, ref) {
     const [revealed, setRevealed] = React.useState(false);
-    const isStage = variant === 'carousel';
-
     React.useImperativeHandle(
       ref,
       () => ({
@@ -672,36 +733,18 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
     }, [revealed, onRevealedChange]);
 
     return (
-      <div
-        className={isStage ? 'ankiDeckCard ankiDeckCardStage' : 'ankiDeckCard'}
-      >
+      <div className="ankiDeckCard ankiDeckCardStage">
         <div className="ankiDeckCardFront">{note.fields[0]}</div>
-        {isStage ? null : (
-          <div className="ankiDeckCardRevealRow">
-            <button
-              className="button ankiDeckCardReveal"
-              type="button"
-              onClick={() => setRevealed((value) => !value)}
-            >
-              {revealed ? 'Hide answer' : 'Show answer'}
-            </button>
-          </div>
-        )}
-        {isStage ? (
-          <div
-            className={
-              revealed
-                ? 'ankiDeckCardBack ankiDeckCardBackRevealed'
-                : 'ankiDeckCardBack'
-            }
-            aria-hidden={!revealed}
-          >
-            {note.fields[1]}
-          </div>
-        ) : null}
-        {!isStage && revealed ? (
-          <div className="ankiDeckCardBack">{note.fields[1]}</div>
-        ) : null}
+        <div
+          className={
+            revealed
+              ? 'ankiDeckCardBack ankiDeckCardBackRevealed'
+              : 'ankiDeckCardBack'
+          }
+          aria-hidden={!revealed}
+        >
+          {note.fields[1]}
+        </div>
       </div>
     );
   },
@@ -709,12 +752,11 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
 
 interface AnkiClozeCardProps {
   note: T.AnkiNote;
-  variant: AnkiCardVariant;
   onRevealedChange?: (revealed: boolean) => void;
 }
 
 const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
-  function AnkiClozeCard({ note, variant, onRevealedChange }, ref) {
+  function AnkiClozeCard({ note, onRevealedChange }, ref) {
     const [revealedNums, setRevealedNums] = React.useState<Set<number>>(
       new Set(),
     );
@@ -753,12 +795,8 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
       });
     }
 
-    const isStage = variant === 'carousel';
-
     return (
-      <div
-        className={isStage ? 'ankiDeckCard ankiDeckCardStage' : 'ankiDeckCard'}
-      >
+      <div className="ankiDeckCard ankiDeckCardStage">
         <p className="ankiDeckClozeText">
           {spans.map((span, index) =>
             span.type === 'text' ? (
