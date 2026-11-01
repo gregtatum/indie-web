@@ -1,6 +1,7 @@
 import * as React from 'react';
 import * as Router from 'react-router-dom';
 import { $$ } from 'frontend';
+import { isTypingTarget } from 'frontend/utils';
 
 import './NextPrev.css';
 
@@ -140,6 +141,9 @@ export function NextPrevLinks() {
   const navigate = Router.useNavigate();
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) {
+        return;
+      }
       if (event.key === 'ArrowRight' && nextSong) {
         navigate(nextSong.url);
       }

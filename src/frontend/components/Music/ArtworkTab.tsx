@@ -7,7 +7,12 @@ import {
   useFolderArtworkDrop,
   useFolderArtworkPaste,
 } from 'frontend/hooks/music';
-import { getDirName, getPathFileName, getKeyboardString } from 'frontend/utils';
+import {
+  getDirName,
+  getPathFileName,
+  getKeyboardString,
+  isTypingTarget,
+} from 'frontend/utils';
 import type { TrackTagsLoadState } from 'frontend/logic/music/metadata';
 import type { EmbedFolderArtworkResponse } from 'shared/@types/shared';
 import { Tooltip } from 'frontend/components/Tooltip';
@@ -1058,8 +1063,7 @@ export function ArtworkTab({
   const hasPendingArtwork = pendingArtwork !== null;
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('input, textarea, [contenteditable="true"]')) {
+      if (isTypingTarget(event.target)) {
         return;
       }
       switch (getKeyboardString(event)) {

@@ -5,6 +5,7 @@ import {
   assertType,
   isAppSettingScrollTop,
   getKeyboardString,
+  isTypingTarget,
 } from 'frontend/utils';
 import { getBrowserName } from 'frontend/logic/app-logic';
 import './Header.css';
@@ -169,16 +170,6 @@ function goFullScreen() {
       console.error('Failed to go fullscreen', error);
     });
   }
-}
-
-function isTypingTarget(target: EventTarget | null) {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable ||
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLSelectElement)
-  );
 }
 
 function fullScreenEventHandler(event: KeyboardEvent) {

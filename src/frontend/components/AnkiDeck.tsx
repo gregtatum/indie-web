@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as T from 'frontend/@types';
-import { getKeyboardString } from 'frontend/utils';
+import { getKeyboardString, isTypingTarget } from 'frontend/utils';
 import { A, Hooks, $$ } from 'frontend';
 import { overlayPortal } from 'frontend/hooks';
 import { Popup } from './Popup';
@@ -348,7 +348,7 @@ function AnkiStudyCarousel({
         return;
       }
       const canGrade = revealed && !isFinished;
-      if (active instanceof HTMLInputElement) {
+      if (isTypingTarget(active)) {
         if (event.key === 'Enter' && !revealed && !isFinished) {
           event.preventDefault();
           reveal();

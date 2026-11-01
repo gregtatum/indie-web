@@ -3,6 +3,7 @@ import {
   getPathFileName,
   getPathFileNameNoExt,
   getDirName,
+  isTypingTarget,
   pathJoin,
   randomUuid,
 } from 'frontend/utils';
@@ -167,5 +168,42 @@ describe('track positions', () => {
   it('refuses to format too many runs', () => {
     const odds = Array.from({ length: 21 }, (_, i) => i * 2 + 1);
     expect(formatTrackPositions(odds)).toBeNull();
+  });
+});
+
+describe('isTypingTarget', () => {
+  function parse(html: string) {
+    document.body.innerHTML = html;
+    return document.body.firstElementChild;
+  }
+
+  it('is true for text entry controls and editable content', () => {
+    expect(isTypingTarget(parse('<input type="text">'))).toBe(true);
+    expect(isTypingTarget(parse('<input>'))).toBe(true);
+    expect(isTypingTarget(parse('<input type="range">'))).toBe(true);
+    expect(isTypingTarget(parse('<textarea></textarea>'))).toBe(true);
+    expect(isTypingTarget(parse('<select><option>a</option></select>'))).toBe(
+      true,
+    );
+    expect(
+      isTypingTarget(parse('<div contenteditable="true"><span>x</span></div>')),
+    ).toBe(true);
+  });
+
+  it('is true for elements nested inside editable content', () => {
+    const editor = parse('<div contenteditable="true"><span>x</span></div>');
+    expect(isTypingTarget(editor?.firstElementChild ?? null)).toBe(true);
+  });
+
+  it('is false for buttons, checkboxes, and ordinary elements', () => {
+    expect(isTypingTarget(parse('<button>Go</button>'))).toBe(false);
+    expect(isTypingTarget(parse('<input type="checkbox">'))).toBe(false);
+    expect(isTypingTarget(parse('<input type="submit">'))).toBe(false);
+    expect(isTypingTarget(parse('<div contenteditable="false"></div>'))).toBe(
+      false,
+    );
+    expect(isTypingTarget(parse('<div></div>'))).toBe(false);
+    expect(isTypingTarget(document)).toBe(false);
+    expect(isTypingTarget(null)).toBe(false);
   });
 });
