@@ -63,6 +63,20 @@ export function addAnkiRun(
   return `---\n${yaml}---\n${body}`;
 }
 
+export function readAnkiStats(
+  text: string,
+  deck: string | null,
+): T.AnkiDeckStats {
+  const { frontmatter } = splitFrontmatter(text);
+  const doc = frontmatter === null ? null : parseDocument(frontmatter);
+  const deckPath = ['anki', deck ?? DEFAULT_DECK];
+  const runs = doc?.getIn([...deckPath, 'runs']);
+  return {
+    runs: isSeq(runs) ? runs.items.length : 0,
+    weak: readStrings(doc?.getIn([...deckPath, 'weak'])),
+  };
+}
+
 function flow<V>(doc: Document, value: V) {
   const node = doc.createNode(value);
   if (isCollection(node)) {

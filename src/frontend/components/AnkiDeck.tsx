@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as T from 'frontend/@types';
 import { getKeyboardString } from 'frontend/utils';
-import { A, Hooks } from 'frontend';
+import { A, Hooks, $$ } from 'frontend';
 import {
   noteSummary,
   noteTerm,
@@ -22,6 +22,11 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
   const { notes } = parsed;
   const isStudyMode = mode === 'study';
   const { title } = splitDeckPath(notes[0]?.deck);
+  const stats = useAnkiStats(notes[0]?.deck ?? null);
+  const [weakTerms, setWeakTerms] = React.useState<string[] | null>(null);
+  if (weakTerms === null && stats !== null) {
+    setWeakTerms(stats.weak);
+  }
 
   return (
     <div
@@ -32,14 +37,23 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
       tabIndex={isStudyMode ? 0 : undefined}
     >
       {title ? <h3>{title}</h3> : null}
+      {stats ? (
+        <div className="ankiDeckStats">
+          <span>{pluralize(stats.runs, 'time')} practiced</span>
+          <span>{pluralize(stats.weak.length, 'weak card')}</span>
+        </div>
+      ) : null}
       {isStudyMode ? (
-        <AnkiStudyCarousel
-          notes={notes}
-          containerRef={containerRef}
-          random={random}
-          onRandomChange={setRandom}
-          onShowAll={() => setMode('full')}
-        />
+        weakTerms && (
+          <AnkiStudyCarousel
+            notes={notes}
+            weakTerms={weakTerms}
+            containerRef={containerRef}
+            random={random}
+            onRandomChange={setRandom}
+            onShowAll={() => setMode('full')}
+          />
+        )
       ) : (
         <>
           <button
@@ -60,8 +74,29 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
   );
 }
 
+function pluralize(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+type ReadAnkiStats = typeof import('frontend/logic/anki').readAnkiStats;
+
+function useAnkiStats(deck: string | null): T.AnkiDeckStats | null {
+  const text = $$.getActiveFileText();
+  const [readStats, setReadStats] = React.useState<ReadAnkiStats | null>(null);
+  React.useEffect(() => {
+    void import(/* webpackChunkName: "anki" */ 'frontend/logic/anki').then(
+      ({ readAnkiStats }) => setReadStats(() => readAnkiStats),
+    );
+  }, []);
+  return React.useMemo(
+    () => (readStats ? readStats(text, deck) : null),
+    [readStats, text, deck],
+  );
+}
+
 interface AnkiStudyCarouselProps {
   notes: T.AnkiNote[];
+  weakTerms: string[];
   containerRef: React.RefObject<HTMLDivElement | null>;
   random: boolean;
   onRandomChange: (random: boolean) => void;
@@ -184,16 +219,30 @@ function shuffled<T>(items: T[]): T[] {
   return result;
 }
 
+function weakFirst(
+  notes: T.AnkiNote[],
+  weakTerms: string[],
+  random: boolean,
+): T.AnkiNote[] {
+  const weak = new Set(weakTerms);
+  const order = random ? shuffled : <Item,>(items: Item[]) => items;
+  return [
+    ...order(notes.filter((note) => weak.has(noteTerm(note)))),
+    ...order(notes.filter((note) => !weak.has(noteTerm(note)))),
+  ];
+}
+
 function AnkiStudyCarousel({
   notes: orderedNotes,
+  weakTerms,
   containerRef,
   random,
   onRandomChange,
   onShowAll,
 }: AnkiStudyCarouselProps) {
   const notes = React.useMemo(
-    () => (random ? shuffled(orderedNotes) : orderedNotes),
-    [orderedNotes, random],
+    () => weakFirst(orderedNotes, weakTerms, random),
+    [orderedNotes, weakTerms, random],
   );
   const [session, setSession] = React.useState(() => createStudySession(notes));
   const [revealed, setRevealed] = React.useState(false);

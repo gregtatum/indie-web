@@ -186,6 +186,17 @@ describe('<AnkiDeck>', () => {
         tabindex="0"
       >
         <div
+          class="ankiDeckStats"
+        >
+          <span>
+            0 times
+             practiced
+          </span>
+          <span>
+            0 weak cards
+          </span>
+        </div>
+        <div
           class="ankiDeckCarouselTop"
         >
           <div
@@ -750,6 +761,38 @@ describe('<AnkiDeck>', () => {
           FrenchText,
         ].join('\n'),
       );
+    });
+
+    it('shows practice stats and studies weak cards first', async () => {
+      await setup(
+        [
+          '---',
+          'anki:',
+          '  default:',
+          '    weak: [Thanks, No]',
+          '    runs:',
+          '      - { at: 2026-10-30T17:12Z, first: 6, of: 8, answers: 10, seconds: 60 }',
+          '      - { at: 2026-10-31T17:12Z, first: 8, of: 8, answers: 8, seconds: 40 }',
+          '---',
+          EightCardText,
+        ].join('\n'),
+      );
+      await waitFor(() => screen.getByTestId('ankiDeck'));
+      expect(screen.getByText('2 times practiced')).toBeTruthy();
+      expect(screen.getByText('2 weak cards')).toBeTruthy();
+
+      const user = userEvent.setup();
+      const seen: Array<string | null> = [];
+      for (let i = 0; i < 4; i++) {
+        seen.push(
+          document.querySelector('.ankiDeckCardFront')?.textContent ?? null,
+        );
+        await click(user, 'Show');
+        await click(user, 'Right');
+      }
+      expect(seen.slice(0, 2).sort()).toEqual(['No', 'Thanks']);
+      expect(seen.slice(2)).not.toContain('No');
+      expect(seen.slice(2)).not.toContain('Thanks');
     });
 
     it('flags Study missed runs as retries and keeps their weak terms', async () => {

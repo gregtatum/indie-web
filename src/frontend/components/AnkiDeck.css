@@ -345,3 +345,10 @@
 .ankiDeckClozeBlank:hover {
   background: var(--accent-tint);
 }
+
+.ankiDeckStats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}

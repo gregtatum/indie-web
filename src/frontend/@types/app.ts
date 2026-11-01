@@ -98,6 +98,11 @@ export interface AnkiRunUpdate {
   current: string[];
 }
 
+export interface AnkiDeckStats {
+  runs: number;
+  weak: string[];
+}
+
 export interface ParsedMarkdown {
   htmlText: string;
   ankiBlocks: ParsedAnkiFile[];
