@@ -36,13 +36,15 @@ export function AnkiDeck({ parsed }: AnkiDeckProps) {
       ref={containerRef}
       tabIndex={isStudyMode ? 0 : undefined}
     >
-      {title ? <h3>{title}</h3> : null}
-      {stats ? (
-        <div className="ankiDeckStats">
-          <span>{pluralize(stats.runs, 'time')} practiced</span>
-          <span>{pluralize(stats.weak.length, 'weak card')}</span>
-        </div>
-      ) : null}
+      <div className="ankiDeckHeader">
+        {title ? <h3>{title}</h3> : null}
+        {stats ? (
+          <div className="ankiDeckStats">
+            <span>{pluralize(stats.runs, 'session')}</span>
+            <span>{stats.weak.length} weak</span>
+          </div>
+        ) : null}
+      </div>
       {isStudyMode ? (
         weakTerms && (
           <AnkiStudyCarousel
@@ -398,6 +400,49 @@ function AnkiStudyCarousel({
 
   return (
     <>
+      <div className="ankiDeckCarouselProgressRow">
+        <div className="ankiDeckCarouselProgress">
+          {Math.min(session.mastered.length + 1, deck.length)} / {deck.length}
+        </div>
+        <div
+          className="ankiDeckCarouselBar"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={deck.length}
+          aria-valuenow={session.mastered.length}
+          style={
+            {
+              '--mastered': session.mastered.length / deck.length,
+              '--retry': retryCount / deck.length,
+            } as React.CSSProperties
+          }
+        >
+          <div className="ankiDeckCarouselFill" data-fill="mastered" />
+          <div className="ankiDeckCarouselFill" data-fill="retry" />
+        </div>
+      </div>
+      <div className="ankiDeckCarouselStage">
+        {currentId === undefined ? (
+          <AnkiStudySummary
+            session={session}
+            onStudyAgain={() => startSession(notes)}
+            onStudyMissed={() => {
+              const missed = deck.filter(
+                (_, id) => session.progress[id].misses,
+              );
+              startSession(random ? shuffled(missed) : missed, true);
+            }}
+          />
+        ) : (
+          renderNote(
+            deck[currentId],
+            session.step,
+            cardRef,
+            'carousel',
+            setRevealed,
+          )
+        )}
+      </div>
       <div className="ankiDeckCarouselTop">
         <div className="ankiDeckCarouselInfo">
           <button
@@ -445,7 +490,7 @@ function AnkiStudyCarousel({
             </>
           ) : (
             <button
-              className="button ankiDeckCarouselShowNext"
+              className="button button-primary ankiDeckCarouselShowNext"
               type="button"
               disabled={isFinished}
               onClick={reveal}
@@ -455,49 +500,6 @@ function AnkiStudyCarousel({
             </button>
           )}
         </div>
-      </div>
-      <div className="ankiDeckCarouselProgressRow">
-        <div className="ankiDeckCarouselProgress">
-          {Math.min(session.mastered.length + 1, deck.length)} / {deck.length}
-        </div>
-        <div
-          className="ankiDeckCarouselBar"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={deck.length}
-          aria-valuenow={session.mastered.length}
-          style={
-            {
-              '--mastered': session.mastered.length / deck.length,
-              '--retry': retryCount / deck.length,
-            } as React.CSSProperties
-          }
-        >
-          <div className="ankiDeckCarouselFill" data-fill="mastered" />
-          <div className="ankiDeckCarouselFill" data-fill="retry" />
-        </div>
-      </div>
-      <div className="ankiDeckCarouselStage">
-        {currentId === undefined ? (
-          <AnkiStudySummary
-            session={session}
-            onStudyAgain={() => startSession(notes)}
-            onStudyMissed={() => {
-              const missed = deck.filter(
-                (_, id) => session.progress[id].misses,
-              );
-              startSession(random ? shuffled(missed) : missed, true);
-            }}
-          />
-        ) : (
-          renderNote(
-            deck[currentId],
-            session.step,
-            cardRef,
-            'carousel',
-            setRevealed,
-          )
-        )}
       </div>
     </>
   );

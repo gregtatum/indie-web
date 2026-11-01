@@ -9,7 +9,7 @@
   outline: none;
 }
 
-.viewMarkdownDiv .ankiDeck > h3 {
+.viewMarkdownDiv .ankiDeckHeader > h3 {
   margin: 0;
   padding: 0;
 }
@@ -346,9 +346,23 @@
   background: var(--accent-tint);
 }
 
+.ankiDeckHeader {
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .ankiDeckStats {
   display: flex;
-  gap: 12px;
-  font-size: 12px;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.ankiDeckStats span + span::before {
+  content: '·';
+  margin-right: 6px;
 }

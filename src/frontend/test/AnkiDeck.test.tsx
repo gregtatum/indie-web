@@ -186,50 +186,18 @@ describe('<AnkiDeck>', () => {
         tabindex="0"
       >
         <div
-          class="ankiDeckStats"
-        >
-          <span>
-            0 times
-             practiced
-          </span>
-          <span>
-            0 weak cards
-          </span>
-        </div>
-        <div
-          class="ankiDeckCarouselTop"
+          class="ankiDeckHeader"
         >
           <div
-            class="ankiDeckCarouselInfo"
+            class="ankiDeckStats"
           >
-            <button
-              class="button ankiDeckModeToggle"
-              type="button"
-            >
-              Show all
-            </button>
-            <label
-              class="ankiDeckCarouselRandom"
-            >
-              <input
-                checked=""
-                type="checkbox"
-              />
-              Random
-            </label>
-          </div>
-          <div
-            aria-label="Card controls"
-            class="ankiDeckCarouselNav"
-            role="toolbar"
-          >
-            <button
-              class="button ankiDeckCarouselShowNext"
-              tabindex="0"
-              type="button"
-            >
-              Show
-            </button>
+            <span>
+              0 sessions
+            </span>
+            <span>
+              0
+               weak
+            </span>
           </div>
         </div>
         <div
@@ -277,6 +245,42 @@ describe('<AnkiDeck>', () => {
             >
               Bonjour
             </div>
+          </div>
+        </div>
+        <div
+          class="ankiDeckCarouselTop"
+        >
+          <div
+            class="ankiDeckCarouselInfo"
+          >
+            <button
+              class="button ankiDeckModeToggle"
+              type="button"
+            >
+              Show all
+            </button>
+            <label
+              class="ankiDeckCarouselRandom"
+            >
+              <input
+                checked=""
+                type="checkbox"
+              />
+              Random
+            </label>
+          </div>
+          <div
+            aria-label="Card controls"
+            class="ankiDeckCarouselNav"
+            role="toolbar"
+          >
+            <button
+              class="button button-primary ankiDeckCarouselShowNext"
+              tabindex="0"
+              type="button"
+            >
+              Show
+            </button>
           </div>
         </div>
       </div>
@@ -778,8 +782,8 @@ describe('<AnkiDeck>', () => {
         ].join('\n'),
       );
       await waitFor(() => screen.getByTestId('ankiDeck'));
-      expect(screen.getByText('2 times practiced')).toBeTruthy();
-      expect(screen.getByText('2 weak cards')).toBeTruthy();
+      expect(screen.getByText('2 sessions')).toBeTruthy();
+      expect(screen.getByText('2 weak')).toBeTruthy();
 
       const user = userEvent.setup();
       const seen: Array<string | null> = [];
