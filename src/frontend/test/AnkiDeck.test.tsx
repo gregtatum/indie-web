@@ -578,6 +578,22 @@ describe('<AnkiDeck>', () => {
     expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
   });
 
+  it('leaves Space and Enter to the focused options control instead of advancing the card', async () => {
+    await setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+    const options = screen.getByRole('button', { name: 'Options' });
+    await act(async () => options.focus());
+    await press(user, '[Enter]');
+
+    expect(
+      screen.getByRole('radiogroup', { name: 'Answer mode' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Show' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Right' })).toBeNull();
+  });
+
   it('renders an empty anki block without crashing, e.g. while mid-edit', async () => {
     await setup(EmptyText);
     await waitFor(() => screen.getByTestId('ankiDeck'));

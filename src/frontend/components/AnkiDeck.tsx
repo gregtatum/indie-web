@@ -363,14 +363,13 @@ function AnkiStudyCarousel({
           break;
         case ' ':
         case 'Enter':
-          if (isFinished) {
+          if (isFinished || active instanceof HTMLButtonElement) {
             break;
           }
+          event.preventDefault();
           if (!revealed) {
-            event.preventDefault();
             reveal();
-          } else if (!(active instanceof HTMLButtonElement)) {
-            event.preventDefault();
+          } else {
             grade('correct');
           }
           break;
