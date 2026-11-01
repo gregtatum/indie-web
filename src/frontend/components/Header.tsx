@@ -171,8 +171,18 @@ function goFullScreen() {
   }
 }
 
+function isTypingTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable ||
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement)
+  );
+}
+
 function fullScreenEventHandler(event: KeyboardEvent) {
-  if (getKeyboardString(event) === 'F') {
+  if (getKeyboardString(event) === 'F' && !isTypingTarget(event.target)) {
     goFullScreen();
   }
 }

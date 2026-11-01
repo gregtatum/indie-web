@@ -83,6 +83,8 @@ describe('<AnkiDeck>', () => {
   });
 
   afterEach(() => {
+    Reflect.deleteProperty(document, 'fullscreenEnabled');
+    Reflect.deleteProperty(Element.prototype, 'requestFullscreen');
     jest.restoreAllMocks();
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
@@ -556,10 +558,19 @@ describe('<AnkiDeck>', () => {
 
   it('studies in reverse and with typed answers from the options menu', async () => {
     jest.spyOn(Math, 'random').mockReturnValue(0);
-    await setup();
+    Object.defineProperty(document, 'fullscreenEnabled', {
+      value: true,
+      configurable: true,
+    });
+    const { store } = await setup();
+    await act(async () => {
+      store.dispatch(A.hideEditor(true));
+    });
     await waitFor(() => screen.getByTestId('ankiDeck'));
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
+    const requestFullscreen = jest.fn(() => Promise.resolve());
+    Element.prototype.requestFullscreen = requestFullscreen;
     await click(user, 'Options');
     await act(() => user.click(screen.getByLabelText('Reverse')));
     expect(
@@ -572,10 +583,41 @@ describe('<AnkiDeck>', () => {
     await act(() => user.click(screen.getByRole('radio', { name: 'Type' })));
     await click(user, 'Options');
     const input = screen.getByRole('textbox', { name: 'Your answer' });
+    await act(() => user.type(input, 'f'));
+    expect(requestFullscreen).not.toHaveBeenCalled();
+    await act(() => user.clear(input));
     await act(() => user.type(input, 'goodbye'));
     await press(user, '[Enter]');
     expect(input.getAttribute('data-match')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Right' })).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Right' }),
+    );
+  });
+
+  it('focuses Wrong after a blank or incorrect typed answer', async () => {
+    await setup();
+    await waitFor(() => screen.getByTestId('ankiDeck'));
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await click(user, 'Options');
+    await act(() => user.click(screen.getByRole('radio', { name: 'Type' })));
+    await click(user, 'Options');
+    await act(() =>
+      user.click(screen.getByRole('textbox', { name: 'Your answer' })),
+    );
+
+    await press(user, '[Enter]');
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Wrong' }),
+    );
+    await press(user, '[Enter]');
+
+    await act(() =>
+      user.type(screen.getByRole('textbox', { name: 'Your answer' }), 'nope'),
+    );
+    await press(user, '[Enter]');
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Wrong' }),
+    );
   });
 
   it('leaves Space and Enter to the focused options control instead of advancing the card', async () => {

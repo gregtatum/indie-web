@@ -130,6 +130,7 @@ interface AnkiStudyCarouselProps {
 interface AnkiCardHandle {
   revealAll: () => void;
   hideAll: () => void;
+  isTypedWrong: () => boolean;
 }
 
 type GroupButton = 'show' | 'incorrect' | 'correct';
@@ -294,7 +295,8 @@ function AnkiStudyCarousel({
 
   React.useEffect(() => {
     if (revealed && focusGroupOnReveal.current) {
-      buttonRefs.current.correct?.focus();
+      const isWrong = cardRef.current?.isTypedWrong() ?? false;
+      buttonRefs.current[isWrong ? 'incorrect' : 'correct']?.focus();
     }
     focusGroupOnReveal.current = false;
     setLastFocused(null);
@@ -824,8 +826,9 @@ const AnkiBasicCard = React.forwardRef<AnkiCardHandle, AnkiBasicCardProps>(
       () => ({
         revealAll: () => setRevealed(true),
         hideAll: () => setRevealed(false),
+        isTypedWrong: () => isTyping && !isTypedMatch(typed, answer),
       }),
-      [],
+      [isTyping, typed, answer],
     );
 
     React.useEffect(() => {
@@ -890,6 +893,7 @@ const AnkiClozeCard = React.forwardRef<AnkiCardHandle, AnkiClozeCardProps>(
       () => ({
         revealAll: () => setRevealedNums(new Set(clozeNums)),
         hideAll: () => setRevealedNums(new Set()),
+        isTypedWrong: () => false,
       }),
       [clozeNums],
     );

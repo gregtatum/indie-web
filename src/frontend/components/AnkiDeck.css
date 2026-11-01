@@ -423,17 +423,25 @@
 }
 
 .ankiDeckCardTyped {
+  box-sizing: border-box;
   width: 100%;
   max-width: 320px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--button-border-radius);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
   font-size: 1.25em;
+  line-height: 1.2;
   text-align: center;
 }
 
-.ankiDeckCardTyped[data-match='true'] {
-  border-color: var(--success-color);
+.ankiDeckCardTyped:focus-visible {
+  outline: var(--outline-focus);
 }
 
 .ankiDeckCardTyped[data-match='false'] {
-  border-color: var(--muted);
   text-decoration: line-through;
 }
