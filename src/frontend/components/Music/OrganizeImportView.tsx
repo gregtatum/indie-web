@@ -264,6 +264,10 @@ interface TreeFolder {
   files: string[];
 }
 
+function compareNames(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
 function buildTreeRows(paths: string[]): TreeRow[] {
   const root: TreeFolder = { folders: new Map(), files: [] };
   for (const path of paths) {
@@ -285,11 +289,12 @@ function buildTreeRows(paths: string[]): TreeRow[] {
   }
   const rows: TreeRow[] = [];
   function walk(folder: TreeFolder, depth: number) {
-    for (const [name, child] of folder.folders) {
+    const folders = [...folder.folders].sort(([a], [b]) => compareNames(a, b));
+    for (const [name, child] of folders) {
       rows.push({ kind: 'folder', name, depth });
       walk(child, depth + 1);
     }
-    for (const name of folder.files) {
+    for (const name of [...folder.files].sort(compareNames)) {
       rows.push({ kind: 'file', name, depth });
     }
   }

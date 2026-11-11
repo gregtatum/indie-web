@@ -1570,6 +1570,32 @@ describe('drag-and-drop import & organize', () => {
       ]);
     }, 30_000);
 
+    it('sorts the folder tree alphabetically with numbers in natural order', async () => {
+      await dropTracks([
+        { fileName: 'a.mp3', tags: { title: 'Zebra', artist: 'Floyd' } },
+        { fileName: 'b.mp3', tags: { title: 'track 10', artist: 'Floyd' } },
+        { fileName: 'c.mp3', tags: { title: 'apple', artist: 'Floyd' } },
+        { fileName: 'd.mp3', tags: { title: 'track 2', artist: 'Floyd' } },
+      ]);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+        await waitForNetworkIdle();
+      });
+      await screen.findByText(/Organize ·/);
+
+      fireEvent.click(presetRadio('Custom…'));
+      fireEvent.change(screen.getByLabelText('Naming template'), {
+        target: { value: '{Title}' },
+      });
+
+      expect(treeRows()).toEqual([
+        'apple.mp3',
+        'track 2.mp3',
+        'track 10.mp3',
+        'Zebra.mp3',
+      ]);
+    }, 30_000);
+
     it('previews the default preset and switches to another preset', async () => {
       await dropAndOrganize('time.mp3', {
         title: 'Time',
