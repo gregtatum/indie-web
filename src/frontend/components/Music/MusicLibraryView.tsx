@@ -1812,6 +1812,18 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
   }, [focusedIndex]);
 
   React.useEffect(() => {
+    if (focusedPathRef.current !== null) {
+      return;
+    }
+    const playingIndex = tracksRef.current.findIndex(
+      (t) => t.path === playingPath,
+    );
+    if (playingIndex >= 0) {
+      virtualizerRef.current.scrollToIndex(playingIndex, { align: 'auto' });
+    }
+  }, [playingPath]);
+
+  React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       const isFilterPanelFocused = Boolean(
         document.activeElement?.closest('.musicFilterPanelList'),
