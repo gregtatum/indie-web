@@ -15,7 +15,10 @@ export function PlaybackBar() {
   const musicPlaybackStatus = $$.getMusicPlaybackStatus();
   const trackPath = $$.getMusicPlaybackTrackPath();
   const allTracks = $$.getMusicTracks();
-  const playbackQueue = $$.getMusicPlaybackQueue();
+  const hasPrevious = $$.getMusicPlaybackHasPrevious();
+  const hasNext = $$.getMusicPlaybackHasNext();
+  const shuffle = $$.getMusicPlaybackShuffle();
+  const repeat = $$.getMusicPlaybackRepeat();
   const playbackQueuePanelSelections =
     $$.getMusicPlaybackQueuePanelSelections();
   // OrNull: this bar is mounted at the app level so playback survives leaving
@@ -34,15 +37,8 @@ export function PlaybackBar() {
       : null;
   const isPlaying = musicPlaybackStatus === 'playing';
 
-  const idx = playbackQueue.findIndex((t) => t.path === trackPath);
-  const prevTrack =
-    idx > 0
-      ? () => dispatch(A.musicPlaybackLoad(playbackQueue[idx - 1].path))
-      : undefined;
-  const nextTrack =
-    idx !== -1 && idx < playbackQueue.length - 1
-      ? () => dispatch(A.musicPlaybackLoad(playbackQueue[idx + 1].path))
-      : undefined;
+  const repeatCycle = { off: 'all', all: 'one', one: 'off' } as const;
+  const repeatLabel = { off: 'off', all: 'all tracks', one: 'this track' };
 
   useMediaSession({
     musicPlaybackStatus,
@@ -150,10 +146,26 @@ export function PlaybackBar() {
         <div className="musicPlaybackButtons">
           <button
             type="button"
+            className={`musicPlaybackBtn musicPlaybackToggle${shuffle ? ' active' : ''}`}
+            aria-label="Shuffle"
+            aria-pressed={shuffle}
+            onClick={() => dispatch(A.setMusicPlaybackShuffle(!shuffle))}
+          >
+            <span
+              className="musicPlaybackToggleIcon"
+              style={
+                {
+                  '--toggle-icon': 'url(/svg/shuffle.svg)',
+                } as React.CSSProperties
+              }
+            />
+          </button>
+          <button
+            type="button"
             className="musicPlaybackBtn"
             aria-label="Previous track"
-            onClick={prevTrack}
-            disabled={!prevTrack}
+            onClick={() => dispatch(A.musicPlaybackStep('previous'))}
+            disabled={!hasPrevious}
           >
             <img src="/svg/backward-step.svg" alt="" />
           </button>
@@ -173,10 +185,27 @@ export function PlaybackBar() {
             type="button"
             className="musicPlaybackBtn"
             aria-label="Next track"
-            onClick={nextTrack}
-            disabled={!nextTrack}
+            onClick={() => dispatch(A.musicPlaybackStep('next'))}
+            disabled={!hasNext}
           >
             <img src="/svg/forward-step.svg" alt="" />
+          </button>
+          <button
+            type="button"
+            className={`musicPlaybackBtn musicPlaybackToggle${repeat === 'off' ? '' : ' active'}`}
+            aria-label={`Repeat: ${repeatLabel[repeat]}`}
+            onClick={() =>
+              dispatch(A.setMusicPlaybackRepeat(repeatCycle[repeat]))
+            }
+          >
+            <span
+              className="musicPlaybackToggleIcon"
+              style={
+                {
+                  '--toggle-icon': `url(${repeat === 'one' ? '/svg/repeat-one.svg' : '/svg/repeat.svg'})`,
+                } as React.CSSProperties
+              }
+            />
           </button>
         </div>
 

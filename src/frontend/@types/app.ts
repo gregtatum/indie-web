@@ -340,5 +340,7 @@ export type LanguageCoachSection =
   'home' | 'study-list' | 'learned' | 'reading';
 
 export type MusicPanelType = 'genre' | 'artist' | 'album';
+
+export type MusicRepeatMode = 'off' | 'all' | 'one';
 export type MusicEditTab = 'details' | 'artwork' | 'id3';
 export type MusicStagingView = 'staging' | 'organize';

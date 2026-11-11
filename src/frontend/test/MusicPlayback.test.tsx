@@ -99,6 +99,8 @@ const { getServer } = useMusicTestServer();
 // Provide offset values so that tests render somewhat realistically.
 beforeEach(() => {
   persistedState.musicPlaybackResume.remove();
+  persistedState.musicPlaybackShuffle.remove();
+  persistedState.musicPlaybackRepeat.remove();
   jest.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   jest.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
 });
@@ -378,7 +380,7 @@ describe('PlaybackBar', () => {
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
       store.dispatch(A.setMusicPanelSelection('album', ['Album A']));
       store.dispatch(
-        A.setMusicPlaybackQueue($.getFilteredMusicTracks(store.getState())),
+        A.startMusicPlayback($.getFilteredMusicTracks(store.getState())),
       );
     });
 
@@ -396,9 +398,11 @@ describe('PlaybackBar', () => {
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
       store.dispatch(A.setMusicPanelSelection('album', ['Album A']));
       store.dispatch(
-        A.setMusicPlaybackQueue($.getFilteredMusicTracks(store.getState())),
+        A.startMusicPlayback(
+          $.getFilteredMusicTracks(store.getState()),
+          '/music/a.mp3',
+        ),
       );
-      store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
       store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
       store.dispatch(A.setMusicPanelSelection('album', ['Album B']));
@@ -432,9 +436,11 @@ describe('PlaybackBar', () => {
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
       store.dispatch(A.setMusicPanelSelection('album', ['Album A']));
       store.dispatch(
-        A.setMusicPlaybackQueue($.getFilteredMusicTracks(store.getState())),
+        A.startMusicPlayback(
+          $.getFilteredMusicTracks(store.getState()),
+          '/music/a.mp3',
+        ),
       );
-      store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
       store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
@@ -467,9 +473,11 @@ describe('PlaybackBar', () => {
       store.dispatch(A.setMusicPanelSelection('artist', ['Artist A']));
       store.dispatch(A.setMusicPanelSelection('album', ['Album A']));
       store.dispatch(
-        A.setMusicPlaybackQueue($.getFilteredMusicTracks(store.getState())),
+        A.startMusicPlayback(
+          $.getFilteredMusicTracks(store.getState()),
+          '/music/a.mp3',
+        ),
       );
-      store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
       store.dispatch(A.setMusicPanelSelection('genre', ['Jazz']));
       store.dispatch(A.setMusicPanelSelection('album', ['Album B']));
@@ -502,8 +510,7 @@ describe('PlaybackBar', () => {
   it('clicking Next track advances through the queued tracks', async () => {
     const { store } = await setup();
     act(() => {
-      store.dispatch(A.setMusicPlaybackQueue(TRACKS));
-      store.dispatch(A.musicPlaybackLoad('/music/a.mp3'));
+      store.dispatch(A.startMusicPlayback(TRACKS, '/music/a.mp3'));
       store.dispatch(A.musicPlaybackReady());
     });
 
@@ -512,6 +519,88 @@ describe('PlaybackBar', () => {
     });
 
     expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/b.mp3');
+  });
+
+  it('cycles repeat through all, track, and off and persists it', async () => {
+    const { store } = await setup();
+    act(() => {
+      store.dispatch(A.startMusicPlayback(TRACKS, '/music/a.mp3'));
+      store.dispatch(A.musicPlaybackReady());
+    });
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Repeat: off' }),
+      );
+    });
+    expect(persistedState.musicPlaybackRepeat.read()).toBe('all');
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Repeat: all tracks' }),
+      );
+    });
+    expect(persistedState.musicPlaybackRepeat.read()).toBe('one');
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Repeat: this track' }),
+      );
+    });
+    expect(persistedState.musicPlaybackRepeat.read()).toBe('off');
+  });
+
+  it('Next track wraps to the first track when repeating all', async () => {
+    const { store } = await setup();
+    act(() => {
+      store.dispatch(A.startMusicPlayback(TRACKS, '/music/c.mp3'));
+      store.dispatch(A.musicPlaybackReady());
+    });
+    expect(
+      (screen.getByRole('button', { name: 'Next track' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    await act(async () => {
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Repeat: off' }),
+      );
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Next track' }));
+    });
+
+    expect($.getMusicPlaybackTrackPath(store.getState())).toBe('/music/a.mp3');
+  });
+
+  it('shuffle plays every track once, starting with the chosen track', async () => {
+    const { store } = await setup();
+    act(() => {
+      store.dispatch(A.startMusicPlayback(TRACKS, '/music/b.mp3'));
+      store.dispatch(A.musicPlaybackReady());
+    });
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Shuffle' }));
+    });
+    expect(
+      screen
+        .getByRole('button', { name: 'Shuffle' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    const played = [$.getMusicPlaybackTrackPath(store.getState())];
+    for (let i = 0; i < TRACKS.length - 1; i++) {
+      await act(async () => {
+        await userEvent.click(
+          screen.getByRole('button', { name: 'Next track' }),
+        );
+      });
+      played.push($.getMusicPlaybackTrackPath(store.getState()));
+    }
+
+    expect(played[0]).toBe('/music/b.mp3');
+    expect([...played].sort()).toEqual(TRACKS.map((t) => t.path).sort());
+    expect(
+      (screen.getByRole('button', { name: 'Next track' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 
   it('shows Play button when paused', async () => {

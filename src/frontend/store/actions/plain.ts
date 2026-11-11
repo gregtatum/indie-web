@@ -440,6 +440,10 @@ export function musicPlaybackError() {
   return { type: 'music-playback-error' as const };
 }
 
+export function setMusicPlaybackRepeat(repeat: T.MusicRepeatMode) {
+  return { type: 'set-music-playback-repeat' as const, repeat };
+}
+
 export function musicPlaybackStop() {
   return { type: 'music-playback-stop' as const };
 }

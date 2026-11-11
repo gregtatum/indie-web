@@ -77,14 +77,13 @@ export const TrackContextMenu = React.forwardRef<TrackContextMenuHandle>(
         const tracks = $.getFilteredMusicTracks(getState());
         if (trackPaths.length > 1) {
           dispatch(
-            A.setMusicPlaybackQueue(
+            A.startMusicPlayback(
               tracks.filter((t) => trackPaths.includes(t.path)),
+              trackPaths[0],
             ),
           );
-          dispatch(A.musicPlaybackLoad(trackPaths[0]));
         } else if (trackPaths.length === 1) {
-          dispatch(A.setMusicPlaybackQueue(tracks));
-          dispatch(A.musicPlaybackLoad(trackPaths[0]));
+          dispatch(A.startMusicPlayback(tracks, trackPaths[0]));
         }
       },
       [dispatch, getState],

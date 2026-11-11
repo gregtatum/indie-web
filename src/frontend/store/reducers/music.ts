@@ -1,5 +1,6 @@
 import * as T from 'frontend/@types';
 import { combineReducers } from 'redux';
+import { persistedState } from 'frontend/logic/persisted-state';
 
 export type MusicPlaybackStatus =
   'idle' | 'loading' | 'playing' | 'paused' | 'error';
@@ -9,6 +10,7 @@ export type FolderArtworkSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export interface MusicPlaybackQueue {
   tracks: T.TrackMetadata[];
   panelSelections: Partial<Record<T.MusicPanelType, string[]>>;
+  shuffledPaths: string[];
 }
 
 /**
@@ -115,6 +117,7 @@ function playingTrackPath(
 ): string | null {
   switch (action.type) {
     case 'music-playback-load':
+    case 'music-playback-start':
       return action.path;
     case 'music-playback-stop':
       return null;
@@ -131,6 +134,7 @@ function playingTrackPath(
 function playbackLoadId(state = 0, action: T.Action): number {
   switch (action.type) {
     case 'music-playback-load':
+    case 'music-playback-start':
       return state + 1;
     default:
       return state;
@@ -143,6 +147,7 @@ function playbackStatus(
 ): MusicPlaybackStatus {
   switch (action.type) {
     case 'music-playback-load':
+    case 'music-playback-start':
       return 'loading';
     case 'music-playback-ready':
     case 'music-playback-play':
@@ -202,6 +207,7 @@ function tracks(
 function selectedTrackPaths(state: string[] = [], action: T.Action): string[] {
   switch (action.type) {
     case 'music-playback-load':
+    case 'music-playback-start':
       return action.selectedTrackPath ? [action.selectedTrackPath] : state;
     case 'set-music-selected-tracks':
       return action.paths;
@@ -356,6 +362,7 @@ function fileStoreContainerName(
 const emptyPlaybackQueue: MusicPlaybackQueue = {
   tracks: [],
   panelSelections: {},
+  shuffledPaths: [],
 };
 
 function playbackQueue(
@@ -363,11 +370,57 @@ function playbackQueue(
   action: T.Action,
 ): MusicPlaybackQueue {
   switch (action.type) {
-    case 'set-music-playback-queue':
+    case 'music-playback-start':
       return {
         tracks: action.tracks,
         panelSelections: action.panelSelections,
+        shuffledPaths: action.shuffledPaths,
       };
+    case 'music-playback-load':
+      return action.shuffledPaths
+        ? { ...state, shuffledPaths: action.shuffledPaths }
+        : state;
+    case 'set-music-playback-shuffle':
+      return action.shuffledPaths
+        ? { ...state, shuffledPaths: action.shuffledPaths }
+        : state;
+    default:
+      return state;
+  }
+}
+
+function playbackShuffle(
+  state: boolean = persistedState.musicPlaybackShuffle.read() ?? false,
+  action: T.Action,
+): boolean {
+  switch (action.type) {
+    case 'set-music-playback-shuffle':
+      persistedState.musicPlaybackShuffle.write(action.shuffle);
+      return action.shuffle;
+    case 'music-playback-start':
+      if (action.shuffle === null) {
+        return state;
+      }
+      persistedState.musicPlaybackShuffle.write(action.shuffle);
+      return action.shuffle;
+    default:
+      return state;
+  }
+}
+
+function readPersistedRepeat(): T.MusicRepeatMode {
+  const value = persistedState.musicPlaybackRepeat.read();
+  return value === 'all' || value === 'one' ? value : 'off';
+}
+
+function playbackRepeat(
+  state: T.MusicRepeatMode = readPersistedRepeat(),
+  action: T.Action,
+): T.MusicRepeatMode {
+  switch (action.type) {
+    case 'set-music-playback-repeat':
+      persistedState.musicPlaybackRepeat.write(action.repeat);
+      return action.repeat;
     default:
       return state;
   }
@@ -408,6 +461,8 @@ const combinedMusicReducer = combineReducers({
   playbackLoadId,
   playbackStatus,
   playbackQueue,
+  playbackShuffle,
+  playbackRepeat,
   musicServerId,
   folderArtworkSaveStatus,
   folderArtworkEmbedStatus,

@@ -1344,7 +1344,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 14px;
   padding-top: 5px;
 }
 
@@ -1373,6 +1373,36 @@
     width: 22px;
     height: 22px;
   }
+}
+
+.musicPlaybackToggle {
+  position: relative;
+  width: 24px;
+  height: 24px;
+
+  &.active {
+    color: var(--accent);
+    opacity: 1;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 50%;
+      width: 4px;
+      height: 4px;
+      margin-left: -2px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  }
+}
+
+.musicPlaybackToggleIcon {
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  mask: var(--toggle-icon) center / contain no-repeat;
 }
 
 .musicPlaybackPlayBtn {

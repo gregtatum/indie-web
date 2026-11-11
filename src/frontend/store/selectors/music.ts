@@ -186,6 +186,40 @@ export function getMusicPlaybackQueue(state: State): T.TrackMetadata[] {
   return getMusic(state).playbackQueue.tracks;
 }
 
+export function getMusicPlaybackShuffle(state: State): boolean {
+  return getMusic(state).playbackShuffle;
+}
+
+export function getMusicPlaybackRepeat(state: State): T.MusicRepeatMode {
+  return getMusic(state).playbackRepeat;
+}
+
+export const getMusicPlaybackOrder = createSelector(
+  [
+    getMusicPlaybackQueue,
+    (state: State) => getMusic(state).playbackQueue.shuffledPaths,
+    getMusicPlaybackShuffle,
+  ],
+  (tracks, shuffledPaths, shuffle) =>
+    shuffle ? shuffledPaths : tracks.map((track) => track.path),
+);
+
+export function getMusicPlaybackHasPrevious(state: State): boolean {
+  const index = getMusicPlaybackOrder(state).indexOf(
+    getMusicPlaybackTrackPath(state) ?? '',
+  );
+  return index > 0;
+}
+
+export function getMusicPlaybackHasNext(state: State): boolean {
+  const order = getMusicPlaybackOrder(state);
+  const index = order.indexOf(getMusicPlaybackTrackPath(state) ?? '');
+  return (
+    index !== -1 &&
+    (index < order.length - 1 || getMusicPlaybackRepeat(state) !== 'off')
+  );
+}
+
 export function getMusicPlaybackQueuePanelSelections(
   state: State,
 ): Partial<Record<T.MusicPanelType, string[]>> {

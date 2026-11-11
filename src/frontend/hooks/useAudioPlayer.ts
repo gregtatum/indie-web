@@ -134,13 +134,7 @@ export function useAudioPlayer(): AudioPlayerState {
     }
 
     function onEnded() {
-      const queue = $.getMusicPlaybackQueue(getState());
-      const idx = queue.findIndex((t) => t.path === trackPath);
-      if (idx !== -1 && idx < queue.length - 1) {
-        dispatch(A.musicPlaybackLoad(queue[idx + 1].path));
-      } else {
-        dispatch(A.musicPlaybackStop());
-      }
+      dispatch(A.musicPlaybackEnded());
     }
 
     function onError() {

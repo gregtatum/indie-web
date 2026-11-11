@@ -912,15 +912,6 @@ function pickMostCommon(values: (string | null)[]): string | null {
   return best;
 }
 
-function shuffleTracks(tracks: T.TrackMetadata[]): T.TrackMetadata[] {
-  const result = tracks.slice();
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
 function AlbumHero() {
   const dispatch = Hooks.useDispatch();
   const server = $$.getCurrentServer();
@@ -1049,8 +1040,11 @@ function AlbumHero() {
     if (tracks.length === 0) {
       return;
     }
-    dispatch(A.setMusicPlaybackQueue(tracks));
-    dispatch(A.musicPlaybackLoad(tracks[0].path));
+    dispatch(A.startMusicPlayback(tracks, tracks[0].path));
+  }
+
+  function shuffleTracks() {
+    dispatch(A.startMusicPlayback(orderedTracks, undefined, true));
   }
 
   return (
@@ -1105,7 +1099,7 @@ function AlbumHero() {
             type="button"
             className="musicAlbumHeroButton"
             aria-label={`Shuffle ${title}`}
-            onClick={() => playTracks(shuffleTracks(orderedTracks))}
+            onClick={shuffleTracks}
           >
             <img src="/svg/shuffle.svg" alt="" />
             Shuffle
@@ -1307,11 +1301,9 @@ function FilterPanel({
 
   function playFilteredTracks() {
     const filtered = $.getFilteredMusicTracks(getState());
-    if (filtered.length === 0) {
-      return;
+    if (filtered.length > 0) {
+      dispatch(A.startMusicPlayback(filtered, filtered[0].path));
     }
-    dispatch(A.setMusicPlaybackQueue(filtered));
-    dispatch(A.musicPlaybackLoad(filtered[0].path));
   }
 
   Hooks.useTypeAheadSearch(listRef, items, (value) => {
@@ -1754,8 +1746,7 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
     focusedIndex >= 0 ? `music-track-${focusedIndex}` : undefined;
 
   const handlePlay = React.useCallback((path: string) => {
-    dispatch(A.setMusicPlaybackQueue(tracksRef.current));
-    dispatch(A.musicPlaybackLoad(path));
+    dispatch(A.startMusicPlayback(tracksRef.current, path));
   }, []);
 
   const handleTrackClick = React.useCallback(
@@ -2033,8 +2024,7 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
               selectedPaths.length > 1
                 ? currentTracks.filter((t) => selectedPaths.includes(t.path))
                 : currentTracks;
-            dispatch(A.setMusicPlaybackQueue(queue));
-            dispatch(A.musicPlaybackLoad(currentPath));
+            dispatch(A.startMusicPlayback(queue, currentPath));
           }
           break;
         }
@@ -2046,8 +2036,7 @@ function Tracks({ onScrollbarWidthChange }: TracksProps) {
           } else if (playbackStatus === 'paused') {
             dispatch(A.musicPlaybackPlay());
           } else if (currentPath) {
-            dispatch(A.setMusicPlaybackQueue(currentTracks));
-            dispatch(A.musicPlaybackLoad(currentPath));
+            dispatch(A.startMusicPlayback(currentTracks, currentPath));
           }
           break;
         }

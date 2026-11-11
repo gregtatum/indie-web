@@ -15,6 +15,8 @@ import {
   formatMegabytes,
   getZipJs,
   processInChunks,
+  shuffleAvoidingFirst,
+  shuffleWithFirst,
   splitOutFileExtension,
 } from 'frontend/utils';
 import * as Plain from './plain';
@@ -164,22 +166,43 @@ const PlainInternal = {
     };
   },
 
-  loadMusicPlayback(path: string, selectedTrackPath?: string) {
+  loadMusicPlayback(
+    path: string,
+    selectedTrackPath: string | undefined,
+    shuffledPaths: string[] | null,
+  ) {
     return {
       type: 'music-playback-load' as const,
       path,
       selectedTrackPath,
+      shuffledPaths,
     };
   },
 
-  setMusicPlaybackQueue(
+  startMusicPlayback(
     tracks: T.TrackMetadata[],
     panelSelections: Partial<Record<T.MusicPanelType, string[]>>,
+    path: string,
+    selectedTrackPath: string | undefined,
+    shuffledPaths: string[],
+    shuffle: boolean | null,
   ) {
     return {
-      type: 'set-music-playback-queue' as const,
+      type: 'music-playback-start' as const,
       tracks,
       panelSelections,
+      path,
+      selectedTrackPath,
+      shuffledPaths,
+      shuffle,
+    };
+  },
+
+  setMusicPlaybackShuffle(shuffle: boolean, shuffledPaths: string[] | null) {
+    return {
+      type: 'set-music-playback-shuffle' as const,
+      shuffle,
+      shuffledPaths,
     };
   },
 };
@@ -209,30 +232,118 @@ export function setMusicTracks(
   };
 }
 
-export function musicPlaybackLoad(path: string): Thunk {
+function getSelectedTrackPathForLoad(
+  state: T.State,
+  path: string,
+): string | undefined {
+  const selectedPaths = $.getMusicSelectedTrackPaths(state);
+  const isSoleSelectionPlaying =
+    selectedPaths.length === 1 &&
+    selectedPaths[0] === $.getMusicPlaybackTrackPath(state) &&
+    $.getFilteredMusicTracks(state).some(
+      (track) => track.path === selectedPaths[0],
+    );
+  return isSoleSelectionPlaying ? path : undefined;
+}
+
+function loadMusicPlayback(
+  path: string,
+  shuffledPaths: string[] | null = null,
+): Thunk {
   return (dispatch, getState) => {
-    const state = getState();
-    const selectedPaths = $.getMusicSelectedTrackPaths(state);
-    let selectedTrackPath: string | undefined;
-    if (
-      selectedPaths.length === 1 &&
-      selectedPaths[0] === $.getMusicPlaybackTrackPath(state) &&
-      $.getFilteredMusicTracks(state).some(
-        (track) => track.path === selectedPaths[0],
-      )
-    ) {
-      selectedTrackPath = path;
-    }
-    dispatch(PlainInternal.loadMusicPlayback(path, selectedTrackPath));
+    dispatch(
+      PlainInternal.loadMusicPlayback(
+        path,
+        getSelectedTrackPathForLoad(getState(), path),
+        shuffledPaths,
+      ),
+    );
   };
 }
 
-export function setMusicPlaybackQueue(tracks: T.TrackMetadata[]): Thunk {
+export function musicPlaybackLoad(path: string): Thunk {
+  return loadMusicPlayback(path);
+}
+
+export function startMusicPlayback(
+  tracks: T.TrackMetadata[],
+  path?: string,
+  shuffleOverride?: boolean,
+): Thunk {
   return (dispatch, getState) => {
+    const state = getState();
+    const paths = tracks.map((track) => track.path);
+    const shuffledPaths = shuffleWithFirst(paths, path ?? null);
+    const isShuffling = shuffleOverride ?? $.getMusicPlaybackShuffle(state);
+    const startPath = path ?? (isShuffling ? shuffledPaths[0] : paths[0]);
+    if (startPath === undefined) {
+      return;
+    }
     dispatch(
-      PlainInternal.setMusicPlaybackQueue(
+      PlainInternal.startMusicPlayback(
         tracks,
-        $.getMusicPanelSelections(getState()),
+        $.getMusicPanelSelections(state),
+        startPath,
+        getSelectedTrackPathForLoad(state, startPath),
+        shuffledPaths,
+        shuffleOverride ?? null,
+      ),
+    );
+  };
+}
+
+export function musicPlaybackStep(direction: 'next' | 'previous'): Thunk {
+  return (dispatch, getState) => {
+    const state = getState();
+    const order = $.getMusicPlaybackOrder(state);
+    const current = $.getMusicPlaybackTrackPath(state);
+    const index = current === null ? -1 : order.indexOf(current);
+    if (index === -1) {
+      return;
+    }
+    if (direction === 'previous') {
+      if (index > 0) {
+        dispatch(loadMusicPlayback(order[index - 1]));
+      }
+    } else if (index < order.length - 1) {
+      dispatch(loadMusicPlayback(order[index + 1]));
+    } else if ($.getMusicPlaybackRepeat(state) !== 'off') {
+      if ($.getMusicPlaybackShuffle(state)) {
+        const reshuffled = shuffleAvoidingFirst(order, current);
+        dispatch(loadMusicPlayback(reshuffled[0], reshuffled));
+      } else {
+        dispatch(loadMusicPlayback(order[0]));
+      }
+    }
+  };
+}
+
+export function musicPlaybackEnded(): Thunk {
+  return (dispatch, getState) => {
+    const state = getState();
+    const current = $.getMusicPlaybackTrackPath(state);
+    if (current !== null && $.getMusicPlaybackRepeat(state) === 'one') {
+      dispatch(loadMusicPlayback(current));
+    } else if ($.getMusicPlaybackHasNext(state)) {
+      dispatch(musicPlaybackStep('next'));
+    } else {
+      dispatch(Plain.musicPlaybackStop());
+    }
+  };
+}
+
+export function setMusicPlaybackShuffle(shuffleOn: boolean): Thunk {
+  return (dispatch, getState) => {
+    const state = getState();
+    dispatch(
+      PlainInternal.setMusicPlaybackShuffle(
+        shuffleOn,
+        shuffleOn
+          ? shuffleWithFirst(
+              $.getMusicPlaybackQueue(state).map((track) => track.path),
+              $.getMusicPlaybackTrackPath(state),
+            )
+          : null,
       ),
     );
   };

@@ -3,6 +3,43 @@ import type { T } from 'frontend';
 
 export * from 'shared/utils';
 
+export function shuffle<Item>(items: Item[]): Item[] {
+  const result = items.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * Shuffles, keeping `first` at the front when it's present.
+ */
+export function shuffleWithFirst<Item>(
+  items: Item[],
+  first: Item | null,
+): Item[] {
+  if (first === null || !items.includes(first)) {
+    return shuffle(items);
+  }
+  return [first, ...shuffle(items.filter((item) => item !== first))];
+}
+
+/**
+ * Shuffles, making sure `avoid` isn't left at the front.
+ */
+export function shuffleAvoidingFirst<Item>(
+  items: Item[],
+  avoid: Item | null,
+): Item[] {
+  const result = shuffle(items);
+  if (result.length > 1 && result[0] === avoid) {
+    const last = result.length - 1;
+    [result[0], result[last]] = [result[last], result[0]];
+  }
+  return result;
+}
+
 export function getEnv(key: string): string {
   if (!process.env[key]) {
     console.error(process.env);

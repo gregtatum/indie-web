@@ -225,6 +225,8 @@ export const persistedState = {
   dropboxCodeVerifier: new StringStorage(),
   dropboxRedirectURL: new StringStorage(),
   musicLastPlayedTrackPath: new StringStorage(),
+  musicPlaybackShuffle: new BooleanStorage(),
+  musicPlaybackRepeat: new StringStorage(),
 
   dropboxOauth: new JsonStorage({
     defaultValue: null,
