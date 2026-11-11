@@ -1305,6 +1305,15 @@ function FilterPanel({
     }
   }
 
+  function playFilteredTracks() {
+    const filtered = $.getFilteredMusicTracks(getState());
+    if (filtered.length === 0) {
+      return;
+    }
+    dispatch(A.setMusicPlaybackQueue(filtered));
+    dispatch(A.musicPlaybackLoad(filtered[0].path));
+  }
+
   Hooks.useTypeAheadSearch(listRef, items, (value) => {
     anchorRef.current = value;
     setCursor(value);
@@ -1520,6 +1529,7 @@ function FilterPanel({
             setCursor(null);
             dispatch(A.setMusicPanelSelection(panel));
           }}
+          onDoubleClick={playFilteredTracks}
         >
           {getPanelAllLabel(panel)}
         </div>
@@ -1532,6 +1542,7 @@ function FilterPanel({
             isSelected={effectiveSelections.includes(value)}
             isCursor={value === cursor}
             onClick={(event) => handleItemClick(value, event)}
+            onDoubleClick={playFilteredTracks}
             isRenameTarget={rename.state?.targets.includes(value) ?? false}
             rename={
               rename.state?.focused === value
@@ -1558,6 +1569,7 @@ function FilterPanelItem({
   isSelected,
   isCursor,
   onClick,
+  onDoubleClick,
   isRenameTarget,
   rename,
 }: {
@@ -1567,6 +1579,7 @@ function FilterPanelItem({
   isSelected: boolean;
   isCursor: boolean;
   onClick: (event: React.MouseEvent) => void;
+  onDoubleClick: () => void;
   isRenameTarget: boolean;
   rename: InlineRename | null;
 }) {
@@ -1586,6 +1599,7 @@ function FilterPanelItem({
       id={`music-panel-${panel}-${index}`}
       ref={divRef}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
     >
       {rename ? (
         <input

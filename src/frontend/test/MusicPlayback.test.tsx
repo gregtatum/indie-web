@@ -120,6 +120,17 @@ describe('track interactions', () => {
     expect($.getMusicPlaybackStatus(state)).toBe('loading');
   });
 
+  it('double-clicking a filter panel item plays the first filtered track', async () => {
+    const { store } = await setup();
+    const artistList = await screen.findByRole('listbox', { name: 'artist' });
+    await act(async () => {
+      await userEvent.dblClick(within(artistList).getByText('Artist A'));
+    });
+    const state = store.getState();
+    expect($.getMusicPlaybackTrackPath(state)).toBe('/music/a.mp3');
+    expect($.getMusicPlaybackStatus(state)).toBe('loading');
+  });
+
   it('pressing Enter on a selected track loads it', async () => {
     const { store } = await setup();
     // Click to select Song A first
