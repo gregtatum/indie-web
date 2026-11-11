@@ -152,6 +152,8 @@ export function useRetainScroll() {
   }, [window.location.href, navigationType]);
 }
 
+const MOUSE_EVENTS_ENDING_DRAG = ['mousemove', 'mousedown', 'mouseenter'];
+
 export function useFileDrop(
   targetRef: React.RefObject<HTMLElement | null>,
   onDropCallback: (event: DragEvent) => unknown,
@@ -160,6 +162,7 @@ export function useFileDrop(
   // fires `drop` at all, instead of just skipping the drop's side effects.
   canAcceptDrop?: (event: DragEvent) => boolean,
 ): boolean {
+  const dispatch = useDispatch();
   const [dragging, setDraggingState] = React.useState(false);
 
   function setDragging(value: boolean) {
@@ -222,11 +225,28 @@ export function useFileDrop(
       }
     };
 
+    // Firefox can end a file drag without firing dragleave/drop/dragend. Mouse
+    // events are suppressed during a drag, so seeing one means it is over.
+    const handleWindowMouse = () => {
+      if (element.classList.contains('dragging')) {
+        setDragging(false);
+        dispatch(
+          A.addMessage({
+            message: 'Drag ended unexpectedly. Try dropping again.',
+            timeout: true,
+          }),
+        );
+      }
+    };
+
     element.addEventListener('dragenter', handleDragEnter);
     element.addEventListener('dragover', handleDragOver);
     element.addEventListener('dragleave', handleDragLeave);
     element.addEventListener('drop', handleDrop);
     window.addEventListener('dragend', handleWindowDragEnd);
+    for (const type of MOUSE_EVENTS_ENDING_DRAG) {
+      window.addEventListener(type, handleWindowMouse, true);
+    }
     window.addEventListener('dragover', handleWindowDragOver, true);
 
     return () => {
@@ -235,9 +255,12 @@ export function useFileDrop(
       element.removeEventListener('dragleave', handleDragLeave);
       element.removeEventListener('drop', handleDrop);
       window.removeEventListener('dragend', handleWindowDragEnd);
+      for (const type of MOUSE_EVENTS_ENDING_DRAG) {
+        window.removeEventListener(type, handleWindowMouse, true);
+      }
       window.removeEventListener('dragover', handleWindowDragOver, true);
     };
-  }, [targetRef, onDropCallback, canAcceptDrop]);
+  }, [targetRef, onDropCallback, canAcceptDrop, dispatch]);
 
   return dragging;
 }
