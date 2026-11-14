@@ -288,7 +288,7 @@ describe('<BatchEditGrid> with real server', () => {
       '.musicBatchEditRow',
     ) as HTMLElement;
     const cells = row.querySelectorAll<HTMLElement>('.musicBatchEditCell');
-    expect(cells.length).toBe(6);
+    expect(cells.length).toBe(7);
     for (const [index, cell] of cells.entries()) {
       jest.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
         left: index * 100,
@@ -305,9 +305,9 @@ describe('<BatchEditGrid> with real server', () => {
       } as DOMRect);
     }
 
-    // Between the Artist cell (index 2, right edge 290) and the Album Artist
-    // cell (index 3, left edge 300) — closer to Artist.
-    fireEvent.click(row, { clientX: 292 });
+    // Between the Artist cell (index 3, right edge 390) and the Album Artist
+    // cell (index 4, left edge 400) — closer to Artist.
+    fireEvent.click(row, { clientX: 392 });
 
     expect($.getMusicSelectedTrackPaths(store.getState())).toEqual(['/a.mp3']);
     expect(

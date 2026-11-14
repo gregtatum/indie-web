@@ -105,6 +105,8 @@ export interface TrackMetadata {
   preferComposerGrouping: boolean | null;
   /** Track number within its album. */
   track: number | null;
+  /** Disc number within a multi-disc album. */
+  disc: number | null;
   /** Duration in seconds. */
   duration: number | null;
   size: number;

@@ -28,6 +28,7 @@ const PREFERRED_FLEX_COLUMN: BatchEditColumnKey = 'title';
 
 const DEFAULT_COLUMN_WIDTHS: Record<BatchEditColumnKey, number> = {
   track: 70,
+  disc: 70,
   title: 200,
   artist: 160,
   albumArtist: 160,

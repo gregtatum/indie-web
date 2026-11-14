@@ -9,6 +9,7 @@ exports[`upgradeMusicIndex v1 → current upgrades a v1 index to current 1`] = `
       "albumArtist": null,
       "artist": "Test Artist",
       "composer": null,
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": null,
       "genre": null,
@@ -26,6 +27,7 @@ exports[`upgradeMusicIndex v1 → current upgrades a v1 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -39,7 +41,7 @@ exports[`upgradeMusicIndex v1 → current upgrades a v1 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
 }
 `;
 
@@ -52,6 +54,7 @@ exports[`upgradeMusicIndex v2 → current upgrades a v2 index to current 1`] = `
       "albumArtist": null,
       "artist": "Test Artist",
       "composer": null,
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": null,
       "genre": "Rock",
@@ -69,6 +72,7 @@ exports[`upgradeMusicIndex v2 → current upgrades a v2 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -82,7 +86,7 @@ exports[`upgradeMusicIndex v2 → current upgrades a v2 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
 }
 `;
 
@@ -95,6 +99,7 @@ exports[`upgradeMusicIndex v3 → current upgrades a v3 index to current 1`] = `
       "albumArtist": null,
       "artist": "Test Artist",
       "composer": null,
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": null,
       "genre": "Rock",
@@ -112,6 +117,7 @@ exports[`upgradeMusicIndex v3 → current upgrades a v3 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -125,7 +131,7 @@ exports[`upgradeMusicIndex v3 → current upgrades a v3 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
 }
 `;
 
@@ -138,6 +144,7 @@ exports[`upgradeMusicIndex v4 → current upgrades a v4 index to current 1`] = `
       "albumArtist": null,
       "artist": "Test Artist",
       "composer": null,
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": "/Artist/Album/Folder.jpg",
       "genre": "Rock",
@@ -155,6 +162,7 @@ exports[`upgradeMusicIndex v4 → current upgrades a v4 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -168,7 +176,7 @@ exports[`upgradeMusicIndex v4 → current upgrades a v4 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
 }
 `;
 
@@ -181,6 +189,7 @@ exports[`upgradeMusicIndex v5 → current upgrades a v5 index to current 1`] = `
       "albumArtist": null,
       "artist": "Test Artist",
       "composer": null,
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": "/Artist/Album/Folder.jpg",
       "genre": "Rock",
@@ -198,6 +207,7 @@ exports[`upgradeMusicIndex v5 → current upgrades a v5 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -211,7 +221,7 @@ exports[`upgradeMusicIndex v5 → current upgrades a v5 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
 }
 `;
 
@@ -224,6 +234,7 @@ exports[`upgradeMusicIndex v6 → current upgrades a v6 index to current 1`] = `
       "albumArtist": "Test Album Artist",
       "artist": "Test Artist",
       "composer": null,
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": "/Artist/Album/Folder.jpg",
       "genre": "Rock",
@@ -241,6 +252,7 @@ exports[`upgradeMusicIndex v6 → current upgrades a v6 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -254,7 +266,7 @@ exports[`upgradeMusicIndex v6 → current upgrades a v6 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
 }
 `;
 
@@ -267,6 +279,7 @@ exports[`upgradeMusicIndex v7 → current upgrades a v7 index to current 1`] = `
       "albumArtist": "Test Album Artist",
       "artist": "Test Artist",
       "composer": "Test Composer",
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": "/Artist/Album/Folder.jpg",
       "genre": "Rock",
@@ -284,6 +297,7 @@ exports[`upgradeMusicIndex v7 → current upgrades a v7 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -297,7 +311,7 @@ exports[`upgradeMusicIndex v7 → current upgrades a v7 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
 }
 `;
 
@@ -310,6 +324,7 @@ exports[`upgradeMusicIndex v8 → current upgrades a v8 index to current 1`] = `
       "albumArtist": "Test Album Artist",
       "artist": "Test Artist",
       "composer": "Test Composer",
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": "/Artist/Album/Folder.jpg",
       "genre": "Rock",
@@ -327,6 +342,7 @@ exports[`upgradeMusicIndex v8 → current upgrades a v8 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -340,7 +356,7 @@ exports[`upgradeMusicIndex v8 → current upgrades a v8 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
 }
 `;
 
@@ -353,6 +369,7 @@ exports[`upgradeMusicIndex v9 → current upgrades a v9 index to current 1`] = `
       "albumArtist": "Test Album Artist",
       "artist": "Test Artist",
       "composer": "Test Composer",
+      "disc": null,
       "duration": 180.5,
       "folderArtworkPath": "/Artist/Album/Folder.jpg",
       "genre": "Rock",
@@ -370,6 +387,7 @@ exports[`upgradeMusicIndex v9 → current upgrades a v9 index to current 1`] = `
       "albumArtist": null,
       "artist": null,
       "composer": null,
+      "disc": null,
       "duration": null,
       "folderArtworkPath": null,
       "genre": null,
@@ -383,6 +401,51 @@ exports[`upgradeMusicIndex v9 → current upgrades a v9 index to current 1`] = `
       "year": null,
     },
   ],
-  "version": 10,
+  "version": 11,
+}
+`;
+
+exports[`upgradeMusicIndex v10 → current upgrades a v10 index to current 1`] = `
+{
+  "scannedAt": "2025-01-01T00:00:00.000Z",
+  "tracks": [
+    {
+      "album": "Test Album",
+      "albumArtist": "Test Album Artist",
+      "artist": "Test Artist",
+      "composer": "Test Composer",
+      "disc": null,
+      "duration": 180.5,
+      "folderArtworkPath": "/Artist/Album/Folder.jpg",
+      "genre": "Rock",
+      "hasEmbeddedArtwork": true,
+      "mtime": "2024-12-01T00:00:00.000Z",
+      "path": "/Artist/Album/track.mp3",
+      "preferComposerGrouping": null,
+      "size": 3145728,
+      "title": "Test Track",
+      "track": 1,
+      "year": "1999",
+    },
+    {
+      "album": null,
+      "albumArtist": null,
+      "artist": null,
+      "composer": null,
+      "disc": null,
+      "duration": null,
+      "folderArtworkPath": null,
+      "genre": null,
+      "hasEmbeddedArtwork": false,
+      "mtime": "2024-11-01T00:00:00.000Z",
+      "path": "/no-tags.mp3",
+      "preferComposerGrouping": null,
+      "size": 1024,
+      "title": null,
+      "track": null,
+      "year": null,
+    },
+  ],
+  "version": 11,
 }
 `;

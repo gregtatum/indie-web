@@ -520,6 +520,9 @@ export function applyIndexedTrackChanges(
     } else if (frameId === 'TRCK') {
       const num = parseInt(value.split('/')[0], 10);
       updated.track = isNaN(num) ? null : num;
+    } else if (frameId === 'TPOS') {
+      const num = parseInt(value.split('/')[0], 10);
+      updated.disc = isNaN(num) ? null : num;
     } else if (
       frameId === 'TXXX' &&
       description === PREFER_COMPOSER_GROUPING_TAG_DESCRIPTION
@@ -537,7 +540,7 @@ export interface MusicTrackSource {
 }
 
 export type BatchEditColumnKey =
-  'track' | 'title' | 'artist' | 'albumArtist' | 'album' | 'genre';
+  'track' | 'disc' | 'title' | 'artist' | 'albumArtist' | 'album' | 'genre';
 
 export interface BatchEditColumn {
   key: BatchEditColumnKey;
@@ -559,6 +562,13 @@ export const BATCH_EDIT_COLUMNS: BatchEditColumn[] = [
     label: 'Track #',
     frameId: 'TRCK',
     metadataKey: 'track',
+    numeric: true,
+  },
+  {
+    key: 'disc',
+    label: 'Disc #',
+    frameId: 'TPOS',
+    metadataKey: 'disc',
     numeric: true,
   },
   { key: 'title', label: 'Title', frameId: 'TIT2', metadataKey: 'title' },

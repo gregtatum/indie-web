@@ -396,6 +396,7 @@ async function scanSingleAudioFile(
   let genre: string | null = null;
   let preferComposerGrouping: boolean | null = null;
   let track: number | null = null;
+  let disc: number | null = null;
   let duration: number | null = null;
   let hasEmbeddedArtwork = false;
   let year: string | null = null;
@@ -412,6 +413,7 @@ async function scanSingleAudioFile(
       getNativePrivateTextTags(meta.native),
     );
     track = parseLeadingInt(resolveTagValue(blocks, 'TRCK'));
+    disc = parseLeadingInt(resolveTagValue(blocks, 'TPOS'));
     duration = meta.format.duration ?? null;
     hasEmbeddedArtwork = (meta.common.picture?.length ?? 0) > 0;
     year = resolveTagValue(blocks, 'TYER') ?? null;
@@ -444,6 +446,7 @@ async function scanSingleAudioFile(
     year,
     preferComposerGrouping,
     track,
+    disc,
     duration,
     size,
     mtime,
@@ -1337,6 +1340,11 @@ export async function updateIndexAfterTrackTagWrites(
               case 'TRCK': {
                 const num = parseInt(value.split('/')[0], 10);
                 updatedTrack.track = isNaN(num) ? null : num;
+                break;
+              }
+              case 'TPOS': {
+                const num = parseInt(value.split('/')[0], 10);
+                updatedTrack.disc = isNaN(num) ? null : num;
                 break;
               }
               default:

@@ -22,6 +22,7 @@ const BASE_TRACK: TrackMetadata = {
   year: null,
   preferComposerGrouping: null,
   track: 1,
+  disc: null,
   duration: 180,
   size: 1024,
   mtime: '2024-01-01T00:00:00Z',

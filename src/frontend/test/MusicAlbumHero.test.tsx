@@ -30,6 +30,7 @@ function makeTrack(overrides: Partial<T.TrackMetadata>): T.TrackMetadata {
     year: null,
     preferComposerGrouping: null,
     track: 1,
+    disc: null,
     duration: 100,
     size: 1000,
     mtime: '2024-01-01T00:00:00Z',
@@ -47,6 +48,7 @@ const TRACKS: T.TrackMetadata[] = [
     title: 'Rock Two',
     album: 'Rock Album',
     track: 2,
+    disc: null,
   }),
   makeTrack({
     path: '/jazz/1.mp3',
@@ -196,6 +198,7 @@ describe('album hero selection', () => {
         album: 'Hot Fuss',
         genre: 'Rock',
         track: 2,
+        disc: null,
       }),
     ];
     setup(tracks);

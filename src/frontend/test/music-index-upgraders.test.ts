@@ -472,3 +472,23 @@ describe('upgradeMusicIndex v9 → current', () => {
     expect(track.folderArtworkPath).toBeNull();
   });
 });
+
+// v10 → current: backfill disc as null (v10 had no disc number field).
+describe('upgradeMusicIndex v10 → current', () => {
+  const v10Fixture = JSON.parse(
+    readFileSync(join(__dirname, 'fixtures/music-index-v10.json'), 'utf-8'),
+  );
+
+  it('upgrades a v10 index to current', () => {
+    const { index, wasUpgraded } = upgradeMusicIndex(v10Fixture);
+    expect(wasUpgraded).toBe(true);
+    expect(index.version).toBe(CURRENT_MUSIC_INDEX_VERSION);
+    expect(index).toMatchSnapshot();
+  });
+
+  it('backfills disc as null and keeps year', () => {
+    const { index } = upgradeMusicIndex(v10Fixture);
+    expect(index.tracks.map((t) => t.disc)).toEqual([null, null]);
+    expect(index.tracks[0].year).toBe('1999');
+  });
+});
