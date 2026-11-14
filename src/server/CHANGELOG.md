@@ -10,6 +10,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.10.0] - 2026-11-14
+
 ### Added
 
 - Set `DOCKER_SERVICE_NAME` in your `docker-compose.yml` to the service's name
@@ -172,7 +174,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 - Initial Docker support for running the server in a container.
 
-[unreleased]: https://github.com/gregtatum/indie-web/compare/v3.9.0...HEAD
+[unreleased]: https://github.com/gregtatum/indie-web/compare/v3.10.0...HEAD
+[3.10.0]: https://github.com/gregtatum/indie-web/compare/v3.9.0...v3.10.0
 [3.9.0]: https://github.com/gregtatum/indie-web/compare/v3.8.0...v3.9.0
 [3.8.0]: https://github.com/gregtatum/indie-web/compare/v3.7.0...v3.8.0
 [3.7.0]: https://github.com/gregtatum/indie-web/compare/v3.6.0...v3.7.0
