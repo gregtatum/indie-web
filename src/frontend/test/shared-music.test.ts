@@ -110,6 +110,7 @@ const ORGANIZATION_TRACK: OrganizationTrackFields = {
   year: '1973',
   title: 'Time',
   track: 4,
+  disc: 2,
   composer: null,
 };
 
@@ -155,6 +156,23 @@ describe('resolveOrganizationPath', () => {
         '.mp3',
       ),
     ).toBe('/AC-DC/Time.mp3');
+  });
+
+  it('substitutes the disc number and drops it when missing', () => {
+    expect(
+      resolveOrganizationPath(
+        'Disc {Disc}/{Track} - {Title}',
+        ORGANIZATION_TRACK,
+        '.mp3',
+      ),
+    ).toBe('/Disc 2/04 - Time.mp3');
+    expect(
+      resolveOrganizationPath(
+        '{Disc}/{Track} - {Title}',
+        { ...ORGANIZATION_TRACK, disc: null },
+        '.mp3',
+      ),
+    ).toBe('/04 - Time.mp3');
   });
 
   it('renders a null track number as an empty segment token', () => {

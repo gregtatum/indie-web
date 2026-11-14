@@ -317,6 +317,7 @@ export interface OrganizationTrackFields {
   year: string | null;
   title: string | null;
   track: number | null;
+  disc: number | null;
   composer: string | null;
 }
 
@@ -337,6 +338,7 @@ export const ORGANIZATION_TOKENS: ReadonlyArray<{
     token: '{Track}',
     getValue: (t) => (t.track === null ? '' : String(t.track).padStart(2, '0')),
   },
+  { token: '{Disc}', getValue: (t) => (t.disc === null ? '' : String(t.disc)) },
   { token: '{Composer}', getValue: (t) => t.composer ?? '' },
 ];
 

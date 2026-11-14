@@ -604,6 +604,10 @@
     --token-fill: #dddefe;
   }
 
+  &[data-token='Disc'] {
+    --token-fill: #e9ecb0;
+  }
+
   &[data-token='Composer'] {
     --token-fill: #fed6d2;
   }
