@@ -27,7 +27,8 @@ services:
   floppydisk:
     image: tatumcreative/floppydisk.link:latest
     container_name: floppydisk-docs
-    hostname: floppydisk
+    environment:
+      DOCKER_SERVICE_NAME: floppydisk
     restart: unless-stopped
 
     ports:

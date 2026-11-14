@@ -417,10 +417,10 @@ export function setFileManagerRevealLabel(label: string | null) {
   };
 }
 
-export function setFileStoreContainerName(containerName: string | null) {
+export function setFileStoreServiceName(serviceName: string | null) {
   return {
-    type: 'set-file-store-container-name' as const,
-    containerName,
+    type: 'set-file-store-service-name' as const,
+    serviceName,
   };
 }
 

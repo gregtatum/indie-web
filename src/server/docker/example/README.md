@@ -13,9 +13,10 @@ services:
     # The name of the running container.
     container_name: floppydisk
 
-    # Passes the Docker service name into the container, so the app can show
-    # helpful hints about your Docker configuration.
-    hostname: floppydisk
+    environment:
+      # Keep this the same as the service name above. It lets the app show
+      # update instructions with the right name.
+      DOCKER_SERVICE_NAME: floppydisk
 
     # Automatically restart the container unless it is explicitly stopped.
     restart: unless-stopped

@@ -28,7 +28,7 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
   const needsRescan = $$.getMusicNeedsRescan();
   const servedIndexVersion = $$.getMusicServedIndexVersion();
   const serverMaxIndexVersion = $$.getMusicServerMaxIndexVersion();
-  const containerName = $$.getFileStoreContainerName();
+  const serviceName = $$.getFileStoreServiceName();
   const { dispatch } = Hooks.useStore();
   const { isFilesView, closeBatchEdit } = useMusicUrlSerialization();
   const [scanPhase, setScanPhase] = React.useState<ScanPhase>('idle');
@@ -147,9 +147,12 @@ function MusicForServer({ server }: { server: T.FileStoreServer }) {
     window.location.reload();
   }
 
-  const updateDocsHref = containerName
-    ? `/docs/update-docker.html?containerName=${encodeURIComponent(containerName)}`
-    : '/docs/update-npm.html';
+  let updateDocsHref = '/docs/update-npm.html';
+  if (serviceName !== null) {
+    updateDocsHref = serviceName
+      ? `/docs/update-docker.html?serviceName=${encodeURIComponent(serviceName)}`
+      : '/docs/update-docker.html';
+  }
 
   let scanLabel = 'Scan Library';
   if (scanPhase === 'scanning') {

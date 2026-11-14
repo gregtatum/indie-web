@@ -10,6 +10,17 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Set `DOCKER_SERVICE_NAME` in your `docker-compose.yml` to the service's name
+  and the app's update instructions fill it in. It replaces the earlier use of
+  the container's `hostname`, which defaults to a container ID. Without it the
+  instructions show a placeholder.
+
+### Changed
+
+- The file-store API root reports `serviceName` instead of `containerName`.
+
 ## [3.9.0] - 2026-10-20
 
 ### Added

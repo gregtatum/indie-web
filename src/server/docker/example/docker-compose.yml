@@ -4,9 +4,9 @@ services:
     image: tatumcreative/floppydisk.link:latest
     # The name of the running container.
     container_name: floppydisk
-    # Passes the Docker service name into the container, so the app can show
-    # helpful hints about your Docker configuration.
-    hostname: floppydisk
+    environment:
+      # Keep this the same as the service name above.
+      DOCKER_SERVICE_NAME: floppydisk
     # Automatically restart the container unless it is explicitly stopped.
     restart: unless-stopped
     ports:
@@ -25,7 +25,8 @@ services:
   # floppydisk-music:
   #   image: tatumcreative/floppydisk.link:latest
   #   container_name: floppydisk-music
-  #   hostname: floppydisk-music
+  #   environment:
+  #     DOCKER_SERVICE_NAME: floppydisk-music
   #   restart: unless-stopped
   #   ports:
   #     - "6544:6543"

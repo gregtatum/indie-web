@@ -342,16 +342,16 @@ function fileManagerRevealLabel(
 }
 
 /**
- * The Docker container's hostname, reported by the server. A string value
- * implies the server is running in Docker.
+ * The Docker service name, reported by the server. A string value implies the
+ * server is running in Docker. It's empty when DOCKER_SERVICE_NAME isn't set.
  */
-function fileStoreContainerName(
+function fileStoreServiceName(
   state: string | null = null,
   action: T.Action,
 ): string | null {
   switch (action.type) {
-    case 'set-file-store-container-name':
-      return action.containerName;
+    case 'set-file-store-service-name':
+      return action.serviceName;
     case 'view-music':
       return null;
     default:
@@ -456,7 +456,7 @@ const combinedMusicReducer = combineReducers({
   servedIndexVersion,
   serverMaxIndexVersion,
   fileManagerRevealLabel,
-  fileStoreContainerName,
+  fileStoreServiceName,
   playingTrackPath,
   playbackLoadId,
   playbackStatus,

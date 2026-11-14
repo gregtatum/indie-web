@@ -9,7 +9,6 @@ import type { T } from '../index.ts';
 import { dirname } from 'node:path';
 import { createReadStream, promises as fs } from 'node:fs';
 import { writeFile, mkdir, rename } from 'node:fs/promises';
-import { hostname } from 'node:os';
 import { finished, pipeline } from 'node:stream/promises';
 import { zipFolder } from './zip.ts';
 import {
@@ -52,12 +51,15 @@ export function fileStoreRoute(mountPath: MountPath) {
     async (): Promise<{
       routes: string[];
       revealLabel: string | null;
-      containerName: string | null;
+      serviceName: string | null;
     }> => {
       return {
         routes: route.routes.map((r) => r.toString()),
         revealLabel: getFileManagerLauncher()?.label ?? null,
-        containerName: process.env.IS_DOCKER === 'true' ? hostname() : null,
+        serviceName:
+          process.env.IS_DOCKER === 'true'
+            ? (process.env.DOCKER_SERVICE_NAME ?? null)
+            : null,
       };
     },
   );
