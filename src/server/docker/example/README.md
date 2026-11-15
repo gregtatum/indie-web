@@ -79,6 +79,8 @@ services:
       - tailscale-floppydisk
     # Share network stack with Tailscale.
     network_mode: service:tailscale-floppydisk
+    environment:
+      DOCKER_SERVICE_NAME: floppydisk
     # ...
     # Add the rest of the configuration from above.
 ```

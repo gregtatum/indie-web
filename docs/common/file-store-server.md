@@ -26,7 +26,7 @@ Create a `docker-compose.yml`, or add this service to an existing one. Give the 
 services:
   floppydisk:
     image: tatumcreative/floppydisk.link:latest
-    container_name: floppydisk-docs
+    container_name: floppydisk
     environment:
       DOCKER_SERVICE_NAME: floppydisk
     restart: unless-stopped

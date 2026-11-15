@@ -7,7 +7,7 @@ order: 6
 
 If you're running the server with Docker, update it by pulling the latest image and recreating the container.
 
-<p id="dockerContainerUnknown">Replace <code>&lt;service-name&gt;</code> below with your container's name. Find it with <code>docker ps</code> if you're not sure.</p>
+<p id="dockerContainerUnknown">Replace <code>&lt;service-name&gt;</code> below with your service's name, the key under <code>services:</code> in your <code>docker-compose.yml</code>.</p>
 
 <pre><code>sudo docker-compose pull <span data-service-name>&lt;service-name&gt;</span>
 sudo docker-compose up --detach <span data-service-name>&lt;service-name&gt;</span></code></pre>

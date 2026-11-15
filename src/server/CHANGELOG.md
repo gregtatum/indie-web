@@ -10,6 +10,10 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Update some missing information in the docker docs.
+
 ## [3.10.0] - 2026-11-14
 
 ### Added
