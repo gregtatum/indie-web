@@ -1042,7 +1042,6 @@ export async function main(args) {
   requireDockerAvailable();
   requireMainBranch(options.bump);
   requireCleanTree(options.bump);
-  requireChangelogEntry(options.bump);
 
   if (!options.dryRun) {
     try {
@@ -1064,6 +1063,10 @@ export async function main(args) {
     ? pending.version
     : bumpVersion(currentVersion, options.bump);
   const tag = resuming ? pending.tag : `v${nextVersion}`;
+
+  if (!resuming) {
+    requireChangelogEntry(options.bump);
+  }
 
   if (resuming) {
     console.log(
