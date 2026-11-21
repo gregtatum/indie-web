@@ -22,7 +22,20 @@ interface SplitterConstraint {
   maxSize?: number;
 }
 
+interface SplitterFixedStart {
+  /** Start pane width (px) used when nothing is persisted yet. */
+  defaultSize: number;
+  /** The start pane shrinks only once the end pane would drop below this (px). */
+  minEndSize: number;
+}
+
 interface SplitterProps extends SplitterBaseProps {
+  /**
+   * Pin the start pane to a pixel width, so only the end pane absorbs window
+   * resizes. The persisted value is then the preferred start width, not an
+   * offset, and the rendered width only dips below it while space is tight.
+   */
+  fixedStart?: SplitterFixedStart;
   /**
    * Optionally bound one pane's size. Naming a single `pane` means the limits
    * can't contradict each other, so there's no wrong way to pass them.
@@ -86,6 +99,7 @@ export function Splitter(props: SplitterProps) {
     direction = 'horizontal',
     defaultOffset = 0,
     constrain,
+    fixedStart,
   } = props;
   const container = React.useRef<HTMLDivElement>(null);
   const middleVisible = React.useRef<HTMLDivElement>(null);
@@ -98,7 +112,7 @@ export function Splitter(props: SplitterProps) {
   const touchId = React.useRef<null | number>(null);
   const isVertical = direction === 'vertical';
 
-  let initialOffset = defaultOffset;
+  let initialOffset = fixedStart ? fixedStart.defaultSize : defaultOffset;
   if (persistLocalStorage) {
     const number = persistedState.splitterOffset(persistLocalStorage).read();
     if (number !== null) {
@@ -106,6 +120,7 @@ export function Splitter(props: SplitterProps) {
     }
   }
   const [offset, setOffset] = React.useState(initialOffset);
+  const [containerSize, setContainerSize] = React.useState<number | null>(null);
 
   // Store the offset in a ref so it can be passed to the ResizeObserver.
   const offsetRef = React.useRef(offset);
@@ -125,6 +140,16 @@ export function Splitter(props: SplitterProps) {
     off: number,
   ): number {
     const size = isVertical ? rect.height : rect.width;
+    if (fixedStart) {
+      if (constrain?.minSize !== undefined) {
+        off = Math.max(constrain.minSize, off);
+      }
+      if (constrain?.maxSize !== undefined) {
+        off = Math.min(constrain.maxSize, off);
+      }
+      off = Math.min(size - fixedStart.minEndSize, off);
+      return Math.max(minSpace, off);
+    }
     off = Math.max(-(size / 2) + minSpace, off);
     off = Math.min(size / 2 - minSpace, off);
     // The start pane spans `size / 2 - off` and the end pane `size / 2 + off`,
@@ -159,6 +184,10 @@ export function Splitter(props: SplitterProps) {
     const resizeObserver = new ResizeObserver((entries) => {
       const currentOffset = offsetRef.current;
       for (const entry of entries) {
+        if (fixedStart) {
+          setContainerSize(entry.contentRect.width);
+          continue;
+        }
         const off = keepOffsetInBounds(entry.contentRect, currentOffset);
         if (off !== currentOffset) {
           setOffset(off);
@@ -255,7 +284,7 @@ export function Splitter(props: SplitterProps) {
     const rect = current.getBoundingClientRect();
     const size = isVertical ? rect.height : rect.width;
     const origin = isVertical ? rect.y : rect.x;
-    const off = size / 2 + origin - pos;
+    const off = fixedStart ? pos - origin : size / 2 + origin - pos;
     setOffset(keepOffsetInBounds(rect, off));
     if (crossPos !== undefined) {
       slideVisibleIndicator(rect, crossPos);
@@ -313,12 +342,27 @@ export function Splitter(props: SplitterProps) {
   const onMiddleHoverMove: React.MouseEventHandler<HTMLDivElement> = (event) =>
     hoverTrack(event, false);
 
+  const startSize =
+    fixedStart && containerSize !== null
+      ? keepOffsetInBounds(
+          { width: containerSize, height: containerSize },
+          offset,
+        )
+      : offset;
+
   let startStyle: React.CSSProperties;
   let endStyle: React.CSSProperties;
   let middleStyle: React.CSSProperties;
   const midPos = `calc(50% - ${splitterWidth / 2 + splitterPadding + offset}px)`;
 
-  if (isVertical) {
+  if (fixedStart) {
+    startStyle = { ...horizontalStartStyle, width: `${startSize}px` };
+    endStyle = { ...horizontalEndStyle, width: `calc(100% - ${startSize}px)` };
+    middleStyle = {
+      ...horizontalMiddleStyle,
+      left: `${startSize - splitterWidth / 2 - splitterPadding}px`,
+    };
+  } else if (isVertical) {
     startStyle = { ...verticalStartStyle, height: `calc(50% - ${offset}px)` };
     endStyle = { ...verticalEndStyle, height: `calc(50% + ${offset}px)` };
     middleStyle = { ...verticalMiddleStyle, top: midPos };

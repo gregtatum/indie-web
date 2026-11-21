@@ -380,7 +380,7 @@ export function MusicLibraryView({
           <Splitter
             direction="horizontal"
             className="musicLibrarySidebarSplitter"
-            defaultOffset={400}
+            fixedStart={{ defaultSize: 300, minEndSize: 400 }}
             constrain={{ pane: 'start', minSize: 245, maxSize: 500 }}
             start={isLoading ? <AlbumHeroSkeleton /> : <AlbumHero />}
             end={
@@ -403,7 +403,7 @@ export function MusicLibraryView({
                 />
               </div>
             }
-            persistLocalStorage="musicLibrarySidebarSplitterOffset"
+            persistLocalStorage="musicLibrarySidebarWidth"
           />
         </div>
       </div>
